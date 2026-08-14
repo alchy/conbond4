@@ -427,6 +427,9 @@ TIME_AND_PLACE = Dialogue(
     name="Čas a prostor",
     source="„Petr jel v pondělí do Prahy. V úterý jel Petr do Brna.“",
     shapes=(PROPN_SUBJ, ("NOUN", "Sing", "Loc", "obl", Operation.EXISTS)),
+    # Táž odpověď jako u Petrovic, a je to TÝŽ tvar: jedna věta člověka
+    # zavírá `v`+Loc pro obě domény.
+    roles=(("v+Loc", "kde"),),
     steps=(
         Step(
             text="Petr jel do Prahy.",
@@ -484,6 +487,32 @@ TIME_AND_PLACE = Dialogue(
             answers="U",
             point="otevřený svět: o Plzni nikdo nic neřekl, takže `U` — "
             "a otázka na neznámé místo ŽÁDNÝ uzel nezaloží (§ 0.2)",
+        ),
+        Step(
+            text="Petr byl v pondělí v Praze.",
+            reading=sentence(
+                w("Petr", "Petr", "PROPN", 6, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("byl", "být", "AUX", 6, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Acc"),
+                w("pondělí", "pondělí", "NOUN", 6, "obl", Case="Acc", Gender="Neut", Number="Sing"),
+                w("v", "v", "ADP", 6, "case", AdpType="Prep", Case="Loc"),
+                w("Praze", "Praha", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 6, "punct"),
+            ),
+            reads="být(kde:Praha, kdo:·Petr, kdy:pondělí)",
+            anchors=(
+                "Praze → Praha (sort z role; místo)",
+                "pondělí → pondělí (sort z role; čas)",
+            ),
+            writes="být(kde:Praha, kdo:Petr, kdy:pondělí)",
+            point=(
+                "ČAS A MÍSTO V JEDNÉ VĚTĚ, oba ze SPONY. Do N‑4 dávala "
+                "tahle věta `co:Praha`, tedy „Petr BYL Prahou“: UD dělá "
+                "„Praze“ kořenem a „byl“ sponou, takže sponové pravidlo "
+                "vzalo kořen jako jmennou část. PŘEDLOŽKA u kořene je "
+                "tvrdý signál, že jmenná část to není — „být prostředek“ "
+                "ji nemá, „být v Praze“ ji má vždycky"
+            ),
         ),
     ),
 )

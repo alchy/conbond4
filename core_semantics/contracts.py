@@ -728,6 +728,23 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_learned_meaning_of_a_shape_is_revocable",
         ),
     ),
+    Clause(
+        id="S-22",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "PŘEDLOŽKA u sponového kořene vylučuje jmennou část: být "
+            "v Praze není být Prahou. Není to pravidlo o významu — role "
+            "zůstane POVRCHOVÁ a co znamená, se učí; jen se nepřevezme "
+            "jmenná část tam, kde ji stavba vylučuje (N‑4)"
+        ),
+        anchor="core_semantics.cascade:generate",
+        entry="cascade(",
+        enforced_by=(
+            "test_a_preposition_at_the_root_means_it_is_not_the_nominal_predicate",
+            "test_a_nominal_predicate_without_a_preposition_is_untouched",
+            "test_the_role_stays_surface_and_is_asked_about",
+        ),
+    ),
     # -- storage → cascade (zpětná hrana) ----------------------------------
     Clause(
         id="B-1",

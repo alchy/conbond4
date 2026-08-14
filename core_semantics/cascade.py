@@ -394,6 +394,14 @@ def base_deprel(deprel: str) -> str:
     return deprel.split(":", 1)[0]
 
 
+def _preposition_of(token: Token, reading: Reading) -> Token | None:
+    """Předložka závislá na tokenu (`deprel=case`) — nebo `None`."""
+    for child in reading.children(token.index):
+        if base_deprel(child.deprel) == "case":
+            return child
+    return None
+
+
 def surface_role(token: Token, reading: Reading) -> str:
     """Povrchové pojmenování okolnosti z PŘEDLOŽKY A PÁDU (§ 12/1).
 
@@ -407,14 +415,8 @@ def surface_role(token: Token, reading: Reading) -> str:
     znamená jednou `kde` a jednou `kdy`, řeší naučené mapování rolí, ne
     tenhle kód.
     """
-    preposition = next(
-        (
-            child.lemma
-            for child in reading.children(token.index)
-            if base_deprel(child.deprel) == "case"
-        ),
-        None,
-    )
+    found = _preposition_of(token, reading)
+    preposition = found.lemma if found else None
     case = token.feat("Case")
     # PODTYP JE SOUČÁST TVARU, ne ozdoba. „v pondělí" je `obl`, tedy
     # volné určení, kdežto „věří v úspěch" je `obl:arg`, tedy PŘEDMĚT
@@ -524,7 +526,23 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
     if carrier is not anchor:
         # Spona: jmenná část JE obsah — to říká stavba věty, ne odhad.
         # Nominály tedy plní jen podmět.
-        fixed.append(_nominal(anchor, reading, ROLE_OBJECT))
+        #
+        # **PŘEDLOŽKA JMENNOU ČÁST VYLUČUJE** *(N‑4)*. „Petr byl v Praze"
+        # má v UD kořen `Praze` a sponu `byl`, takže sponové pravidlo
+        # dosud udělalo z Prahy jmennou část přísudku — `co:Praha`, jako
+        # by Petr Prahou BYL. Předložka u kořene je ale tvrdý strukturní
+        # signál, že jde o OKOLNOST: „být prostředek" předložku nemá,
+        # „být v Praze" ji má vždycky.
+        #
+        # Není to nové pravidlo o významu — sémantika okolnosti se dál
+        # nehádá a role zůstane POVRCHOVÁ (`v+Loc`). Jen se nepřevezme
+        # jmenná část tam, kde ji stavba vylučuje.
+        anchor_role = (
+            surface_role(anchor, reading)
+            if _preposition_of(anchor, reading) is not None
+            else ROLE_OBJECT
+        )
+        fixed.append(_nominal(anchor, reading, anchor_role))
         variants = [(_nominal(t, reading, ROLE_SUBJECT),) for t in nominals] or [()]
     elif len(nominals) == 2:
         first, second = nominals

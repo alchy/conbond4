@@ -248,26 +248,26 @@ D3 = Golden(
         tok(6, "Praze", "Praha", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
         tok(7, ".", ".", "PUNCT", 6, "punct"),
     ),
-    predication="být(co:Praha, kdo:·Petr, kdy:pondělí)",
+    predication="být(kdo:·Petr, kdy:pondělí, v+Loc:Praha)",
     point=(
         "VĚTA, KTERÁ SADU OPRAVILA. Vedla se tu jako zásadní mez — „dvě "
         "určení téhož tvaru, rozlišit je nejde“ — a byl to artefakt ručně "
         "psané nahrávky. Skutečný parser dá „v pondělí“ AKUZATIV a „v "
         "Praze“ LOKÁL, takže se ta určení tvarově LIŠÍ a žádná kolize "
         "není. Mez, kterou projekt zapsal jako vlastnost češtiny, byla "
-        "vlastnost mého omylu."
+        "vlastnost mého omylu. "
+        "DRUHÁ VĚC, KTEROU TAHLE VĚTA OPRAVILA (N‑4): dávala `co:Praha`, "
+        "tedy „Petr BYL Prahou“. UD dělá „Praze“ kořenem a „byl“ sponou, "
+        "takže sponové pravidlo vzalo kořen jako jmennou část. PŘEDLOŽKA "
+        "u kořene je ale tvrdý strukturní signál, že jmenná část to není: "
+        "„být prostředek“ předložku nemá, „být v Praze“ ji má vždycky. "
+        "Není to nové pravidlo o významu — role zůstane POVRCHOVÁ a co "
+        "znamená, se učí."
     ),
     asks=(
-        "ptá se na kvantifikátor role `co`, a nemá se to umlčet vzorem: "
-        "odpověď by tu byla špatná, ať zní jakkoli — viz mez níž"
-    ),
-    limit=(
-        "`co:Praha` JE STRUKTURNĚ ŠPATNĚ. Věta říká, KDE Petr byl, ne CO "
-        "Petr byl. UD dělá „Praze“ kořenem a „byl“ sponou, takže sponové "
-        "pravidlo vezme jmennou část jako `co` — u „Auto je prostředek“ "
-        "správně, u „byl v Praze“ ne, protože tam je to předložkové určení "
-        "místa. Rozlišit obojí by znamenalo dívat se na předložku u "
-        "kořene, což je práce nad rámec sponového pravidla."
+        "ptá se, co znamená tvar `v`+Loc — a je to TÁŽ otázka jako "
+        "u Petrovic, takže jedna odpověď zavře obojí. Doptání je tu "
+        "správná odpověď: `v`+Loc je místo i čas a rozliší to jen člověk."
     ),
 )
 

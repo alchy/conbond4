@@ -1,8 +1,126 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — N‑2 je uzavřená celá
+## Status: 🟢 APPROVE — druhý akceptační dialog prochází
 
-**Kolo #48.** 685 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #49.** 697 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **48/48**, živá parita **16/16**. **N‑3 ověřeno mnou** — dialog
+*Petrovice* prochází celý a oba mé counterexamply drží.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+**Gate *Petrovice* — a verdikt je PODMÍNKA, ne próza:**
+
+```
+» Roník bydlí v Petrovicích.   ✓ bydlet(kde:Petrovice, kdo:∀roník)   [s0001]
+     Petrovicích → Petrovice (sort z role; místo)
+» Micka bydlí v Petrovicích.   ✓ zapsáno [s0005]
+» Bydlí Micka v Petrovicích?   answers='A'   ← podmínka v datech, ověřeno
+   roles: (('v+Loc', 'kde'),)                ← rozhodnutí domény, ne vlastnost češtiny
+```
+
+Bez potvrzené role se věta **ptá** a nezapisuje — ověřeno zvlášť.
+
+**Moje counterexamply:**
+
+```
+» Petr jel v pondělí do Prahy.   jet(kam:Praha, kdo:·Petr, kdy:pondělí)   neptá se ✓
+» Petr byl v pondělí v Praze.    obě určení přečtena, kdy:pondělí         ✓
+```
+
+`v`+Acc → `kdy` se **neuvolnilo**.
+
+**Regrese celá** včetně G‑3 recallu a zákazu eliminace `OR`; gate
+*Farmaka* `N`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Nález kola: dvě hypotézy nedělaly volbu, dělaly neřešitelnost
+
+Builderova diagnóza je ostřejší než moje zadání a stojí za zapsání:
+
+> Dvě hypotézy v seedu (`v+Loc→kde`, `v+Loc→kdy`) situaci **neřešily, ony
+> ji dělaly NEŘEŠITELNOU**. I kdyby člověk odpověděl, kandidáti by byli
+> pořád dva a tvar by zůstal dvojznačný navždy.
+
+Odstranění ze seedu tedy **nebylo zjednodušení**, ale **podmínka toho, aby
+odpověď vůbec mohla něco rozhodnout**. Zadal jsem to jako „nedávat do
+seedu, ať se zeptá"; on našel důvod, proč to jinak nejde.
+
+**A druhý mezikrok, který si přiznal:** otázka se nejdřív četla **ze
+stopy**, takže se ptal na roli `Gen`, kterou jádrová relace mezitím
+spotřebovala jako stranu `subset`. **Stopa je log** — nese i to, co
+pozdější patro vyřešilo. Otázka se musí počítat z **hotové predikace**.
+Zachytila to zlatá sada, ne úsudek.
+
+---
+
+## Semantic Warnings
+
+**W‑25 · nové pole `Step.limit` — schvaluji a je to oprava asymetrie.**
+`Golden` pole `limit` měl, `Step` ne, takže **v dialozích se meze nedaly
+zapsat**. `Roník` jako obecné jméno je přiznaná mez (znalost světa, ne
+morfologie) a doména na ní nestojí — mluví se o témže uzlu v obou větách.
+Zapsat ji je správné; kdyby chyběla, tvářilo by se v pořádku všechno.
+
+---
+
+## Stav akceptačních dialogů
+
+| doména | stav |
+|---|---|
+| **Farmaka** | 🟢 prochází, `N` z doloženého popření |
+| **Petrovice** | 🟢 prochází, `A` doloženo |
+| Jana a zmrzlina | 🟡 `member` hotový; `rády` jako `iobj` blokuje druhou větu |
+| Doprava | 🟡 A1 se ptá a dočte; zbytek neověřen |
+| Čas a prostor | 🟡 `co:Praha` × `kde:Praha` ve sponových lokativech |
+
+---
+
+## Jeden další směr: `co:Praha` × `kde:Praha` ve sponových lokativech
+
+**Fakt změřený mnou:** `Petr byl v pondělí v Praze.` →
+`být(co:Praha, kdo:·Petr, kdy:pondělí)`. `Praha` dostane roli **`co`**,
+tedy jmennou část přísudku — ne `kde`.
+
+**Kořenová příčina:** UD dělá `Praze` kořenem a `byl` sponou, takže
+sponové pravidlo vezme jmennou část jako `co`. U *„Auto je prostředek"*
+je to správně, u předložkového určení místa ne.
+
+**Proč právě tohle:** je to poslední položka, která **blokuje akceptační
+dialog** (*Čas a prostor*). Zbylé otevřené věci — přivlastnění, `rády`
+jako `iobj`, `Postřižiny`, `Roník` — jsou buď **jiná vrstva**, nebo
+**meze parseru a znalosti světa**, tedy ne nesplněné scénáře.
+
+**Nejmenší bezpečná změna:** když má sponový kořen u sebe **předložku**
+(`case`), není to jmenná část — je to okolnost a má dostat povrchovou
+roli, tedy `v+Loc`, a projít **týmž doptáním** jako Petrovice. Žádné
+nové pravidlo o významu; jen se nepřevezme jmenná část tam, kde ji
+předložka vylučuje.
+
+**Counterexample, který musí projít:** (a) `Auto je dopravní prostředek.`
+a `Jana je učitelka.` **beze změny** — tam předložka není a jmenná část
+je správně; (b) `Vrabec není savec.` → `disjoint` beze změny; (c) gate
+*Farmaka* i *Petrovice* a parita 16/16.
+
+**Očekávaný výsledek:** `Petr byl v pondělí v Praze.` → `v+Loc:Praha`
+s doptáním, po odpovědi `kde:Praha`; dialog *Čas a prostor* projde celý;
+plná regrese.
+
+---
+
+## Archiv — kolo #48 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #48. 685 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **47/47**, živá parita **16/16**. **N‑2d ověřeno mnou** — oba mé
 counterexamply prošly a Builder si sám našel vadu, kterou jsem nezadal
 a která by byla vážná.

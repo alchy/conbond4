@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from core_semantics.cascade import (
     HARD_TIERS,
+    role_question,
+    surface_roles,
     ROLE_OBJECT,
     ROLE_SUBJECT,
     agreement_tier,
@@ -386,3 +388,77 @@ def test_hard_tiers_run_morphology_before_anything_statistical() -> None:
     """§ 5.2: statistika je až za tvrdými filtry, protože dialogový objem
     anotací jsou desítky, ne tisíce."""
     assert HARD_TIERS == (agreement_tier, case_tier, negation_tier)
+
+
+# --------------------------------------------------------------------------
+# Předložka vylučuje jmennou část — N‑4
+# --------------------------------------------------------------------------
+#
+# „Petr byl v Praze." má v UD kořen `Praze` a sponu `byl`, takže sponové
+# pravidlo dělalo z Prahy jmennou část přísudku: `co:Praha`, tedy „Petr
+# BYL Prahou". Předložka u kořene je tvrdý strukturní signál, že jmenná
+# část to není — „být prostředek" ji nemá, „být v Praze" ji má vždycky.
+#
+# Není to nové pravidlo o významu: role zůstane POVRCHOVÁ (`v+Loc`) a co
+# znamená, se učí odpovědí. Jen se nepřevezme jmenná část tam, kde ji
+# stavba vylučuje.
+
+
+def _copula_with_preposition() -> Reading:
+    return _reading(
+        _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Number="Sing"),
+        _token(2, "byl", "být", "AUX", 4, "cop", Number="Sing", Polarity="Pos"),
+        _token(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        _token(4, "Praze", "Praha", "PROPN", 0, "root", Case="Loc", NameType="Geo", Number="Sing"),
+    )
+
+
+def _copula_without_preposition() -> Reading:
+    return _reading(
+        _token(1, "Auto", "auto", "NOUN", 3, "nsubj", Case="Nom", Number="Sing"),
+        _token(2, "je", "být", "AUX", 3, "cop", Number="Sing", Polarity="Pos"),
+        _token(3, "prostředek", "prostředek", "NOUN", 0, "root", Case="Nom", Number="Sing"),
+    )
+
+
+def _roles_of(reading: Reading) -> list[str]:
+    verdict = cascade(reading)
+    assert verdict.decided is not None
+    return [r.name for r in verdict.decided.predication.roles]
+
+
+def test_a_preposition_at_the_root_means_it_is_not_the_nominal_predicate() -> None:
+    """JÁDRO N‑4. „Petr BYL Prahou" je nesmysl, který se tvářil jako čtení."""
+    roles = _roles_of(_copula_with_preposition())
+    assert "v+Loc" in roles
+    assert "co" not in roles
+
+
+def test_the_role_stays_surface_and_is_asked_about() -> None:
+    """Nepřevzít jmennou část NENÍ totéž co vědět, o co jde. `v+Loc` je
+    místo i čas — rozhodnout to tady by byla táž tichá volba, jen o patro
+    jinde."""
+    verdict = cascade(_copula_with_preposition())
+    assert verdict.decided is not None
+    assert surface_roles(verdict.decided.predication) == ("v+Loc",)
+    assert role_question(verdict.decided.predication) is not None
+
+
+def test_a_nominal_predicate_without_a_preposition_is_untouched() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (a). Tam, kde předložka NENÍ, je jmenná
+    část správně — a „Auto je dopravní prostředek" na ní stojí."""
+    roles = _roles_of(_copula_without_preposition())
+    assert "co" in roles
+    assert not any("+" in name for name in roles)
+
+
+def test_the_answer_turns_the_shape_into_a_place() -> None:
+    """A po odpovědi je to `kde`, takže se fillér zakotví jako `Place`
+    (§ 3.6) — sort z ROLE, ne ze slova."""
+    lexicon = czech_seed()
+    lexicon.teach_role("v+Loc", "kde", learned_from="test")
+    verdict = cascade(
+        _copula_with_preposition(), tiers=(*HARD_TIERS, role_mapping_tier(lexicon))
+    )
+    assert verdict.decided is not None
+    assert "kde" in [r.name for r in verdict.decided.predication.roles]
