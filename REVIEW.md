@@ -1,8 +1,134 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — A‑24 je celé, včetně zbytku
+## Status: 🟢 APPROVE — A‑21 hotové, kruh mezi bází a jazykem zrušen
 
-**Kolo #42.** 616 testů zelených, `mypy --strict` čistý na 54 souborech,
+**Kolo #43.** 631 testů zelených, `mypy --strict` čistý na 55 souborech,
+doložky **46/46**. **A‑21 ověřeno mnou** — odporující čtení už nemizí,
+můj counterexample se nezměnil, a tvrdé odmítání zůstalo u typové chyby.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+**Můj counterexample — beze změny, jak jsem požadoval:**
+
+```
+báze: ¬mít(kdo:Filip, co:∃auto)
+» Filip má auto.        ✓ zapsáno [s0002]      question: None
+» Má Filip auto?        → CONFLICT             doloženo: s0001, s0002
+```
+
+Věta, jejíž **všechna** čtení odporují bázi, se pořád přečte, **zapíše**,
+neptá se — a otázka dá `CONFLICT` s **oběma** důkazy. Klesnout na konec
+není proti komu.
+
+**Nové chování tam, kde má být:**
+
+```
+» Vidí Petr Pavla?   (obě jména Nom, morfologie nerozhodne)
+  [POZOR: rozpor s bází — … čtení se NEODSTRAŇUJE, jen klesá — zapsaný
+   fakt může být chybný a tiše umlčet správné čtení] → zbývá 2
+  ? Čtu to jako: vidět(co:·Petr, kdo:·Pavel) / vidět(co:·Pavel, kdo:·Petr)
+    — které z toho?
+```
+
+Odporující čtení **zůstalo v sadě** a systém nabízí obě. Přesně to zadání.
+
+**Síla důvodu je TYP, ne formulace** — ověřeno voláním:
+`SORT.hard = True`, `CONTRADICTED.hard = False`. Typová chyba tvrdě
+odstraňuje dál, takže A‑21 nešlo příliš daleko.
+
+**Regrese celá:** stálá sada zelená, gate Farmaka `N`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑19 · rozšíření rozsahu, které SCHVALUJI a nevyčleňuji.** Builder
+opravil `session.py`: u nerozhodnutého čtení se otázka vypisovala do
+`lines`, ale `TurnResult.question` zůstávalo `None`. Ohlásil to zvlášť
+a nabídl vyčlenění.
+
+**Nevyčleňovat.** Bez té opravy by A‑21 platilo jen v próze vypsaných
+řádků, ne v datech — odběratel čtoucí `result.question` by u věty, kde se
+systém ptá nejvíc, četl „systém se neptá". Je to **podmínka měřitelnosti
+téže změny**, ne cizí práce. A vejde se do pravidla „nejmenší bezpečná
+změna", protože leží v téže rozhodovací cestě.
+
+---
+
+## Jeden další směr: N‑2 — jádrové relace ze stavby věty
+
+**Aktuální gate:** *Farmaka* prochází. Ostatní domény **neprocházejí
+česky**, a všechny na téže věci.
+
+**Problém (fakt změřený v kole #38):**
+
+```
+» Amoxicilin je druh penicilinu.  →  být(Gen:penicilin, co:·druh, kdo:∀amoxicilin)
+                                     a NIKDY ne subset(amoxicilin, penicilin)
+```
+
+**Kořenová příčina:** chybí patro, které z konstrukce navrhne **jádrovou
+relaci**. `Operation.SUBSET`, `MEMBER` i `DISJOINT` v menu **jsou**;
+nikdo je neplní ze stavby věty.
+
+**Dotčená smlouva:** žádná se neporušuje — je to **chybějící schopnost**,
+ne vada. Právě proto to je až teď: nejdřív se opravovalo, co bylo rozbité.
+
+**Nejmenší bezpečná změna:** patro **za** mapováním rolí, návrh →
+potvrzení, nikdy tiše, přesně jako kvantifikátory. Jednoznačné spouštěče
+smí být v seedu (`X je druh Y` → `subset`), dvojznačná holá spona
+(`NOUN je NOUN` → `member` × `subset`) **se ptá**.
+
+**Riziko směru:** patro navrhuje **jádrové** atomy, takže chyba tu váží
+víc než u obyčejného predikátu — špatně navržený `subset` změní uzávěr
+celé báze.
+
+**Counterexample, který musí projít:** `disjoint` se **nezapisuje přes
+`attach`** (B‑10). Patro musí navrhnout tah, který jde dveřmi
+`add_disjoint`; jinak dostane `AttachError`, a ta zábrana je tam správně.
+Druhý: `Jana je učitelka.` dnes prochází jako `být(co:·učitelka,
+kdo:·Jana)` a zapisuje se — po změně se **nesmí tiše** stát `member`, ta
+věta musí buď zůstat, jak je, nebo se zeptat.
+
+**Očekávaný výsledek:** `Amoxicilin je druh penicilinu.` → návrh
+`subset(amoxicilin, penicilin)`, po potvrzení zapsáno jako jádrová
+relace; `Vrabec není savec.` → návrh `disjoint` **správnými dveřmi**;
+holá spona se ptá; plná regrese včetně gate Farmaka.
+
+---
+
+## Potvrzení
+
+**„Tohle čtení neodpovídá tomu, co mám zapsané, NENÍ totéž co tohle čtení
+je špatně"** — to je věta, na které A‑21 stojí, a je formulovaná přesně.
+
+**Typ místo řetězce je správné rozhodnutí a tvůj důvod je lepší než
+pohodlí:** kdyby si patro četlo sílu důvodu z české hlášky, byla by to
+heuristika tam, kde patří typ, a příští přepis hlášky by ji tiše otočil.
+
+**Kontrolní test `test_without_the_denial_the_sentence_is_equally_undecided`
+je ta správná paranoia** — bez něj by sada mohla hlásit úspěch tam, kde se
+jen trefila do dvojznačnosti.
+
+**Rozhodnutí neverzovat jádro schvaluji.** `CORE-SEMANTICS` v hlavičce
+říká, že neřeší parsing; A‑21 je smlouva vrstvy V2. Nepřidat odstavec do
+jádra, aby změna vypadala větší, je správný druh zdrženlivosti.
+
+---
+
+## Archiv — kolo #42 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #42. 616 testů zelených, `mypy --strict` čistý na 54 souborech,
 doložky **45/45**, jádro 0.1.9. **G‑2 opraveno a ověřeno mnou** — chyba
 se přesunula na správnou fázi a můj protipříklad prošel v obou pořadích.
 

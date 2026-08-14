@@ -355,8 +355,74 @@ F2 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# Dialog G — jádrová relace ze stavby věty (N‑2)
+# --------------------------------------------------------------------------
+
+G1 = Golden(
+    dialogue="G",
+    text="Amoxicilin je druh penicilinu.",
+    tokens=(
+        tok(1, "Amoxicilin", "amoxicilin", "NOUN", 3, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "druh", "druh", "NOUN", 0, "root", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, "penicilinu", "penicilin", "NOUN", 3, "nmod", Animacy="Inan", Case="Gen", Gender="Masc", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="subset(sub:·amoxicilin, sup:·penicilin)",
+    notes=("cop:druh+Gen",),
+    point=(
+        "věta, kvůli které N‑2 vzniklo: dřív z ní bylo "
+        "být(Gen:penicilin, co:druh, kdo:amoxicilin) a nikdy subset, "
+        "takže kaskáda subset* neměla čeho se chytit"
+    ),
+)
+
+G2 = Golden(
+    dialogue="G",
+    text="Vrabec není savec.",
+    tokens=(
+        tok(1, "Vrabec", "vrabec", "NOUN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(2, "není", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "savec", "savec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="disjoint(a:·vrabec, b:·savec)",
+    notes=("cop:NOUN≠NOUN",),
+    point=(
+        "záporná spona mezi dvěma OBECNÝMI jmény je oddělenost tříd — "
+        "a zapisuje se `add_disjoint`em, protože s markerem musí vzniknout "
+        "i dvojice pravidel se silnou negací"
+    ),
+)
+
+G3 = Golden(
+    dialogue="G",
+    text="Kočka je savec.",
+    tokens=(
+        tok(1, "Kočka", "kočka", "NOUN", 3, "nsubj", Case="Nom", Gender="Fem", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "savec", "savec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="být(co:·savec, kdo:∀kočka)",
+    asks=(
+        "holá kladná spona je DVOJZNAČNÁ: „Kočka je savec“ je subset, "
+        "„Mourek je kočka“ member, a tvar je týž. Systém se proto ptá "
+        "a DO ODPOVĚDI NEZAPISUJE NIC: zapsat to teď jako obyčejný vztah "
+        "`být` a po odpovědi znovu jako `subset` by uložilo dva výroky "
+        "a ten první by nikdo neodvolal — táž vada jako u ztraceného "
+        "členu (N‑5), jen o jinou chybějící věc. Fixuje se tu OTÁZKA, "
+        "ne uhodnutá relace."
+    ),
+    point="dvojznačnost, kterou N‑2 schválně NEROZHODUJE za člověka",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
-CORPUS: tuple[Golden, ...] = (A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2)
+CORPUS: tuple[Golden, ...] = (
+    A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3,
+)
 
 
 def recordings() -> dict[str, Utterance]:

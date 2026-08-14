@@ -173,6 +173,30 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="J-6",
+        boundary=KERNEL_LEARNING,
+        promise=(
+            "jádrová relace se čte ze STAVBY věty, ale nikdy se nedosazuje "
+            "potichu: jednoznačná konstrukce se použije a zapíše do stopy, "
+            "dvojznačná se ZEPTÁ a do odpovědi se nezapisuje NIC. `disjoint` "
+            "jde `add_disjoint`em, ne `attach`em — jinak by se marker dostal "
+            "do indexu a neodvodilo by se z něj nic (N‑2)"
+        ),
+        anchor="core_semantics.cascade:relation_tier",
+        # Průchod je `.utter(`, ne `relation_tier`. Patro samo o sobě
+        # neříká nic o tom, co se doopravdy zapíše do báze — a právě to
+        # je na téhle doložce to podstatné.
+        entry=".utter(",
+        enforced_by=(
+            "test_the_subset_sentence_finally_says_subset",
+            "test_the_written_subset_actually_works_as_a_closure",
+            "test_the_negated_bare_copula_goes_through_the_right_door",
+            "test_the_bare_copula_asks_instead_of_guessing",
+            "test_nothing_is_written_while_the_relation_is_undecided",
+            "test_the_menu_is_closed",
+        ),
+    ),
+    Clause(
         id="J-3",
         boundary=KERNEL_LEARNING,
         promise=(

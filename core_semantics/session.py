@@ -47,6 +47,7 @@ from .ast import (
     Rule,
     SortError,
     Term,
+    Variable,
     atom,
     role,
     same_as_of,
@@ -67,6 +68,8 @@ from .cascade import (
     lost_role_tier,
     open_roles_question,
     quantifier_tier,
+    relation_question,
+    relation_tier,
     role_mapping_tier,
 )
 from .engine import Engine
@@ -190,6 +193,10 @@ class TurnKind(Enum):
     DECIDE_REFERENCE = "→="
     #: ODPOVĚĎ na otázku systému po JMÉNU ROLE ztraceného členu (N‑5).
     NAME_ROLE = "→@"
+    #: ODPOVĚĎ na otázku systému po tom, KTEROU JÁDROVOU RELACI stavba
+    #: věty tvrdí (N‑2). Vlastní druh tahu, protože se tím nenaučí, jak se
+    #: věta ČTE, ale co se z ní zapíše do JÁDRA — a to je jiná váha.
+    NAME_RELATION = "→⊆"
 
 
 @dataclass(frozen=True, slots=True)
@@ -289,11 +296,52 @@ def reads(
     )
 
 
+def _disjoint_pair(formula: Atom) -> tuple[GroupTerm, GroupTerm]:
+    """Operandy `disjoint` z atomu, který postavila V3.
+
+    Sort se kontroluje, i když ho `disjoint_of` vyrobil právě před chvílí:
+    kdyby se sem někdy dostal jiný atom, tichý `cast` by ho pustil dál
+    a spadlo by to o vrstvu níž, kde už nebude vidět, odkud přišel.
+    """
+    sides = {r.name: r.target for r in formula.roles}
+    first, second = sides.get("a"), sides.get("b")
+    if not isinstance(first, (Group, Variable)) or not isinstance(
+        second, (Group, Variable)
+    ):
+        raise SortError(
+            f"{formula}: oddělenost se tvrdí o SKUPINÁCH; role `a`/`b` "
+            f"nesou {first!r} a {second!r}"
+        )
+    return first, second
+
+
 def declares_disjoint(text: str, first: GroupTerm, second: GroupTerm) -> Turn:
     """„Žádný stroj není člověk." Vlastní druh tahu, protože se neukládá
     jeden atom, ale marker plus derivační expanze na dvě pravidla se
     silnou negací (§ 5.3)."""
     return Turn(TurnKind.DISJOINT, text, pair=(first, second))
+
+
+def names_relation(
+    text: str, reading: Reading, shape: str, operation: Operation
+) -> Turn:
+    """ODPOVĚĎ na otázku „co ta stavba tvrdí?" (N‑2).
+
+    Táž smyčka jako u kvantifikátoru a ztracené role: **zeptat se →
+    odpověď jako TAH → naučit TVAR → přečíst větu ZNOVU.** Učí se
+    konstrukce (`cop:NOUN=NOUN`), ne věta, takže jedna odpověď zavře
+    celou třídu vět.
+
+    Nabídka je uzavřená (`RELATIONAL`) — dialog nesmí vyrobit relaci,
+    kterou jádro nezná (I‑15).
+    """
+    return Turn(
+        TurnKind.NAME_RELATION,
+        text,
+        reading=reading,
+        shape_name=shape,
+        operation=operation,
+    )
 
 
 def answers_quantifier(
@@ -443,6 +491,12 @@ class Session:
             *HARD_TIERS,
             lexicon_tier(self.lexicon),
             role_mapping_tier(self.lexicon),
+            # Jádrová relace ze stavby (N‑2) PŘED kvantifikátorem: relace
+            # své role přejmenuje na jádrové a označí je jako třídy, takže
+            # kvantifikátor už na nich nemá co řešit. V opačném pořadí by
+            # se člověk nejdřív doptal na kvantifikátor role `co`, a ta by
+            # vzápětí přestala existovat.
+            relation_tier(self.lexicon),
             # Doplnění ztracené role PŘED kvantifikátorem: role, která
             # teprve vznikne, se musí stihnout zkvantifikovat jako každá
             # jiná — jinak by odpověď zavřela jednu otázku a hned otevřela
@@ -485,6 +539,7 @@ class Session:
             TurnKind.ANSWER_QUANTIFIER: self._answer_quantifier,
             TurnKind.DECIDE_REFERENCE: self._decide_reference,
             TurnKind.NAME_ROLE: self._name_role,
+            TurnKind.NAME_RELATION: self._name_relation,
             TurnKind.REVOKE: self._revoke,
             TurnKind.QUESTION: self._question,
             TurnKind.BOUND: self._bound,
@@ -768,6 +823,11 @@ class Session:
             for part in (
                 open_roles_question(predication.open_roles()),
                 lost_question(turn.lost),
+                # Otázka na to, co stavba tvrdí (N‑2). Čte se ze STOPY,
+                # protože v predikaci po sobě nerozhodnutá relace nic
+                # nenechá — čtení zůstane obyčejným vztahem a nedalo by
+                # se z něj poznat, že o něm systém pochybuje.
+                relation_question(turn.trace),
             )
             if part
         ) or None
@@ -793,8 +853,17 @@ class Session:
         # odpovědi znovu by uložilo DVA výroky — nejdřív oseknutý, pak
         # celý — a ten první by nikdo neodvolal. Čeká se na doplnění;
         # věta se má dokončit, ne oseknout.
+        #
+        # TÝŽ DŮVOD U NEROZHODNUTÉ JÁDROVÉ RELACE (N‑2). Věta, u které se
+        # systém ptá, co ta stavba tvrdí, by se zapsala jako obyčejný
+        # vztah `být` — a kdyby člověk vzápětí odpověděl `subset`, ležely
+        # by v bázi OBA výroky a ten první by nikdo neodvolal. Je to táž
+        # vada jako u ztraceného členu, jen o jinou chybějící věc.
+        pending_relation = relation_question(turn.trace) is not None
         routed = (
-            None if turn.lost else self._route(index, turn, predication, grounded)
+            None
+            if turn.lost or pending_relation
+            else self._route(index, turn, predication, grounded)
         )
         if routed is None:
             if grounded.formula is None and not question:
@@ -848,6 +917,16 @@ class Session:
         if predication.mood is Mood.QUESTION:
             return self._question(index, asks(turn.text, grounded.formula))
         if predication.mood is Mood.ASSERTION:
+            if predication.relation is Operation.DISJOINT:
+                # SPRÁVNÝMI DVEŘMI (N‑2). Oddělenost se nezapisuje přes
+                # `attach`: s markerem musí vzniknout i dvojice pravidel
+                # se silnou negací, jinak by se `disjoint` do indexu dostal
+                # a NEODVODILO by se z něj nic. `attach` to odmítá — a to
+                # odmítnutí je správně, takže se nemá obcházet, ale použít
+                # ty dveře, na které ukazuje.
+                return self._declare_disjoint(
+                    index, declares_disjoint(turn.text, *_disjoint_pair(grounded.formula))
+                )
             return self._assert(index, says(turn.text, grounded.formula))
         # `Mood.UNKNOWN` — nálada se nepoznala. Hádat mezi „zapiš to"
         # a „odpověz na to" je ta nejhorší tichá volba, jakou tenhle
@@ -948,6 +1027,35 @@ class Session:
         prefix = [
             f"✓ naučeno  {mapping}",
             f"  (platí pro každý tvar {turn.shape_name}, ne jen pro tuhle větu)",
+        ]
+        if verdict.decided is None:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(*prefix, "→ větu se ani tak přečíst nepodařilo"),
+                trace=verdict.trace,
+            )
+        return self._settle(index, turn, verdict.decided.predication, prefix)
+
+    def _name_relation(self, index: int, turn: Turn) -> TurnResult:
+        """`→⊆` — člověk řekl, co ta stavba tvrdí, a věta se čte znovu."""
+        assert turn.reading is not None and turn.operation is not None
+        try:
+            mapping = self.lexicon.teach_relation(
+                turn.shape_name, turn.operation, learned_from=f"tah {index}"
+            )
+        except ValueError as exc:
+            # Odpověď mimo uzavřené menu. Selhat má TAH, ne čtení: člověk
+            # nabídl relaci, kterou jádro nezná, a má to slyšet hned.
+            return TurnResult(
+                index=index, turn=turn, lines=(f"✗ nenaučeno: {exc}",), error=str(exc)
+            )
+        verdict = cascade(
+            turn.reading, mood=_mood_of(turn.text), tiers=self.tiers()
+        )
+        prefix = [
+            f"✓ naučeno  {mapping}",
+            f"  (platí pro každou stavbu {turn.shape_name}, ne jen pro tuhle větu)",
         ]
         if verdict.decided is None:
             return TurnResult(

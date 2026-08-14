@@ -130,6 +130,11 @@ class Predication:
     #: je doložené tvrzení o tučňácích, ne přiznání, že o nich nic nevíme —
     #: a splynout to nesmí (I‑21).
     negated: bool = False
+    #: JÁDROVÁ RELACE, kterou konstrukce tvrdí (N‑2) — `None` znamená
+    #: „obyčejný vztah, reifikuje se". Není to jen jiné jméno predikátu:
+    #: `subset` mění UZÁVĚR báze, kdežto vztah `být` je fakt jako každý
+    #: jiný. Proto se sem nikdy nedosazuje potichu.
+    relation: Operation | None = None
 
     def __post_init__(self) -> None:
         names = [r.name for r in self.roles]
@@ -906,6 +911,227 @@ def lost_role_tier(lexicon: Lexicon) -> Tier:
         return tuple(out), "; ".join(notes) if notes else None
 
     return tier
+
+
+#: Lemma spony. Konstrukce se pozná podle NÍ, ne podle seznamu sloves.
+COPULA_LEMMA = "být"
+
+#: Role, ze kterých se skládá jádrová relace navržená konstrukcí, podle
+#: operace: `(levá, pravá)`. Jména jsou jádrová (§ 5.1), takže se z nich
+#: dá postavit atom bez dalšího překladu.
+RELATION_ROLES: dict[Operation, tuple[str, str]] = {
+    Operation.MEMBER: ("elem", "group"),
+    Operation.SUBSET: ("sub", "sup"),
+    Operation.DISJOINT: ("a", "b"),
+}
+
+
+def relation_shape(
+    predication: Predication, reading: Reading
+) -> tuple[str, str, str] | None:
+    """Tvar spony jako `(tvar, levá role, pravá role)` — nebo `None`.
+
+    Vrací se **tvar**, ne rovnou operace. Co ten tvar znamená, je naučené
+    a odvolatelné tvrzení v lexikonu; kdyby to rozhodovala tahle funkce,
+    byl by v interpretu schovaný seznam významů českých konstrukcí — táž
+    vada, kvůli které se okolnosti pojmenovávají povrchově (INV‑11).
+
+    Rozeznávají se dvě rodiny:
+
+    * **s lexikálním markerem** — „X je DRUH Y": jmenná část je slovo,
+      které samo mluví o třídách, a pravá strana relace je jeho přívlastek
+      v genitivu. Tvar nese lemma markeru, protože právě to slovo tu nese
+      význam;
+    * **holá spona** — „X je Y" / „X není Y": tvar nese slovní druhy obou
+      stran a polaritu, protože na nich to celé visí. `Mourek je kočka`
+      (PROPN) a `Kočka je savec` (NOUN) jsou různé relace.
+
+    **Vlastní jméno v podmětu se schválně NEROZEZNÁVÁ.** `member` by tam
+    byl významově správnější než dnešní reifikovaný `být`, ale ta věta
+    dnes prochází celým akceptačním dialogem („Jana je učitelka." →
+    „Je Jana učitelka?" → `A`) a přepsat ji potichu na jinou relaci by
+    znamenalo změnit význam scénáře, který drží. Je to **evidovaná mez**,
+    ne tvrzení, že `být(co:·učitelka, kdo:Jana)` je ten správný zápis.
+    """
+    if predication.predicate != COPULA_LEMMA:
+        return None
+    subject = predication.reading(ROLE_SUBJECT)
+    complement = predication.reading(ROLE_OBJECT)
+    if subject is None or complement is None:
+        return None
+
+    genitive = [
+        role
+        for role in predication.roles
+        if role is not subject
+        and role is not complement
+        and role.mention.feat("Case") == "Gen"
+    ]
+    if len(genitive) == 1:
+        # „X je druh Y" — pravá strana je přívlastek, ne jmenná část.
+        return (
+            f"cop:{complement.mention.lemma}+Gen",
+            subject.name,
+            genitive[0].name,
+        )
+    if len(predication.roles) != 2:
+        # Tři a víc členů bez genitivu: konstrukce, kterou tenhle popis
+        # nepokrývá. Mlčet je tu správně — navrhnout relaci z něčeho, čemu
+        # nerozumím, by bylo horší než nenavrhnout nic.
+        return None
+    if complement.mention.upos != "NOUN":
+        # JMENNÝ přísudek, ne jakýkoli. „To auto je modré." je VLASTNOST,
+        # ne vztah tříd — ptát se u ní na členství nebo podmnožinu je
+        # otázka bez odběratele, ať člověk odpoví cokoli.
+        return None
+    if subject.mention.upos != "NOUN":
+        # Vlastní jméno v podmětu je evidovaná mez, ne přehlédnutí — viz
+        # docstring. Ta věta dnes prochází celým akceptačním dialogem
+        # a i pouhé DOPTÁNÍ by z ní udělalo nedořečený tah tam, kde dnes
+        # odpovídá.
+        return None
+    link = "≠" if predication.negated else "="
+    shape = f"cop:{subject.mention.upos}{link}{complement.mention.upos}"
+    return (shape, subject.name, complement.name)
+
+
+def relation_tier(lexicon: Lexicon) -> Tier:
+    """Jádrová relace ze STAVBY věty — N‑2. Řadí se **za** mapování rolí.
+
+    **Problém.** „Amoxicilin je druh penicilinu." se přečetlo jako
+    `být(Gen:penicilin, co:druh, kdo:amoxicilin)` a nikdy jako `subset`.
+    Operace `MEMBER`/`SUBSET`/`DISJOINT` v menu byly, ale nikdo je ze
+    stavby věty neplnil — chybělo patro, které konstrukci rozpozná.
+    Doména kontraindikace na tom stojí celá: bez `subset` se kaskáda
+    `subset*` nemá čeho chytit.
+
+    **Návrh, ne dosazení.** Tohle patro váží víc než ostatní, a proto je
+    opatrnější: ostatní vzory mění, jak se věta ČTE, tenhle mění, co se
+    z ní zapíše do JÁDRA. Špatně navržený `subset` změní uzávěr celé báze
+    a projeví se to na odpovědích, které s tou větou nemají nic
+    společného. Rozhoduje se proto stejně jako u kvantifikátoru:
+
+    * právě jeden aktivní vzor na daný tvar → **dosadí se** a je to ve stopě;
+    * víc vzorů nebo žádný → **nedosadí se nic**, tvar se ohlásí a čeká se
+      na odpověď člověka.
+
+    Holá kladná spona je ten druhý případ a je to jádro věci: „Kočka je
+    savec" je `subset`, „Mourek je kočka" je `member`, a tvar je týž.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        decided: list[Candidate] = []
+        for candidate in candidates:
+            proposed, note = _propose_relation(candidate.predication, reading, lexicon)
+            if note:
+                notes.append(note)
+            decided.append(Candidate(proposed, origin=candidate.origin))
+        return tuple(decided), "; ".join(notes) if notes else None
+
+    return tier
+
+
+def _propose_relation(
+    predication: Predication, reading: Reading, lexicon: Lexicon
+) -> tuple[Predication, str | None]:
+    if predication.relation is not None:
+        return predication, None  # už rozhodnuto (odpovědí člověka)
+    found = relation_shape(predication, reading)
+    if found is None:
+        return predication, None
+    shape, left, right = found
+    matches = lexicon.relation_candidates(shape)
+    if len(matches) > 1:
+        return predication, (
+            f"[POZOR: tvar {shape} připouští "
+            + " nebo ".join(m.operation.value for m in matches)
+            + f" — {RELATION_QUESTION_MARK}{shape}]"
+        )
+    if not matches:
+        return predication, (
+            f"[CHYBÍ: co ta stavba tvrdí — tvar {shape} "
+            f"{RELATION_QUESTION_MARK}{shape}]"
+        )
+    operation = matches[0].operation
+    return (
+        _as_relation(predication, operation, left, right),
+        f"[STAVBA: tvar {shape} → jádrová relace {operation.value}]",
+    )
+
+
+def _as_relation(
+    predication: Predication, operation: Operation, left: str, right: str
+) -> Predication:
+    """Přepíše čtení na jádrovou relaci s JÁDROVÝMI jmény rolí.
+
+    Přejmenování je podstatné: `subset(sub:…, sup:…)` se dá zakotvit
+    přímo konstruktorem jádra, kdežto `subset(kdo:…, co:…)` by musel někdo
+    o vrstvu níž překládat — a ten překlad by byl druhé místo, kde se
+    rozhoduje, která strana je která.
+
+    **Negace se nezahazuje, ale ani nepřenáší.** `disjoint` sám nese, že
+    se třídy nepřekrývají; ponechat na něm `negated=True` by znamenalo
+    tvrdit `¬disjoint`, tedy pravý opak toho, co člověk řekl.
+
+    **Kvantifikátor je `·` a není to dohad.** Argumenty jádrové relace jsou
+    TY TŘÍDY SAMY — `subset(amoxicilin, penicilin)` mluví o dvou skupinách,
+    ne o jejich členech, a jádrové konstruktory to tak i vyžadují. Ptát se
+    tu „o každém, o některém, nebo o tom konkrétním?" by byla otázka bez
+    odběratele: ať člověk odpoví cokoli, atom by vypadal stejně.
+    """
+    left_role, right_role = RELATION_ROLES[operation]
+    by_name = {role.name: role for role in predication.roles}
+
+    def as_class(role: RoleReading, name: str) -> RoleReading:
+        return replace(
+            role,
+            name=name,
+            quantifier=Quantifier.SELF,
+            pending=None,
+            awaiting="",
+            source=f"jádrová relace {operation.value}",
+        )
+
+    return Predication(
+        predicate=operation.value,
+        roles=tuple(
+            sorted(
+                (
+                    as_class(by_name[left], left_role),
+                    as_class(by_name[right], right_role),
+                ),
+                key=lambda r: r.name,
+            )
+        ),
+        mood=predication.mood,
+        negated=False,
+        relation=operation,
+    )
+
+
+#: Značka doptání na relaci ve stopě. Konstanta, protože ji píše kaskáda
+#: a čte `Session` — poznávat vlastní hlášku podle uhodnutého prefixu je
+#: přesně ta křehkost, kvůli které existují ostatní značky.
+RELATION_QUESTION_MARK = "?stavba="
+
+
+def relation_question(trace: Sequence[str]) -> str | None:
+    """Otázka na to, co konstrukce tvrdí — nebo `None`."""
+    for step in trace:
+        if RELATION_QUESTION_MARK in step:
+            # Po značce následuje tvar a pak `]`, za kterým už kaskáda
+            # připsala svoje „→ zbývá N". Číst do konce řádku by do otázky
+            # vtáhlo cizí text.
+            shape = step.split(RELATION_QUESTION_MARK, 1)[1].split("]", 1)[0]
+            return (
+                f"Co ta věta tvrdí o vztahu těch dvou? Tvar je {shape} — "
+                f"členství (member), podmnožina (subset), nebo oddělenost "
+                f"skupin (disjoint)?"
+            )
+    return None
 
 
 def quantifier_tier(lexicon: Lexicon) -> Tier:

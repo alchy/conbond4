@@ -350,6 +350,70 @@ class RoleMapping:
         )
 
 
+#: Operace, které odpovídají na otázku „kterou JÁDROVOU RELACI ta věta
+#: tvrdí". Filtruje se tady ze stejného důvodu jako `QUANTIFYING`: spouštěč
+#: nemá vědět, na co se zrovna ptáme.
+RELATIONAL: frozenset["Operation"] = frozenset(
+    {Operation.MEMBER, Operation.SUBSET, Operation.DISJOINT}
+)
+
+
+@dataclass(frozen=True, slots=True)
+class RelationMapping:
+    """Konstrukce → jádrová relace — N‑2.
+
+    „Amoxicilin je druh penicilinu" tvrdí `subset`, ne vztah `být` se třemi
+    rolemi. Že to tvrdí, plyne ze **STAVBY věty**, a stavba se popisuje
+    tvarem (`cop:druh+Gen`), ne slovem — proto vlastní druh řádku programu,
+    stejně jako `RoleMapping`.
+
+    **Není to `LearnedPattern`.** Ten se spouští jedním TOKENEM a jeho
+    signatura je popis jednoho slova. Relaci ale nenese slovo, nese ji
+    konstrukce přes několik členů — spona, podmět, jmenná část, případně
+    přívlastek v genitivu. Nacpat to do `Trigger` by znamenalo přetížit
+    pole `upos` něčím, co upos není, a to je ten druh úspory, po které se
+    za měsíc nedá poznat, co která hodnota znamená.
+
+    **Váží víc než ostatní vzory a je poctivé to říct.** Ostatní naučené
+    vzory mění, jak se věta ČTE. Tenhle mění, co se z ní ZAPÍŠE do jádra:
+    špatně navržený `subset` změní uzávěr celé báze. Proto se navrhuje
+    a potvrzuje, nikdy nedosazuje potichu.
+    """
+
+    shape: str
+    operation: Operation
+    learned_from: str
+    status: PatternStatus = PatternStatus.HYPOTHESIS
+
+    def __post_init__(self) -> None:
+        if self.operation not in RELATIONAL:
+            # Bez téhle kontroly by šlo tvarem „naučit" cokoli z menu —
+            # třeba kvantifikátor — a patro by pak dosadilo operaci, se
+            # kterou neumí nic udělat. Selhat má zápis, ne čtení.
+            raise ValueError(
+                f"{self.operation.value!r} není jádrová relace; "
+                f"na výběr je {sorted(o.value for o in RELATIONAL)}"
+            )
+
+    @property
+    def active(self) -> bool:
+        return self.status in ACTIVE_STATUSES
+
+    def with_status(self, status: PatternStatus) -> "RelationMapping":
+        return RelationMapping(
+            self.shape, self.operation, self.learned_from, status
+        )
+
+    def key(self) -> str:
+        return f"{self.shape}=>{self.operation.value}"
+
+    def __str__(self) -> str:
+        return (
+            f"konstrukce {self.shape} ~ {self.operation.value} "
+            f"[{self.status.value}, {self.learned_from}]"
+        )
+
+
 class Lexicon:
     """Sbírka naučených vzorů. Žádný globální stav, všechno je to data."""
 
@@ -357,13 +421,17 @@ class Lexicon:
         self,
         patterns: Iterable[LearnedPattern] = (),
         roles: Iterable[RoleMapping] = (),
+        relations: Iterable[RelationMapping] = (),
     ) -> None:
         self._by_key: dict[str, LearnedPattern] = {}
         self._roles: dict[str, RoleMapping] = {}
+        self._relations: dict[str, RelationMapping] = {}
         for pattern in patterns:
             self.add(pattern)
         for mapping in roles:
             self.add_role(mapping)
+        for relation in relations:
+            self.add_relation(relation)
 
     def add(self, pattern: LearnedPattern) -> None:
         self._by_key[pattern.key()] = pattern
@@ -447,6 +515,40 @@ class Lexicon:
 
     def all_roles(self) -> tuple[RoleMapping, ...]:
         return tuple(sorted(self._roles.values(), key=lambda m: m.key()))
+
+    # -- konstrukce → jádrová relace (N‑2) ---------------------------------
+
+    def add_relation(self, mapping: RelationMapping) -> None:
+        self._relations[mapping.key()] = mapping
+
+    def teach_relation(
+        self, shape: str, operation: Operation, *, learned_from: str
+    ) -> RelationMapping:
+        mapping = RelationMapping(shape, operation, learned_from)
+        self.add_relation(mapping)
+        return mapping
+
+    def relation_candidates(self, shape: str) -> tuple[RelationMapping, ...]:
+        """**Kandidáti, ne jedno mapování** — přesně jako u kvantifikátoru.
+
+        Holá spona (`cop:NOUN=NOUN`) připouští `member` i `subset` a která
+        z nich platí, věta neříká: „Kočka je savec" je podmnožina, „Mourek
+        je kočka" členství, a tvar je týž. Vrátit obě a zeptat se je jediná
+        poctivá odpověď; vybrat tiše by změnilo, co se zapíše do JÁDRA.
+        """
+        found = [m for m in self._relations.values() if m.active and m.shape == shape]
+        return tuple(sorted(found, key=lambda m: m.key()))
+
+    def revoke_relation(self, key: str) -> RelationMapping | None:
+        mapping = self._relations.get(key)
+        if mapping is None:
+            return None
+        updated = mapping.with_status(PatternStatus.REVOKED)
+        self._relations[key] = updated
+        return updated
+
+    def all_relations(self) -> tuple[RelationMapping, ...]:
+        return tuple(sorted(self._relations.values(), key=lambda m: m.key()))
 
     def confirm(self, key: str) -> LearnedPattern | None:
         return self._set_status(key, PatternStatus.CONFIRMED)
@@ -559,6 +661,24 @@ _ROLE_SEED: tuple[tuple[str, str], ...] = (
 )
 
 
+#: Konstrukce, u kterých je jádrová relace JEDNOZNAČNÁ (N‑2).
+#:
+#: Je tu jen to, co jednoznačné doopravdy je. Holá kladná spona
+#: `cop:NOUN=NOUN` tu SCHVÁLNĚ NENÍ: „Kočka je savec" je `subset`, „Mourek
+#: je kočka" je `member`, tvar je týž a rozhodnout to za člověka by
+#: znamenalo měnit uzávěr báze podle dohadu. Ta se doptá.
+#:
+#: `cop:NOUN≠NOUN` — záporná spona mezi dvěma OBECNÝMI jmény — jednoznačná
+#: je: mluví se o dvou třídách a tvrdí se, že se nepřekrývají. U vlastního
+#: jména by to bylo něco jiného (`¬member` o jednom uzlu), a proto je
+#: v tvaru slovní druh podmětu.
+_RELATION_SEED: tuple[tuple[str, Operation], ...] = (
+    ("cop:druh+Gen", Operation.SUBSET),
+    ("cop:poddruh+Gen", Operation.SUBSET),
+    ("cop:NOUN≠NOUN", Operation.DISJOINT),
+)
+
+
 def czech_seed(*, learned_from: str = "seed") -> Lexicon:
     """Výchozí český lexikon — všechno jako hypotézy."""
     return Lexicon(
@@ -575,6 +695,12 @@ def czech_seed(*, learned_from: str = "seed") -> Lexicon:
                 surface=surface, canonical=canonical, learned_from=learned_from
             )
             for surface, canonical in _ROLE_SEED
+        ),
+        (
+            RelationMapping(
+                shape=shape, operation=operation, learned_from=learned_from
+            )
+            for shape, operation in _RELATION_SEED
         ),
     )
 
