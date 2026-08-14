@@ -813,6 +813,26 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-27",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "kvantifikátor jde rozhodnout PRO JEDNU VĚTU, a takový tah se "
+            "NIC NEUČÍ: týž tvar znamená v jedné větě `∀` a v druhé `∃` "
+            "(vegetarián nejí maso × Petr jedl steak), takže tvarová "
+            "odpověď by druhou větu přečetla špatně a nezeptala se. Tah na "
+            "TVAR zůstává — jsou to dvě různé otázky, ne náhrada (N‑8)"
+        ),
+        anchor="core_semantics.session:Session._answer_here",
+        entry="answers_here(",
+        enforced_by=(
+            "test_the_sentence_level_answer_closes_the_role",
+            "test_the_sentence_level_answer_teaches_nothing",
+            "test_the_shape_level_answer_still_teaches",
+            "test_answering_a_role_that_does_not_wait_is_refused",
+            "test_a_sentence_level_answer_does_not_leak_into_the_next_sentence",
+        ),
+    ),
+    Clause(
         id="S-25",
         boundary=SESSION_STORAGE,
         promise=(

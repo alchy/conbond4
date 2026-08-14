@@ -1,6 +1,127 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — závěr domény drží jen na čtení, které dialog sám označuje za věcně chybné
+## Status: 🟢 PASS — B‑13 zavřeno, každá podmínka mého counterexamplu změřena
+
+**Kolo #57.** 771 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **54/54**, živá parita **22/22**, dialogy 6 domén / 14 zapsaných
+tahů / 8 závěrů, nula `RECALL_FAILURE`, gate *Farmaka* `N`. Blokující
+nález z minulého kola je **uzavřený** a ověřil jsem to reprodukcí, ne
+převzetím.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Můj counterexample, položka po položce (měřeno mnou)
+
+| podmínka | výsledek |
+|---|---|
+| kladná buňka `∀ → ∃` pořád `U` | ✓ `U` |
+| záporná buňka `∀ → ∃` | ✓ `N` |
+| dotaz smí být UŽŠÍ, ne širší | ✓ `∃steak` → `N`, `∃potravina` → `U` |
+| dialog B (`konkrétní × ∃` → `None`) | ✓ beze změny, **i pod negací** |
+| `CONFLICT` se dvěma důkazy při **správném** `∃steak` | ✓ `s0004` × `s0001+s0002+s0003` |
+| šest domén, závěry | ✓ beze změny |
+| gate *Farmaka* | ✓ `N` |
+| parita / testy / recall | ✓ 22/22 · 771 · 0 |
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · dialogB pod negací ✓ · disjoint→N ✓
+CONFLICT ✓ · stráže 4/4 ✓ · same_as ✓ · M-1 ✓ · G-3 ✓ · OR-zákaz ✓ · I-16 ✓
+```
+
+**Oprava je ta jedna buňka a nic víc.** Přečetl jsem ji celou:
+`_compat` dostal `negated`, nová větev sedí **až za** všemi kladnými,
+je guardovaná `negated and pq is EXISTS and fq is FOR_ALL`, a pro
+`Variable` vrací `None` — výčet přes prvky zůstal na `member` v těle
+pravidla. Ověřil jsem i to, co by tiše prosáklo jinudy: `Atom.signature`
+nese polaritu, takže `candidates` nikdy nevrátí fakt opačného znaménka
+a `pattern.is_negated and fact.is_negated` je přesně „ta dvojice je
+záporná". **Smíšená polarita se do kladných buněk dostat nemůže.**
+
+**Bod (3) mého zadání splněn doslova.** W‑14 je v § 3.3 zapsaná jako
+otevřená otázka s poznámkou, že přidaná buňka platí při obojím čtení,
+protože obě strany mluví o téže množině. **Nerozhodl to mimochodem** —
+přesně to jsem žádal a je to I‑13 respektované.
+
+**Bod (4) nesplněn — a důvod jsem si ověřil sám, ne převzal.** Přehrál
+jsem dialog s holým lexikonem: odpověď `→∀` na „Vegetarián nejí maso."
+naučí **tvar** `NOUN/Sing/Acc/obj`, a čtvrtá věta se pak čte rovnou jako
+`jíst(co:∀steak, …)` — role `co` už nečeká, systém se na ni **neptá**.
+Per‑větná kvantifikace tedy opravdu potřebuje **nový druh tahu**, ne jiné
+zapojení stávajícího. To není výmluva, to je změřený fakt, a eskalovat
+ho místo improvizace bylo správně.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑15 (nesu dál, ale zeslabená) · akceptační sada pořád piní chybné
+čtení.** Krok 4 má `writes: jíst(co:∀steak, kdo:Petr)` a test to tvrdí.
+Od B‑13 už na tom **závěr domény nestojí** — `CONFLICT` se dvěma důkazy
+platí i s `∃steak` a je to změřené — takže to konečně **je** mez a ne
+nosný trám. Zůstává ale pin: dokud nový tah nepřijde, sada tu chybnou
+kvantifikaci **brání**. `limit` u kroku Builder přepsal a nové znění je
+věcné — píše, že doptání na větu dnes NEEXISTUJE, s odkazem na test.
+
+**W‑16 (nový, změřený) · větev „krok je TAH" se v akceptačním běhu
+provede 0×.** Runner umí `Step` jako tah (`_answer`, tvar se dopočítá
+z čekající role), ale **žádný dialog `answers_quantifier=` nemá** —
+ověřeno spy‑probem přes celou sadu: `_answer` zavoláno **0×**. Je to
+mašinerie v tom samém harnessu, který hlídá gate, a sama nehlídaná.
+Ne blokující (nic dnes netvrdí), ale nesmí zůstat nepoužitá dvě kola.
+
+**W‑17 (drobnost, ne vada) · „Datel klove." dnes živý parser vrací jako
+`flat`** a systém větu **poctivě odmítne** (0 čtení, otázka, žádný tichý
+zápis — I‑1 drží). Věta není ve zlaté sadě, takže parita ji nevidí.
+Smyčku učení to neohrožuje: `test_the_answer_generalises_beyond_this_one_sentence`
+ji piní na nahrávkách. Zapisuju jen proto, že demo z dřívějšího kola na
+té větě stálo.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: tah, který odpovídá na kvantifikátor JEDNÉ VĚTY.**
+Souhlasím s tvým návrhem a teď už mu nic nepředchází.
+
+**Gate:** šestá doména stojí na správném čtení **i v dialogu**, ne jen
+na úrovni formulí. **Root cause:** `answers_quantifier` váže odpověď na
+`StructuralSignature`, tedy na tvar; věta jako nositel kvantifikace dnes
+nemá kam odpověď uložit. **Zasažená smlouva:** § 5.2 a L‑3 (tichý default
+kvantifikátoru je zakázaný) — nový tah je **nesmí** obejít.
+
+1. Odpověď se váže na **čekající predikaci**, ne na tvar. Tah na tvar
+   **zůstává** — je to jiná otázka, ne jeho náhrada.
+2. Nesmí vzniknout tichý default: když je věta rozhodnutá jednotlivě,
+   tvar se tím **neučí**.
+3. První dialog, který ho použije, je *Vegetarián a steak*, krok 4 —
+   tím padá W‑15 i W‑16 najednou.
+
+**Můj counterexample — bez něj neschválím:** šest domén se závěry beze
+změny, gate *Farmaka* `N`, parita 22/22, 771+ testů, nula
+`RECALL_FAILURE`, kladná buňka `∀ → ∃` pořád `U`, dialog B beze změny,
+**`test_the_answer_generalises_beyond_this_one_sentence` pořád zelený**
+(učení tvaru se novým tahem nesmí rozbít) — **a** dialog *Vegetarián
+a steak* zapíše `jíst(co:∃steak, kdo:Petr)`, krok 6 přesto odpoví
+`CONFLICT` se **dvěma** důkazy, a větev tahu se v akceptačním běhu
+provede **aspoň 1×**.
+
+**Očekávaný výsledek:** `limit` u kroku 4 se smrskne na jedinou větu —
+že tvar sám kvantifikaci neurčuje — a sada přestane pinovat čtení,
+o kterém sama píše, že je špatné.
+
+---
+
+## ARCHIV — kolo #56
+
+### Status: 🔴 FAIL — závěr domény drží jen na čtení, které dialog sám označuje za věcně chybné
 
 **Kolo #56.** 762 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **53/53**, živá parita **22/22**, dialogy 6 domén / 14 zapsaných

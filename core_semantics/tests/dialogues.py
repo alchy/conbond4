@@ -89,10 +89,12 @@ class Step:
     #: čekající role, neopisuje se: opsaný tvar by se mohl rozejít s tím,
     #: na co se systém doopravdy ptal.
     #:
-    #: **Zatím to nestačí na per‑VĚTNOU kvantifikaci** a je poctivé to
-    #: říct tady: tah `→∀` učí TVAR, takže první odpověď zavře celou třídu
-    #: a druhá věta se už nezeptá. Mez je popsaná u dialogu Vegetarián.
     answers_quantifier: tuple[str, Operation] | None = None
+    #: `(jméno role, operace)` — krok je ODPOVĚĎ `→∀1` na tutéž otázku,
+    #: ale JEN PRO TU JEDNU VĚTU. Tvar se tím NEUČÍ, takže se další věta
+    #: téhož tvaru zeptá znovu — a přesně to čeština u některých tvarů
+    #: potřebuje (N‑8).
+    answers_here: tuple[str, Operation] | None = None
     #: Věc, která je na tomhle kroku VĚCNĚ ŠPATNĚ a ví se proč. Zapsaná
     #: mez není totéž co selhání: krok projde, ale nepředstírá se, že je
     #: v pořádku všechno.
@@ -556,9 +558,10 @@ VEGETARIAN = Dialogue(
     shapes=(
         PROPN_SUBJ,
         NOUN_SUBJ_SG,
-        # Předmět v akuzativu je tu ∀, ne ∃, a je to ROZHODNUTÍ domény,
-        # ne obecná pravda — viz mez u kroku 4.
-        ("NOUN", "Sing", "Acc", "obj", Operation.FOR_ALL),
+        # Předmět v akuzativu tu POTVRZENÝ TVAR NEMÁ, a je to jádro téhle
+        # domény: ve „Vegetarián nejí maso" je `∀`, v „Petr jedl steak"
+        # `∃`, a je to týž tvar. Rozhoduje se proto VĚTA PO VĚTĚ tahem
+        # `→∀1`, který se nic neučí (N‑8).
     ),
     steps=(
         Step(
@@ -581,8 +584,10 @@ VEGETARIAN = Dialogue(
                 w("maso", "maso", "NOUN", 2, "obj", Case="Acc", Gender="Neut", Number="Sing"),
                 w(".", ".", "PUNCT", 2, "punct"),
             ),
-            reads="¬jíst(co:∀maso, kdo:∀vegetarián)",
-            writes="¬jíst(co:∀maso, kdo:∀vegetarián)",
+            asks=(
+                "ptá se na kvantifikátor předmětu — potvrzený tvar tahle "
+                "doména nemá a mít nemůže, viz krok o dva dál"
+            ),
             point=(
                 "ODPOVĚĎ NA OTÁZKU, KVŮLI KTERÉ TENHLE DIALOG VZNIKL. "
                 "Vypadá to jako PRAVIDLO (kdo je vegetarián, nejí maso), "
@@ -591,6 +596,18 @@ VEGETARIAN = Dialogue(
                 "co dělá práci pravidla, je DISTRIBUCE KVANTIFIKOVANÝCH "
                 "ROLÍ (§ 5.2). Pravidlo z věty tedy NENÍ další patro, aspoň "
                 "ne kvůli tomuhle odstavci"
+            ),
+        ),
+        Step(
+            text="Jde o maso obecně.",
+            answers_here=("co", Operation.FOR_ALL),
+            reads="¬jíst(co:∀maso, kdo:∀vegetarián)",
+            writes="¬jíst(co:∀maso, kdo:∀vegetarián)",
+            point=(
+                "ODPOVĚĎ JE TAH, A PLATÍ JEN PRO TUHLE VĚTU. Generické "
+                "popření mluví o KAŽDÉM masu; bez `∀` by z něj bylo "
+                "„nějaké maso nejí“, což je mnohem slabší tvrzení, ze "
+                "kterého závěr domény neplyne"
             ),
         ),
         Step(
@@ -614,28 +631,27 @@ VEGETARIAN = Dialogue(
                 w("steak", "steak", "NOUN", 2, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
                 w(".", ".", "PUNCT", 2, "punct"),
             ),
-            reads="jíst(co:∀steak, kdo:·Petr)",
-            writes="jíst(co:∀steak, kdo:Petr)",
-            point=(
-                "věta, která rozpor způsobí — a systém ji ZAPÍŠE, i když "
-                "už při čtení hlásí, že odporuje bázi: stranu sporu si "
-                "nevybírá (I‑3)"
+            asks=(
+                "TÁŽ OTÁZKA JAKO O TŘI KROKY DŘÍV — a to je důkaz, že se "
+                "tvar předchozí odpovědí nenaučil. Kdyby ano, věta by se "
+                "přečetla jako `∀steak` a nikdo by se nezeptal"
             ),
-            limit=(
-                "`∀steak` JE VĚCNĚ ŠPATNĚ — Petr snědl JEDEN steak, ne "
-                "všechny. Potvrzený tvar `NOUN/Sing/Acc/obj → ∀` je "
-                "rozhodnutí domény a pro tuhle větu je chybné; pro "
-                "„Vegetarián nejí maso“ je naopak nutné. TÝŽ TVAR NESE "
-                "V TĚCHTO DVOU VĚTÁCH JINOU KVANTIFIKACI a `shapes` jsou "
-                "na doménu, ne na větu. Změřeno: s `obj → ∃` se čte "
-                "„Petr jedl steak“ správně, ale generické popření zeslábne "
-                "na ¬jíst(co:∃maso, …), tedy „nějaké maso nejí“, a ZÁVĚR "
-                "DOMÉNY SE ZTRATÍ — otázka pak dá `A` místo sporu. Správné "
-                "řešení není jiný tvar, ale doptání NA VĚTU — a to dnes "
-                "NEEXISTUJE: tah `→∀` učí TVAR, takže první odpověď zavře "
-                "celou třídu a druhá věta se už nezeptá. Změřeno. Závěr "
-                "domény ale na tom chybném čtení NESTOJÍ: od B‑13 dá "
-                "`CONFLICT` i se správným `∃steak` (test v test_engine)"
+            point=(
+                "věta, která rozpor způsobí — systém ji ZAPÍŠE (až po "
+                "odpovědi), i když hlásí, že odporuje bázi: stranu sporu "
+                "si nevybírá (I‑3)"
+            ),
+        ),
+        Step(
+            text="Šlo o jeden steak.",
+            answers_here=("co", Operation.EXISTS),
+            reads="jíst(co:∃steak, kdo:·Petr)",
+            writes="jíst(co:∃steak, kdo:Petr)",
+            point=(
+                "TÝŽ TVAR, JINÁ ODPOVĚĎ — celý důvod, proč je tenhle krok "
+                "tahem a ne řádkem v `shapes`. Petr snědl JEDEN steak; "
+                "`∀steak` by bylo věcně špatně a závěr domény by stál na "
+                "chybném čtení"
             ),
         ),
         Step(
@@ -646,12 +662,19 @@ VEGETARIAN = Dialogue(
                 w("maso", "maso", "NOUN", 1, "obj", Case="Acc", Gender="Neut", Number="Sing"),
                 w("?", "?", "PUNCT", 1, "punct"),
             ),
-            reads="jíst(co:∀maso, kdo:·Petr)",
-            answers="N",
+            asks="i otázka potřebuje kvantifikátor — tvar pořád naučený není",
+            point="ptát se musí i u otázky; jinak by se dotaz četl jinak než věta",
+        ),
+        Step(
+            text="Ptám se na nějaké maso.",
+            answers_here=("co", Operation.EXISTS),
+            reads="jíst(co:∃maso, kdo:·Petr)",
+            answers="CONFLICT",
             point=(
-                "MEZIKROK, na kterém je vidět, že řetěz drží: `N` neplyne "
-                "z ničeho zapsaného o Petrovi a mase, ale z distribuce "
-                "generického popření přes členství"
+                "MEZIKROK, na kterém je vidět, že řetěz drží: protidůkaz "
+                "neplyne z ničeho zapsaného o Petrovi a mase, ale "
+                "z DISTRIBUCE generického popření přes členství — a od "
+                "B‑13 sedne i na `∃` dotaz, protože negace obrací monotonii"
             ),
         ),
         Step(
@@ -662,7 +685,13 @@ VEGETARIAN = Dialogue(
                 w("steak", "steak", "NOUN", 1, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
                 w("?", "?", "PUNCT", 1, "punct"),
             ),
-            reads="jíst(co:∀steak, kdo:·Petr)",
+            asks="a naposledy totéž — tvar zůstal nenaučený celou dobu",
+            point="poslední doklad, že `→∀1` opravdu nic neučí",
+        ),
+        Step(
+            text="Ptám se na nějaký steak.",
+            answers_here=("co", Operation.EXISTS),
+            reads="jíst(co:∃steak, kdo:·Petr)",
             answers="CONFLICT",
             point=(
                 "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. `CONFLICT` se DVĚMA "

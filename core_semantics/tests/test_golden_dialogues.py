@@ -13,7 +13,12 @@ import pytest
 from core_semantics.oracle import RecordedOracle
 from typing import Sequence
 
-from core_semantics.session import Session, TurnResult, answers_quantifier
+from core_semantics.session import (
+    Session,
+    TurnResult,
+    answers_here,
+    answers_quantifier,
+)
 from core_semantics.tests._console import echo
 from core_semantics.tests.dialogues import DIALOGUES, Dialogue, Step
 
@@ -43,7 +48,7 @@ def _run(
     done: Sequence[tuple[Step, TurnResult]],
 ) -> TurnResult:
     """Krok je buď VĚTA, nebo TAH."""
-    if step.answers_quantifier is None:
+    if step.answers_quantifier is None and step.answers_here is None:
         return session.utter(step.text, oracle)
     return _answer(session, step, done)
 
@@ -57,8 +62,9 @@ def _answer(
     opsaný tvar by se mohl rozejít s tím, na co se systém ptal, a sada by
     hlídala shodu dvou zápisů místo chování."""
     assert done, "tah bez předchozí věty nemá na co odpovídat"
-    assert step.answers_quantifier is not None
-    name, operation = step.answers_quantifier
+    answer = step.answers_quantifier or step.answers_here
+    assert answer is not None
+    name, operation = answer
     pending = done[-1][1].predication
     assert pending is not None, f"{step.text!r}: předchozí krok nic nepřečetl"
     role = pending.reading(name)
@@ -66,6 +72,11 @@ def _answer(
         f"{step.text!r}: role {name!r} na kvantifikátor nečeká, "
         f"takže není na co odpovídat"
     )
+    if step.answers_here is not None:
+        # ODPOVĚĎ NA VĚTU, ne na tvar (N‑8). Sada tím měří i to, že se
+        # tvar NENAUČIL: kdyby ano, další věta téhož tvaru by se nezeptala
+        # a krok, který na ni odpovídá, by spadl na „role nečeká".
+        return session.play(answers_here(step.text, pending, name, operation))
     return session.play(
         answers_quantifier(step.text, pending, role.pending, operation)
     )
@@ -87,7 +98,7 @@ def test_dialogue_reads_writes_and_answers_as_recorded(dialogue: Dialogue) -> No
         # protože to není věta.
         result = (
             session.utter(step.text, oracle)
-            if step.answers_quantifier is None
+            if step.answers_quantifier is None and step.answers_here is None
             else _answer(session, step, done)
         )
         done.append((step, result))
@@ -140,9 +151,11 @@ def test_questions_never_change_the_base(dialogue: Dialogue) -> None:
     """I‑12 přes celý dialog: po otázce musí být program beze změny."""
     session = Session(lexicon=dialogue.lexicon())
     oracle = RecordedOracle(dialogue.recordings())
+    done: list[tuple[Step, TurnResult]] = []
     for step in dialogue.steps:
         before = session.program()
-        result = session.utter(step.text, oracle)
+        result = _run(session, oracle, step, done)
+        done.append((step, result))
         if step.answers:
             assert session.program() == before, (
                 f"{dialogue.name} / {step.text!r}: otázka změnila bázi"
@@ -210,3 +223,38 @@ def test_golden_dialogues_print() -> None:
     )
     echo("=" * 72)
     assert written and answered
+
+
+def test_the_turn_branch_really_runs_in_the_acceptance_set() -> None:
+    """W‑16: mašinerie ve stejném harnessu, který hlídá gate, a sama
+    nehlídaná, je horší než žádná — vypadá jako pokrytí a není.
+
+    Počítá se PRŮCHOD, ne existence pole: krok, který je tah, musí projít
+    `_answer`, jinak by sada tvrdila, že smyčku učení měří, a přitom by
+    ji obcházela."""
+    ran = 0
+    for dialogue in DIALOGUES:
+        session = Session(lexicon=dialogue.lexicon())
+        oracle = RecordedOracle(dialogue.recordings())
+        done: list[tuple[Step, TurnResult]] = []
+        for step in dialogue.steps:
+            if step.answers_quantifier is not None or step.answers_here is not None:
+                ran += 1
+                done.append((step, _answer(session, step, done)))
+            else:
+                done.append((step, session.utter(step.text, oracle)))
+    assert ran >= 1, "větev tahu se v akceptačním běhu neprovedla ani jednou"
+
+
+def test_a_sentence_level_answer_does_not_leak_into_the_next_sentence() -> None:
+    """N‑8 měřené NA DOMÉNĚ, ne na jednotce: „Vegetarián nejí maso" se
+    rozhodne jako `∀`, a „Petr jedl steak" se PŘESTO zeptá znovu. Kdyby
+    se tvar naučil, druhá věta by se přečetla jako `∀steak` a závěr
+    domény by stál na chybném čtení."""
+    dialogue = next(d for d in DIALOGUES if d.name == "Vegetarián a steak")
+    played, session = play(dialogue)
+    written = " ".join(session.program())
+    assert "jíst(co:∃steak" in written
+    assert "jíst(co:∀steak" not in written
+    asked = [step.text for step, result in played if result.question is not None]
+    assert "Petr jedl steak." in asked

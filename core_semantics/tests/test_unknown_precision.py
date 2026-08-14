@@ -225,12 +225,21 @@ def _dialogue_unknowns() -> tuple[Diagnosis, ...]:
     from core_semantics.oracle import RecordedOracle
     from core_semantics.session import Session
 
+    from core_semantics.session import TurnResult
+    from core_semantics.tests.dialogues import Step
+    from core_semantics.tests.test_golden_dialogues import _run
+
     found: list[Diagnosis] = []
     for dialogue in DIALOGUES:
         session = Session(lexicon=dialogue.lexicon())
         oracle = RecordedOracle(dialogue.recordings())
+        done: list[tuple[Step, TurnResult]] = []
         for step in dialogue.steps:
-            result = session.utter(step.text, oracle)
+            # Kroky, které jsou TAH a ne věta, se přehrávají stejným
+            # runnerem jako v akceptační sadě — jinak by rozklad `U`
+            # měřil jinou posloupnost než gate.
+            result = _run(session, oracle, step, done)
+            done.append((step, result))
             if result.status is not QueryStatus.UNKNOWN:
                 continue
             if result.predication is None:

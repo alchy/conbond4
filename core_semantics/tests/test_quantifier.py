@@ -37,7 +37,7 @@ from core_semantics.lexicon import (
     czech_seed,
 )
 from core_semantics.oracle import Reading, Token
-from core_semantics.session import Session
+from core_semantics.session import Session, answers_quantifier
 from core_semantics.tests._console import echo
 
 STAMP = "test"
@@ -412,3 +412,79 @@ def test_quantifier_transcript_prints() -> None:
         for line in verdict.render():
             echo(f"   {line}")
     echo("\n" + "=" * 72)
+
+
+# --------------------------------------------------------------------------
+# Odpověď na JEDNU VĚTU, ne na tvar — N‑8
+# --------------------------------------------------------------------------
+#
+# `→∀` váže odpověď na TVAR, takže jedna odpověď zavře celou třídu vět.
+# Většinou přesně to chceme. Jenže čeština má tvary, které v jedné větě
+# znamenají `∀` a v druhé `∃`: „Vegetarián nejí maso" mluví o KAŽDÉM
+# masu, „Petr jedl steak" o JEDNOM steaku — a `NOUN/Sing/Acc/obj` je to
+# v obou. Po první odpovědi se druhá věta už nezeptá a přečte se špatně.
+#
+# `→∀1` je proto DRUHÁ otázka, ne náhrada té první: „jak se čte tahle
+# věta" vedle „jak se čte tenhle tvar".
+
+
+def _pending(reading: Reading) -> object:
+    verdict = read(reading, czech_seed())
+    assert verdict.decided is not None
+    return verdict.decided.predication
+
+
+def test_the_sentence_level_answer_closes_the_role() -> None:
+    from core_semantics.session import answers_here
+
+    session = Session()
+    predication = _pending(sentence(None))
+    result = session.play(
+        answers_here("Jde o každou.", predication, ROLE_SUBJECT, Operation.FOR_ALL)  # type: ignore[arg-type]
+    )
+    assert result.predication is not None
+    subject = result.predication.reading(ROLE_SUBJECT)
+    assert subject is not None
+    assert subject.quantifier is Quantifier.FOR_ALL
+    assert subject.pending is None
+
+
+def test_the_sentence_level_answer_teaches_nothing() -> None:
+    """JÁDRO N‑8. Kdyby se tvar naučil, další věta téhož tvaru by se
+    nezeptala — a právě o to, že se zeptá, tady jde."""
+    from core_semantics.session import answers_here
+
+    session = Session()
+    before = session.lexicon.all()
+    session.play(
+        answers_here("Jde o každou.", _pending(sentence(None)), ROLE_SUBJECT, Operation.FOR_ALL)  # type: ignore[arg-type]
+    )
+    assert session.lexicon.all() == before
+
+
+def test_the_shape_level_answer_still_teaches() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (2). `→∀1` NENÍ náhrada `→∀`: tvarová
+    odpověď dál zavírá celou třídu, jinak by se každá věta musela
+    rozhodovat zvlášť a učení by zmizelo."""
+    session = Session()
+    predication = _pending(sentence(None))
+    subject = predication.reading(ROLE_SUBJECT)  # type: ignore[attr-defined]
+    assert subject is not None and subject.pending is not None
+    session.play(
+        answers_quantifier(
+            "Platí to o každé.", predication, subject.pending, Operation.FOR_ALL  # type: ignore[arg-type]
+        )
+    )
+    assert any(p.operation is Operation.FOR_ALL for p in session.lexicon.all())
+
+
+def test_answering_a_role_that_does_not_wait_is_refused() -> None:
+    """Tah, který nemá co zavřít, se nesmí tvářit, že něco udělal."""
+    from core_semantics.session import answers_here
+
+    session = Session()
+    result = session.play(
+        answers_here("Jde o každou.", _pending(sentence("každý")), ROLE_SUBJECT, Operation.FOR_ALL)  # type: ignore[arg-type]
+    )
+    assert result.error is not None
+    assert any("nečeká" in line for line in result.lines)

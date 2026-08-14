@@ -198,6 +198,11 @@ class TurnKind(Enum):
     #: věty tvrdí (N‑2). Vlastní druh tahu, protože se tím nenaučí, jak se
     #: věta ČTE, ale co se z ní zapíše do JÁDRA — a to je jiná váha.
     NAME_RELATION = "→⊆"
+    #: ODPOVĚĎ na otázku po kvantifikátoru JEDNÉ VĚTY, ne tvaru (N‑8).
+    #: Vlastní druh tahu, protože se tím NIC NEUČÍ — a to je celý rozdíl
+    #: proti `→∀`. Jsou to dvě různé otázky: „jak se čte tenhle tvar"
+    #: a „jak se čte tahle věta".
+    ANSWER_HERE = "→∀1"
     #: ODPOVĚĎ na otázku, KOHO označuje přivlastňovací přívlastek (N‑7).
     #: Vlastní druh tahu, protože zapisuje DVA výroky: větu a k ní vztah
     #: vlastnictví. Ani `→=`, ani `→@` to nejsou — první rozhoduje odkaz
@@ -346,6 +351,34 @@ def names_relation(
         text,
         reading=reading,
         shape_name=shape,
+        operation=operation,
+    )
+
+
+def answers_here(
+    text: str, predication: Predication, role_name: str, operation: Operation
+) -> Turn:
+    """ODPOVĚĎ na kvantifikátor JEDNÉ VĚTY — N‑8.
+
+    **Proč to nemůže dělat `→∀`.** Ten váže odpověď na `StructuralSignature`,
+    tedy na TVAR, a jedna odpověď tím zavře celou třídu vět. Většinou je
+    to přesně to, co chceme; jenže čeština má tvary, které v jedné větě
+    znamenají `∀` a v druhé `∃`. „Vegetarián nejí maso" mluví o KAŽDÉM
+    masu, „Petr jedl steak" o JEDNOM steaku — a `NOUN/Sing/Acc/obj` je to
+    v obou. Po první odpovědi se ta druhá věta už nezeptá a přečte se
+    špatně.
+
+    **Tenhle tah se proto NIC NEUČÍ.** Odpověď platí pro tu jednu větu
+    a v lexikonu po ní nezůstane nic. Není to náhrada `→∀`, je to jiná
+    otázka — a obě se ptají právem: tvar má většinou jeden význam a je
+    hloupé se na něj ptát pokaždé, ale výjimky existují a tichý default
+    by je přejel (L‑3).
+    """
+    return Turn(
+        TurnKind.ANSWER_HERE,
+        text,
+        predication=predication,
+        role_name=role_name,
         operation=operation,
     )
 
@@ -566,6 +599,7 @@ class Session:
             TurnKind.DECIDE_REFERENCE: self._decide_reference,
             TurnKind.NAME_ROLE: self._name_role,
             TurnKind.NAME_RELATION: self._name_relation,
+            TurnKind.ANSWER_HERE: self._answer_here,
             TurnKind.NAME_OWNER: self._name_owner,
             TurnKind.REVOKE: self._revoke,
             TurnKind.QUESTION: self._question,
@@ -1006,6 +1040,47 @@ class Session:
             statement_id=marker,
             derived=(left, right),
         )
+
+    def _answer_here(self, index: int, turn: Turn) -> TurnResult:
+        """`→∀1` — kvantifikátor pro TUHLE VĚTU. Nic se neučí.
+
+        Zavírá se role podle JMÉNA, ne podle tvaru: tvar je zrovna to,
+        co tu rozhodnout nejde, protože v jiné větě znamená něco jiného.
+        """
+        assert turn.predication is not None and turn.operation is not None
+        target = turn.predication.reading(turn.role_name)
+        if target is None or target.pending is None:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(
+                    f"✗ nerozhodnuto: role {turn.role_name!r} na kvantifikátor "
+                    f"nečeká, takže není co rozhodovat",
+                ),
+                error="role nečeká na kvantifikátor",
+            )
+        quantifier = QUANTIFIER_OF.get(turn.operation)
+        resolved = replace(
+            turn.predication,
+            roles=tuple(
+                replace(
+                    role,
+                    quantifier=quantifier,
+                    pending=None,
+                    awaiting="",
+                    source=f"rozhodnuto pro tuhle větu (tah {index})",
+                )
+                if role.name == turn.role_name
+                else role
+                for role in turn.predication.roles
+            ),
+        )
+        prefix = [
+            f"✓ rozhodnuto pro TUHLE VĚTU  {turn.role_name} → "
+            f"{turn.operation.value}",
+            "  (tvar se tím NEUČÍ — jiná věta se zeptá znovu)",
+        ]
+        return self._settle(index, turn, resolved, prefix)
 
     def _answer_quantifier(self, index: int, turn: Turn) -> TurnResult:
         """`→∀` — naučí tvar a HNED přečte čekající větu znovu."""
