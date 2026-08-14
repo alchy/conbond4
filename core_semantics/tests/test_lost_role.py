@@ -15,12 +15,14 @@ naučit TVAR → přečíst větu ZNOVU.**
 from __future__ import annotations
 
 from core_semantics.cascade import (
+    AWAITING_REFERENCE,
     cascade,
     lost_members,
     lost_shape,
     role_question,
     surface_roles,
 )
+from core_semantics.ast import Entity, Group, member_of
 from core_semantics.lexicon import Mood, czech_seed
 from core_semantics.oracle import Reading, Token, Utterance
 from core_semantics.session import Session, names_role
@@ -48,22 +50,25 @@ def tok(
     )
 
 
-def sentence(owner: str) -> Reading:
-    """«<Čí> auto je modré.» — PŘIVLASTNĚNÍ nemá roli.
+def sentence(who: str) -> Reading:
+    """«<Kdo> má alergii na penicilin.» — PŘÍVLASTEK V GENITIVU nemá roli.
 
-    Původně tu stálo „Jan nesmí dostat penicilin.", jenže tam předmět
-    ztracený BÝT PŘESTAL: složený přísudek (G‑1a) ho vtáhl do predikace,
-    a to je správně. Příklad se proto vyměnil za ten, který ztracený
-    člen má doopravdy — přivlastňovací přívlastek roli nemá a je to
-    skutečná mez, ne vada, kterou lze opravit jinde.
+    Příklad se stěhoval už dvakrát a pokaždé proto, že ten předchozí
+    ztracený člen mít PŘESTAL — což je dobrá zpráva, ne vada testu.
+    Nejdřív tu stálo „Jan nesmí dostat penicilin.", než ho složený
+    přísudek (G‑1a) vtáhl do predikace. Pak „Filipovo auto je modré.",
+    než se z přivlastnění stal určitý popis (N‑6). Zůstal předložkový
+    přívlastek pod předmětem: „alergii NA PENICILIN" — `penicilin` visí
+    pod `alergie`, ne pod přísudkem, takže roli ve vztahu nedostane.
     """
     return Reading(
         tokens=(
-            tok(1, f"{owner}ovo", f"{owner}ův", "ADJ", 2, "amod", Case="Nom", Poss="Yes"),
-            tok(2, "auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Number="Sing"),
-            tok(3, "je", "být", "AUX", 4, "cop", Number="Sing"),
-            tok(4, "modré", "modrý", "ADJ", 0, "root", Case="Nom", Number="Sing"),
-            tok(5, ".", ".", "PUNCT", 4, "punct"),
+            tok(1, who, who, "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
+            tok(2, "má", "mít", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+            tok(3, "alergii", "alergie", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+            tok(4, "na", "na", "ADP", 5, "case", AdpType="Prep", Case="Acc"),
+            tok(5, "penicilin", "penicilin", "NOUN", 3, "nmod", Case="Acc", Number="Sing"),
+            tok(6, ".", ".", "PUNCT", 2, "punct"),
         ),
         provenance=STAMP,
     )
@@ -79,13 +84,13 @@ class _Recorded:
         return Utterance(text=text, readings=(self._mapping[text],))
 
 
-DENIED = "Filipovo auto je modré."
-OTHER = "Petrovo auto je modré."
-SHAPE = "nsubj>amod+Nom"
+DENIED = "Jan má alergii na penicilin."
+OTHER = "Petr má alergii na penicilin."
+SHAPE = "obj>nmod+Acc"
 
 
 def oracle() -> _Recorded:
-    return _Recorded({DENIED: sentence("Filip"), OTHER: sentence("Petr")})
+    return _Recorded({DENIED: sentence("Jan"), OTHER: sentence("Petr")})
 
 
 # --------------------------------------------------------------------------
@@ -97,21 +102,21 @@ def test_the_shape_is_a_path_not_a_word() -> None:
     """Učí se TVAR, ne slovo — jedna odpověď má zavřít celou třídu vět.
 
     Cesta od přísudku je podstatná: `penicilin` nevisí na slovese, ale
-    pod infinitivem, a `xcomp>obj+Acc` platí stejně pro „smí dostat",
-    „chce koupit" i „musí vrátit"."""
-    reading = sentence("Filip")
-    assert lost_shape(reading.tokens[0], reading) == SHAPE
+    pod předmětem, a `obj>nmod+Acc` platí stejně pro „má alergii na X",
+    „našel lék na Y" i „dostal recept na Z"."""
+    reading = sentence("Jan")
+    assert lost_shape(reading.tokens[4], reading) == SHAPE
 
 
 def test_only_what_is_really_in_the_parse_is_asked_about() -> None:
     """„Pokud existuje" je podstatná půlka zadání: interpunkce, spona ani
     pomocné sloveso nejsou ztracený člen a otázka bez odběratele je horší
     než ticho."""
-    reading = sentence("Filip")
+    reading = sentence("Jan")
     verdict = cascade(reading)
     assert verdict.decided is not None
     lost = {t.form for t, _ in lost_members(reading, verdict.decided.predication)}
-    assert lost == {"Filipovo"}
+    assert lost == {"penicilin"}
 
 
 # --------------------------------------------------------------------------
@@ -123,7 +128,7 @@ def test_a_lost_member_is_asked_about_not_just_noted() -> None:
     session = Session()
     result = session.utter(DENIED, oracle())
     assert result.question is not None
-    assert "Filipovo" in result.question
+    assert "penicilin" in result.question
     assert SHAPE in result.question
 
 
@@ -142,11 +147,11 @@ def test_the_answer_completes_the_very_sentence_that_asked() -> None:
     session = Session()
     session.utter(DENIED, oracle())
     answer = session.play(
-        names_role("Je to vlastník.", sentence("Filip"), SHAPE, "čí")
+        names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co")
     )
     assert answer.predication is not None
-    assert answer.predication.role("čí") is not None
-    assert "Filipův" in str(answer.predication)
+    assert answer.predication.role("na co") is not None
+    assert "penicilin" in str(answer.predication)
     assert any("naučeno" in line for line in answer.lines)
 
 
@@ -155,12 +160,12 @@ def test_one_answer_closes_the_whole_class() -> None:
     vzorem a zapamatovanou odpovědí."""
     session = Session()
     session.utter(DENIED, oracle())
-    session.play(names_role("Je to vlastník.", sentence("Filip"), SHAPE, "čí"))
+    session.play(names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co"))
 
     again = session.utter(OTHER, oracle())
     assert again.predication is not None
-    assert again.predication.role("čí") is not None
-    assert again.question is None or "Petrovo" not in again.question
+    assert again.predication.role("na co") is not None
+    assert again.question is None or "penicilin" not in again.question
     assert any("DOPLNĚNO" in step for step in again.trace)
 
 
@@ -168,7 +173,7 @@ def test_the_learned_shape_is_revocable_data() -> None:
     """I‑16: co se naučí odpovědí, jde odvolat stejně jako cokoli jiného."""
     session = Session()
     session.utter(DENIED, oracle())
-    session.play(names_role("Je to vlastník.", sentence("Filip"), SHAPE, "čí"))
+    session.play(names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co"))
     learned = [m for m in session.lexicon.all_roles() if m.surface == SHAPE]
     assert learned and "tah" in learned[0].learned_from
 
@@ -180,7 +185,7 @@ def test_the_whole_loop_replays_from_the_journal() -> None:
     """Odpověď je TAH, takže leží v žurnálu a přehrání se neptá podruhé."""
     session = Session()
     session.utter(DENIED, oracle())
-    session.play(names_role("Je to vlastník.", sentence("Filip"), SHAPE, "čí"))
+    session.play(names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co"))
     replayed = Session.replay(session.journal)
     assert replayed.answers() == session.answers()
     assert replayed.program() == session.program()
@@ -198,7 +203,7 @@ def test_lost_role_transcript_prints() -> None:
         (
             "→@ Je to vlastník.",
             session.play(
-                names_role("Je to vlastník.", sentence("Filip"), SHAPE, "čí")
+                names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co")
             ),
         ),
         (OTHER + "   (JINÁ věta téhož tvaru)", session.utter(OTHER, oracle())),
@@ -319,3 +324,120 @@ def test_a_canonical_role_is_not_asked_about() -> None:
     assert verdict.decided is not None
     assert surface_roles(verdict.decided.predication) == (LOC,)
     assert "kdo" not in (role_question(verdict.decided.predication) or "")
+
+
+# --------------------------------------------------------------------------
+# Přivlastnění je URČITÝ POPIS — N‑6
+# --------------------------------------------------------------------------
+#
+# Do N‑6 bylo „Filipovo" ztracený člen a systém se ptal, jakou roli hraje.
+# Tu otázku ale nezavřela ŽÁDNÁ odpověď: „čí" není role, je to vztah ke
+# KONKRÉTNÍMU uzlu. Otázka bez odběratele je podle vlastního pravidla
+# projektu horší než ticho — a tady se navíc věta mezitím četla jako
+# tvrzení o VŠECH autech.
+#
+# ROZHODNUTÍ O DENOTACI, protože bez něj se nedá stavět:
+#
+# „Filipovo auto" je URČITÝ POPIS — jméno zúžené kritériem. Není to
+# reifikovaný vztah `vlastnit(Filip, auto)` MÍSTO popisu: ten vztah je
+# to KRITÉRIUM, kterým popis vybírá uzel, takže obojí není alternativa,
+# ale dvě různé otázky (co fráze DENOTUJE × podle čeho vybírá).
+#
+# Postavené je zatím jen to první, a je to vědomé: rozbor jméno vlastníka
+# NEDÁVÁ. Token je „Filipovo" s lemmatem „Filipův" a cesta odtud k uzlu
+# „Filip" je derivační morfologie, kterou tagger neřeší. Useknout „‑ův"
+# by byl dohad o češtině zadrátovaný do interpretu.
+
+
+def possessive(owner: str = "Filip") -> Reading:
+    return Reading(
+        tokens=(
+            tok(1, f"{owner}ovo", f"{owner}ův", "ADJ", 2, "amod", Case="Nom", Poss="Yes"),
+            tok(2, "auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Number="Sing"),
+            tok(3, "je", "být", "AUX", 4, "cop", Number="Sing", Polarity="Pos"),
+            tok(4, "modré", "modrý", "ADJ", 0, "root", Case="Nom", Number="Sing"),
+            tok(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+POSSESSIVE_TEXT = "Filipovo auto je modré."
+
+
+def possessive_oracle() -> _Recorded:
+    return _Recorded({POSSESSIVE_TEXT: possessive()})
+
+
+def test_a_possessive_is_no_longer_a_lost_member() -> None:
+    """JÁDRO N‑6. Do významu se dostalo — jen ne vlastní rolí."""
+    verdict = cascade(possessive())
+    assert verdict.decided is not None
+    assert verdict.lost == ()
+
+
+def test_the_sentence_stops_being_about_all_cars() -> None:
+    """Tohle byla ta věcná vada, ne ztracený token: `∀auto` říká něco
+    o VŠECH autech, ačkoli věta mluví o jednom konkrétním."""
+    verdict = cascade(possessive())
+    assert verdict.decided is not None
+    subject = verdict.decided.predication.reading("kdo")
+    assert subject is not None
+    assert subject.quantifier is None
+    assert subject.awaiting == AWAITING_REFERENCE
+
+
+def test_the_question_now_has_an_answer() -> None:
+    """Ptá se, KTERÝ uzel se míní — a na to existuje tah `→=`."""
+    session = Session()
+    result = session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    assert result.question is not None
+    assert "auto" in result.question
+    assert "roli" not in result.question, (
+        "jakou ROLI hraje „Filipovo“ je otázka, kterou nezavře žádná "
+        "odpověď — „čí“ není role, ale vztah ke konkrétnímu uzlu"
+    )
+
+
+def test_an_undecided_reference_is_not_written() -> None:
+    session = Session()
+    result = session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    assert result.statement_id is None
+
+
+def test_a_single_candidate_resolves_and_says_so() -> None:
+    """Jednoznačné doložení se pořád VYPÍŠE (M‑4): odkaz, který vyšel na
+    jediného kandidáta, je rozhodnutí systému, ne fakt z věty."""
+    session = Session()
+    session.kb.attach(member_of(Entity("a1"), Group("auto")))
+    result = session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    assert any("a1" in line for line in result.lines)
+
+
+def test_more_candidates_ask_which_one() -> None:
+    session = Session()
+    session.kb.attach(member_of(Entity("a1"), Group("auto")))
+    session.kb.attach(member_of(Entity("a2"), Group("auto")))
+    result = session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    assert result.question is not None
+    assert "a1" in result.question and "a2" in result.question
+
+
+def test_the_owner_is_not_guessed_from_the_word() -> None:
+    """PŘIZNANÁ MEZ, a je to podstatné: z „Filipův" se NEODVOZUJE uzel
+    „Filip". Useknout „‑ův" je derivační morfologie, kterou rozbor
+    nedává — a dohad o češtině zadrátovaný do interpretu je přesně to,
+    čemu se INV‑11 brání."""
+    session = Session()
+    session.kb.attach(member_of(Entity("a1"), Group("auto")))
+    session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    written = " ".join(session.program())
+    assert "Filip" not in written
+
+
+def test_a_possessive_does_not_become_a_class() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (a). Z každého majitele by byla nová
+    třída — N‑2c to vyloučilo záměrně a N‑6 to nesmí obejít."""
+    verdict = cascade(possessive())
+    assert verdict.decided is not None
+    assert "Filipův_auto" not in str(verdict.decided.predication)

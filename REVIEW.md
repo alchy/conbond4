@@ -1,8 +1,125 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — všech pět akceptačních dialogů má verdikt
+## Status: 🟢 APPROVE — akceptační sada uzavřena v zapsaném rozsahu
 
-**Kolo #50.** 704 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #51.** 709 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **49/49**, živá parita **16/16**. **N‑5b ověřeno mnou** —
+*Zmrzlina* se čte, akceptační sada `test_golden_dialogues` **17 passed**,
+a všech pět domén má verdikt jako podmínku.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Stav akceptace — měřeno mnou z dat i během
+
+```
+Jana a zmrzlina    zapisuje 2  verdikty ['A']
+Doprava            zapisuje 1  verdikty ['A']
+Farmaka            zapisuje 2  verdikty ['N']
+Čas a prostor      zapisuje 3  verdikty ['A', 'U']
+Petrovice          zapisuje 2  verdikty ['A']
+CELKEM: 5 domén, 10 zapsaných tahů, 6 závěrů      test_golden_dialogues: 17 passed
+```
+
+**Zmrzlina** — před změnou `0 čtení`, dnes:
+
+```
+» Děti mají rády zmrzlinu.   ◐ mít(co:∃zmrzlina, iobj:rád, kdo:∀dítě)
+```
+
+Kolize dvou jádrových členů zmizela; `iobj` má **povrchové** jméno,
+takže se systém nezastaví ani nehádá.
+
+**Moje counterexamply:**
+
+```
+Filip má auto. / Jan má alergii.  → mít(co:…, kdo:…)   žádná povrchová role, neptá se ✓
+Lék se podává pacientům.          → Dat:arg, nsubj:pass   beze změny ✓
+```
+
+**Regrese celá:** B‑1, B‑2, matice ⪯, `disjoint`→`N`, `CONFLICT`, stráže
+4/4, `same_as`, M‑1, G‑3 recall, zákaz eliminace `OR`, I‑16.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Nález kola: metrika ohlásila pokrok jako propad
+
+Builder našel, že čítač „s verdiktem" počítal i **nepřečtenou** větu,
+protože ta se vrací se statusem `UNKNOWN`. Když se *Zmrzlina* konečně
+přečetla a **zapsala**, číslo **kleslo ze 7 na 6**.
+
+To je vzácný druh vady: **měřicí přístroj ukazoval opačným směrem, než
+se hýbala skutečnost.** Přejmenování na „závěrů domén" a počítání z toho,
+co má krok zapsané jako **očekávaný** verdikt, je správná oprava — a jeho
+zdůvodnění sedí: *jinak příště nepoznám, jestli doména o odpověď opravdu
+přišla, nebo se jen něco přestalo lámat.*
+
+---
+
+## Semantic Warnings
+
+**W‑27 · změna potvrzeného tvaru v dialogu — ověřeno, není oslabení.**
+`('ADJ','Plur','','advmod')` → `('ADJ','Plur','','iobj')`. Ověřil jsem
+u živé služby: parser dává **`iobj`**. Původní zápis byl *„co by bylo
+mluvnicky správně"*, ne *„co rozbor dal"* — a takový vzor nikdy nesedne.
+Je to **táž třída jako fixtura bez `Poss=Yes`** z kola #47: záznam chudší
+nebo jiný než skutečnost fixuje chování, které nenastane. Mez je u kroku
+zapsaná jako `limit`, takže se netváří, že je `rády` jako `iobj`
+v pořádku.
+
+**W‑28 · „uzavřeno v zapsaném rozsahu" — beru přesně tak, jak to Builder
+napsal.** Akceptační sada je splněná; **není to tvrzení, že je hotový
+jazyk**. Deset komplexních odstavců, které zadal člověk, zůstává
+otevřeným cílem a tahle sada je jen jeho spodní patro.
+
+---
+
+## Jeden další směr: **přivlastnění**
+
+Builder poprvé nemá na stole nesplněný scénář, který by směr určil, a
+nechal rozhodnutí na mně.
+
+**Volím přivlastnění**, ne `Postřižiny`/`Roník`.
+
+**Důvod — rozlišení druhu překážky:** `Postřižiny` a `Roník` jsou
+**znalost světa** (rozpoznat vlastní jméno, které není v rejstříku).
+Tu morfologie nedodá **nikdy**, takže není co stavět — je to mez, ne
+úkol. Přivlastnění je naproti tomu **chybějící vrstva**, kterou systém
+dnes poctivě přiznává (`[ZAHOZENO: „Filipovo"]` + otázka), ale **odpověď
+nemá kam vést**.
+
+**Dotčená smlouva:** dnešní stav porušuje ducha N‑5. Systém se ptá
+*„jakou roli hraje »Filipovo«?"* — a **žádná odpověď tu otázku nezavře**,
+protože „čí" není role, ale **vztah ke konkrétnímu uzlu**. Otázka bez
+odběratele je podle vlastního pravidla projektu horší než ticho.
+
+**Nejmenší bezpečná změna:** rozhodnout, **čím** přivlastnění je, než se
+začne stavět. Kandidáti: (a) reifikovaná relace `vlastní(kdo, co)`;
+(b) role na uzlu s odkazem, tedy táž fronta jako `awaiting='odkaz'`.
+**Napiš důvod, ne jen volbu** — je to volba denotace se `semantic blast
+radius` do identity.
+
+**Counterexample, který musí projít:** (a) `Filipovo auto je modré.`
+nesmí vyrobit **třídu** `Filipovo_auto` (kolo #47 to vyloučilo záměrně —
+z každého majitele by byla nová třída); (b) `To auto je modré.` beze
+změny; (c) všech pět domén a parita 16/16.
+
+**Očekávaný výsledek:** buď odpověď na tu otázku **někam vede**, nebo se
+otázka **přestane klást** a přivlastnění se zapíše jako přiznaná mez.
+Obojí je poctivé; dnešní stav — ptát se bez odběratele — není.
+
+---
+
+## Archiv — kolo #50 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #50. 704 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **49/49**, živá parita **16/16**. **N‑4 ověřeno mnou** a poprvé
 jsem změřil **stav všech pěti** akceptačních dialogů, ne jen toho, který
 se právě měnil.

@@ -751,6 +751,27 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_real_indirect_object_keeps_its_own_shape",
         ),
     ),
+    Clause(
+        id="S-23",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "PŘIVLASTNĚNÍ dělá ze jména URČITÝ POPIS, ne ztracený člen "
+            "a ne třídu: věta pak nemluví o všech autech a systém se ptá, "
+            "KTERÝ uzel se míní — na to existuje odpověď, kdežto na otázku "
+            "po JMÉNU ROLE přivlastnění nezavře žádná. Vlastník se "
+            "NEODVOZUJE ze slova: rozbor dá lemma `Filipův`, cesta k uzlu "
+            "`Filip` je derivační morfologie, kterou tagger neřeší (N‑6)"
+        ),
+        anchor="core_semantics.cascade:possessive_of",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_possessive_is_no_longer_a_lost_member",
+            "test_the_sentence_stops_being_about_all_cars",
+            "test_the_question_now_has_an_answer",
+            "test_the_owner_is_not_guessed_from_the_word",
+            "test_a_possessive_does_not_become_a_class",
+        ),
+    ),
     # -- storage → cascade (zpětná hrana) ----------------------------------
     Clause(
         id="B-1",

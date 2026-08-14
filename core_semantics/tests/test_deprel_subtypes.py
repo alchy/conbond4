@@ -19,6 +19,7 @@ je horší než dnešní odmítnutí, protože dnes aspoň řekne, že neví.
 from __future__ import annotations
 
 from core_semantics.cascade import (
+    AWAITING_REFERENCE,
     ROLE_SUBJECT,
     base_deprel,
     cascade,
@@ -383,14 +384,18 @@ def test_the_attribute_is_not_a_lost_member_once_composed() -> None:
 
 
 def test_a_possessive_attribute_is_not_composed() -> None:
-    """PROTIPŘÍKLAD REVIEWERA (c). „Filipovo auto" NENÍ druh auta — je to
-    vztah ke KONKRÉTNÍMU uzlu. Složit ho na `Filipův_auto` by z každého
-    majitele udělalo novou třídu a hlavně by to UMLČELO otázku, kterou na
-    přivlastnění systém právem klade."""
+    """„Filipovo auto" NENÍ druh auta — je to vztah ke KONKRÉTNÍMU uzlu.
+    Složit ho na `Filipův_auto` by z každého majitele udělalo novou třídu.
+
+    Od N‑6 už přivlastnění není ani ZTRACENÝ ČLEN: dělá ze jména určitý
+    popis, takže se nepřečte jako tvrzení o všech autech a systém se ptá
+    na to, na co existuje odpověď — KTERÝ uzel to je."""
     verdict = cascade(POSSESSIVE)
     assert verdict.decided is not None
     assert "Filipův" not in str(verdict.decided.predication)
-    assert verdict.lost == (("Filipovo", "nsubj>amod+Nom"),)
+    assert verdict.lost == ()
+    subject = verdict.decided.predication.reading("kdo")
+    assert subject is not None and subject.awaiting == AWAITING_REFERENCE
 
 
 def test_a_predicative_adjective_is_not_composed() -> None:

@@ -308,12 +308,47 @@ def _composed_mention(token: Token, reading: Reading) -> Mention:
     )
 
 
+def possessive_of(token: Token, reading: Reading) -> Token | None:
+    """Přivlastňovací přívlastek nominálu — nebo `None` (N‑6).
+
+    Rozlišuje se `Poss=Yes`, tedy z ROZBORU, ne z podoby slova.
+    """
+    for child in reading.children(token.index):
+        if base_deprel(child.deprel) == "amod" and child.feat("Poss") == "Yes":
+            return child
+    return None
+
+
 def _nominal(token: Token, reading: Reading, name: str) -> RoleReading:
-    """Role s **složeným** fillérem a se zapsanými pohlcenými tokeny."""
+    """Role s **složeným** fillérem a se zapsanými pohlcenými tokeny.
+
+    **Přivlastnění dělá ze jména URČITÝ POPIS** *(N‑6)*. „Filipovo auto"
+    nemluví o autech obecně, mluví o JEDNOM autě a přivlastnění je to,
+    co ho vybírá. Role proto čeká na ODKAZ, ne na kvantifikátor — a co
+    z toho plyne prakticky: „O kterém „auto" mluvíš?" je otázka, na
+    kterou existuje odpověď (tah `→=`), kdežto dosavadní „jakou roli
+    hraje „Filipovo"?" byla otázka bez odběratele. Podle vlastního
+    pravidla projektu je taková otázka horší než ticho.
+
+    **Co se tím schválně NEDĚLÁ.** Nevzniká třída `Filipův_auto`
+    (z každého majitele by byla nová třída, N‑2c to vyloučilo záměrně)
+    a nevzniká ani vztah `vlastnit(Filip, auto)`. Ten druhý by byl
+    významově správný, jenže **rozbor jméno vlastníka NEDÁVÁ**: token je
+    `Filipovo` s lemmatem `Filipův`, a dostat se odtud k uzlu `Filip` je
+    derivační morfologie, kterou tagger neřeší. Odvodit ji useknutím
+    „‑ův" by byl dohad o češtině zadrátovaný do interpretu.
+
+    Přivlastnění tedy dnes **zužuje referenci, ale nezapisuje vlastníka**.
+    Je to přiznaná mez, ne tvrzení, že o vlastníkovi nic říct nejde —
+    a hlavně už to není otázka, na kterou se nedá odpovědět.
+    """
+    possessive = possessive_of(token, reading)
     return RoleReading(
         name,
         _composed_mention(token, reading),
-        absorbed=tuple(t.index for t in attributes_of(token, reading)),
+        absorbed=tuple(t.index for t in attributes_of(token, reading))
+        + ((possessive.index,) if possessive else ()),
+        awaiting=AWAITING_REFERENCE if possessive else "",
     )
 
 
@@ -1398,6 +1433,12 @@ def quantifier_tier(lexicon: Lexicon) -> Tier:
             for role in candidate.predication.roles:
                 if (
                     role.quantifier is not None
+                    # Role, která čeká na ODKAZ, kvantifikátor nepotřebuje:
+                    # určitý popis žádnou skupinu neotvírá, ukazuje na uzel.
+                    # Bez téhle podmínky by patro přepsalo `awaiting`
+                    # a z „Filipovo auto" by se zase ptalo na kvantifikátor
+                    # — tedy na něco, co se u určitého popisu neurčuje.
+                    or role.awaiting == AWAITING_REFERENCE
                     or role.mention.upos not in QUANTIFIED_UPOS
                     # Místo a čas se NEKVANTIFIKUJÍ — `RoleTerm` to u nich
                     # ani nepřipustí. Ptát se na kvantifikátor role `kam`

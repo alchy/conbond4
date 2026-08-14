@@ -332,10 +332,18 @@ def test_session_stops_asking_once_the_pattern_is_confirmed() -> None:
 
 
 def test_dropped_token_is_reported_not_swallowed() -> None:
-    """B‑12. „Filipovo auto je modré." vyjde jako tvrzení o VŠECH autech,
-    protože přivlastnění se do čtení nedostane. Že se nepřečte, je poctivá
-    mez. Že se o tom mlčí, je vada — čtení se pak tváří úplné a člověk
-    nemá jak poznat, že ze vstupu něco vypadlo."""
+    """B‑12, přepsané po N‑6.
+
+    Původní znění: „Filipovo auto je modré." vyjde jako tvrzení o VŠECH
+    autech, protože přivlastnění se do čtení nedostane; že se nepřečte, je
+    poctivá mez, ale mlčet o tom je vada.
+
+    POŽADAVEK ZŮSTÁVÁ, JEN JE SPLNĚNÝ SILNĚJI. Přivlastnění se do čtení
+    dostane — udělá ze jména URČITÝ POPIS — takže věta o všech autech
+    NENÍ a hlásit ztrátu není co. Systém místo toho říká, že neví, KTERÝ
+    uzel se míní, a to je otázka, na kterou existuje odpověď (`→=`).
+    Původní znění bylo zapsané u té špatné příčiny: nešlo o to, že token
+    vypadl, ale o to, že se z určitého popisu stalo obecné tvrzení."""
     text = "Filipovo auto je modré."
     reading = Reading(
         tokens=(
@@ -355,14 +363,17 @@ def test_dropped_token_is_reported_not_swallowed() -> None:
     result = session.utter(text, _Recorded(reading, text))
     assert result.predication is not None
     assert "Filipův" not in str(result.predication)
-    assert any("ZAHOZENO" in step for step in result.trace), (
-        f"ztráta se neohlásila: {result.trace}"
+    assert "∀auto" not in str(result.predication), (
+        "věta NENÍ tvrzení o všech autech — právě to byla ta vada"
     )
-    assert any("Filipovo" in step for step in result.trace)
+    subject = result.predication.reading("kdo")
+    assert subject is not None and subject.quantifier is None
+    assert result.question is not None and "auto" in result.question
     assert result.lines[0].startswith("◐"), (
-        "čtení, ze kterého vypadl kus věty, není celá věta — `✓` by "
-        "slibovalo víc, než tah odevzdal"
+        "nedořečený tah není celá věta — `✓` by slibovalo víc, než "
+        "tah odevzdal"
     )
+    assert result.statement_id is None, "nerozhodnutý odkaz se nezapisuje"
     # Ohlášení musí přežít replay — jinak by druhý průchod týmž žurnálem
     # tvrdil, že se nic neztratilo.
     assert Session.replay(session.journal).answers() == session.answers()

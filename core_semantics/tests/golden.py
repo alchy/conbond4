@@ -343,25 +343,29 @@ F2 = Golden(
         tok(4, "modré", "modrý", "ADJ", 0, "root", Case="Nom", Degree="Pos", Gender="Neut", Number="Sing", Polarity="Pos"),
         tok(5, ".", ".", "PUNCT", 4, "punct"),
     ),
-    predication="být(co:·modrý, kdo:∀auto)",
+    predication="být(co:·modrý, kdo:auto)",
     point=(
-        "vršení popisu: `Filipovo` visí pod `auto`, ne pod přísudkem, "
-        "takže se do rolí predikace nedostane — přivlastnění je práce V3"
+        "PŘIVLASTNĚNÍ DĚLÁ ZE JMÉNA URČITÝ POPIS (N‑6). „Filipovo“ visí "
+        "pod „auto“, ne pod přísudkem, takže roli ve vztahu nedostane — "
+        "ale nezmizí: je to ono, co říká, že řeč je o JEDNOM autě. Podmět "
+        "proto čeká na ODKAZ, ne na kvantifikátor, a `∀auto`, které tu "
+        "sada dřív fixovala jako mez, se přestalo vyrábět."
     ),
     asks=(
-        "ptá se, jakou roli hraje „Filipovo“ — a je to ta správná otázka. "
-        "Do N‑5 se přivlastnění jen tiše zahodilo a věta se zapsala "
-        "oseknutá; teď se nezapíše nic, dokud člověk roli nepojmenuje"
+        "ptá se, KTERÝ uzel se míní — a to je otázka, na kterou existuje "
+        "odpověď (tah `→=`). Do N‑6 se ptala, jakou ROLI hraje "
+        "„Filipovo“, a tu otázku nezavřela žádná odpověď, protože „čí“ "
+        "není role, ale vztah ke konkrétnímu uzlu. Otázka bez odběratele "
+        "je podle vlastního pravidla projektu horší než ticho."
     ),
     limit=(
-        "∀auto JE ŠPATNĚ. Věta mluví o Filipově autě, tedy o jednom "
-        "konkrétním, ne o všech. Potvrzený vzor `NOUN/Sing/Nom/nsubj → ∀` "
-        "na to nemůže přijít, protože vidí jen tvar podstatného jména "
-        "a přivlastnění je na SOUSEDNÍM tokenu. Sada to fixuje jako mez, "
-        "ne jako správnou odpověď: kdyby se tvářila, že je to v pořádku, "
-        "byla by to nepravda s razítkem testu. Zavře to buď rozšíření "
-        "tvaru o přivlastnění (`Poss=Yes` u `amod`), nebo V3, která určitý "
-        "popis rozřeší na uzel a kvantifikátor tím přebije."
+        "VLASTNÍK SE NEZAPISUJE. Že auto patří Filipovi, by mělo skončit "
+        "v bázi jako vztah — jenže ROZBOR JMÉNO VLASTNÍKA NEDÁVÁ: token "
+        "je „Filipovo“ s lemmatem „Filipův“ a cesta odtud k uzlu „Filip“ "
+        "je derivační morfologie, kterou tagger neřeší. Useknout „‑ův“ by "
+        "byl dohad o češtině zadrátovaný do interpretu. Přivlastnění tedy "
+        "dnes ZUŽUJE REFERENCI, ale vlastníka nezapíše; zavře to buď "
+        "jmenná vrstva, nebo tah, kterým člověk vlastníka pojmenuje."
     ),
 )
 
