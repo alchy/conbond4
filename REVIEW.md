@@ -1,8 +1,131 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — otázka se ptá jen na to, co zůstalo otevřené
+## Status: 🟢 APPROVE — vlastnictví je v bázi, poslední řešitelná položka uzavřena
 
-**Kolo #53.** 728 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #54.** 738 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **52/52**, živá parita **16/16**, dialogy 5 domén / 10 zapsaných
+tahů / 6 závěrů. **N‑7 ověřeno mnou včetně účinku.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+```
+» Filipovo auto je modré.    ✓ být(co:·modrý, kdo:auto)   [s0002]   5 výroků, 'být(' 1×
+» →' Filipovo je Filip.      ✓ rozhodnuto  přivlastnění → Filip
+                             ✓ zapsáno [s0006]  vlastnit(co:a1, kdo:Filip)
+
+   po tahu 9 výroků, 'být(' pořád 1×   ← ŽÁDNÝ dvojí zápis
+   ÚČINEK: vlastnit(Filip, a1) → A, doloženo ['s0006']
+```
+
+**Moje counterexamply:**
+
+```
+(a) bez odpovědi:  zapsáno, neptá se, 'vlastnit' v bázi: žádné ✓
+(b) To auto je modré.  beze změny ✓
+(c) vzorů obsahujících „Filip": žádný ✓
+```
+
+**Regrese celá** včetně G‑3 recallu, zákazu eliminace `OR` a I‑16; gate
+*Farmaka* `N`.
+
+*(Poznámka k vlastnímu měření: první pokus jsem volal `names_owner`
+s predikací místo rozboru a dostal `AttributeError`. Chyba v mé sondě,
+ne v kódu.)*
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Co na tomhle kole stojí za zapsání
+
+**Rozdělení „co je na tvaru a co na slově" je jinak, než šlo z mého
+zadání číst doslova — a je to správněji.** Že přivlastnění označuje
+vlastníka, je **vlastnost konstrukce**: platí pro každé `amod` s
+`Poss=Yes` a **není to rozhodnutí**, takže se to neučí vůbec. **Kdo** je
+ten vlastník, je vlastnost **jedné zmínky**, takže leží v žurnálu jako
+tah, ne v lexikonu.
+
+Můj požadavek *„vzor ať je na tvaru, ne na slově"* je tím splněný
+v silnější podobě: **na slově není vzor žádný.**
+
+**Vada, kterou si našel uprostřed a která by byla regrese:** první verze
+pouštěla tah přes `_settle`, takže se věta zapsala **podruhé** — v bázi
+by ležely dva `být(co:·modrý, kdo:a1)` a ten první by nikdo neodvolal.
+Je to **přesně ta vada, kterou `_settle` jinde hlídá**, jen se k ní šlo
+zezadu. Ověřil jsem počtem: `být(` je v bázi **jednou**.
+
+**Vlastnictví se připíná jen k uzlu** — dokud se odkaz nerozřešil, není
+ke komu. *„Nějaké auto patří Filipovi"* je jiné tvrzení než *„TOHLE auto
+patří Filipovi"* a jen to druhé věta nese; vyrobit si uzel by bylo
+zakládání individua evaluací (§ 0.2).
+
+**A oprava vlastního testu:** přehrávací test plnil bázi přes
+`kb.attach`, jenže **přímý zápis do báze v žurnálu není**, takže by test
+měřil neúplný záznam a padal na něčem jiném, než co má hlídat.
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.**
+
+---
+
+## Stav: akceptační sada uzavřena, řešitelné položky vyčerpány
+
+| položka | stav |
+|---|---|
+| Pět akceptačních dialogů | 🟢 procházejí, verdikty jsou podmínky |
+| Přivlastnění | 🟢 určitý popis + vztah vlastnictví tahem |
+| `Postřižiny`, `Roník` | ⬜ **znalost světa — není co stavět** |
+
+Builderovo *„nebudu předstírat opak"* u znalosti světa **potvrzuji**.
+Rozpoznat vlastní jméno mimo rejstřík morfologie nedodá; je to mez, ne
+úkol.
+
+---
+
+## Jeden další směr: **`Unknown precision` — měřit, jestli `U` znamená nedostatek důkazu**
+
+Poprvé není na stole ani nesplněný scénář, ani řešitelná mez. Vybírám
+podle **rizika pro správnost**, jak ukládá mandát.
+
+**Problém:** systém dnes umí říct `U` a `GapFinder` umí říct proč — ale
+**nikdo neměří, jestli `U` opravdu znamená „chybí důkaz"**, a ne
+„přehnaná opatrnost". Druhý externí posudek to označil za nejcennější
+metriku a nemáme ji.
+
+**Proč to je riziko, ne kosmetika:** systém, který je příliš opatrný, má
+skvělou přesnost a je **prakticky nepoužitelný** — a dnes to nepoznáme.
+Všechny naše metriky měří, co systém **udělal**; žádná neměří, co udělat
+**mohl a neudělal**.
+
+**Nejmenší bezpečná změna:** vzít případy, kde padlo `U`, a u každého
+z `GapFinder` **vytáhnout důvod**; rozlišit *chybí fakt* (legitimní `U`),
+*chybí pravidlo* (kandidát na učení) a *je to v bázi, jen se to nenašlo*
+(**vada**). To poslední je přesně G‑3, které jsme jednou už našli — a
+tahle metrika by ho odhalila **sama**.
+
+**Counterexample, který musí projít:** metrika **nesmí** dávat pokyn
+odpovídat víc — `U` je legitimní verdikt a snížit jejich počet hádáním
+by bylo horší než nic. Měří se **důvod**, ne počet.
+
+**Očekávaný výsledek:** rozpad `U` podle důvodu na zapsaných dialozích;
+kdyby se objevil případ „v bázi to je, ale nenašlo se", je to bloker.
+
+---
+
+## Archiv — kolo #53 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #53. 728 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **51/51**, živá parita **16/16**, dialogy 5 domén / 10 zapsaných
 tahů / 6 závěrů. **G‑4 opraveno a ověřeno mnou ve všech třech větvích.**
 

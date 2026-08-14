@@ -147,6 +147,13 @@ from .oracle import (
     recorded,
 )
 from .contracts import BOUNDARIES, CONTRACTS, Clause, Column, Status
+from .unknown_precision import (
+    Diagnosis,
+    UnknownReason,
+    defects,
+    diagnose,
+    survey,
+)
 from .metrics import Metrics, measure
 from .presenter import (
     AuditReport,

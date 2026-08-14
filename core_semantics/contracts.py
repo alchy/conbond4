@@ -815,6 +815,27 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_someone_who_never_answers_sees_no_change",
         ),
     ),
+    Clause(
+        id="S-26",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "`U` se rozkládá podle DŮVODU, ne podle počtu: modul nemá "
+            "žádné skóre k minimalizaci, protože vylepšit počet `U` jde "
+            "jen hádáním. Kategorie `RECALL_FAILURE` je VADA, ne nález — "
+            "tvrzení v bázi JE a systém ho nenašel; přesně to byla G‑3. "
+            "Rozklad stojí jen na tom, co `GapFinder` vrátil a co v bázi "
+            "leží; nic se nedomýšlí (A‑27)"
+        ),
+        anchor="core_semantics.unknown_precision:diagnose",
+        entry="diagnose(",
+        enforced_by=(
+            "test_a_stated_fact_answered_unknown_is_a_defect",
+            "test_the_defect_check_compares_formulas_not_derivability",
+            "test_no_stated_fact_is_forgotten_in_any_kernel_shape",
+            "test_the_module_offers_no_score_to_minimise",
+            "test_no_dialogue_answer_is_a_recall_failure",
+        ),
+    ),
     # -- storage → cascade (zpětná hrana) ----------------------------------
     Clause(
         id="B-1",
