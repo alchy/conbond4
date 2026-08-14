@@ -253,6 +253,26 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="J-8",
+        boundary=KERNEL_LEARNING,
+        promise=(
+            "jádrová relace nad ČASEM nebo MÍSTEM se dá vyrobit ČESKOU "
+            "VĚTOU a její strany dostanou sort Z RELACE, ne ze jména role "
+            "(`whole`/`part` má `contains` i `within`, takže jméno "
+            "nestačí). Kvantifikátor takové strany nenesou (§ 3.6). "
+            "Schopnost, ke které jazyk nevede, se nedá odlišit od "
+            "schopnosti, která nefunguje (N‑9)"
+        ),
+        anchor="core_semantics.ast:RELATION_SORTS",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_czech_sentence_finally_produces_before",
+            "test_the_sides_are_intervals_not_groups",
+            "test_the_answer_needs_a_transitive_step",
+            "test_the_opposite_direction_is_unknown_not_false",
+        ),
+    ),
+    Clause(
         id="J-2",
         boundary=KERNEL_LEARNING,
         promise=(

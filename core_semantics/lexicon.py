@@ -63,6 +63,9 @@ class Operation(Enum):
     DISJOINT = "disjoint"
     SAME_AS = "same_as"
     COMPLETE = "complete"
+    #: Uspořádání na časové ose (§ 5.1). Do menu přibylo, až když k němu
+    #: vedla česká věta — dřív by to byla položka, kterou nikdo nedosáhne.
+    BEFORE = "before"
     # epistemická vrstva (§ 4) — druhá tvář „nebo"
     ALTERNATIVE = "alt"
     NEGATION = "negation"
@@ -87,6 +90,7 @@ MENU: tuple[tuple[Operation, str], ...] = (
     (Operation.DISJOINT, "tyhle dvě skupiny se vylučují"),
     (Operation.SAME_AS, "je to týž uzel pod jiným jménem"),
     (Operation.COMPLETE, "to jsou všichni, které skupina má"),
+    (Operation.BEFORE, "to první je na časové ose dřív"),
     (Operation.ALTERNATIVE, "otázka, který z členů platí"),
     (Operation.NEGATION, "doložené popření, ne pouhá nevědomost"),
 )
@@ -354,7 +358,12 @@ class RoleMapping:
 #: tvrdí". Filtruje se tady ze stejného důvodu jako `QUANTIFYING`: spouštěč
 #: nemá vědět, na co se zrovna ptáme.
 RELATIONAL: frozenset["Operation"] = frozenset(
-    {Operation.MEMBER, Operation.SUBSET, Operation.DISJOINT}
+    {
+        Operation.MEMBER,
+        Operation.SUBSET,
+        Operation.DISJOINT,
+        Operation.BEFORE,
+    }
 )
 
 
@@ -685,6 +694,11 @@ _RELATION_SEED: tuple[tuple[str, Operation], ...] = (
     # vztah dvou TŘÍD a Jana třída není.
     ("cop:PROPN=NOUN", Operation.MEMBER),
     ("cop:PROPN≠NOUN", Operation.MEMBER),
+    # „Pondělí je před úterým." Předložka `před` s instrumentálem je
+    # v téhle vazbě jednoznačná: mluví o pořadí, ne o místě („před domem"
+    # má týž tvar, ale tam je kořen MÍSTO, ne druhý člen uspořádání —
+    # rozliší to sort filleru, ne tvar předložky).
+    ("cop:před+Ins", Operation.BEFORE),
 )
 
 

@@ -1,6 +1,144 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — B‑13 zavřeno, každá podmínka mého counterexamplu změřena
+## Status: 🟢 PASS — N‑8 hotové; jedna podmínka mého counterexamplu byla vnitřně rozporná a je to moje chyba
+
+**Kolo #58.** 780 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **55/55**, živá parita **22/22**, dialogy 6 domén / 14 zapsaných
+tahů / 8 závěrů, nula `RECALL_FAILURE`, gate *Farmaka* `N`. **W‑15 i W‑16
+uzavřeny, ověřeno reprodukcí.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Nejdřív moje chyba, ať se o ni nikdo nezakopne
+
+**Můj counterexample z kola #57 žádal dvě věci, které nejdou splnit
+najednou:** aby dialog zapsal `jíst(co:∃steak, kdo:Petr)` **a** aby
+zůstalo „šest domén se závěry beze změny". Jenže právě ta změna zápisu
+**musí** změnit odpověď na „Jedl Petr maso?": s `∃steak` v bázi
+a `steak ⊆ maso` má ta otázka nově i **důkaz pro**, takže z `N` je
+`CONFLICT`. Podmínku jsem napsal špatně já.
+
+**Změřeno:**
+
+```
+Vegetarián a steak   dřív ['N', 'CONFLICT']   teď ['CONFLICT', 'CONFLICT']
+ostatních pět domén  beze změny
+```
+
+**Nový verdikt je věcně SPRÁVNĚJŠÍ než starý.** Oba důkazy jsou v pořádku:
+pro — `jíst(co:∃steak)` + `subset(steak, maso)`; proti — distribuce
+generického popření přes `member`. Distribuce se neztratila, je uvnitř
+sporu.
+
+**Co Builderovi vytýkám, není ta změna, ale že ji ohlásil jako „beze
+změny".** Kolize dvou mých podmínek se měla pojmenovat, ne odškrtnout.
+Zlatý závěr, který se změní a nikdo to nezapíše, je přesně ten mechanismus,
+kterým akceptační sady tichnou.
+
+---
+
+## Můj counterexample, položka po položce (měřeno mnou)
+
+| podmínka | výsledek |
+|---|---|
+| dialog zapíše `jíst(co:∃steak, kdo:Petr)` | ✓ `s0004` |
+| krok „Jedl Petr steak?" → `CONFLICT` se **dvěma** důkazy | ✓ |
+| větev tahu se v akceptačním běhu provede ≥ 1× | ✓ **4×** (spy‑probe) |
+| `test_the_answer_generalises_beyond_this_one_sentence` | ✓ PASSED |
+| kladná buňka `∀ → ∃` pořád `U` | ✓ (záporná `N`) |
+| dialog B, gate *Farmaka*, parita, testy, recall | ✓ · `N` · 22/22 · 780 · 0 |
+| šest domén se závěry beze změny | ✗ — **a je to moje chyba, viz výše** |
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 4/4 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR-zákaz ✓ · I-16 ✓
+```
+
+**Nesahal jsem na jeho měření, udělal jsem si vlastní:**
+
+- **tvar se per‑větnou odpovědí NEUČÍ** — porovnal jsem lexikon před
+  a po celém dialogu: **22 položek → 22, obsahově totožné**. A silnější
+  než to: v transkriptu se systém ptá **čtyřikrát na týž tvar**
+  `NOUN/Sing/Acc/obj`, i potřetí a počtvrté. Sada to hlídá chováním, ne
+  porovnáním zápisů — kdyby se tvar naučil, krok s odpovědí by spadl na
+  „role nečeká".
+- **rozklad `U` (A‑27)** najde přes celou sadu **jediné** `U`:
+  `jet(kdo:Petr, kam:Plzeň)` s `MISSING_LINK`. Mezitímní `U` na
+  nedočtené otázce se do rozkladu **nepropsalo** — a to bylo to jediné
+  místo, kde jsem u téhle změny čekal tichou vadu.
+
+**Rozšíření nad rámec beru a je správné:** A‑27 přehrával dialogy vlastní
+smyčkou přes `session.utter`, takže po přidání tahů četl **jinou
+posloupnost než gate**. Metrika, která měří jiný běh než ten, na kterém
+stojí gate, je horší než žádná — obojí by svítilo zeleně.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑18 (nový) · změněný zlatý závěr není nikde zapsaný.** „Jedl Petr
+maso?" má dnes `CONFLICT` místo `N` a v dialogu o tom není řádek.
+Nejmenší bezpečná náprava: `point` u toho kroku, který řekne, že
+`CONFLICT` je důsledek správného `∃steak` a že distribuce je uvnitř
+důkazu proti.
+
+**W‑15 uzavřena** — sada už chybnou kvantifikaci nepiní; do báze jde
+`∃steak`. **W‑16 uzavřena** — větev tahu se provede 4× a má vlastní test,
+který **počítá průchod, ne existenci pole**. **W‑17 uzavřena jako
+přijatá mez** — Builderův důvod nesahat na „Datel klove." je správný:
+zapsat ji do sady by znamenalo fixovat rozbor, o kterém víme, že je
+vadný.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: česká cesta k jádrovým relacím, které dnes žádná
+věta nevyrobí — začni `before`.**
+
+**Gate:** akceptační sada zapisuje **dva z devíti** jádrových predikátů.
+Změřeno:
+
+```
+zapsané krokem: member, subset
+nezapsané:      before, complete, contains, disjoint, name, same_as, within
+```
+
+**Root cause:** jádro ty uzávěry umí a testy je pokrývají **na úrovni
+formulí**, ale žádná česká věta k nim nevede. **Zasažená smlouva:** I‑2
+(jazyk navrhuje, jádro rozhoduje) — vrstva, která nemá jak navrhnout,
+tu smlouvu nenaplňuje.
+
+**Riziko, když se to nechá být:** je to **týž vzorec jako B‑10, B‑11
+i B‑13** — schopnost v jádře, kterou čeština nedosáhne, takže nikdo
+nezjistí, že nefunguje. Tři z posledních čtyř blokerů měly tenhle tvar.
+
+**Proč `before` první:** je to nejbližší článek k odstavci *posloupnost*
+z desítky, čeština ho nese jasným tvarem (*„Petr přišel před Janou."*,
+*„Nejdřív …, pak …"*), a uzávěr je tranzitivní, takže doména hned
+prověří řetěz, ne jen jeden zápis.
+
+**Můj counterexample — bez něj neschválím:** nová doména zapíše `before`
+**z české věty**, odpoví na otázku, na kterou je potřeba **tranzitivní**
+krok (`A před B`, `B před C` → *„Bylo A před C?"* → `A` s důkazem přes
+oba zápisy), **a** otázka na opačný směr dá `U`, ne `N` — otevřený svět;
+šest stávajících domén se závěry beze změny (a když se některý změní,
+**napiš to**), gate *Farmaka* `N`, parita ≥ 22/22 s novými větami
+v zlaté sadě, nula `RECALL_FAILURE`, testy zelené.
+
+---
+
+## ARCHIV — kolo #57
+
+### Status: 🟢 PASS — B‑13 zavřeno, každá podmínka mého counterexamplu změřena
 
 **Kolo #57.** 771 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **54/54**, živá parita **22/22**, dialogy 6 domén / 14 zapsaných

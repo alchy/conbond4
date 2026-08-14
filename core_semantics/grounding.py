@@ -41,6 +41,7 @@ from typing import TYPE_CHECKING, Callable
 
 from .ast import (
     PLACE_ROLES,
+    RELATION_SORTS,
     TIME_ROLES,
     UNQUANTIFIED_ROLES,
     Atom,
@@ -150,7 +151,20 @@ def _quantifier_for(term: Term, chosen: Quantifier | None) -> Quantifier | None:
     return chosen if term.SORT is Sort.GROUP else None
 
 
-def _sort_for(role_name: str, term_id: str, concrete: bool) -> Term:
+def _sort_for(
+    role_name: str, term_id: str, concrete: bool, relation: Sort | None = None
+) -> Term:
+    """Sort filleru. `relation` má PŘEDNOST před jménem role (N‑9).
+
+    Jádrová relace určuje sort svých stran sama: `before(earlier, later)`
+    mluví o časové ose, ať se ty role jmenují jakkoli. Odvozovat to ze
+    jména by nešlo — `whole`/`part` má `contains` (místo) i `within`
+    (čas), takže by to bylo hádání.
+    """
+    if relation is Sort.TIME:
+        return Interval(term_id)
+    if relation is Sort.PLACE:
+        return Place(term_id)
     if role_name in PLACE_ROLES:
         return Place(term_id)
     if role_name in TIME_ROLES:
@@ -164,7 +178,11 @@ _Resolution = tuple[Term | None, BindingType, str, str | None]
 _UNRESOLVED: _Resolution = (None, BindingType.GROUP, "", None)
 
 
-def _ground_role(reading: RoleReading, view: ResolvedGraphView) -> _Resolution:
+def _ground_role(
+    reading: RoleReading,
+    view: ResolvedGraphView,
+    relation: Sort | None = None,
+) -> _Resolution:
     mention = reading.mention
 
     if reading.resolved:
@@ -194,6 +212,16 @@ def _ground_role(reading: RoleReading, view: ResolvedGraphView) -> _Resolution:
 
     if reading.awaiting == AWAITING_REFERENCE:
         return _resolve_definite(reading, view)
+
+    if relation is not None:
+        # Strana jádrové relace: sort plyne z RELACE a kvantifikátor se
+        # u ní nedrží (§ 3.6), takže se tu neptáme ani na jedno.
+        return (
+            _sort_for(reading.name, name_of(mention), concrete=False, relation=relation),
+            BindingType.FROM_ROLE,
+            "sort z jádrové relace",
+            None,
+        )
 
     if reading.name in UNQUANTIFIED_ROLES:
         # Místo a čas kvantifikátor nemají a mít nesmí — role sama určuje
@@ -366,8 +394,15 @@ def ground(predication: Predication, view: ResolvedGraphView) -> Grounded:
     questions: list[str] = []
     fillers = []
 
+    relation_sort = (
+        RELATION_SORTS.get(predication.predicate)
+        if predication.relation is not None
+        else None
+    )
     for reading in predication.roles:
-        term, binding, detail, question = _ground_role(reading, view)
+        term, binding, detail, question = _ground_role(
+            reading, view, relation_sort
+        )
         if question:
             questions.append(question)
         if term is None:

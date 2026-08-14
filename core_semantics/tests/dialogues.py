@@ -674,7 +674,15 @@ VEGETARIAN = Dialogue(
                 "MEZIKROK, na kterém je vidět, že řetěz drží: protidůkaz "
                 "neplyne z ničeho zapsaného o Petrovi a mase, ale "
                 "z DISTRIBUCE generického popření přes členství — a od "
-                "B‑13 sedne i na `∃` dotaz, protože negace obrací monotonii"
+                "B‑13 sedne i na `∃` dotaz, protože negace obrací "
+                "monotonii. "
+                "VERDIKT SE TU ZMĚNIL Z `N` NA `CONFLICT` A JE TO "
+                "DŮSLEDEK SPRÁVNÉHO ČTENÍ. Dokud se „Petr jedl steak“ "
+                "zapisovalo jako `∀steak`, měla tahle otázka jen důkaz "
+                "PROTI. Se správným `∃steak` a `steak ⊆ maso` má i důkaz "
+                "PRO, takže spor je věcně na místě: Petr snědl něco, co "
+                "je maso, a o mase je doložené popření. Distribuce se "
+                "neztratila — je uvnitř toho sporu"
             ),
         ),
         Step(
@@ -712,6 +720,92 @@ VEGETARIAN = Dialogue(
 )
 
 
+
+# --------------------------------------------------------------------------
+# 7 · Pořadí dnů — jádrová relace `before` z české věty
+# --------------------------------------------------------------------------
+
+ORDER = Dialogue(
+    name="Pořadí dnů",
+    source="„Pondělí je před úterým. Úterý je před středou.“",
+    steps=(
+        Step(
+            text="Pondělí je před úterým.",
+            reading=sentence(
+                w("Pondělí", "pondělí", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+                w("je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+                w("úterým", "úterý", "NOUN", 0, "root", Case="Ins", Gender="Neut", Number="Sing"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            reads="before(earlier:pondělí, later:úterý)",
+            anchors=("Pondělí → pondělí (sort z role; sort z jádrové relace)",),
+            writes="before(earlier:pondělí, later:úterý)",
+            point=(
+                "PRVNÍ JÁDROVÁ RELACE NAD ČASEM, KTEROU VYROBÍ ČESKÁ VĚTA. "
+                "Do N‑9 zapisovala akceptační sada z devíti jádrových "
+                "predikátů jen dva; `before` uměl evaluátor, ale žádná věta "
+                "k němu nevedla — a schopnost, kterou jazyk nedosáhne, se "
+                "nedá odlišit od schopnosti, která nefunguje"
+            ),
+        ),
+        Step(
+            text="Úterý je před středou.",
+            reading=sentence(
+                w("Úterý", "úterý", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+                w("je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+                w("středou", "středa", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            reads="before(earlier:úterý, later:středa)",
+            writes="before(earlier:úterý, later:středa)",
+            point="druhý článek — bez něj by se tranzitivita neměla na čem ukázat",
+        ),
+        Step(
+            text="Je pondělí před středou?",
+            reading=sentence(
+                w("Je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("pondělí", "pondělí", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+                w("před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+                w("středou", "středa", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="before(earlier:pondělí, later:středa)",
+            answers="A",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA — a je TRANZITIVNÍ: "
+                "tenhle vztah nikdo nezapsal, plyne z OBOU zapsaných "
+                "a důkaz cituje oba. Jediný zápis by uzávěr neprověřil"
+            ),
+        ),
+        Step(
+            text="Je středa před pondělím?",
+            reading=sentence(
+                w("Je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("středa", "středa", "NOUN", 4, "nsubj", Case="Nom", Gender="Fem", Number="Sing"),
+                w("před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+                w("pondělím", "pondělí", "NOUN", 0, "root", Case="Ins", Gender="Neut", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="before(earlier:středa, later:pondělí)",
+            answers="U",
+            point=(
+                "OPAČNÝ SMĚR DÁ `U`, NE `N`, a to je celý otevřený svět: "
+                "z „pondělí je před středou“ NEPLYNE, že středa před "
+                "pondělím není — plynulo by to teprve z uzavření osy, "
+                "které nikdo nevyslovil. `N` by tu bylo tvrzení navíc"
+            ),
+        ),
+    ),
+    note=(
+        "Sedmý akceptační dialog. Otevírá českou cestu k jádrovým relacím, "
+        "ke kterým dosud žádná věta nevedla: uzávěr `before*` je "
+        "tranzitivní, takže doména prověří ŘETĚZ, ne jeden zápis."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -719,4 +813,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     TIME_AND_PLACE,
     PETROVICE,
     VEGETARIAN,
+    ORDER,
 )

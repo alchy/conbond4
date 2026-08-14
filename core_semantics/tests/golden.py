@@ -563,10 +563,71 @@ H6 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# Dialog I — `before` z české věty (N‑9)
+# --------------------------------------------------------------------------
+#
+# Vazba `před`+Ins se dosud živě neměřila vůbec a je to jediná cesta, kterou
+# čeština k uspořádání na časové ose dnes vede.
+
+I1 = Golden(
+    dialogue="I",
+    text="Pondělí je před úterým.",
+    tokens=(
+        tok(1, "Pondělí", "pondělí", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+        tok(2, "je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+        tok(4, "úterým", "úterý", "NOUN", 0, "root", Case="Ins", Gender="Neut", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    predication="before(earlier:pondělí, later:úterý)",
+)
+
+I2 = Golden(
+    dialogue="I",
+    text="Úterý je před středou.",
+    tokens=(
+        tok(1, "Úterý", "úterý", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+        tok(2, "je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+        tok(4, "středou", "středa", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    predication="before(earlier:úterý, later:středa)",
+)
+
+I3 = Golden(
+    dialogue="I",
+    text="Je pondělí před středou?",
+    tokens=(
+        tok(1, "Je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "pondělí", "pondělí", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+        tok(3, "před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+        tok(4, "středou", "středa", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+        tok(5, "?", "?", "PUNCT", 4, "punct"),
+    ),
+    predication="before(earlier:pondělí, later:středa)",
+)
+
+I4 = Golden(
+    dialogue="I",
+    text="Je středa před pondělím?",
+    tokens=(
+        tok(1, "Je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "středa", "středa", "NOUN", 4, "nsubj", Case="Nom", Gender="Fem", Number="Sing"),
+        tok(3, "před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+        tok(4, "pondělím", "pondělí", "NOUN", 0, "root", Case="Ins", Gender="Neut", Number="Sing"),
+        tok(5, "?", "?", "PUNCT", 4, "punct"),
+    ),
+    predication="before(earlier:středa, later:pondělí)",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
     H1, H2, H3, H4, H5, H6,
+    I1, I2, I3, I4,
 )
 
 

@@ -635,3 +635,107 @@ def test_what_the_composition_does_not_claim_can_be_said_by_a_turn() -> None:
         subset_of(Group("auto"), Group("prostředek"))
     )
     assert result.status is QueryStatus.PROVEN_TRUE
+
+
+# --------------------------------------------------------------------------
+# `before` z české věty — N‑9
+# --------------------------------------------------------------------------
+#
+# Akceptační sada zapisovala z DEVÍTI jádrových predikátů jen DVA
+# (`member`, `subset`). Zbytek evaluátor umí a testy ho pokrývají na
+# úrovni formulí, ale žádná česká věta k němu nevedla — a schopnost,
+# kterou jazyk nedosáhne, se nedá odlišit od schopnosti, která
+# nefunguje. Byl to týž vzorec jako B‑10, B‑11 i B‑13.
+
+COP_INS = dict(
+    Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Tense="Pres",
+    VerbForm="Fin", Voice="Act", Polarity="Pos",
+)
+
+
+def order(earlier: str, later: str, *, question: bool = False) -> Reading:
+    """«<X> je před <Y>.» / «Je <X> před <Y>?»"""
+    # Pořadí slov se v otázce obrací („Je pondělí…" × „Pondělí je…"),
+    # a je to jediné, co se mezi tvrzením a otázkou liší — proto se
+    # skládají oba tvary z týchž dílů.
+    order_of = (
+        (("Je", "být", "AUX", "cop"), (earlier, earlier, "NOUN", "nsubj"))
+        if question
+        else ((earlier, earlier, "NOUN", "nsubj"), ("je", "být", "AUX", "cop"))
+    )
+    first, second = order_of
+    return Reading(
+        tokens=(
+            w(1, first[0], first[1], first[2], 4, first[3], **(
+                COP_INS if first[3] == "cop" else {"Case": "Nom", "Number": "Sing"}
+            )),
+            w(2, second[0], second[1], second[2], 4, second[3], **(
+                COP_INS if second[3] == "cop" else {"Case": "Nom", "Number": "Sing"}
+            )),
+            w(3, "před", "před", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+            w(4, later, later, "NOUN", 0, "root", Case="Ins", Number="Sing"),
+            w(5, "?" if question else ".", "?" if question else ".", "PUNCT", 4, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def test_a_czech_sentence_finally_produces_before() -> None:
+    """JÁDRO N‑9. Předložka s pádem říká, JAKÝ vztah se tvrdí — přesně
+    jako `druh` u podtřídy."""
+    reading = order("pondělí", "úterý")
+    found = relation_shape(_predication(reading), reading)
+    assert found is not None
+    assert found.shape == "cop:před+Ins"
+    assert (found.left, found.right) == ("kdo", "před+Ins")
+
+
+def test_the_sides_are_intervals_not_groups() -> None:
+    """SORT PLYNE Z RELACE, ne ze jména role: `before` mluví o časové ose,
+    ať se ty role jmenují jakkoli. Odvozovat to ze jména by nešlo —
+    `whole`/`part` má `contains` (místo) i `within` (čas)."""
+    session = Session()
+    result = session.utter("Pondělí je před úterým.", _order_oracle())
+    assert result.predication is not None
+    assert str(result.predication) == "before(earlier:pondělí, later:úterý)"
+    assert result.statement_id is not None
+    assert all(r.quantifier is None for r in result.predication.roles), (
+        "čas se nekvantifikuje (§ 3.6) — ptát se na to by byla otázka "
+        "bez odběratele"
+    )
+
+
+def _order_oracle() -> _Recorded:
+    return _Recorded(
+        {
+            "Pondělí je před úterým.": order("pondělí", "úterý"),
+            "Úterý je před středou.": order("úterý", "středa"),
+            "Je pondělí před středou?": order("pondělí", "středa", question=True),
+            "Je středa před pondělím?": order("středa", "pondělí", question=True),
+        }
+    )
+
+
+def _ordered_session() -> Session:
+    session = Session()
+    oracle = _order_oracle()
+    session.utter("Pondělí je před úterým.", oracle)
+    session.utter("Úterý je před středou.", oracle)
+    return session
+
+
+def test_the_answer_needs_a_transitive_step() -> None:
+    """COUNTEREXAMPLE REVIEWERA. Ten vztah nikdo nezapsal — plyne z OBOU
+    zapsaných, a důkaz je cituje. Jediný zápis by uzávěr neprověřil."""
+    result = _ordered_session().utter("Je pondělí před středou?", _order_oracle())
+    assert result.status is QueryStatus.PROVEN_TRUE
+    cited = [line for line in result.lines if "řekls" in line]
+    assert len(cited) == 2, f"důkaz musí citovat OBA zápisy: {result.lines}"
+
+
+def test_the_opposite_direction_is_unknown_not_false() -> None:
+    """OTEVŘENÝ SVĚT. Z „pondělí je před středou" NEPLYNE, že středa před
+    pondělím není — plynulo by to teprve z uzavření osy, které nikdo
+    nevyslovil. `N` by tu bylo tvrzení navíc."""
+    result = _ordered_session().utter("Je středa před pondělím?", _order_oracle())
+    assert result.status is QueryStatus.UNKNOWN

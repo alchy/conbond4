@@ -560,6 +560,15 @@ REQUIRES_BOUND: dict[str, tuple[str, ...]] = {
     P_NAME: ("of", "value"),
 }
 
+#: Jádrové relace, jejichž fillery NEJSOU skupiny. Sort plyne z RELACE,
+#: ne ze jména role: `whole`/`part` má `contains` (místo) i `within` (čas),
+#: takže samotné jméno by nestačilo a hádat se nemá co (§ 3.6).
+RELATION_SORTS: dict[str, Sort] = {
+    P_BEFORE: Sort.TIME,
+    P_WITHIN: Sort.TIME,
+    P_CONTAINS: Sort.PLACE,
+}
+
 #: Predikáty, které naučené pravidlo NESMÍ mít v nenegované hlavě (I‑16).
 #:
 #: **Je to širší množina než `KERNEL_PREDICATES`, a ten rozdíl je celý

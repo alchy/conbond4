@@ -60,7 +60,12 @@ RELATION_ROLES: dict[Operation, tuple[str, str]] = {
     Operation.MEMBER: ("elem", "group"),
     Operation.SUBSET: ("sub", "sup"),
     Operation.DISJOINT: ("a", "b"),
+    Operation.BEFORE: ("earlier", "later"),
 }
+
+#: Relace, jejichž fillery NEJSOU skupiny, takže kvantifikátor nenesou
+#: (§ 3.6). `RoleTerm` by ho u nich ani nepřipustil.
+UNQUANTIFIED_RELATIONS: frozenset[Operation] = frozenset({Operation.BEFORE})
 
 
 @dataclass(frozen=True, slots=True)
@@ -1205,9 +1210,27 @@ def relation_shape(
     if predication.predicate != COPULA_LEMMA:
         return None
     subject = predication.reading(ROLE_SUBJECT)
-    complement = predication.reading(ROLE_OBJECT)
-    if subject is None or complement is None:
+    if subject is None:
         return None
+    complement = predication.reading(ROLE_OBJECT)
+    if complement is None:
+        # Sponový kořen s PŘEDLOŽKOU nedostal jmennou část (N‑4), ale
+        # konstrukce to je: „Pondělí je PŘED úterým." Předložka s pádem
+        # říká, JAKÝ vztah se tvrdí — přesně jako `druh` u podtřídy.
+        others = [r for r in predication.roles if r is not subject]
+        if len(others) != 1:
+            return None
+        other = others[0]
+        token = _token_at(other.mention.token_index, reading)
+        preposition = _preposition_of(token, reading) if token else None
+        case = other.mention.feat("Case")
+        if preposition is None or not case:
+            return None
+        return Construction(
+            shape=f"cop:{preposition.lemma}+{case}",
+            left=subject.name,
+            right=other.name,
+        )
 
     genitive = [
         role
@@ -1346,6 +1369,10 @@ def _as_relation(
     left_role, right_role = RELATION_ROLES[operation]
     by_name = {role.name: role for role in predication.roles}
 
+    quantifier = (
+        None if operation in UNQUANTIFIED_RELATIONS else Quantifier.SELF
+    )
+
     def as_class(role: RoleReading, name: str) -> RoleReading:
         # `absorbed` se ZÁMĚRNĚ nepředává: `replace` ho zdědí z role, kterou
         # složil `generate`. Přepsat ho tady na prázdno by přivlastnilo
@@ -1354,7 +1381,7 @@ def _as_relation(
         return replace(
             role,
             name=name,
-            quantifier=Quantifier.SELF,
+            quantifier=quantifier,
             pending=None,
             awaiting="",
             source=f"jádrová relace {operation.value}",
@@ -1439,6 +1466,11 @@ def quantifier_tier(lexicon: Lexicon) -> Tier:
                     # a z „Filipovo auto" by se zase ptalo na kvantifikátor
                     # — tedy na něco, co se u určitého popisu neurčuje.
                     or role.awaiting == AWAITING_REFERENCE
+                    # Strany jádrové relace nad ČASEM nebo MÍSTEM
+                    # kvantifikátor nenesou (§ 3.6) — `RoleTerm` by ho
+                    # u nich ani nepřipustil, takže by to byla otázka
+                    # bez odběratele.
+                    or candidate.predication.relation in UNQUANTIFIED_RELATIONS
                     or role.mention.upos not in QUANTIFIED_UPOS
                     # Místo a čas se NEKVANTIFIKUJÍ — `RoleTerm` to u nich
                     # ani nepřipustí. Ptát se na kvantifikátor role `kam`
