@@ -5,3 +5,8 @@ __pycache__/
 venv/
 *.egg-info/
 .idea/
+
+# Předávací stav mezi Builderem a Reviewerem. Přepisuje se při každém tahu
+# a nekumuluje se, takže v historii by to byl jen šum. Trvalý záznam nese
+# REVIEW.md.
+.agent_state.json
