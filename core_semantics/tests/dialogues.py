@@ -532,10 +532,147 @@ TIME_AND_PLACE = Dialogue(
 )
 
 
+
+# --------------------------------------------------------------------------
+# 6 · Vegetarián a steak — logický rozpor (odstavec 6 z deseti)
+# --------------------------------------------------------------------------
+
+VEGETARIAN = Dialogue(
+    name="Vegetarián a steak",
+    source="„Petr je vegetarián. Vegetarián nejí maso. Steak je druh masa. "
+    "Petr jedl steak.“",
+    shapes=(
+        PROPN_SUBJ,
+        NOUN_SUBJ_SG,
+        # Předmět v akuzativu je tu ∀, ne ∃, a je to ROZHODNUTÍ domény,
+        # ne obecná pravda — viz mez u kroku 4.
+        ("NOUN", "Sing", "Acc", "obj", Operation.FOR_ALL),
+    ),
+    steps=(
+        Step(
+            text="Petr je vegetarián.",
+            reading=sentence(
+                w("Petr", "Petr", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("vegetarián", "vegetarián", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Petr, group:·vegetarián)",
+            writes="member(elem:Petr, group:·vegetarián)",
+            point="členství — první článek řetězu",
+        ),
+        Step(
+            text="Vegetarián nejí maso.",
+            reading=sentence(
+                w("Vegetarián", "vegetarián", "NOUN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("nejí", "jíst", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("maso", "maso", "NOUN", 2, "obj", Case="Acc", Gender="Neut", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            reads="¬jíst(co:∀maso, kdo:∀vegetarián)",
+            writes="¬jíst(co:∀maso, kdo:∀vegetarián)",
+            point=(
+                "ODPOVĚĎ NA OTÁZKU, KVŮLI KTERÉ TENHLE DIALOG VZNIKL. "
+                "Vypadá to jako PRAVIDLO (kdo je vegetarián, nejí maso), "
+                "a česky se pravidlo zapsat neumí — jenže tady se nemusí. "
+                "Je to FAKT o třídě se SILNOU NEGACÍ a s ∀ na obou rolích; "
+                "co dělá práci pravidla, je DISTRIBUCE KVANTIFIKOVANÝCH "
+                "ROLÍ (§ 5.2). Pravidlo z věty tedy NENÍ další patro, aspoň "
+                "ne kvůli tomuhle odstavci"
+            ),
+        ),
+        Step(
+            text="Steak je druh masa.",
+            reading=sentence(
+                w("Steak", "steak", "NOUN", 3, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("druh", "druh", "NOUN", 0, "root", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+                w("masa", "maso", "NOUN", 3, "nmod", Case="Gen", Gender="Neut", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="subset(sub:·steak, sup:·maso)",
+            writes="subset(sub:·steak, sup:·maso)",
+            point="podtřída — druhý článek, týž tvar jako u Amoxicilinu",
+        ),
+        Step(
+            text="Petr jedl steak.",
+            reading=sentence(
+                w("Petr", "Petr", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("jedl", "jíst", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("steak", "steak", "NOUN", 2, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            reads="jíst(co:∀steak, kdo:·Petr)",
+            writes="jíst(co:∀steak, kdo:Petr)",
+            point=(
+                "věta, která rozpor způsobí — a systém ji ZAPÍŠE, i když "
+                "už při čtení hlásí, že odporuje bázi: stranu sporu si "
+                "nevybírá (I‑3)"
+            ),
+            limit=(
+                "`∀steak` JE VĚCNĚ ŠPATNĚ — Petr snědl JEDEN steak, ne "
+                "všechny. Potvrzený tvar `NOUN/Sing/Acc/obj → ∀` je "
+                "rozhodnutí domény a pro tuhle větu je chybné; pro "
+                "„Vegetarián nejí maso“ je naopak nutné. TÝŽ TVAR NESE "
+                "V TĚCHTO DVOU VĚTÁCH JINOU KVANTIFIKACI a `shapes` jsou "
+                "na doménu, ne na větu. Změřeno: s `obj → ∃` se čte "
+                "„Petr jedl steak“ správně, ale generické popření zeslábne "
+                "na ¬jíst(co:∃maso, …), tedy „nějaké maso nejí“, a ZÁVĚR "
+                "DOMÉNY SE ZTRATÍ — otázka pak dá `A` místo sporu. Správné "
+                "řešení není jiný tvar, ale doptání NA VĚTU (`→∀`), které "
+                "systém sám dělá, když tvar potvrzený není"
+            ),
+        ),
+        Step(
+            text="Jedl Petr maso?",
+            reading=sentence(
+                w("Jedl", "jíst", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("Petr", "Petr", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("maso", "maso", "NOUN", 1, "obj", Case="Acc", Gender="Neut", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
+            ),
+            reads="jíst(co:∀maso, kdo:·Petr)",
+            answers="N",
+            point=(
+                "MEZIKROK, na kterém je vidět, že řetěz drží: `N` neplyne "
+                "z ničeho zapsaného o Petrovi a mase, ale z distribuce "
+                "generického popření přes členství"
+            ),
+        ),
+        Step(
+            text="Jedl Petr steak?",
+            reading=sentence(
+                w("Jedl", "jíst", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("Petr", "Petr", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("steak", "steak", "NOUN", 1, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
+            ),
+            reads="jíst(co:∀steak, kdo:·Petr)",
+            answers="CONFLICT",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. `CONFLICT` se DVĚMA "
+                "důkazy: pro z toho, co Petr udělal, proti přes tři články "
+                "(členství → podtřída → distribuce). Systém stranu "
+                "NEVYBÍRÁ a obě větve pojmenuje — právě to odstavec 6 "
+                "z deseti požaduje"
+            ),
+        ),
+    ),
+    note=(
+        "Šestý akceptační dialog a první z DESETI ODSTAVCŮ, který jde "
+        "česky celý. Odpovídá na otázku, jestli je pravidlo z věty další "
+        "patro: NENÍ — generické popření je fakt o třídě a práci pravidla "
+        "odvede distribuce rolí. Zbylé odstavce potřebují abdukci, "
+        "pragmatiku, shrnutí nebo modalitu, tedy vrstvy, ne patra."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
     PHARMA,
     TIME_AND_PLACE,
     PETROVICE,
+    VEGETARIAN,
 )

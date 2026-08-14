@@ -1,8 +1,139 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — vlastnictví je v bázi, poslední řešitelná položka uzavřena
+## Status: 🟢 APPROVE — měří se, PROČ padlo `U`
 
-**Kolo #54.** 738 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #55.** 753 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **53/53**, živá parita **16/16**, dialogy 5 domén / 10 zapsaných
+tahů / 6 závěrů. **A‑27 ověřeno mnou včetně mé podmínky.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+**Moje podmínka — metrika nesmí nabízet číslo k vylepšování:**
+
+```
+veřejné symboly modulu: Diagnosis, UnknownReason, defects, diagnose, survey, render
+symboly obsahující score/rate/ratio/precision/total:  ŽÁDNÉ ✓
+```
+
+**Devět jádrových tvarů — zapsat a hned se zeptat:**
+
+```
+member ✓ · subset ✓ · subset/alg ✓ · member/alg ✓ · contains ✓
+before ✓ · same_as ✓ · complete ✓ · reifikovaný vztah ✓
+recall failures: 0
+```
+
+**Na akceptačních dialozích** jediné `U` je `Jel Petr do Plzně?` s důvodem
+`MISSING_LINK` — legitimní otevřený svět. **Nula vad.**
+
+**Regrese celá** včetně G‑3 recallu, zákazu eliminace `OR` a I‑16; gate
+*Farmaka* `N`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Co na tomhle kole stojí za zapsání
+
+**Zábrana proti Goodhartovi je v kódu, ne v komentáři.**
+`test_the_module_offers_no_score_to_minimise` kontroluje, že modul
+nevystavuje žádný symbol se jménem `score`/`rate`/`ratio`/`precision`/
+`total`, a druhý test hlídá, že se ani výpis nesčítá do jednoho čísla.
+Builderův důvod je přesný:
+
+> Číslo, které jde vylepšit, se dřív nebo později vylepšovat začne —
+> a vylepšit počet `U` jde jen hádáním.
+
+To je nejlepší možná odpověď na mou podmínku: **neudělal ji pravidlem,
+udělal ji nemožnou.**
+
+**„Odvoditelnost není přítomnost"** — detektor vady porovnává **rovnost
+formulí**, ne odvoditelnost. `member(Mourek, savec)` z báze *plyne*, ale
+v bázi *není*, takže to vada není. Cokoli volnějšího by z metriky udělalo
+**druhý evaluátor** — a ten by měl vlastní chyby, o kterých by nikdo
+nevěděl.
+
+**Přiznaný stub a jeho zdůvodnění.** `RECALL_FAILURE` dnes v systému
+**není**, takže se detektor nedá pinnout na skutečném enginu. Kdyby ho
+Builder testoval jen tím, že nic nenajde, **prošel by i tehdy, kdyby
+přestal hledat úplně**. `_AmnesiacEngine` je proto součást měření, ne
+obcházení. To je přesně ta úvaha, kterou jsem vyžadoval u sady útoků
+v kole #31: zelený test má něco *měřit*, ne jen svítit.
+
+**A upřesnění, které našel test, ne úvaha:** `GapFinder` vrací jako
+otevřený podcíl i **sám dotaz**, takže do `MISSING_LINK` původně spadlo
+každé `U` a `NOT_STATED` byla prázdná. Bez rozlišení by z rozkladu nešlo
+poznat, **na co se dá odpovědět** — což je jeho jediný praktický užitek.
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.**
+
+---
+
+## Stav projektu
+
+| oblast | stav |
+|---|---|
+| Pět akceptačních dialogů | 🟢 procházejí, verdikty jsou podmínky |
+| Jádro | 🟢 0.1.10, 53 doložek, invarianty drží |
+| Živá služba | 🟢 parita 16/16 |
+| Měření `U` | 🟢 rozklad podle důvodu, nula vad |
+| `Postřižiny`, `Roník` | ⬜ znalost světa — mez, ne úkol |
+
+---
+
+## Jeden další směr: **rozšířit akceptační sadu o odstavec 6 z deseti**
+
+Poprvé je uzavřená sada i všechny řešitelné meze. Cíl, který zadal
+člověk — **deset komplexních odstavců** — zůstává otevřený, a je čas
+posunout **gate**, ne hledat práci uvnitř splněného.
+
+**Vybírám odstavec 6 (logický rozpor: vegetarián × steak).** Důvod:
+
+- **Změřil jsem ho v kole #38** a **funguje** — `SPOR V BÁZI` přes
+  `subset(steak, maso)`. Ale **strukturovaně**; česky ne.
+- Je to **jediný z deseti, jehož závěr je přímo jádrová operace**
+  (`CONFLICT` se dvěma důkazy), takže neotvírá novou sémantiku — jen
+  ověří, jestli **čeština unese celý řetěz**: `member`, `subset`,
+  pravidlo, a rozpor.
+- Ostatní odstavce potřebují buď abdukci (1), pragmatiku (2, 7),
+  shrnutí (3 — mimo architekturu), nebo modalitu (9).
+
+**Co to prověří:** dnes umí čeština `member`, `subset`, `disjoint`
+a obyčejné vztahy. **Pravidlo se česky říct nedá** — a odstavec 6 ho
+potřebuje (*„vegetarián nejí maso"*). Tohle je tedy test, kde se ukáže,
+jestli je další patro **pravidlo z věty**, nebo jestli stačí pravidla
+zadávat strukturovaně a jazyk nechat na faktech.
+
+**Nejmenší bezpečná změna — a je to průzkum, ne stavba:** zapsat
+odstavec 6 jako **šestý akceptační dialog** s tím, co dnes jde česky,
+a **co nejde, zapsat jako `limit` s důvodem**. Teprve z toho vyjde, co
+stavět.
+
+**Counterexample, který musí projít:** všech pět dnešních domén, gate
+*Farmaka*, parita 16/16 a nula `RECALL_FAILURE` — nový dialog nesmí nic
+z toho pohnout.
+
+**Očekávaný výsledek:** šestý dialog v sadě, u každého kroku buď verdikt
+jako podmínka, nebo zapsaná mez s důvodem; a jasná odpověď na otázku,
+**jestli je pravidlo z věty další patro, nebo ne**.
+
+---
+
+## Archiv — kolo #54 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #54. 738 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **52/52**, živá parita **16/16**, dialogy 5 domén / 10 zapsaných
 tahů / 6 závěrů. **N‑7 ověřeno mnou včetně účinku.**
 

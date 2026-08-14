@@ -472,9 +472,101 @@ G5 = Golden(
 )
 
 
+#: **Zlatá sada čte předmět jako `∃`, dialog Vegetarián jako `∀` — a je to
+#: TÝŽ TVAR.** Není to nesrovnalost, je to NÁLEZ: `NOUN/Sing/Acc/obj`
+#: nese v „Petr jedl steak" existenci a v „Vegetarián nejí maso" obecnost,
+#: a rozliší to jen VĚTA, ne tvar. Sada tu fixuje, co dá JEJÍ potvrzený
+#: tvar; závěr domény (rozpor) na tom stojí a je zapsaný v dialogu, kde je
+#: potvrzený tvar jiný. Správné řešení není třetí tvar, ale doptání na
+#: větu — to systém dělá sám, když potvrzený tvar není.
+
+# --------------------------------------------------------------------------
+# Dialog H — logický rozpor (odstavec 6 z deseti)
+# --------------------------------------------------------------------------
+#
+# Do zlaté sady jdou proto, že `live_check` kontroluje JEN tuhle sadu:
+# nahrávky v `dialogues.py` by se s parserem mohly rozejít a nikdo by se
+# to nedozvěděl. Šestý dialog stojí na generickém popření a na distribuci
+# rolí, tedy na tvarech, které se dřív neměřily živě vůbec.
+
+H1 = Golden(
+    dialogue="H",
+    text="Petr je vegetarián.",
+    tokens=(
+        tok(1, "Petr", "Petr", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "vegetarián", "vegetarián", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Petr, group:·vegetarián)",
+)
+
+H2 = Golden(
+    dialogue="H",
+    text="Vegetarián nejí maso.",
+    tokens=(
+        tok(1, "Vegetarián", "vegetarián", "NOUN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(2, "nejí", "jíst", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "maso", "maso", "NOUN", 2, "obj", Case="Acc", Gender="Neut", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    predication="¬jíst(co:∃maso, kdo:∀vegetarián)",
+)
+
+H3 = Golden(
+    dialogue="H",
+    text="Steak je druh masa.",
+    tokens=(
+        tok(1, "Steak", "steak", "NOUN", 3, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "druh", "druh", "NOUN", 0, "root", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, "masa", "maso", "NOUN", 3, "nmod", Case="Gen", Gender="Neut", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="subset(sub:·steak, sup:·maso)",
+)
+
+H4 = Golden(
+    dialogue="H",
+    text="Petr jedl steak.",
+    tokens=(
+        tok(1, "Petr", "Petr", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "jedl", "jíst", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(3, "steak", "steak", "NOUN", 2, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    predication="jíst(co:∃steak, kdo:·Petr)",
+)
+
+H5 = Golden(
+    dialogue="H",
+    text="Jedl Petr maso?",
+    tokens=(
+        tok(1, "Jedl", "jíst", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(2, "Petr", "Petr", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(3, "maso", "maso", "NOUN", 1, "obj", Case="Acc", Gender="Neut", Number="Sing"),
+        tok(4, "?", "?", "PUNCT", 1, "punct"),
+    ),
+    predication="jíst(co:∃maso, kdo:·Petr)",
+)
+
+H6 = Golden(
+    dialogue="H",
+    text="Jedl Petr steak?",
+    tokens=(
+        tok(1, "Jedl", "jíst", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(2, "Petr", "Petr", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(3, "steak", "steak", "NOUN", 1, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
+        tok(4, "?", "?", "PUNCT", 1, "punct"),
+    ),
+    predication="jíst(co:∃steak, kdo:·Petr)",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
+    H1, H2, H3, H4, H5, H6,
 )
 
 
