@@ -535,6 +535,31 @@ PLACE_ROLES: tuple[str, ...] = ("kam", "kde", "odkud", "kudy")
 TIME_ROLES: tuple[str, ...] = ("kdy",)
 UNQUANTIFIED_ROLES: frozenset[str] = frozenset(PLACE_ROLES + TIME_ROLES)
 
+#: Role, které MUSÍ být vázané v okamžiku, kdy se literál vyhodnocuje.
+#:
+#: Jádrové predikáty se neenumerují (§ 5.1 ve F0): `subset(X, Y)` se
+#: dvěma volnými proměnnými by znamenalo projít všechny dvojice skupin.
+#: Engine to hlásí `EvaluationError` — hlasitě, ale AŽ U DOTAZU.
+#:
+#: Tenhle seznam je proto tady, ne v evaluátoru: potřebuje ho i **zápis**,
+#: aby uměl pravidlo uspořádat do bezpečného pořadí dřív, než se na něj
+#: kdokoli zeptá (A‑24). Dvě kopie téhož seznamu by se rozešly a poznalo
+#: by se to na tom, že zápis pustí pravidlo, které vyhodnocení odmítne.
+#:
+#: `member` má vázanou jen `group`: prvky skupiny se vyjmenovat DAJÍ, což
+#: je právě ta operace, ze které výčtové otázky žijí.
+REQUIRES_BOUND: dict[str, tuple[str, ...]] = {
+    P_MEMBER: ("group",),
+    P_SUBSET: ("sub", "sup"),
+    P_CONTAINS: ("whole", "part"),
+    P_WITHIN: ("whole", "part"),
+    P_BEFORE: ("earlier", "later"),
+    P_SAME_AS: ("left", "right"),
+    P_DISJOINT: ("a", "b"),
+    P_COMPLETE: ("group",),
+    P_NAME: ("of", "value"),
+}
+
 #: Predikáty, které naučené pravidlo NESMÍ mít v nenegované hlavě (I‑16).
 #:
 #: **Je to širší množina než `KERNEL_PREDICATES`, a ten rozdíl je celý
@@ -721,6 +746,88 @@ def complete_of(group: GroupTerm) -> Atom:
 # --------------------------------------------------------------------------
 
 
+def _evaluable(literal: Atom, bound: frozenset[str]) -> bool:
+    """Dá se literál vyhodnotit, když jsou vázané právě `bound`?
+
+    Dvě různé podmínky, které se **nesmí slít**:
+
+    * **negovaný** literál neváže nic (§ 5.4/1), takže musí mít vázané
+      VŠECHNY proměnné — jinak by kvantifikoval přes celou otevřenou
+      doménu;
+    * **pozitivní** literál váže, ale jádrový predikát se neenumeruje:
+      role z `REQUIRES_BOUND` musí být vázané už teď.
+
+    Test `test_requires_bound_agrees_with_the_engine` měří, že tenhle
+    předpis souhlasí s evaluátorem — ne čtením zdroje, ale chováním.
+
+    **Hranice, kterou to schválně nepřekračuje.** Podmínka se ptá na
+    proměnnou v KOŘENI fillera (`isinstance(r.target, Variable)`), přesně
+    jako `_match_kernel`. Proměnná schovaná uvnitř algebraického termu
+    (`subset(A AND X, b)`) se tu tedy nepočítá — protože se nepočítá ani
+    tam. Přísnější zápis by odmítal pravidla, která evaluátor spustí, a to
+    je stejná rozešlost jako A‑24, jen otočená. Jestli si algebraický
+    filler s volnou proměnnou zaslouží vlastní ošetření, je otázka na
+    evaluátor, ne na zápis.
+    """
+    if literal.is_negated:
+        return all(v.id in bound for v in literal.variables())
+    required = REQUIRES_BOUND.get(literal.predicate, ())
+    return all(
+        not (
+            r.name in required
+            and isinstance(r.target, Variable)
+            and r.target.id not in bound
+        )
+        for r in literal.canonical_roles()
+    )
+
+
+def _safe_body(rule_id: str, body: tuple[Atom, ...]) -> tuple[Atom, ...]:
+    """Tělo v KANONICKÉM BEZPEČNÉM pořadí — nebo hlasité odmítnutí (A‑24).
+
+    **Problém, který to řeší.** Hornovo pravidlo je konjunkce a `A ∧ B`
+    je totéž co `B ∧ A`. Vyhodnocení ale váže proměnné zleva doprava,
+    takže z šesti permutací téhož pravidla dvě odpovídaly a čtyři padaly
+    na `EvaluationError` — **až u dotazu**, tedy případně o mnoho tahů
+    později a jen na některou otázku. Pro dialogové učení je to
+    nepřijatelné: lexikální tvar naučeného pravidla by určoval jeho
+    význam.
+
+    **Kde se to opravuje.** U ZÁPISU, ne v evaluátoru. Vyhodnocovací
+    strategie se nemění a pořadí zůstává implementační věcí — jen
+    přestává být vlastností významu.
+
+    **Kanonické, ne jen bezpečné.** Mezi vyhodnotitelnými literály se
+    vybírá deterministicky podle zápisu, takže všech šest permutací dá
+    TOTÉŽ tělo, a tedy i tytéž důkazy. Kdyby se jen bralo první, co jde,
+    lišily by se normální tvary a s nimi kanonické důkazy (§ 7).
+
+    **Neexistuje‑li bezpečné pořadí, pravidlo se ODMÍTNE hned.** Chyba
+    u zápisu je tah dialogu, na který jde odpovědět; chyba u dotazu je
+    překvapení.
+    """
+    remaining = list(body)
+    ordered: list[Atom] = []
+    bound: frozenset[str] = frozenset()
+    while remaining:
+        ready = [a for a in remaining if _evaluable(a, bound)]
+        if not ready:
+            blocked = sorted(str(a) for a in remaining)
+            raise UnsafeRule(
+                f"pravidlo {rule_id!r}: pro literály {blocked} neexistuje "
+                f"bezpečné pořadí — jádrový predikát potřebuje vázané role "
+                f"a žádný jiný literál je nesváže. Odmítá se u ZÁPISU, ne "
+                f"až u dotazu, protože chyba u zápisu je tah dialogu, "
+                f"kdežto chyba u dotazu je překvapení."
+            )
+        chosen = min(ready, key=str)
+        ordered.append(chosen)
+        remaining.remove(chosen)
+        if not chosen.is_negated:
+            bound |= frozenset(v.id for v in chosen.variables())
+    return tuple(ordered)
+
+
 @dataclass(frozen=True, slots=True)
 class Rule:
     id: str
@@ -760,6 +867,7 @@ class Rule:
                 f"pravidlo {self.id!r} by přepsalo chráněný predikát "
                 f"{self.head.predicate!r}; učení mění program, nikdy jazyk (I‑16)"
             )
+        object.__setattr__(self, "body", _safe_body(self.id, self.body))
 
     def variables(self) -> frozenset[Variable]:
         return self.head.variables().union(*(a.variables() for a in self.body))

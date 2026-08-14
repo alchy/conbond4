@@ -192,6 +192,9 @@ class Verdict:
     #: se jen z jediného přeživšího, protože ptát se na kvantifikátor
     #: v čtení, které možná není to pravé, je otázka na špatnou věc.
     pending: tuple[tuple[str, StructuralSignature], ...] = ()
+    #: Významové členy, které nedostaly roli, jako `(tvar slova, tvar role)`.
+    #: „Pokud existuje" z N‑5: ptá se jen na to, co v rozboru SKUTEČNĚ je.
+    lost: tuple[tuple[str, str], ...] = ()
 
     @property
     def decided(self) -> Candidate | None:
@@ -249,8 +252,65 @@ def _predicate_head(reading: Reading) -> tuple[Token, Token] | None:
     return root, root
 
 
+def complex_predicate(reading: Reading, anchor: Token) -> Token | None:
+    """Infinitiv, který s řídicím slovesem tvoří JEDEN přísudek.
+
+    Třetí tvar přísudku vedle plnovýznamového slovesa a spony — a je to
+    táž otázka, kde leží lemma: „nesmí dostat penicilin" nese modalitu
+    v kořeni a OBSAH v infinitivu. Bez tohohle se `dostat` odsune do
+    role `xcomp`, `penicilin` zůstane viset pod ním a věta se nezakotví,
+    protože sloveso není uzel žádného sortu.
+
+    **Že je to jeden přísudek, říká specifikace, ne odhad.** Doména
+    farmaka (§ 6.12) modeluje závěr jako JEDEN predikát
+    `smí_dostat(who, what)` se silnou negací — ne jako `smět` s vnořeným
+    dějem. Modalita je součástí jména vztahu.
+
+    **Nic se nezahazuje.** Složené lemma nese obě části (`smět_dostat`),
+    takže se z věty neztrácí ani modalita, ani obsah; mění se jen to,
+    KDE je systém hledá.
+
+    Rozpoznává se **ze stavby, ne ze seznamu sloves**: kořen má
+    infinitivní `xcomp`. Zavřený seznam modálních sloves by byl domněnka
+    o češtině navíc, a tahle podmínka je přímo v rozboru.
+    """
+    for child in reading.children(anchor.index):
+        if (
+            base_deprel(child.deprel) == "xcomp"
+            and child.feat("VerbForm") == "Inf"
+        ):
+            return child
+    return None
+
+
 #: Deprel okolností, které se pojmenovávají povrchově z předložky a pádu.
+#: Porovnává se ZÁKLAD, ne celý řetězec — viz `base_deprel`.
 CIRCUMSTANCE_DEPRELS = ("obl", "nmod")
+
+#: Závislosti, které NEJSOU ztracený člen, i když je slovní druh
+#: významový. `expl` je zvratná částice („se" v „myje se") — patří ke
+#: slovesu, ne do role, a hlásit ji jako ztrátu by byl šum.
+NOT_A_LOST_MEMBER = ("expl", "cop", "aux", "punct", "case", "det")
+
+
+def base_deprel(deprel: str) -> str:
+    """Základ závislosti bez UD podtypu: `obl:arg` → `obl`.
+
+    **Odděluje VIDITELNOST od POJMENOVÁNÍ** (N‑1). Univerzální závislosti
+    používají podtypy (`obl:arg`, `nsubj:pass`, `nmod:poss`) a porovnání
+    na přesnou shodu je na nich slepé — token propadl a skončil jako
+    `[ZAHOZENO]`, u podmětu rovnou jako nečitelná věta. Celý trpný rod
+    byl pro systém neviditelný.
+
+    **Podtyp se tím ale NEZAHAZUJE**, a to je ta podstatná půlka.
+    `nsubj:pass` NENÍ `nsubj`: v „Auto bylo koupeno Filipem" je `auto`
+    trpný podmět, tedy to KUPOVANÉ, a agens je `Filipem`. Kdyby se
+    podtyp ztratil, systém by mlčky přiřadil „kdo" tomu, kdo nic nedělá
+    — a to je horší než dnešní odmítnutí, protože dnes aspoň řekne, že
+    neví. Základ tedy rozhoduje, jestli je token KANDIDÁT na roli;
+    jméno role dostane až z celého deprelu, a co znamená, se učí.
+    """
+    return deprel.split(":", 1)[0]
 
 
 def surface_role(token: Token, reading: Reading) -> str:
@@ -270,32 +330,50 @@ def surface_role(token: Token, reading: Reading) -> str:
         (
             child.lemma
             for child in reading.children(token.index)
-            if child.deprel == "case"
+            if base_deprel(child.deprel) == "case"
         ),
         None,
     )
     case = token.feat("Case")
+    # PODTYP JE SOUČÁST TVARU, ne ozdoba. „v pondělí" je `obl`, tedy
+    # volné určení, kdežto „věří v úspěch" je `obl:arg`, tedy PŘEDMĚT
+    # slovesa — a rozbor to rozlišuje. Kdyby se obojí jmenovalo `v+Acc`,
+    # naučené mapování `v+Acc → kdy` by z „věří v úspěch" udělalo časový
+    # údaj. Tu chybu jsem si vyrobil sám, než se podtyp začal brát v potaz.
+    _, _, subtype = token.deprel.partition(":")
+    suffix = f":{subtype}" if subtype else ""
     if preposition and case:
-        return f"{preposition}+{case}"
+        return f"{preposition}+{case}{suffix}"
     if preposition:
-        return preposition
+        return f"{preposition}{suffix}"
     if case:
-        return case
+        return f"{case}{suffix}"
     return token.deprel
 
 
 def _role_for(token: Token, reading: Reading) -> str | None:
     """Jméno role pro závislý člen. Jádro rolí je uzavřené, okolnosti
-    povrchové (§ 12/1)."""
-    if token.deprel == "nsubj":
-        return ROLE_SUBJECT
-    if token.deprel in ("obj", "iobj"):
-        return ROLE_OBJECT
-    if token.deprel in ("amod", "advmod"):
+    povrchové (§ 12/1).
+
+    **Podtyp mění jméno.** Holé `nsubj` je `kdo`; `nsubj:pass` dostane
+    své vlastní, povrchové jméno, protože trpný podmět není konatel a
+    ztotožnit je by byl dohad o významu (I‑2, INV‑11). Co takové jméno
+    znamená, se učí jako `RoleMapping` — stejně jako u `do+Gen → kam`.
+    """
+    base = base_deprel(token.deprel)
+    subtyped = token.deprel != base
+
+    if base == "nsubj":
+        return token.deprel if subtyped else ROLE_SUBJECT
+    if base in ("obj", "iobj"):
+        return token.deprel if subtyped else ROLE_OBJECT
+    if base in ("amod", "advmod"):
         return ROLE_MANNER
-    if token.deprel in CIRCUMSTANCE_DEPRELS:
+    if base in CIRCUMSTANCE_DEPRELS:
+        # Okolnost se jmenuje z předložky a pádu, takže je na podtypu
+        # nezávislá sama od sebe: `obl` i `obl:arg` dají „v+Acc".
         return surface_role(token, reading)
-    if token.deprel in ("xcomp", "ccomp"):
+    if base in ("xcomp", "ccomp"):
         return token.deprel
     return None
 
@@ -325,11 +403,25 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
         return ()
     carrier, anchor = head
 
+    # Složený přísudek: lemma nese kořen I infinitiv, a členy se sbírají
+    # z OBOU. Předmět „nesmí dostat penicilin" visí pod infinitivem, ne
+    # pod kořenem — brát jen kořenové děti by ho ztratilo.
+    inner = complex_predicate(reading, anchor)
+    lemma = f"{carrier.lemma}_{inner.lemma}" if inner else carrier.lemma
+    members = list(reading.children(anchor.index))
+    if inner is not None:
+        members = [t for t in members if t.index != inner.index]
+        members.extend(reading.children(inner.index))
+
     nominals: list[Token] = []
     fixed: list[RoleReading] = []
-    for token in reading.children(anchor.index):
+    for token in members:
         if token.deprel == "cop":
             continue
+        # Do ZÁMĚNY kdo/co jdou jen HOLÉ jádrové členy. Podtypovaný
+        # (`nsubj:pass`) je sice vidět, ale permutovat ho by znamenalo
+        # tvrdit, že je zaměnitelný s konatelem — a právě to o trpném
+        # podmětu neplatí.
         if token.deprel in NOMINAL_DEPRELS:
             nominals.append(token)
             continue
@@ -385,7 +477,7 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
             # odkud se role vzala.
             origin = "doplnění podmětu (parser ho nedal)"
         candidates.append(
-            Candidate(Predication(carrier.lemma, roles, mood), origin=origin)
+            Candidate(Predication(lemma, roles, mood), origin=origin)
         )
     # Parserovo čtení jde první — orákulum navrhuje, kaskáda rozhoduje.
     candidates.sort(key=lambda c: (c.origin != "rozbor parseru", str(c.predication)))
@@ -676,6 +768,62 @@ def _token_at(index: int, reading: Reading) -> Token | None:
     return next((t for t in reading.tokens if t.index == index), None)
 
 
+def lost_role_tier(lexicon: Lexicon) -> Tier:
+    """Doplní roli ztracenému členu, **je‑li pro jeho tvar naučená** (N‑5).
+
+    Jediné patro, které čtení ROZŠIŘUJE. Ostatní vybírají nebo
+    přejmenovávají; tohle přidá roli, která v rozboru nemá jméno, ale
+    člověk jí jméno dal.
+
+    Je to táž smyčka jako u kvantifikátoru: **zeptat se → dostat odpověď
+    jako tah → naučit tvar → přečíst větu znovu.** A ze stejného důvodu:
+    věta, ze které vypadl předmět, se nemá zapsat oseknutá — má se
+    dokončit.
+
+    **Bez naučeného tvaru se nic nedoplňuje.** Uhádnout roli z cesty
+    v rozboru by znamenalo vymyslet si význam (INV‑11); ztráta se pak
+    jen ohlásí a zeptá.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        out: list[Candidate] = []
+        for candidate in candidates:
+            roles = list(candidate.predication.roles)
+            taken = {r.name for r in roles}
+            for token, shape in lost_members(reading, candidate.predication):
+                options = lexicon.role_candidates(shape)
+                if len(options) > 1:
+                    notes.append(
+                        f"[POZOR: tvar {shape} může být "
+                        + " nebo ".join(o.canonical for o in options)
+                        + "]"
+                    )
+                    continue
+                if not options or options[0].canonical in taken:
+                    continue
+                roles.append(RoleReading(options[0].canonical, _mention(token)))
+                taken.add(options[0].canonical)
+                notes.append(
+                    f"[DOPLNĚNO: „{token.form}“ → role {options[0].canonical} "
+                    f"(naučený tvar {shape})]"
+                )
+            out.append(
+                Candidate(
+                    replace(
+                        candidate.predication,
+                        roles=tuple(sorted(roles, key=lambda r: r.name)),
+                    ),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
+
+
 def quantifier_tier(lexicon: Lexicon) -> Tier:
     """Kvantifikátor na roli — L‑3. Řadí se **za** mapování rolí.
 
@@ -832,10 +980,55 @@ def dropped_tokens(reading: Reading, predication: Predication) -> tuple[Token, .
     head = _predicate_head(reading)
     if head is not None:
         used |= {head[0].index, head[1].index}
+        # Infinitiv složeného přísudku NENÍ ztracený člen — jeho lemma je
+        # v predikátu (`smět_dostat`). Hlásit ho jako ztrátu by poslalo
+        # člověka pojmenovat roli něčemu, co roli mít nemá.
+        inner = complex_predicate(reading, head[1])
+        if inner is not None:
+            used.add(inner.index)
     return tuple(
         token
         for token in reading.tokens
-        if token.upos in MEANINGFUL_UPOS and token.index not in used
+        if token.upos in MEANINGFUL_UPOS
+        and token.index not in used
+        and base_deprel(token.deprel) not in NOT_A_LOST_MEMBER
+    )
+
+
+def lost_shape(token: Token, reading: Reading) -> str:
+    """Tvar ztraceného členu — **cesta od přísudku plus povrchové značení**.
+
+    Je to obdoba `surface_role` o patro dál. Zatímco okolnost visí přímo
+    na přísudku a stačí jí předložka s pádem, ztracený člen visí někde
+    hlouběji: `penicilin` v „nesmí dostat penicilin" je `obj` pod
+    `xcomp`. Tvar proto nese CESTU, aby jedna odpověď zavřela celou
+    třídu vět, ne jednu větu — `xcomp>obj+Acc` platí pro „smí dostat",
+    „chce koupit" i „musí vrátit".
+
+    **Nic se z toho nehádá.** Cesta i pád jsou v rozboru; co ta role
+    znamená, se neurčuje tady, ale učí se odpovědí člověka.
+    """
+    head = _predicate_head(reading)
+    anchor = head[1].index if head else 0
+    path: list[str] = []
+    current: Token | None = token
+    seen: set[int] = set()
+    while current is not None and current.index != anchor:
+        if current.index in seen:  # pragma: no cover — pojistka proti cyklu
+            break
+        seen.add(current.index)
+        path.append(base_deprel(current.deprel))
+        current = _token_at(current.head, reading)
+    return ">".join(reversed(path)) + "+" + (token.feat("Case") or "?")
+
+
+def lost_members(
+    reading: Reading, predication: Predication
+) -> tuple[tuple[Token, str], ...]:
+    """Ztracené významové členy i s jejich tvarem."""
+    return tuple(
+        (token, lost_shape(token, reading))
+        for token in dropped_tokens(reading, predication)
     )
 
 
@@ -868,6 +1061,58 @@ def _colliding_circumstances(reading: Reading) -> str | None:
     return ", ".join(duplicates) if duplicates else None
 
 
+def why_nothing(reading: Reading) -> str:
+    """PROČ z věty nevzniklo ani jedno čtení.
+
+    Přidáno po prvním běhu proti živé službě: dvě věty skončily holým
+    „NEVÍM, jak to čtu" **bez jediného slova o důvodu**. Mlčení je tu
+    horší než u odpovědi — u odpovědi aspoň víme, na co se ptalo, kdežto
+    tady člověk neví ani to, jestli je problém ve větě, nebo v systému.
+
+    Vysvětluje se JEN z toho, co v rozboru je. Nic se nedomýšlí; když se
+    důvod najít nedá, řekne se i to.
+    """
+    head = _predicate_head(reading)
+    if head is None:
+        return "rozbor nemá kořen, ze kterého by šlo postavit přísudek"
+
+    collision = _colliding_circumstances(reading)
+    if collision:
+        return (
+            f"dvě určení mají týž tvar ({collision}) — které z nich je "
+            f"které, tvarově nepoznám"
+        )
+
+    anchor = head[1]
+    nominals = [
+        token
+        for token in reading.children(anchor.index)
+        if token.deprel in NOMINAL_DEPRELS
+    ]
+    names = [_role_for(token, reading) for token in nominals]
+    duplicated = sorted({n for n in names if n and names.count(n) > 1})
+    if duplicated:
+        # Táž třída jako kolize určení, jen o patro blíž jádru: `obj`
+        # i `iobj` se mapují na roli `co`, takže věta se třemi jádrovými
+        # nominály vyrobí dvakrát totéž jméno role. Rozlišit je by
+        # znamenalo hádat, který z nich je „ten pravý" předmět.
+        return (
+            "dva jádrové členy dostaly touž roli ("
+            + ", ".join(duplicated)
+            + ") — rozbor je rozlišuje jinak, než umím pojmenovat"
+        )
+
+    if not nominals:
+        unmapped = sorted(
+            {t.deprel for t in reading.children(anchor.index) if t.deprel != "punct"}
+        )
+        return (
+            f"přísudek „{head[0].form}“ nemá ani jeden člen, který bych "
+            f"uměl pojmenovat" + (f" (rozbor dal {', '.join(unmapped)})" if unmapped else "")
+        )
+    return "z rozboru nevzniklo čtení a nedokážu říct proč — to je nález"
+
+
 #: Tvrdá patra, která nepotřebují bázi ani naučené vzory. Pořadí je pořadí
 #: ze § 5.2: morfologie dřív než cokoli statistického. `negation_tier` sem
 #: patří ze stejného důvodu jako shoda a pád — `Polarity=Neg` je tvar, ne
@@ -889,16 +1134,13 @@ def cascade(
     candidates = generate(reading, mood=mood)
     trace: list[str] = [f"generátor: {len(candidates)} čtení"]
     if not candidates:
-        collision = _colliding_circumstances(reading)
+        # Vždycky s DŮVODEM. Holé „neumím to přečíst" nechává člověka
+        # hádat, jestli je problém ve větě, nebo v systému — a to je
+        # jediná otázka, kterou v tu chvíli má.
         return Verdict(
             survivors=(),
             trace=tuple(trace),
-            question=(
-                f"Dvě určení mají týž tvar ({collision}) — které z nich je "
-                f"které? Tvarově je rozlišit neumím."
-                if collision
-                else None
-            ),
+            question=f"Tuhle větu přečíst neumím: {why_nothing(reading)}.",
         )
     for tier in tiers:
         candidates, why = tier(candidates, reading)
@@ -927,6 +1169,11 @@ def cascade(
             # otázky na kvantifikátor se tohle spočítat zpětně nedá a musí
             # se to nést s tahem.
             trace.append(note)
+    lost = tuple(
+        (token.form, shape)
+        for candidate in candidates
+        for token, shape in lost_members(reading, candidate.predication)
+    )
     open_roles = tuple(
         role
         for candidate in candidates
@@ -938,8 +1185,32 @@ def cascade(
     return Verdict(
         survivors=candidates,
         trace=tuple(trace),
-        question=open_roles_question(open_roles),
+        question=" ".join(
+            part
+            for part in (open_roles_question(open_roles), lost_question(lost))
+            if part
+        )
+        or None,
         pending=pending,
+        lost=lost,
+    )
+
+
+def lost_question(lost: Sequence[tuple[str, str]]) -> str | None:
+    """Doptání na ZTRACENÝ ČLEN (N‑5).
+
+    Dřív se ztráta jen ohlásila do stopy a věta se zapsala oseknutá.
+    Ohlásit ztrátu je lepší než mlčet, ale pořád je to konstatování —
+    a systém, který ví, že mu něco chybí, se má **zeptat**, ne si to
+    poznamenat.
+
+    Ptá se na TVAR, ne na slovo: odpověď zavře celou třídu vět."""
+    if not lost:
+        return None
+    parts = [f"„{form}“ ({shape})" for form, shape in lost]
+    return (
+        "Nevím, jakou roli hraje " + ", ".join(parts) + " — do čtení se "
+        "nedostalo. Jak se ta role jmenuje?"
     )
 
 

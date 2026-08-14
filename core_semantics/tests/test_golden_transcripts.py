@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from core_semantics.lexicon import czech_seed
+from core_semantics.lexicon import Mood, czech_seed
 from core_semantics.oracle import (
     CachingOracle,
     OracleError,
@@ -69,13 +69,27 @@ def test_golden_sentence_reads_as_recorded(item: Golden) -> None:
                 f"{item.text!r} se ptá, ačkoli sada tvrdí, že nemá: "
                 f"{result.question}"
             )
-            # L‑5: věta, na kterou se systém neptá, se má DOSTAT DO BÁZE.
+            # L‑5: věta, na kterou se systém neptá, má DOJÍT AŽ NA KONEC.
             # Bez tohohle by šlo zakotvení vypnout a sada by zůstala
-            # zelená — četla by se dál, jen by se nic nezapsalo.
-            assert result.statement_id is not None, (
-                f"{item.text!r} se přečetla, nikdo se neptá, a přesto do "
-                f"báze nešlo nic: {result.lines}"
-            )
+            # zelená — četla by se dál, jen by se nic nedělo.
+            #
+            # „Konec" je ale u každé nálady jiný: tvrzení se ZAPÍŠE,
+            # otázka dostane VERDIKT a bázi nechá být (I‑12). Žádat zápis
+            # i po otázce by znamenalo žádat, aby se ptaním měnila báze.
+            if result.predication.mood is Mood.QUESTION:
+                assert result.status is not None, (
+                    f"{item.text!r} je otázka a nedostala verdikt: "
+                    f"{result.lines}"
+                )
+                assert result.statement_id is None, (
+                    f"{item.text!r} je otázka a přesto zapsala "
+                    f"{result.statement_id}"
+                )
+            else:
+                assert result.statement_id is not None, (
+                    f"{item.text!r} se přečetla, nikdo se neptá, a přesto do "
+                    f"báze nešlo nic: {result.lines}"
+                )
 
     haystack = " ".join((*result.lines, *result.trace))
     for note in item.notes:
@@ -147,7 +161,7 @@ def test_session_wires_the_learned_role_mappings() -> None:
     lexikonu, ne jako chybějící zapojení.
     """
     session = Session(lexicon=golden_lexicon())
-    assert len(session.tiers()) == 7
+    assert len(session.tiers()) == 8
     reading = session.utter("Auta jezdí po dálnici.", oracle())
     assert reading.predication is not None
     assert reading.predication.role("kudy") is not None

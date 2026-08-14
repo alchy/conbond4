@@ -197,6 +197,36 @@ def test_unreadable_response_is_an_error_not_a_guess() -> None:
 # --------------------------------------------------------------------------
 
 
+def test_feats_survive_both_shapes_the_service_speaks() -> None:
+    """N‑6, nález z prvního běhu proti ŽIVÉ službě.
+
+    CoNLL‑U posílá rysy jako řetězec, JSON API jako objekt. Klient uměl
+    jen ten první a druhý si přetypoval přes `str(dict)` — takže
+    `"{'Case': 'Nom'}"` neobsahovalo ani jeden pár a **všechny rysy se
+    tiše zahodily**. Bez `Number` nefunguje shoda čísla, bez `Case`
+    pádová mřížka, bez `Polarity` zápor: celá morfologická vrstva byla
+    mrtvá a nic to neohlásilo.
+    """
+    from_string = parse_feats("Case=Nom|Number=Sing")
+    from_object = parse_feats({"Number": "Sing", "Case": "Nom"})
+    assert from_string == from_object == (("Case", "Nom"), ("Number", "Sing"))
+
+
+def test_unreadable_feats_are_loud_because_empty_ones_are_legitimate() -> None:
+    """Prázdné rysy jsou platná hodnota — interpunkce opravdu žádné nemá.
+
+    Právě proto se neznámý tvar NESMÍ tiše zredukovat na prázdno: vypadal
+    by jako slovo bez morfologie a tvrdá patra by mlčky přestala platit.
+    """
+    assert parse_feats(None) == ()
+    assert parse_feats("_") == ()
+    assert parse_feats({}) == ()
+    with pytest.raises(OracleError):
+        parse_feats("{'Case': 'Nom'}")  # přetypovaný slovník, ne CoNLL-U
+    with pytest.raises(OracleError):
+        parse_feats(["Case=Nom"])
+
+
 def test_two_sentences_are_a_segmentation_error_not_two_readings() -> None:
     """Rozhodnutí L‑1. Dřív se druhá věta vydávala za druhé kandidátní
     čtení téže promluvy, takže se systém ptal „které z toho?" na dvě různé

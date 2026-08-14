@@ -163,20 +163,49 @@ class ParseOracle(Protocol):
 # --------------------------------------------------------------------------
 
 
-def parse_feats(raw: str | None) -> tuple[tuple[str, str], ...]:
-    """`Case=Nom|Gender=Masc` → setříděné dvojice.
+def parse_feats(raw: object) -> tuple[tuple[str, str], ...]:
+    """Morfologické rysy → setříděné dvojice.
+
+    **Přijímá DVA tvary, protože služba mluví oběma.** CoNLL‑U je posílá
+    jako řetězec `Case=Nom|Gender=Masc`, JSON API jako objekt
+    `{"Case": "Nom", …}`. Do N‑6 to uměl jen ten první, a druhý se přes
+    `str(dict)` proměnil v `"{'Case': 'Nom'}"`, ve kterém `parse_feats`
+    nenašel nic — **VŠECHNY RYSY SE TIŠE ZAHODILY**.
+
+    Dopad byl přesně tak velký, jak zní: bez `Number` nefunguje shoda
+    čísla, bez `Case` pádová mřížka, bez `Polarity` zápor a bez
+    `Number`/`Case` nesedí ani jeden tvarový vzor. Celá morfologická
+    vrstva byla mrtvá a nic to neohlásilo, protože prázdné rysy jsou
+    legitimní hodnota (u interpunkce opravdu žádné nejsou).
+
+    Proto poslední řádek: co se **nedá přečíst, se hlásí**. Neznámý tvar
+    už nikdy neprojde jako „prázdné rysy".
 
     Setřídění je kvůli determinismu: pořadí rysů ve výstupu modelu není
     smluvně dané a zlatý transkript by na něm neměl viset (I‑4).
     """
-    if not raw or raw == "_":
+    if raw is None or raw == "_" or raw == "" or raw == {}:
         return ()
-    pairs: list[tuple[str, str]] = []
-    for item in raw.split("|"):
-        key, _, value = item.partition("=")
-        if key and value:
-            pairs.append((key, value))
-    return tuple(sorted(pairs))
+    if isinstance(raw, Mapping):
+        return tuple(
+            sorted((str(key), str(value)) for key, value in raw.items())
+        )
+    if isinstance(raw, str):
+        pairs = [
+            (key, value)
+            for key, _, value in (item.partition("=") for item in raw.split("|"))
+            if key and value
+        ]
+        if not pairs:
+            raise OracleError(
+                f"rysy {raw!r} nejdou přečíst; prázdné rysy jsou legitimní "
+                f"hodnota, takže by se tenhle omyl jinak tvářil jako slovo "
+                f"bez morfologie a celá tvrdá patra by mlčky přestala platit"
+            )
+        return tuple(sorted(pairs))
+    raise OracleError(
+        f"rysy mají neznámý tvar {type(raw).__name__}: {raw!r}"
+    )
 
 
 def token_from_json(raw: Mapping[str, object]) -> Token:
@@ -187,9 +216,11 @@ def token_from_json(raw: Mapping[str, object]) -> Token:
         upos=str(raw.get("upos") or "X"),
         head=int(str(raw.get("head") or 0)),
         deprel=str(raw.get("deprel") or "dep"),
-        feats=parse_feats(
-            None if raw.get("feats") is None else str(raw.get("feats"))
-        ),
+        # Bez `str()`. Právě to přetypování zahodilo rysy z JSON objektu:
+        # `str({"Case": "Nom"})` je platný řetězec, jen v něm `parse_feats`
+        # nic nenajde. Předává se, co přišlo, a rozhoduje se až tam, kde
+        # se to dá poznat.
+        feats=parse_feats(raw.get("feats")),
     )
 
 
@@ -319,9 +350,29 @@ class UDPipeOracle:
         self.provenance = self._handshake()
 
     def _handshake(self) -> str:
+        """Provenience při vytvoření — a **neúplnou nepřijme**.
+
+        Provenience je klíč keše a jediný detektor driftu. Dokud se
+        chybějící model doplňoval otazníkem, dva různé modely pod týmž
+        tokenizérem splynuly do jedné identity: keš by starý rozbor
+        vydávala za nový a zlatý transkript by tiše zestárl. Keš bez
+        identity modelu je horší než žádná — proto se to hlásí hned
+        při vytvoření, ne až u prvního rozdílu, který nikdo nečeká.
+        """
         payload = self._call("/version", None, CHECK_TIMEOUT_S)
-        model = str(payload.get("model", "?"))
-        tokenizer = str(payload.get("tokenizer", payload.get("version", "?")))
+        model = str(payload.get("model") or "")
+        tokenizer = str(payload.get("tokenizer") or payload.get("version") or "")
+        missing = [
+            name
+            for name, value in (("model", model), ("tokenizer", tokenizer))
+            if not value
+        ]
+        if missing:
+            raise OracleError(
+                f"služba neuvedla {', '.join(missing)}; provenience je klíč "
+                f"keše i detektor driftu, takže neúplná je horší než žádná — "
+                f"dva různé modely by pod jednou identitou splynuly"
+            )
         return f"udpipe2 model={model} tokenizer={tokenizer}"
 
     def parse(self, text: str) -> Utterance:

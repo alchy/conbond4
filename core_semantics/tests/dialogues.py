@@ -33,7 +33,7 @@ from core_semantics.lexicon import (
 )
 from core_semantics.oracle import Reading, Token, Utterance
 
-PROVENANCE = "udpipe2 model=czech-pdt-ud-2.12 tokenizer=czech-pdt-2.12"
+PROVENANCE = "udpipe2 model=cs_all-ud-2.17-251125 tokenizer=6247b8b7a5c8"
 
 
 def w(
@@ -141,18 +141,20 @@ PETROVICE = Dialogue(
         Step(
             text="Roník bydlí v Petrovicích.",
             reading=sentence(
-                w("Roník", "Roník", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-                w("bydlí", "bydlet", "VERB", 0, "root", Number="Sing"),
-                w("v", "v", "ADP", 4, "case"),
-                w("Petrovicích", "Petrovice", "PROPN", 2, "obl", Case="Loc", Number="Plur"),
+                w("Roník", "roník", "NOUN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Petrovicích", "Petrovice", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+                w(".", ".", "PUNCT", 2, "punct"),
             ),
-            reads="bydlet(kdo:·Roník, v+Loc:Petrovice)",
+            reads="bydlet(kdo:roník, v+Loc:Petrovice)",
             asks="`v`+Loc je `kde` i `kdy`, takže role zůstane POVRCHOVÁ. "
             "Ptá se proto nejdřív na kvantifikátor (povrchová role není "
             "místní role, takže se kvantifikuje jako každá jiná) a věta "
             "se nezakotví. Obojí má týž kořen: dokud se nerozhodne, co "
             "`v`+Loc znamená, není z čeho určit ani sort filleru",
             point="doména, kterou dnes česky NEPŘEČTEME celou, a je to vidět",
+            refuses="",
         ),
     ),
     note="Petrovice ukazují MEZ: bez rozhodnutí `v`+Loc → `kde` se místní "
@@ -181,9 +183,10 @@ ICE_CREAM = Dialogue(
         Step(
             text="Jana je učitelka.",
             reading=sentence(
-                w("Jana", "Jana", "PROPN", 3, "nsubj", Case="Nom", Number="Sing"),
-                w("je", "být", "AUX", 3, "cop", Number="Sing"),
-                w("učitelka", "učitelka", "NOUN", 0, "root", Case="Nom", Number="Sing"),
+                w("Jana", "Jana", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("učitelka", "učitelka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
             ),
             reads="být(co:·učitelka, kdo:·Jana)",
             anchors=("Jana → Jana (založen)", "učitelka → učitelka (obecné jméno)"),
@@ -193,21 +196,30 @@ ICE_CREAM = Dialogue(
         Step(
             text="Děti mají rády zmrzlinu.",
             reading=sentence(
-                w("Děti", "dítě", "NOUN", 2, "nsubj", Case="Nom", Number="Plur"),
-                w("mají", "mít", "VERB", 0, "root", Number="Plur"),
-                w("rády", "rád", "ADJ", 2, "advmod", Number="Plur"),
-                w("zmrzlinu", "zmrzlina", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+                w("Děti", "dítě", "NOUN", 2, "nsubj", Case="Nom", Gender="Fem", Number="Plur"),
+                w("mají", "mít", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("rády", "rád", "ADJ", 2, "iobj", Animacy="Inan", Degree="Pos", Gender="Fem,Masc", Number="Plur", Polarity="Pos", Variant="Short"),
+                w("zmrzlinu", "zmrzlina", "NOUN", 2, "obj", Case="Acc", Gender="Fem", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
             ),
-            reads="mít(co:∃zmrzlina, jak:·rád, kdo:∀dítě)",
-            writes="mít(co:∃zmrzlina, jak:·rád, kdo:∀dítě)",
-            point="∀ na podmětu, ∃ na předmětu — a `jak` je taky skupina",
+            refuses=(
+                "parser označí „rády“ jako `iobj`, tedy jako druhý PŘEDMĚT. "
+                "„rády“ i „zmrzlinu“ pak dostanou touž roli `co`, čtení "
+                "s duplicitní rolí se nesmí vyrobit a nezbyde ani jedno. "
+                "Systém to ŘEKNE: „dva jádrové členy dostaly touž roli (co)“."
+            ),
+            point=(
+                "táž třída jako B‑9, jen o patro blíž jádru: tam kolidovala "
+                "dvě příslovečná určení, tady dva jádrové členy"
+            ),
         ),
         Step(
             text="Je Jana učitelka?",
             reading=sentence(
-                w("Je", "být", "AUX", 3, "cop", Number="Sing"),
-                w("Jana", "Jana", "PROPN", 3, "nsubj", Case="Nom", Number="Sing"),
-                w("učitelka", "učitelka", "NOUN", 0, "root", Case="Nom", Number="Sing"),
+                w("Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Jana", "Jana", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Giv", Number="Sing"),
+                w("učitelka", "učitelka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
             ),
             reads="být(co:·učitelka, kdo:·Jana)",
             anchors=(
@@ -233,10 +245,11 @@ TRANSPORT = Dialogue(
         Step(
             text="Auta jezdí po dálnici.",
             reading=sentence(
-                w("Auta", "auto", "NOUN", 2, "nsubj", Case="Nom", Number="Plur"),
-                w("jezdí", "jezdit", "VERB", 0, "root", Number="Plur"),
-                w("po", "po", "ADP", 4, "case"),
-                w("dálnici", "dálnice", "NOUN", 2, "obl", Case="Loc", Number="Sing"),
+                w("Auta", "auto", "NOUN", 2, "nsubj", Case="Nom", Gender="Neut", Number="Plur"),
+                w("jezdí", "jezdit", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("po", "po", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("dálnici", "dálnice", "NOUN", 2, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
             ),
             reads="jezdit(kdo:∀auto, kudy:dálnice)",
             anchors=(
@@ -250,10 +263,11 @@ TRANSPORT = Dialogue(
         Step(
             text="Jezdí auta po dálnici?",
             reading=sentence(
-                w("Jezdí", "jezdit", "VERB", 0, "root", Number="Plur"),
-                w("auta", "auto", "NOUN", 1, "nsubj", Case="Nom", Number="Plur"),
-                w("po", "po", "ADP", 4, "case"),
-                w("dálnici", "dálnice", "NOUN", 1, "obl", Case="Loc", Number="Sing"),
+                w("Jezdí", "jezdit", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("auta", "auto", "NOUN", 1, "nsubj", Case="Nom", Gender="Neut", Number="Plur"),
+                w("po", "po", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("dálnici", "dálnice", "NOUN", 1, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
             ),
             reads="jezdit(kdo:∀auto, kudy:dálnice)",
             answers="A",
@@ -269,40 +283,60 @@ TRANSPORT = Dialogue(
 
 PHARMA = Dialogue(
     name="Farmaka",
-    source="„Pacient Jan má alergii. Jan nesmí penicilin.“",
+    source="„Pacient Jan má alergii. Jan nesmí dostat penicilin.“",
     shapes=(PROPN_SUBJ, NOUN_OBJ_SG),
+    note=(
+        "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Krok 3 fixuje verdikt `N` "
+        "s citací zapsaného popření — právě to je kritérium téhle "
+        "domény: `N` z DOLOŽENÉHO popření, ne z nevědomosti (I‑21). "
+        "Dokud tu stálo jen `reads`, hlídala sada ROZBOR a závěr "
+        "nechávala bez dozoru; doména vracela `U` tam, kde její "
+        "vlastní kritérium žádá `N` — a v lékové doméně je to přesně "
+        "ta záměna, před kterou to kritérium varuje. "
+        "Že věta prochází, umožnil SLOŽENÝ PŘÍSUDEK: „nesmí dostat“ je "
+        "jeden děj, ne modální sloveso s vnořenou rolí. Předtím visel "
+        "`penicilin` pod infinitivem a věta se nezakotvila."
+    ),
     steps=(
         Step(
             text="Jan má alergii.",
             reading=sentence(
-                w("Jan", "Jan", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-                w("má", "mít", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
-                w("alergii", "alergie", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+                w("Jan", "Jan", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("má", "mít", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("alergii", "alergie", "NOUN", 2, "obj", Case="Acc", Gender="Fem", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
             ),
             reads="mít(co:∃alergie, kdo:·Jan)",
             writes="mít(co:∃alergie, kdo:Jan)",
+            point="jediný tah téhle domény, který dnes projde až do báze",
         ),
         Step(
-            text="Jan nesmí penicilin.",
+            text="Jan nesmí dostat penicilin.",
             reading=sentence(
-                w("Jan", "Jan", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-                w("nesmí", "smět", "VERB", 0, "root", Number="Sing", Polarity="Neg"),
-                w("penicilin", "penicilin", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+                w("Jan", "Jan", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("nesmí", "smět", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("dostat", "dostat", "VERB", 2, "xcomp", Aspect="Perf", Polarity="Pos", VerbForm="Inf"),
+                w("penicilin", "penicilin", "NOUN", 3, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
             ),
-            reads="¬smět(co:∃penicilin, kdo:·Jan)",
-            writes="¬smět(co:∃penicilin, kdo:Jan)",
+            reads="¬smět_dostat(co:∃penicilin, kdo:·Jan)",
+            writes="¬smět_dostat(co:∃penicilin, kdo:Jan)",
             point="ZÁVĚR CELÉ DOMÉNY. Bez čtení `Polarity=Neg` by věta "
             "znamenala pravý opak — a to je v téhle doméně rozdíl, "
             "který se nepočítá v bodech",
         ),
         Step(
-            text="Smí Jan penicilin?",
+            text="Smí Jan dostat penicilin?",
             reading=sentence(
-                w("Smí", "smět", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
-                w("Jan", "Jan", "PROPN", 1, "nsubj", Case="Nom", Number="Sing"),
-                w("penicilin", "penicilin", "NOUN", 1, "obj", Case="Acc", Number="Sing"),
+                w("Smí", "smět", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Jan", "Jan", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("dostat", "dostat", "VERB", 1, "xcomp", Aspect="Perf", Polarity="Pos", VerbForm="Inf"),
+                w("penicilin", "penicilin", "NOUN", 3, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
             ),
-            reads="smět(co:∃penicilin, kdo:·Jan)",
+            reads="smět_dostat(co:∃penicilin, kdo:·Jan)",
+            # VERDIKT JAKO PODMÍNKA, ne jako próza. Test, který fixuje jen
+            # `reads`, hlídá ROZBOR — a závěr domény nechá bez dozoru.
             answers="N",
             point="`N` z DOLOŽENÉHO popření, ne z nevědomosti (I‑21). "
             "„Nevím“ by tady byla jiná a nebezpečnější odpověď",
@@ -323,10 +357,11 @@ TIME_AND_PLACE = Dialogue(
         Step(
             text="Petr jel do Prahy.",
             reading=sentence(
-                w("Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-                w("jel", "jet", "VERB", 0, "root", Number="Sing"),
-                w("do", "do", "ADP", 4, "case"),
-                w("Prahy", "Praha", "PROPN", 2, "obl", Case="Gen", Number="Sing"),
+                w("Petr", "Petr", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("jel", "jet", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("do", "do", "ADP", 4, "case", AdpType="Prep", Case="Gen"),
+                w("Prahy", "Praha", "PROPN", 2, "obl", Case="Gen", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
             ),
             reads="jet(kam:Praha, kdo:·Petr)",
             anchors=(
@@ -338,10 +373,11 @@ TIME_AND_PLACE = Dialogue(
         Step(
             text="Petr jel do Brna.",
             reading=sentence(
-                w("Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-                w("jel", "jet", "VERB", 0, "root", Number="Sing"),
-                w("do", "do", "ADP", 4, "case"),
-                w("Brna", "Brno", "PROPN", 2, "obl", Case="Gen", Number="Sing"),
+                w("Petr", "Petr", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("jel", "jet", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("do", "do", "ADP", 4, "case", AdpType="Prep", Case="Gen"),
+                w("Brna", "Brno", "PROPN", 2, "obl", Case="Gen", Gender="Neut", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
             ),
             reads="jet(kam:Brno, kdo:·Petr)",
             anchors=("Petr → Petr (kanonicky; týž uzel, o kterém už řeč byla)",),
@@ -352,10 +388,11 @@ TIME_AND_PLACE = Dialogue(
         Step(
             text="Jel Petr do Prahy?",
             reading=sentence(
-                w("Jel", "jet", "VERB", 0, "root", Number="Sing"),
-                w("Petr", "Petr", "PROPN", 1, "nsubj", Case="Nom", Number="Sing"),
-                w("do", "do", "ADP", 4, "case"),
-                w("Prahy", "Praha", "PROPN", 1, "obl", Case="Gen", Number="Sing"),
+                w("Jel", "jet", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("Petr", "Petr", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("do", "do", "ADP", 4, "case", AdpType="Prep", Case="Gen"),
+                w("Prahy", "Praha", "PROPN", 1, "obl", Case="Gen", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
             ),
             reads="jet(kam:Praha, kdo:·Petr)",
             answers="A",
@@ -363,10 +400,11 @@ TIME_AND_PLACE = Dialogue(
         Step(
             text="Jel Petr do Plzně?",
             reading=sentence(
-                w("Jel", "jet", "VERB", 0, "root", Number="Sing"),
-                w("Petr", "Petr", "PROPN", 1, "nsubj", Case="Nom", Number="Sing"),
-                w("do", "do", "ADP", 4, "case"),
-                w("Plzně", "Plzeň", "PROPN", 1, "obl", Case="Gen", Number="Sing"),
+                w("Jel", "jet", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("Petr", "Petr", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("do", "do", "ADP", 4, "case", AdpType="Prep", Case="Gen"),
+                w("Plzně", "Plzeň", "PROPN", 1, "obl", Case="Gen", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
             ),
             reads="jet(kam:Plzeň, kdo:·Petr)",
             answers="U",

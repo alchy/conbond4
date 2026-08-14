@@ -63,6 +63,8 @@ from .cascade import (
     cascade,
     has_dropped,
     lexicon_tier,
+    lost_question,
+    lost_role_tier,
     open_roles_question,
     quantifier_tier,
     role_mapping_tier,
@@ -79,7 +81,7 @@ from .lexicon import (
     Trigger,
     czech_seed,
 )
-from .oracle import OracleUnavailable, ParseOracle, Utterance
+from .oracle import OracleUnavailable, ParseOracle, Reading, Utterance
 from .presenter import DEFAULT_PROFILE, AuditReport, TemplateProfile, XAIPresenter
 from .storage import KnowledgeBase
 
@@ -186,6 +188,8 @@ class TurnKind(Enum):
     ANSWER_QUANTIFIER = "→∀"
     #: ODPOVĚĎ na otázku systému po tom, KTERÝ uzel se míní (M‑4).
     DECIDE_REFERENCE = "→="
+    #: ODPOVĚĎ na otázku systému po JMÉNU ROLE ztraceného členu (N‑5).
+    NAME_ROLE = "→@"
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,11 +219,20 @@ class Turn:
     #: Role a uzel, které rozhodl tah `→=`.
     role_name: str = ""
     node_id: str = ""
+    #: Tvar ztracené role a rozbor, ze kterého se čte znovu (`→@`).
+    #: Rozbor se nese s tahem, protože ztracený člen v predikaci NENÍ —
+    #: to je celý ten problém — takže znovu přečíst jde jen ze stromu.
+    shape_name: str = ""
+    reading: Reading | None = None
     #: Vybrané čtení. Do žurnálu jde STRUKTURA, ne text — kdyby v žurnálu
     #: ležely věty, `replay` by závisel na verzi parseru a přehratelnost
     #: z § 10 by padla (a na té stojí měření učitelnosti).
     predication: Predication | None = None
     trace: tuple[str, ...] = ()
+    #: Ztracené významové členy tahu čtení. Nesou se s tahem, protože
+    #: v predikaci NEJSOU — to je celý ten problém — a `replay` by se
+    #: na ně jinak nezeptal podruhé, ačkoli pořád chybí.
+    lost: tuple[tuple[str, str], ...] = ()
 
 
 def says(text: str, formula: Formula) -> Turn:
@@ -259,12 +272,20 @@ def asks_for(text: str, pattern: Atom, variable: str) -> Turn:
 
 
 def reads(
-    text: str, predication: Predication, *, trace: Sequence[str] = ()
+    text: str,
+    predication: Predication,
+    *,
+    trace: Sequence[str] = (),
+    lost: Sequence[tuple[str, str]] = (),
 ) -> Turn:
     """Tah, který vznikl z české věty. Nese VYBRANÉ ČTENÍ, ne text —
     `text` je jen popis pro transkript, přehrává se struktura."""
     return Turn(
-        TurnKind.READING, text, predication=predication, trace=tuple(trace)
+        TurnKind.READING,
+        text,
+        predication=predication,
+        trace=tuple(trace),
+        lost=tuple(lost),
     )
 
 
@@ -315,6 +336,27 @@ def decides_reference(
         predication=predication,
         role_name=role_name,
         node_id=node_id,
+    )
+
+
+def names_role(
+    text: str, reading: Reading, shape: str, role_name: str
+) -> Turn:
+    """ODPOVĚĎ na otázku „jakou roli hraje tenhle člen?" (N‑5).
+
+    Systém ohlásil, že mu ze vstupu něco vypadlo, a **zeptal se**.
+    Tenhle tah je odpověď: naučí mapování TVARU na roli a čekající větu
+    přečte ZNOVU — teprve pak se zapisuje. Věta se tím dokončí, ne oseká.
+
+    Učí se tvar (`xcomp>obj+Acc`), ne slovo (`penicilin`), takže jedna
+    odpověď zavře celou třídu vět.
+    """
+    return Turn(
+        TurnKind.NAME_ROLE,
+        text,
+        reading=reading,
+        shape_name=shape,
+        role_name=role_name,
     )
 
 
@@ -401,6 +443,11 @@ class Session:
             *HARD_TIERS,
             lexicon_tier(self.lexicon),
             role_mapping_tier(self.lexicon),
+            # Doplnění ztracené role PŘED kvantifikátorem: role, která
+            # teprve vznikne, se musí stihnout zkvantifikovat jako každá
+            # jiná — jinak by odpověď zavřela jednu otázku a hned otevřela
+            # druhou, na kterou by se systém zeptal až příště.
+            lost_role_tier(self.lexicon),
             # Kvantifikátor až po přejmenování rolí: patro se ptá lexikonu
             # na TVAR role, a ten se do poslední chvíle může změnit.
             quantifier_tier(self.lexicon),
@@ -437,6 +484,7 @@ class Session:
             TurnKind.SPLIT: self._split,
             TurnKind.ANSWER_QUANTIFIER: self._answer_quantifier,
             TurnKind.DECIDE_REFERENCE: self._decide_reference,
+            TurnKind.NAME_ROLE: self._name_role,
             TurnKind.REVOKE: self._revoke,
             TurnKind.QUESTION: self._question,
             TurnKind.BOUND: self._bound,
@@ -640,7 +688,12 @@ class Session:
                 trace=verdict.trace,
             )
         return self.play(
-            reads(text, verdict.decided.predication, trace=verdict.trace)
+            reads(
+                text,
+                verdict.decided.predication,
+                trace=verdict.trace,
+                lost=verdict.lost,
+            )
         )
 
     def _utter_many(
@@ -705,7 +758,14 @@ class Session:
         se po odpovědi opravdu ZNOVU ZKUSÍ zapsat, což je celý smysl toho,
         že se člověk odpovídat obtěžoval.
         """
-        question = open_roles_question(predication.open_roles())
+        question = " ".join(
+            part
+            for part in (
+                open_roles_question(predication.open_roles()),
+                lost_question(turn.lost),
+            )
+            if part
+        ) or None
         # Tři znaménka, ne dvě. `✓` slibuje hotový tah, jenže čtení
         # s otevřenou rolí by na `role()` spadlo na `UnquantifiedRole`,
         # a čtení, ze kterého vypadl kus věty, není celá věta. V obou
@@ -724,7 +784,13 @@ class Session:
             lines.append(f"  ? {grounded.question}")
             question = " ".join(filter(None, (question, grounded.question)))
 
-        routed = self._route(index, turn, predication, grounded)
+        # Věta, ze které něco VYPADLO, se nezapisuje. Zapsat ji teď a po
+        # odpovědi znovu by uložilo DVA výroky — nejdřív oseknutý, pak
+        # celý — a ten první by nikdo neodvolal. Čeká se na doplnění;
+        # věta se má dokončit, ne oseknout.
+        routed = (
+            None if turn.lost else self._route(index, turn, predication, grounded)
+        )
         if routed is None:
             if grounded.formula is None and not question:
                 lines.append("  (zakotvení neproběhlo — do báze nejde nic)")
@@ -864,6 +930,28 @@ class Session:
         )
         prefix = [f"✓ rozhodnuto  {turn.role_name} → {turn.node_id}"]
         return self._settle(index, turn, resolved, prefix)
+
+    def _name_role(self, index: int, turn: Turn) -> TurnResult:
+        """`→@` — člověk pojmenoval roli ztraceného členu a věta se čte znovu."""
+        assert turn.reading is not None
+        mapping = self.lexicon.teach_role(
+            turn.shape_name, turn.role_name, learned_from=f"tah {index}"
+        )
+        verdict = cascade(
+            turn.reading, mood=_mood_of(turn.text), tiers=self.tiers()
+        )
+        prefix = [
+            f"✓ naučeno  {mapping}",
+            f"  (platí pro každý tvar {turn.shape_name}, ne jen pro tuhle větu)",
+        ]
+        if verdict.decided is None:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(*prefix, "→ větu se ani tak přečíst nepodařilo"),
+                trace=verdict.trace,
+            )
+        return self._settle(index, turn, verdict.decided.predication, prefix)
 
     def _declare_distinct(self, index: int, turn: Turn) -> TurnResult:
         """`!≠` — „ti dva nejsou tíž".

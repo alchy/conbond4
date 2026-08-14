@@ -547,6 +547,12 @@ _ROLE_SEED: tuple[tuple[str, str], ...] = (
     ("po+Loc", "kudy"),
     ("v+Loc", "kde"),
     ("v+Loc", "kdy"),
+    # „v pondělí" je AKUZATIV, ne lokál — a na rozdíl od `v+Loc` je
+    # jednoznačný, protože místo se předložkou `v` s akuzativem neurčuje.
+    # Doplněno po prvním běhu proti živé službě: ručně psaná nahrávka
+    # tvrdila lokál a kvůli tomu projekt vedl jako zásadní mez kolizi
+    # dvou určení, která ve skutečnosti neexistuje.
+    ("v+Acc", "kdy"),
     ("na+Loc", "kde"),
     ("Ins", "čím"),
     ("s+Ins", "s kým"),

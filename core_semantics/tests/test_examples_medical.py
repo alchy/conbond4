@@ -9,17 +9,25 @@ u pacienta bez anamnézy**. Druhá polovina je ta důležitější: o Petrovi,
 o kterém nic nevíme, se NESMÍ říct, že lék dostat smí. `U` není slabší
 odpověď — je to jediná bezpečná.
 
-## Pozor na pořadí literálů v těle (W‑5)
+## Pořadí literálů v těle (W‑5 → A‑24)
 
 Jádrový predikát v těle vyžaduje, aby **obě** jeho role byly vázané
 v okamžiku, kdy na ně dojde řada. `subset(L2, L1)` se dvěma dosud
-nevázanými proměnnými skončí `EvaluationError`. Tělo `R5` je proto
-uspořádané tak, aby `subset` přišel až po `alergie_na` (naváže `L1`)
+nevázanými proměnnými skončí `EvaluationError`. Tělo `R5` proto muselo
+být napsané tak, aby `subset` přišel až po `alergie_na` (naváže `L1`)
 a `obsahuje` (naváže `L2`).
 
-V deklarativním čtení Hornovy klauzule je pořadí konjunktů lhostejné, tady
-lhostejné není — autor pravidla musí znát vyhodnocovací strategii.
-Selhává to ale **hlasitě**, ne tiše, a to je záměr (I‑1).
+W‑5 zafixovalo, že se to aspoň **nestane tiše** (I‑1). To ale bylo
+ošetření následku: v deklarativním čtení Hornovy klauzule je pořadí
+konjunktů lhostejné, takže autor pravidla nesměl znát jen češtinu, ale
+i vyhodnocovací strategii. Pro pravidlo naučené z dialogu to je
+neúnosné.
+
+**A‑24 odstraňuje příčinu u zápisu**: `attach_rule` tělo normalizuje do
+kanonického bezpečného pořadí. Zdejší `ordered_body=False` proto už
+nespadne — a to je to zesílení, ne oslabení. Vlastní sada A‑24 (všech
+šest permutací, odmítnutí neuspořádatelného pravidla, protipříklad
+s negací) je v `test_rule_order.py`.
 """
 
 from __future__ import annotations
@@ -33,12 +41,13 @@ from core_semantics.ast import (
     Quantifier,
     QueryStatus,
     Sort,
+    UnsafeRule,
     Variable,
     atom,
     role,
     subset_of,
 )
-from core_semantics.engine import Engine, EvaluationError
+from core_semantics.engine import Engine
 from core_semantics.storage import KnowledgeBase
 
 SELF = Quantifier.SELF
@@ -144,9 +153,29 @@ def test_medicine_without_the_allergen_is_not_refused() -> None:
     assert Engine(kb).ask(_may_receive("Jan", "Ibalgin")).status is QueryStatus.UNKNOWN
 
 
-def test_body_order_matters_and_fails_loudly() -> None:
-    """W‑5 zafixované: `subset` před navázáním obou stran spadne s hláškou,
-    ne tiše. Táž klauzule, jiné pořadí, jiný výsledek."""
-    kb = _base(ordered_body=False)
-    with pytest.raises(EvaluationError, match="vázané"):
-        Engine(kb).ask(_may_receive("Jan", "Curam"))
+def test_body_order_does_not_change_the_answer() -> None:
+    """Nástupce `test_body_order_matters_and_fails_loudly` (W‑5 → A‑24).
+
+    Původní test tvrdil „táž klauzule, jiné pořadí, jiný výsledek" a hlídal
+    aspoň to, aby ten jiný výsledek byl hlasitá chyba. Požadavek za ním —
+    **nikdy ne potichu** — platí dál a je splněný silněji: pořadí přestalo
+    výsledek měnit, takže není co ohlašovat. Test se proto neruší, ale
+    obrací; kdyby ho A‑24 jen smazalo, zmizel by s ním doklad, že se ta
+    konkrétní klauzule ve špatném pořadí pořád dá vyhodnotit."""
+    unordered = Engine(_base(ordered_body=False)).ask(_may_receive("Jan", "Curam"))
+    ordered = Engine(_base()).ask(_may_receive("Jan", "Curam"))
+    assert unordered.status is QueryStatus.PROVEN_FALSE
+    assert unordered.proof_tree == ordered.proof_tree
+
+
+def test_an_unorderable_body_still_fails_loudly_but_at_write_time() -> None:
+    """Druhá půlka W‑5: tichost zůstává zakázaná. Když bezpečné pořadí
+    NEEXISTUJE, ohlásí se to — jen o fázi dřív, u zápisu."""
+    unbound = _substance("Z")
+    kb = KnowledgeBase()
+    with pytest.raises(UnsafeRule):
+        kb.attach_rule(
+            rule_id="RX",
+            head=atom("smí_dostat", role("who", Variable("P")), negated=True),
+            body=(subset_of(_substance("Y"), unbound),),
+        )

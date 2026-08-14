@@ -39,7 +39,7 @@ from core_semantics.oracle import Token, Utterance, recorded
 
 #: Jedna provenience pro celou sadu. `RecordedOracle` míchání odmítá —
 #: transkript, který nese dva rozbory, není čím fixovaný.
-PROVENANCE = "udpipe2 model=czech-pdt-ud-2.12 tokenizer=czech-pdt-2.12"
+PROVENANCE = "udpipe2 model=cs_all-ud-2.17-251125 tokenizer=6247b8b7a5c8"
 
 
 def tok(
@@ -49,8 +49,13 @@ def tok(
     upos: str,
     head: int,
     deprel: str,
+    *,
+    extra: dict[str, str] | None = None,
     **feats: str,
 ) -> Token:
+    """Token nahrávky. `extra` je pro rysy, jejichž jméno není platný
+    identifikátor — UD má například `Gender[psor]` u přivlastňovacích
+    tvarů, a ten se jako pojmenovaný argument předat nedá."""
     return Token(
         index=index,
         form=form,
@@ -58,7 +63,7 @@ def tok(
         upos=upos,
         head=head,
         deprel=deprel,
-        feats=tuple(sorted(feats.items())),
+        feats=tuple(sorted({**(extra or {}), **feats}.items())),
     )
 
 
@@ -106,10 +111,11 @@ A1 = Golden(
     dialogue="A",
     text="Auto je dopravní prostředek.",
     tokens=(
-        tok(1, "Auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Number="Sing"),
-        tok(2, "je", "být", "AUX", 4, "cop", Number="Sing"),
-        tok(3, "dopravní", "dopravní", "ADJ", 4, "amod", Case="Nom"),
-        tok(4, "prostředek", "prostředek", "NOUN", 0, "root", Case="Nom", Number="Sing"),
+        tok(1, "Auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+        tok(2, "je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "dopravní", "dopravní", "ADJ", 4, "amod", Animacy="Inan", Case="Nom", Degree="Pos", Gender="Masc", Number="Sing", Polarity="Pos"),
+        tok(4, "prostředek", "prostředek", "NOUN", 0, "root", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 4, "punct"),
     ),
     predication="být(co:·prostředek, jak:·dopravní, kdo:∀auto)",
     point=(
@@ -122,10 +128,11 @@ A2 = Golden(
     dialogue="A",
     text="Auta jezdí po dálnici.",
     tokens=(
-        tok(1, "Auta", "auto", "NOUN", 2, "nsubj", Case="Nom", Number="Plur"),
-        tok(2, "jezdí", "jezdit", "VERB", 0, "root", Number="Plur"),
-        tok(3, "po", "po", "ADP", 4, "case"),
-        tok(4, "dálnici", "dálnice", "NOUN", 2, "obl", Case="Loc", Number="Sing"),
+        tok(1, "Auta", "auto", "NOUN", 2, "nsubj", Case="Nom", Gender="Neut", Number="Plur"),
+        tok(2, "jezdí", "jezdit", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "po", "po", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        tok(4, "dálnici", "dálnice", "NOUN", 2, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 2, "punct"),
     ),
     predication="jezdit(kdo:∀auto, kudy:dálnice)",
     point="`po`+Loc → `kudy` je NAUČENÉ mapování role, jednoznačné, takže přejmenuje",
@@ -139,20 +146,17 @@ B1 = Golden(
     dialogue="B",
     text="Obsahuje citron vitamíny?",
     tokens=(
-        # Parser NEDÁ podmět: „citron" je tvarově Nom i Acc. Tohle je ta
-        # reálná zeď ze zadání, ne vymyšlený případ.
-        tok(1, "Obsahuje", "obsahovat", "VERB", 0, "root", Number="Sing"),
-        tok(2, "citron", "citron", "NOUN", 1, "obj", Number="Sing"),
-        tok(3, "vitamíny", "vitamín", "NOUN", 1, "obj", Case="Acc", Number="Plur"),
+        tok(1, "Obsahuje", "obsahovat", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "citron", "citron", "NOUN", 1, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Sing"),
+        tok(3, "vitamíny", "vitamín", "NOUN", 1, "obj", Animacy="Inan", Case="Acc", Gender="Masc", Number="Plur"),
+        tok(4, "?", "?", "PUNCT", 1, "punct"),
     ),
-    predication="obsahovat(co:∃vitamín, kdo:citron)",
+    predication="obsahovat(co:∃vitamín, kdo:∃citron)",
     notes=("shoda čísla",),
-    point="tvrdý filtr rozhodne BEZ učení: „obsahuje“ je Sing, „vitamíny“ Plur",
-    asks=(
-        "u „citron“ se ptá na kvantifikátor, A JE TO SPRÁVNĚ: parser tomu "
-        "slovu nedal pád, takže tvar je jen NOUN/Sing/obj a žádný potvrzený "
-        "vzor na něj nesedí. Systém si pád nedosadí, aby vzor sedl — to by "
-        "byl dohad postavený na dohadu"
+    point=(
+        "tvrdý filtr rozhodne BEZ učení: „obsahuje“ je Sing, „vitamíny“ Plur. "
+        "Parser oba nominály označí jako `obj` (nominativ je tvarově shodný "
+        "s akuzativem), takže se generují obě čtení a rozhodne morfologie"
     ),
 )
 
@@ -164,12 +168,21 @@ C1 = Golden(
     dialogue="C",
     text="Karel napsal Postřižiny.",
     tokens=(
-        tok(1, "Karel", "Karel", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-        tok(2, "napsal", "napsat", "VERB", 0, "root", Number="Sing"),
-        tok(3, "Postřižiny", "Postřižiny", "PROPN", 2, "obj", Case="Acc", Number="Plur"),
+        tok(1, "Karel", "Karel", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "napsal", "napsat", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(3, "Postřižiny", "postřižina", "NOUN", 2, "obj", Case="Acc", Gender="Fem", Number="Plur"),
+        tok(4, ".", ".", "PUNCT", 2, "punct"),
     ),
-    predication="napsat(co:·Postřižiny, kdo:·Karel)",
+    predication="napsat(co:∃postřižina, kdo:·Karel)",
     point="svědek dialogu C vstupuje jako obyčejná věta se dvěma jádrovými rolemi",
+    limit=(
+        "„Postřižiny“ je NÁZEV DÍLA, parser z něj udělá obecné jméno "
+        "s lemmatem „postřižina“ a systém pak mluví o ∃postřižina místo "
+        "o konkrétní knize. Není to vada parseru ani kaskády: rozpoznat "
+        "název díla je ZNALOST SVĚTA, ne morfologie, a v rozboru pro ni "
+        "není z čeho vyjít. Zavře to buď jmenný rejstřík děl, nebo tah, "
+        "kterým člověk řekne, že jde o jméno."
+    ),
 )
 
 # --------------------------------------------------------------------------
@@ -180,18 +193,19 @@ D1 = Golden(
     dialogue="D",
     text="Petr jel v pondělí do Prahy.",
     tokens=(
-        tok(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-        tok(2, "jel", "jet", "VERB", 0, "root", Number="Sing"),
-        tok(3, "v", "v", "ADP", 4, "case"),
-        tok(4, "pondělí", "pondělí", "NOUN", 2, "obl", Case="Loc", Number="Sing"),
-        tok(5, "do", "do", "ADP", 6, "case"),
-        tok(6, "Prahy", "Praha", "PROPN", 2, "obl", Case="Gen", Number="Sing"),
+        tok(1, "Petr", "Petr", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "jel", "jet", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Acc"),
+        tok(4, "pondělí", "pondělí", "NOUN", 2, "obl", Case="Acc", Gender="Neut", Number="Sing"),
+        tok(5, "do", "do", "ADP", 6, "case", AdpType="Prep", Case="Gen"),
+        tok(6, "Prahy", "Praha", "PROPN", 2, "obl", Case="Gen", Gender="Fem", NameType="Geo", Number="Sing"),
+        tok(7, ".", ".", "PUNCT", 2, "punct"),
     ),
-    predication="jet(kam:Praha, kdo:·Petr, v+Loc:∃pondělí)",
-    notes=("v+Loc může být kde nebo kdy",),
+    predication="jet(kam:Praha, kdo:·Petr, kdy:pondělí)",
     point=(
-        "dvě určení v jedné větě: `do`+Gen je jednoznačně `kam`, ale "
-        "`v`+Loc je `kde` i `kdy` — a to se PŘIZNÁ, nehádá"
+        "dvě určení v jedné větě, obě zakotvená: `do`+Gen → `kam`, "
+        "`v`+Acc → `kdy`. Sort určí ROLE, takže ani jedno nenese "
+        "kvantifikátor — místo a čas se nekvantifikují"
     ),
 )
 
@@ -199,15 +213,15 @@ D2 = Golden(
     dialogue="D",
     text="Petr jel v úterý do Brna.",
     tokens=(
-        tok(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-        tok(2, "jel", "jet", "VERB", 0, "root", Number="Sing"),
-        tok(3, "v", "v", "ADP", 4, "case"),
-        tok(4, "úterý", "úterý", "NOUN", 2, "obl", Case="Loc", Number="Sing"),
-        tok(5, "do", "do", "ADP", 6, "case"),
-        tok(6, "Brna", "Brno", "PROPN", 2, "obl", Case="Gen", Number="Sing"),
+        tok(1, "Petr", "Petr", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "jel", "jet", "VERB", 0, "root", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Acc"),
+        tok(4, "úterý", "úterý", "NOUN", 2, "obl", Case="Acc", Gender="Neut", Number="Sing"),
+        tok(5, "do", "do", "ADP", 6, "case", AdpType="Prep", Case="Gen"),
+        tok(6, "Brna", "Brno", "PROPN", 2, "obl", Case="Gen", Gender="Neut", NameType="Geo", Number="Sing"),
+        tok(7, ".", ".", "PUNCT", 2, "punct"),
     ),
-    predication="jet(kam:Brno, kdo:·Petr, v+Loc:∃úterý)",
-    notes=("v+Loc může být kde nebo kdy",),
+    predication="jet(kam:Brno, kdo:·Petr, kdy:úterý)",
     point="druhý děj dialogu D — bez něj není co uspořádat přes `before*`",
 )
 
@@ -215,22 +229,37 @@ D3 = Golden(
     dialogue="D",
     text="Petr byl v pondělí v Praze.",
     tokens=(
-        tok(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-        tok(2, "byl", "být", "VERB", 0, "root", Number="Sing"),
-        tok(3, "v", "v", "ADP", 4, "case"),
-        tok(4, "pondělí", "pondělí", "NOUN", 2, "obl", Case="Loc", Number="Sing"),
-        tok(5, "v", "v", "ADP", 6, "case"),
-        tok(6, "Praze", "Praha", "PROPN", 2, "obl", Case="Loc", Number="Sing"),
+        tok(1, "Petr", "Petr", "PROPN", 6, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "byl", "být", "AUX", 6, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Acc"),
+        tok(4, "pondělí", "pondělí", "NOUN", 6, "obl", Case="Acc", Gender="Neut", Number="Sing"),
+        tok(5, "v", "v", "ADP", 6, "case", AdpType="Prep", Case="Loc"),
+        tok(6, "Praze", "Praha", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+        tok(7, ".", ".", "PUNCT", 6, "punct"),
     ),
-    predication=None,
-    refuses=True,
-    notes=("v+Loc",),
+    predication="být(co:Praha, kdo:·Petr, kdy:pondělí)",
     point=(
-        "DVĚ URČENÍ TÉHOŽ TVARU. Rozlišit „kdy“ od „kde“ by šlo jen podle "
-        "významu nominálu — a ten se nehádá (INV‑11). Poctivá odpověď je "
-        "otázka, ne tip a ne pád."
+        "VĚTA, KTERÁ SADU OPRAVILA. Vedla se tu jako zásadní mez — „dvě "
+        "určení téhož tvaru, rozlišit je nejde“ — a byl to artefakt ručně "
+        "psané nahrávky. Skutečný parser dá „v pondělí“ AKUZATIV a „v "
+        "Praze“ LOKÁL, takže se ta určení tvarově LIŠÍ a žádná kolize "
+        "není. Mez, kterou projekt zapsal jako vlastnost češtiny, byla "
+        "vlastnost mého omylu."
+    ),
+    asks=(
+        "ptá se na kvantifikátor role `co`, a nemá se to umlčet vzorem: "
+        "odpověď by tu byla špatná, ať zní jakkoli — viz mez níž"
+    ),
+    limit=(
+        "`co:Praha` JE STRUKTURNĚ ŠPATNĚ. Věta říká, KDE Petr byl, ne CO "
+        "Petr byl. UD dělá „Praze“ kořenem a „byl“ sponou, takže sponové "
+        "pravidlo vezme jmennou část jako `co` — u „Auto je prostředek“ "
+        "správně, u „byl v Praze“ ne, protože tam je to předložkové určení "
+        "místa. Rozlišit obojí by znamenalo dívat se na předložku u "
+        "kořene, což je práce nad rámec sponového pravidla."
     ),
 )
+
 
 # --------------------------------------------------------------------------
 # Dialog E — konflikt a výjimka
@@ -240,19 +269,28 @@ E1 = Golden(
     dialogue="E",
     text="Vrabec létá.",
     tokens=(
-        tok(1, "Vrabec", "vrabec", "NOUN", 2, "nsubj", Case="Nom", Number="Sing"),
-        tok(2, "létá", "létat", "VERB", 0, "root", Number="Sing"),
+        tok(1, "Vrabec", "Vrabec", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "létá", "létat", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, ".", ".", "PUNCT", 2, "punct"),
     ),
-    predication="létat(kdo:∀vrabec)",
+    predication="létat(kdo:·Vrabec)",
     point="jednomístná predikace — po odvolání p1 je to věta, která má vyjít A",
+    limit=(
+        "Parser čte „Vrabec“ jako VLASTNÍ JMÉNO (PROPN, NameType=Giv), "
+        "takže věta mluví o panu Vrabcovi, ne o ptácích. Je to skutečná "
+        "mez, ne omyl: „Vrabec“ je v češtině pták i příjmení a velké "
+        "písmeno na začátku věty ta dvě čtení nerozlišuje. Rozhodnout to "
+        "může jen kontext nebo člověk — z téhle jedné věty to nejde."
+    ),
 )
 
 E2 = Golden(
     dialogue="E",
     text="Tučňák nelétá.",
     tokens=(
-        tok(1, "Tučňák", "tučňák", "NOUN", 2, "nsubj", Case="Nom", Number="Sing"),
-        tok(2, "nelétá", "létat", "VERB", 0, "root", Number="Sing", Polarity="Neg"),
+        tok(1, "Tučňák", "tučňák", "NOUN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(2, "nelétá", "létat", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, ".", ".", "PUNCT", 2, "punct"),
     ),
     predication="¬létat(kdo:∀tučňák)",
     notes=("ZÁPOR",),
@@ -271,9 +309,10 @@ F1 = Golden(
     dialogue="F",
     text="Filip má auto.",
     tokens=(
-        tok(1, "Filip", "Filip", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-        tok(2, "má", "mít", "VERB", 0, "root", Number="Sing"),
-        tok(3, "auto", "auto", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+        tok(1, "Filip", "Filip", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "má", "mít", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "auto", "auto", "NOUN", 2, "obj", Case="Acc", Gender="Neut", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 2, "punct"),
     ),
     predication="mít(co:∃auto, kdo:·Filip)",
     notes=("pádová mřížka",),
@@ -287,15 +326,21 @@ F2 = Golden(
     dialogue="F",
     text="Filipovo auto je modré.",
     tokens=(
-        tok(1, "Filipovo", "Filipův", "ADJ", 2, "amod", Case="Nom"),
-        tok(2, "auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Number="Sing"),
-        tok(3, "je", "být", "AUX", 4, "cop", Number="Sing"),
-        tok(4, "modré", "modrý", "ADJ", 0, "root", Case="Nom", Number="Sing"),
+        tok(1, "Filipovo", "Filipův", "ADJ", 2, "amod", extra={"Gender[psor]": "Masc"}, Case="Nom", Gender="Neut", NameType="Giv", Number="Sing", Poss="Yes"),
+        tok(2, "auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+        tok(3, "je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(4, "modré", "modrý", "ADJ", 0, "root", Case="Nom", Degree="Pos", Gender="Neut", Number="Sing", Polarity="Pos"),
+        tok(5, ".", ".", "PUNCT", 4, "punct"),
     ),
     predication="být(co:·modrý, kdo:∀auto)",
     point=(
         "vršení popisu: `Filipovo` visí pod `auto`, ne pod přísudkem, "
         "takže se do rolí predikace nedostane — přivlastnění je práce V3"
+    ),
+    asks=(
+        "ptá se, jakou roli hraje „Filipovo“ — a je to ta správná otázka. "
+        "Do N‑5 se přivlastnění jen tiše zahodilo a věta se zapsala "
+        "oseknutá; teď se nezapíše nic, dokud člověk roli nepojmenuje"
     ),
     limit=(
         "∀auto JE ŠPATNĚ. Věta mluví o Filipově autě, tedy o jednom "

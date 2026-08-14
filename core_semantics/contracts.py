@@ -147,6 +147,28 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="J-5",
+        boundary=KERNEL_LEARNING,
+        promise=(
+            "POŘADÍ literálů v těle není význam: `attach_rule` tělo "
+            "normalizuje do KANONICKÉHO bezpečného pořadí, a když bezpečné "
+            "pořadí neexistuje, odmítne pravidlo U ZÁPISU. Které role musí "
+            "být vázané, čte zápis i evaluátor z JEDNOHO seznamu — dvě kopie "
+            "by se rozešly a zápis by pustil, co vyhodnocení odmítne"
+        ),
+        anchor="core_semantics.ast:REQUIRES_BOUND",
+        # Průchod je `attach_rule`, ne `_safe_body`. Doložka o normalizaci
+        # ověřená voláním vnitřní funkce by netvrdila nic o tom, co se
+        # doopravdy zapíše do báze.
+        entry="attach_rule(",
+        enforced_by=(
+            "test_every_permutation_normalises_to_the_same_body",
+            "test_an_unorderable_rule_is_refused_at_write_time",
+            "test_normalisation_does_not_let_a_negated_literal_bind",
+            "test_requires_bound_agrees_with_the_engine",
+        ),
+    ),
+    Clause(
         id="J-3",
         boundary=KERNEL_LEARNING,
         promise=(
@@ -614,6 +636,21 @@ CONTRACTS: tuple[Clause, ...] = (
         enforced_by=(
             "test_metrics_fall_after_a_revoke_because_they_are_a_function_of_state",
             "test_fast_learning_with_many_corrections_does_not_look_good",
+        ),
+    ),
+    Clause(
+        id="S-20",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "na ZTRACENÝ významový člen se systém ZEPTÁ a věta se do "
+            "doplnění NEZAPÍŠE — zapsat ji oseknutou a po odpovědi znovu "
+            "by uložilo dva výroky, z nichž ten první by nikdo neodvolal"
+        ),
+        anchor="core_semantics.cascade:lost_role_tier",
+        entry="names_role(",
+        enforced_by=(
+            "test_an_incomplete_sentence_is_not_written",
+            "test_one_answer_closes_the_whole_class",
         ),
     ),
     # -- storage → cascade (zpětná hrana) ----------------------------------

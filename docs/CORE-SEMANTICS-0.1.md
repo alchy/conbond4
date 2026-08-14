@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.7 · 14. 8. 2026
+**Verze jádra:** 0.1.8 · 14. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -14,6 +14,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.5 | § 5.1 — uzávěr `before*` nad `Time` (nereflexivní), cyklus v uspořádání jako otevřená položka; § 13 T45–T48 | 14. 8. 2026 |
 | 0.1.6 | § 5.1 — hrana identity ve SPORU se v uzávěru nepoužije (`same_as*` i přemostění ostatních uzávěrů); přímá otázka dál vrací `CONFLICT`; § 13 T49–T52 | 14. 8. 2026 |
 | 0.1.7 | § 5.4 — `PROTECTED_HEADS`: zákaz v hlavě širší než jádrová množina, přibyly `name` a role; § 3.2 intervalová aproximace + axiom o existenci bez uzlu; § 5.1 `complete` jako epistemická deklarace; § 5.6 charakteristika systému; § 7 minimalita podle definované metriky; § 13 T53–T55 | 14. 8. 2026 |
+| 0.1.8 | § 5.4/10 — tělo se při `attach` normalizuje do kanonického bezpečného pořadí, jinak `UnsafeRule` u ZÁPISU; `REQUIRES_BOUND` jako jeden seznam pro zápis i evaluátor; normalizace neobchází bod 7; § 13 T56–T58 | 14. 8. 2026 |
 **Rozsah:** definuje jazyk, typování, denotaci, epistemický status,
 pravidla, modalitu, důkaz a identitu. Neřeší parsing, renderování,
 vnitřek doménových specialistů ani optimalizace.
@@ -530,22 +531,45 @@ se do báze nezapíše. Samotné zopakování validace by nestačilo: bez
 kanonizace v `_unifies` by se pořád porovnávala syrová id a mez by
 zůstala tam, kde byla.
 
-**Pořadí literálů v těle není lhostejné** *(14. 8. 2026)*. Jádrový
-predikát v těle vyžaduje, aby **obě** jeho role byly vázané v okamžiku,
-kdy na ně dojde řada — enumerace nad uzávěry ve F0 není (§ 5.1).
-`subset(L2, L1)` se dvěma dosud nevázanými proměnnými skončí chybou.
-Tělo se proto musí uspořádat tak, aby jádrové literály přišly až po
-navázání svých rolí:
+**Pořadí literálů v těle je implementační věc, ne význam**
+*(14. 8. 2026, 0.1.8 — A‑24)*.
 
-```
-tělo (alergie_na, subset, obsahuje)   → EvaluationError
-tělo (alergie_na, obsahuje, subset)   → N, důkaz v pořádku
-```
+Jádrový predikát v těle vyžaduje, aby jeho vázanostní role byly vázané
+v okamžiku, kdy na ně dojde řada — enumerace nad uzávěry ve F0 není
+(§ 5.1). `subset(L2, L1)` se dvěma dosud nevázanými proměnnými skončí
+chybou. Dokud se tělo bralo, jak bylo napsáno, znamenalo to, že **šest
+permutací téhož pravidla dalo dvakrát `N` a čtyřikrát `EvaluationError`**
+— a `attach_rule` přijal všech šest, takže chyba přišla až u některého
+pozdějšího dotazu.
 
-V deklarativním čtení Hornovy klauzule je pořadí konjunktů lhostejné, tady
-lhostejné není — autor pravidla musí znát vyhodnocovací strategii. Selhává
-to **hlasitě, ne tiše** (I‑1). Automatické přeuspořádání těla při `attach`
-je vedeno jako samostatný úkol, ne jako součást bezpečného fragmentu.
+To je pro pravidlo naučené z dialogu neudržitelné: konjunkce je
+komutativní, takže tvar, v jakém člověk pravidlo vysloví, nesmí určovat
+jeho význam.
+
+10. **tělo se při `attach` normalizuje do kanonického bezpečného
+    pořadí**; neexistuje‑li takové pořadí, pravidlo se **odmítne při
+    zápisu** (`UnsafeRule`), ne až při dotazu.
+
+Normalizace je hladová a **kanonická, ne jen bezpečná**: mezi literály,
+které lze v daném kroku vyhodnotit, se vybírá deterministicky podle
+zápisu. Kdyby se bral první, který projde, lišily by se normální tvary
+a s nimi kanonické důkazy (§ 7) — odpověď by byla táž, ale zdůvodněná
+šesti způsoby.
+
+**Které role musí být vázané, je jeden seznam** (`REQUIRES_BOUND`),
+který čte zápis i evaluátor. Dvě kopie by se rozešly a poznalo by se to
+na tom, že zápis pustí pravidlo, které vyhodnocení odmítne. `member` má
+vázanou jen `group` — prvky skupiny se vyjmenovat **dají**, a právě
+z toho žijí výčtové otázky.
+
+**Normalizace neobchází bod 7.** Bezpečnost vázanosti a bezpečnost
+negace jsou dvě různé podmínky. Negovaný literál **neváže nic**, takže
+při uspořádávání smí přijít na řadu až tehdy, když jsou všechny jeho
+proměnné vázané odjinud; pravidlo, jehož proměnná nemá jiného vazače než
+negovaný literál, se přeuspořádáním „bezpečným" nestává a odmítne se.
+
+Vyhodnocovací strategie se tím nemění. Pořadí uvnitř enginu zůstává
+implementační věcí — jen přestává být vlastností významu.
 
 ### 5.5 Evaluace
 
@@ -936,6 +960,9 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T53 | zákaz v hlavě je širší než jádro | pravidlo s `role` v hlavě → `UnsafeRule`; s `role` v TĚLE projde |
 | T54 | kritérium se odvozuje, nedeklaruje | co čte uzávěrový index, je v `KERNEL_PREDICATES`, a naopak |
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
+| T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
+| T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T58 | normalizace neobchází bezpečnost negace | proměnná vázaná jen negovaným literálem se přeuspořádáním „bezpečnou" nestane; pozitivní vazač ji naopak povolí |
 
 F0 je hotové, když projdou všechny **a** referenční i produkční
 evaluator dají shodný verdikt i shodný `normalize_proof`.
