@@ -31,6 +31,7 @@ strukturám.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from enum import Enum
 from typing import Callable, Sequence
 
 from .ast import UNQUANTIFIED_ROLES, Quantifier
@@ -593,10 +594,45 @@ def case_tier(
     return tuple(survivors), "[PROČ: pádová mřížka — podmět Nom, předmět Acc]"
 
 
+class RejectionKind(Enum):
+    """Proč báze čtení odmítá — a tím i **jak silně** (A‑21).
+
+    Rozdíl není odstín, je to hranice mezi dvěma druhy tvrzení:
+
+    * `SORT` je o **TVARU** čtení. Fillér nesedí do sortu role, takže
+      z toho čtení žádná formule nevznikne. Není co ztratit a není se
+      nač ptát — odmítá se tvrdě.
+    * `CONTRADICTED` je o **OBSAHU BÁZE**. Čtení je syntakticky i typově
+      v pořádku, jen se neshoduje s tím, co už je zapsané. Jenže zapsané
+      může být špatně — a tvrdě takové čtení vyhodit znamená nechat
+      chybný fakt umlčet správnou větu, potichu.
+    """
+
+    SORT = "typová chyba"
+    CONTRADICTED = "rozpor s bází"
+
+
+@dataclass(frozen=True, slots=True)
+class Rejection:
+    """Pojmenovaný důvod odmítnutí. Nikdy holé `True`/`False` — eliminace
+    bez důvodu je přesně to, čemu se K‑7 brání."""
+
+    kind: RejectionKind
+    detail: str
+
+    @property
+    def hard(self) -> bool:
+        """Smí se podle toho čtení ODSTRANIT, nebo jen snížit priorita?"""
+        return self.kind is RejectionKind.SORT
+
+    def __str__(self) -> str:
+        return self.detail
+
+
 #: Důvod, proč báze čtení odmítá — nebo `None`, když žádný nemá.
 #: Injektuje se zvenčí, protože rozhodnout se dá až nad ZAKOTVENOU
 #: formulí, a zakotvení je V3. Kaskáda o něm nemá vědět.
-SemanticCheck = Callable[[Predication], str | None]
+SemanticCheck = Callable[[Predication], Rejection | None]
 
 
 def base_consistency_tier(reject: SemanticCheck) -> Tier:
@@ -623,24 +659,72 @@ def base_consistency_tier(reject: SemanticCheck) -> Tier:
     Praktický důsledek: dokud role čekají na kvantifikátor, tohle patro
     většinou neudělá nic — a je to poctivější než dřívější aktivita,
     která rozhodovala z nesprávného důvodu.
+
+    **Rozpor s bází ČTENÍ NEODSTRAŇUJE, jen mu snižuje prioritu** *(A‑21)*.
+    Do téhle změny patro vracelo jen ty, které bázi neodporovaly, a
+    odporující mizely nenávratně. Syntakticky i typově platné čtení bylo
+    pryč, aniž se kdo zeptal — a jsou to dvě různá tvrzení:
+
+    > „tohle čtení neodpovídá tomu, co mám zapsané" ≠ „tohle čtení je
+    > špatně".
+
+    Rozdíl by nevadil, kdyby báze byla neomylná. Není: plní ji tytéž věty,
+    které tohle patro filtruje. Chybný fakt tedy umlčí správné čtení, to
+    upevní chybu, a **potichu** — z každého dalšího kroku bude vypadat,
+    že „sedí". Je to táž smyčka, kterou ruší K‑7, jen postavená na rozporu
+    místo na známosti.
+
+    Odporující čtení proto zůstává v sadě, klesne na konec a rozpor se
+    zapíše do stopy. Když po zbytku kaskády zbude víc kandidátů, systém
+    se **zeptá** — a to je tah dialogu, ne prohra.
+
+    **Tvrdě odmítat smí jen typová chyba** (`RejectionKind.SORT`), protože
+    ta je o tvaru čtení, ne o obsahu báze. Z takového čtení žádná formule
+    nevznikne, takže není co upřednostňovat a nač se ptát.
     """
 
     def tier(
         candidates: tuple[Candidate, ...], reading: Reading
     ) -> tuple[tuple[Candidate, ...], str | None]:
         reasons = [(c, reject(c.predication)) for c in candidates]
-        survivors = tuple(c for c, why in reasons if why is None)
-        if len(survivors) == len(candidates):
-            return candidates, None
-        if not survivors:
+        kept = [(c, why) for c, why in reasons if why is None or not why.hard]
+        notes: list[str] = []
+
+        mistyped = [why for _, why in reasons if why is not None and why.hard]
+        if mistyped:
+            notes.append(
+                "[PROČ: typová chyba — " + "; ".join(map(str, mistyped)) + "]"
+            )
+        if not kept:
+            # Typová chyba na VŠECH čteních. Vrátit prázdno je tady
+            # poctivé: není co upřednostnit ani na co se zeptat.
+            return (), "; ".join(notes) or None
+
+        clean = tuple(c for c, why in kept if why is None)
+        demoted = [(c, why) for c, why in kept if why is not None]
+        if not demoted:
+            return tuple(c for c, _ in kept), "; ".join(notes) or None
+
+        detail = "; ".join(str(why) for _, why in demoted)
+        if not clean:
             # Odmítnout VŠECHNO by znamenalo tvrdit, že věta nedává smysl,
             # jenže rozporná věta smysl dává — jen se s bází neshoduje.
-            # To je nález pro člověka, ne důvod k mlčení.
-            note = "; ".join(why for _, why in reasons if why)
-            what = "čtení je" if len(candidates) == 1 else "každé čtení je"
-            return candidates, f"[POZOR: {what} v rozporu s bází — {note}]"
-        dropped = "; ".join(why for _, why in reasons if why)
-        return survivors, f"[PROČ: rozpor s bází — {dropped}]"
+            # To je nález pro člověka, ne důvod k mlčení. Tahle větev se
+            # A‑21 NEMĚNÍ: klesnout na konec proti komu, když je rozporné
+            # všechno? Věta se přečte, zapíše a rozpor se ohlásí (I‑3).
+            what = "čtení je" if len(kept) == 1 else "každé čtení je"
+            notes.append(f"[POZOR: {what} v rozporu s bází — {detail}]")
+            return tuple(c for c, _ in kept), "; ".join(notes)
+
+        # Priorita, ne eliminace: čisté dopředu, rozporné dozadu, obojí
+        # v sadě. `Verdict.decided` vrací čtení jen tehdy, zbylo‑li právě
+        # jedno, takže víc kandidátů znamená OTÁZKU, ne favorita.
+        notes.append(
+            f"[POZOR: rozpor s bází — {detail}; čtení se NEODSTRAŇUJE, "
+            f"jen klesá — zapsaný fakt může být chybný a tiše umlčet "
+            f"správné čtení]"
+        )
+        return clean + tuple(c for c, _ in demoted), "; ".join(notes)
 
     return tier
 

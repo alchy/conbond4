@@ -670,6 +670,29 @@ CONTRACTS: tuple[Clause, ...] = (
         enforced_by=("test_base_consistency_narrows_but_never_adds",),
     ),
     Clause(
+        id="B-5",
+        boundary=STORAGE_CASCADE,
+        promise=(
+            "rozpor s bází čtení NEODSTRAŇUJE, jen mu snižuje prioritu a "
+            "pojmenuje ho ve stopě — báze se plní týmiž větami, které se "
+            "přes ni filtrují, takže zapsaný omyl nesmí umlčet správné "
+            "čtení. Tvrdě odmítat smí JEN typová chyba, protože ta je "
+            "o tvaru čtení, ne o obsahu báze (A‑21)"
+        ),
+        anchor="core_semantics.cascade:Rejection.hard",
+        # Průchod je `tier_over`, tedy patro jako celek — stejně jako
+        # u B‑3. Doložka ověřená voláním `Rejection.hard` by netvrdila
+        # nic o tom, co patro s tím rozlišením doopravdy udělá.
+        entry="tier_over(",
+        enforced_by=(
+            "test_a_contradicting_reading_is_kept_not_dropped",
+            "test_the_contradicting_reading_drops_to_the_back",
+            "test_a_wholly_contradictory_sentence_is_still_written",
+            "test_only_a_sort_error_is_hard",
+            "test_a_mistyped_reading_is_still_removed",
+        ),
+    ),
+    Clause(
         id="B-3",
         boundary=STORAGE_CASCADE,
         promise=(

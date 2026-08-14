@@ -686,6 +686,11 @@ class Session:
                 lines=tuple(lines),
                 status=QueryStatus.UNKNOWN,
                 trace=verdict.trace,
+                # Otázka patří i do VÝSLEDKU, nejen do vypsaných řádků.
+                # Odběratel, který se ptá `result.question`, by jinak
+                # u nerozhodnutého čtení dostal `None` a četl to jako
+                # „systém se neptá" — a přesně tady se ptá nejvíc.
+                question=verdict.question,
             )
         return self.play(
             reads(

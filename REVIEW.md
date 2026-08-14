@@ -1,8 +1,116 @@
 # conBond4 — audit jádra
 
-## Status: 🟡 PARTIAL — A‑24 splněno, jeden zbytek téže třídy zůstal
+## Status: 🟢 APPROVE — A‑24 je celé, včetně zbytku
 
-**Kolo #41.** 612 testů zelených, `mypy --strict` čistý na 54 souborech,
+**Kolo #42.** 616 testů zelených, `mypy --strict` čistý na 54 souborech,
+doložky **45/45**, jádro 0.1.9. **G‑2 opraveno a ověřeno mnou** — chyba
+se přesunula na správnou fázi a můj protipříklad prošel v obou pořadích.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou, ne převzato)
+
+**Případ, který jsem blokoval — teď padá u ZÁPISU:**
+
+```
+attach_rule(head=h(a:X), body=(subset(a AND X, b),))
+  → UnsafeRule: „pro literály ['subset(sub:·(a AND X), sup:·b)'] neexistuje
+     bezpečné pořadí — jádrový predikát potřebuje vázané role"
+```
+
+Rozlišil jsem **fázi**, ne jen typ výjimky: hláška mluví o *bezpečném
+pořadí* (zápis), ne o *neuzemněné hlavě* (evaluace). Obě chyby jsou
+`UnsafeRule`, takže test na typ výjimky by rozdíl nepoznal — Builder to
+sám ošetřil testem na text hlášky, a to je správné.
+
+**Můj protipříklad prošel, a v obou pořadích stejně:**
+
+```
+h(a:X) <- member(X, g), subset(a AND X, b)        → přijato, odpověď A
+h(a:X) <- subset(a AND X, b), member(X, g)        → přijato, odpověď A
+normální tvar obojího:  member(elem:X, group:·g) AND subset(sub:·(a AND X), sup:·b)
+```
+
+Vázaná varianta se nestala nepřijatelnou — otočená rozešlost, před kterou
+jsem varoval, nenastala. A A‑24 platí i tady: obě pořadí dávají **týž
+normální tvar**.
+
+**Regrese celá:** stálá sada zelená (B‑1 novou platnou sondou, B‑2,
+matice ⪯, `disjoint`→`N`, `CONFLICT`, stráže 4/4, `same_as`, M‑1, I‑16).
+**Gate Farmaka:** `N`, doloženo `s0005`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.**
+
+---
+
+## Jeden další směr: A‑21 (tvrdé prořezávání)
+
+Teď už bez otevřeného zbytku za zády, takže platí pořadí z dodatku O.
+
+**Problém (fakt ze zdroje, `cascade.py:599`):** když část kandidátů
+odporuje bázi, zbylé se vrátí a odporující **zmizí** —
+`return survivors, …`. Syntakticky platné čtení je nenávratně pryč.
+
+**Riziko:** chybný fakt v bázi umlčí správné čtení, a **potichu**, protože
+zahozený kandidát se nedá vrátit. To je kruh: báze filtruje jazyk, jazyk
+plní bázi.
+
+**Nejmenší bezpečná změna:** odporující čtení **neodstranit**, jen mu
+snížit prioritu a označit v trase. Když po zbytku kaskády přežije víc
+kandidátů, systém se **zeptá** — což je podle zadaného kritéria správné
+chování. Tvrdě odmítat ať smí dál **jen typová chyba**, protože ta je
+o tvaru, ne o obsahu báze.
+
+**Counterexample, který musí projít:** dnešní chování u věty, kde
+**všechna** čtení odporují bázi (`Tučňák létá.` proti doloženému
+`¬létat`), se **nesmí změnit** — věta se musí pořád přečíst, zapsat
+a otázka musí dát `CONFLICT` s oběma důkazy. Přeřazení nesmí tenhle případ
+proměnit v doptání.
+
+**Očekávaný výsledek:** `Filip má auto.` proti doloženému `¬mít` se pořád
+zapíše a otázka dá `CONFLICT`; věta s víc čteními, kde jedno odporuje
+bázi, se **zeptá** místo tichého výběru; plná regrese včetně gate.
+
+**Co neměnit:** typové filtry ani pořadí pater — mění se rozhodnutí
+jednoho patra, ne kaskáda.
+
+---
+
+## Potvrzení
+
+**Opravu vlastního tvrzení jsi udělal správně a na správném místě.**
+Napsal jsi, že přísnější zápis by odmítal pravidla, která evaluátor
+spustí; změřil jsem opak a ty jsi našel důvod: `substitute()` do
+algebraických termů **sestupuje** (`engine.py:78`) a je to tam i napsané.
+Hranici jsi odvodil z `_match_kernel` a nepodíval se na dosazení. To je
+přesný popis, jak vzniká rozdíl mezi „popis místa sedí" a „závěr o směru
+sedí".
+
+**`term_variables` místo `isinstance(..., Variable)` je ta správná
+oprava**, protože zápis se teď ptá na **tutéž množinu proměnných**, na
+kterou se ptá evaluátor při uzemňování hlavy. Sdílená funkce je důvod,
+proč se to nevrátí potřetí — ne dobrá vůle.
+
+**Formulace „vázanost je vlastnost PROMĚNNÉ, ne pozice, ve které stojí"**
+je věta, kterou by měla nést dokumentace.
+
+---
+
+## Archiv — kolo #41 (uzavřeno)
+
+**Status tehdy: 🟡 PARTIAL.** Kolo #41. 612 testů zelených, `mypy --strict` čistý na 54 souborech,
 doložky **45/45**, jádro 0.1.8. **A‑24 je věcně splněné a ověřené** —
 ale reprodukcí jsem našel **zbytek téže vady**, který nová zábrana
 nepokrývá. Proto PARTIAL, ne APPROVE.

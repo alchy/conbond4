@@ -62,6 +62,8 @@ from .cascade import (
     AWAITING_REFERENCE,
     Mention,
     Predication,
+    Rejection,
+    RejectionKind,
     RoleReading,
 )
 from .storage import ResolvedGraphView
@@ -302,7 +304,7 @@ def _resolve_definite(reading: RoleReading, view: ResolvedGraphView) -> _Resolut
     )
 
 
-def semantic_rejection(engine: "Engine") -> Callable[[Predication], str | None]:
+def semantic_rejection(engine: "Engine") -> Callable[[Predication], Rejection | None]:
     """Důvod, proč báze čtení odmítá — nebo `None` (K‑7).
 
     Vrací se **pojmenovaný** důvod, ne pravdivostní hodnota. Kdyby patro
@@ -320,20 +322,34 @@ def semantic_rejection(engine: "Engine") -> Callable[[Predication], str | None]:
     **Nezakotvitelné čtení se neodmítá.** Chybějící kvantifikátor není
     rozpor, je to otevřená otázka — a smíchat obojí by znamenalo vyhodit
     čtení za to, že se na ně systém ještě nezeptal.
+
+    **Důvod nese i svou SÍLU** *(A‑21)*. Vrací se `Rejection`, ne řetězec,
+    protože první důvod je jiného druhu než zbylé dva: typová chyba mluví
+    o TVARU čtení, rozpor a nesplnitelnost o OBSAHU BÁZE. Podle prvního se
+    smí čtení zahodit, podle druhých jen snížit priorita — báze se plní
+    týmiž větami, které se přes ni filtrují, takže zapsaný omyl nesmí
+    umlčet správné čtení. Kdyby síla zůstala schovaná v české větě, musel
+    by ji odběratel číst z textu — a to je heuristika tam, kde patří
+    typ.
     """
 
-    def reject(predication: Predication) -> str | None:
+    def reject(predication: Predication) -> Rejection | None:
         try:
             grounded = ground(predication, engine.kb.view())
         except SortError as exc:
-            return f"typová chyba: {exc}"
+            return Rejection(RejectionKind.SORT, f"typová chyba: {exc}")
         if grounded.formula is None:
             return None  # nedá se posoudit, tedy se neodmítá
         result = engine.ask(grounded.formula)
         if result.status is QueryStatus.CONFLICT:
-            return f"báze tvrdí i opak: {grounded.formula}"
+            return Rejection(
+                RejectionKind.CONTRADICTED, f"báze tvrdí i opak: {grounded.formula}"
+            )
         if result.status is QueryStatus.PROVEN_FALSE:
-            return f"báze má doložené, že {grounded.formula} neplatí"
+            return Rejection(
+                RejectionKind.CONTRADICTED,
+                f"báze má doložené, že {grounded.formula} neplatí",
+            )
         return None
 
     return reject
