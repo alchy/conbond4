@@ -570,12 +570,30 @@ class Engine:
         Sada je záměrně neúplná — chybějící důkaz dá `U`, nikdy falešné
         `A`. Úplná rozhodovací procedura nad algebrou je samostatné
         rozhodnutí (§ 5.2.1).
+
+        **Napřed se hledá ZAPSANÝ výrok, teprve pak se odvozuje** *(G‑3)*.
+        Do téhle opravy se index ptal jen tehdy, když ani jedna strana
+        nebyla algebraická; s algebraickým `sup` se šlo rovnou na zákony.
+        Důsledek: `attach(subset(auto, A AND B))` se uložil, uzávěrový
+        index tu hranu MĚL, a přímá otázka na týž fakt vrátila `U`.
+
+        To není neúplnost odvození, to je **selhání recallu** — systém
+        odpověděl „nevím" na tvrzení, které mu člověk řekl a které má
+        uložené. Neúplná sada zákonů je přiznaná mez (nedokážu odvodit
+        všechno); ignorovat vlastní bázi mez není, to je vada.
+
+        Zákony se tím **neobcházejí**: přímý dotaz jen předchází, a když
+        nic nenajde, běží dál přesně jako dřív. Kde platí obojí, vrací se
+        ten přímý — je kratší, a minimalita důkazu je § 7.
         """
         assert d.index is not None
         if sub.id == sup.id:
             return Proof(ProofKind.CLOSURE, "subset*/refl")
+        recalled = d.index.subset_proof(sub.id, sup.id)
+        if recalled is not None:
+            return recalled
         if not isinstance(sub, ALGEBRAIC) and not isinstance(sup, ALGEBRAIC):
-            return d.index.subset_proof(sub.id, sup.id)
+            return None
 
         label = "subset*/alg"
         # sup = A AND B   ⟸  sub ⊆ A ∧ sub ⊆ B

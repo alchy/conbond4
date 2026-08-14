@@ -319,3 +319,78 @@ def test_recursion_through_an_algebraic_term_is_detected() -> None:
             head=atom("q", role("who", x)),
             body=(atom("p", role("who", x), role("out", v)),),
         )
+
+
+# --------------------------------------------------------------------------
+# G‑3 — napřed ZAPSANÝ výrok, teprve pak odvození
+# --------------------------------------------------------------------------
+#
+# `attach(subset(auto, A AND B))` se uložil, uzávěrový index tu hranu MĚL,
+# a přímá otázka na týž fakt vracela `U`: `_subset_term` se při
+# algebraickém `sup` indexu vůbec nezeptal a šel rovnou na zákony § 5.2.1.
+#
+# Není to neúplnost odvození — neúplná sada zákonů je PŘIZNANÁ MEZ. Tohle
+# bylo selhání RECALLU: systém odpověděl „nevím" na tvrzení, které mu
+# člověk řekl a které měl uložené. Ignorovat vlastní bázi mez není.
+#
+# `_member_term` se index ptal odjakživa; `_subset_term` byl ten, který se
+# choval jinak, ne naopak.
+
+
+def test_a_stated_fact_about_an_algebraic_term_is_recalled() -> None:
+    """JÁDRO G‑3. Táž věta, kterou člověk právě řekl."""
+    kb = KnowledgeBase()
+    kb.attach(subset_of(Group("auto"), group_and(A, B)))
+    result = Engine(kb).ask(subset_of(Group("auto"), group_and(A, B)))
+    assert result.status is QueryStatus.PROVEN_TRUE
+
+
+def test_the_recall_cites_the_statement_the_person_made() -> None:
+    """Odpovědět `A` bez citace toho výroku by bylo lepší než `U`, ale
+    pořád málo: důkaz je jediný zdroj vysvětlení (§ 7)."""
+    kb = KnowledgeBase()
+    sid = kb.attach(subset_of(Group("auto"), group_and(A, B)))
+    result = Engine(kb).ask(subset_of(Group("auto"), group_and(A, B)))
+    assert result.proof is not None
+    assert sid in result.proof.leaves()
+
+
+def test_the_same_holds_when_the_left_side_is_algebraic() -> None:
+    """Vada nebyla ve straně, ale v tom, že se index přeskočil, jakmile
+    byla algebraická KTERÁKOLI z nich."""
+    kb = KnowledgeBase()
+    kb.attach(subset_of(group_or(A, B), Group("c")))
+    result = Engine(kb).ask(subset_of(group_or(A, B), Group("c")))
+    assert result.status is QueryStatus.PROVEN_TRUE
+
+
+def test_recall_does_not_replace_the_laws() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (a). Přímý dotaz smí jen PŘEDCHÁZET; když
+    nic nenajde, zákony musí běžet přesně jako dřív a dát TÝŽ důkaz."""
+    kb = KnowledgeBase()
+    engine = Engine(kb)
+    derived = engine.ask(subset_of(group_and(A, B), A))
+    assert derived.status is QueryStatus.PROVEN_TRUE
+    assert derived.proof is not None
+    assert any("subset*/alg" in line for line in derived.proof_tree)
+
+
+def test_recall_does_not_loosen_the_negative_controls() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (b). Zákaz eliminace `OR` je z prvních kol
+    a nesmí povolit: ze sjednocení se nevybírá člen."""
+    kb = KnowledgeBase()
+    engine = Engine(kb)
+    assert engine.ask(subset_of(group_or(A, B), A)).status is QueryStatus.UNKNOWN
+    assert engine.ask(subset_of(A, group_and(A, B))).status is QueryStatus.UNKNOWN
+
+
+def test_a_stated_fact_wins_over_the_longer_derivation() -> None:
+    """Kde platí obojí, vrací se ten kratší — minimalita důkazu je § 7.
+    Bez tohohle testu by šlo pořadí obrátit a nikdo by si nevšiml ničeho
+    než delšího vysvětlení."""
+    kb = KnowledgeBase()
+    sid = kb.attach(subset_of(group_and(A, B), A))
+    result = Engine(kb).ask(subset_of(group_and(A, B), A))
+    assert result.proof is not None
+    assert sid in result.proof.leaves()
+    assert not any("subset*/alg" in line for line in result.proof_tree)

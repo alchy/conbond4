@@ -1,8 +1,134 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — čeština umí jádrové relace
+## Status: 🟡 PARTIAL — N‑2b splněno, ale potvrdil jsem nález v jádře
 
-**Kolo #44.** 657 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #45.** 665 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **47/47**, živá parita **14/14**. **N‑2b je hotové a oba mé
+counterexamply prošly.** PARTIAL je za nález, který Builder poctivě
+ohlásil mimo rozsah a **který jsem reprodukoval**.
+
+**Architectural Health Score: 9 / 10**
+
+---
+
+## Co je splněno (měřeno mnou)
+
+**Rozhodnutí o denotaci — SCHVALUJI, a čtvrtý důvod je nejlepší.**
+Zvolen **složený pojem**, ne průnik. Argument, který rozhoduje:
+
+> Průnik **tvrdí intersektivitu**. U *„bývalý prezident"* je to nepravda
+> a morfologie ty případy nerozliší — zvolit průnik tedy znamená hádat
+> o významu přídavného jména.
+
+A ten změřený: zákon `X ⊆ A AND B ⇒ X ⊆ B` v § 5.2.1 **není** (je tam
+opačný, introdukční směr), takže by se platil sémantický závazek za
+užitek, který neexistuje. **Nezískaný závěr je lepší než vymyšlený.**
+
+**Moje counterexamply:**
+
+```
+» To auto je modré.               ◐  zapsáno: None      (nenavrhuje vztah tříd ✓)
+» Amoxicilin je druh penicilinu.  ✓  subset(…)  s0001   (beze změny ✓)
+```
+
+**Přívlastek se nehlásí jako ztracený člen** — `verdict.lost` prázdné.
+Že je to řešeno **nesením** (`RoleReading.absorbed`), a ne dopočtem ze
+stromu, je správné: rozhodnutí složit padlo jinde a dopočet by ho hádal
+zpětně.
+
+**Smyčka funguje celá** (živý běh):
+
+```
+» Kočka je savec.        ? … členství, podmnožina, nebo oddělenost?
+» →⊆ Je to podmnožina.   ✓ naučeno konstrukce cop:NOUN=NOUN ~ subset [hypothesis, tah 4]
+                         ✓ subset(sub:·kočka, sup:·savec)
+```
+
+**Změna zlaté sady u A1 NENÍ oslabení** — a ověřil jsem proč: dřív se
+věta zapsala jako reifikované `být` se třemi rolemi, což se sice neptalo,
+ale **nikdy nedalo `subset`**, na kterém doména stojí. Dnes se ptá a
+jedním tahem dočte. To je `vím, že nevím` místo tichého zápisu slabšího
+tvrzení — přesně to, co zadal člověk.
+
+**Regrese celá:** stálá sada zelená, gate *Farmaka* `N`.
+
+---
+
+## Critical Blockers
+
+### G‑3 · engine nevrátí fakt, který má přímo v bázi
+
+Builder to ohlásil mimo rozsah. **Reprodukoval jsem:**
+
+```
+attach(subset(auto, A AND B))      → s0001
+ask   (subset(auto, A AND B))      → U        ← fakt je PŘÍMO V BÁZI
+index.subset_proof(auto, A AND B)  → důkaz existuje
+
+srovnání: subset(auto, DP) bez algebry → A
+```
+
+**Fakt:** `_subset_term` při algebraickém `sup` **přeskočí přímý dotaz do
+indexu** a jde rovnou na zákony § 5.2.1.
+
+**Logický závěr:** systém odpoví „nevím" na tvrzení, které mu člověk
+**řekl a které má uložené**. To není neúplnost odvození — to je selhání
+**recallu**. Doložka „presenter smí říkat jen to, co je podloženo
+skutečně použitým důkazem" má i obrácenou stranu: **důkaz, který v bázi
+leží, se nemá ignorovat**.
+
+**Proč to není gate‑blocker, a přesto je to bloker:** N‑2b průnik
+nezapisuje, takže žádný akceptační scénář tudy dnes nechodí — Builder to
+sám uvádí jako jeden z důvodů volby. Ale je to **nejvyšší otevřené riziko
+pro správnost** a leží v jádře, ne ve vrstvě V2.
+
+---
+
+## Jeden další směr: G‑3, ne složení nominálu
+
+Builder navrhl pořadí opačné. **Rozhoduji jinak**, a důvod je mandát:
+skládání nominálu je **rozšíření schopnosti**, G‑3 je **vada správnosti
+v jádře**. Nová vrstva se nestaví nad otevřenou vadou o patro níž.
+
+**Nejmenší bezpečná změna:** `_subset_term` ať se **nejdřív zeptá indexu**
+(tutéž cestou jako u neagebraického `sup`) a teprve když nic nenajde,
+jde na zákony § 5.2.1.
+
+**Counterexample, který musí projít:** zákony § 5.2.1 se **nesmí obejít**
+— `subset(X, A AND B)` odvozený **ze zákonů** (bez přímého faktu) musí
+dál platit a dát **týž důkaz**; přidání přímého dotazu smí jen doplnit
+cestu, ne nahradit. Druhý: `subset(A OR B, X)` a `DIFF` větve beze změny —
+zákaz eliminace `OR` z prvních kol nesmí povolit.
+
+**Očekávaný výsledek:** `ask(subset(auto, A AND B))` na zapsaný fakt → `A`
+s citací toho výroku; algebraické zákony beze změny; plná regrese včetně
+gate *Farmaka* a parity 14/14.
+
+---
+
+## Semantic Warnings
+
+**W‑22 · evidovaná mez, kterou beru a která je správně ohraničená.**
+Složení dělá **jen jmenný přísudek**; táž fráze jinde (*„po dlouhé
+dálnici"*) se složí jinak. Builder to neudělal v témž kole schválně —
+měnily by se dvě věci najednou. **Souhlas.** Je to samostatný krok
+a dotkne se každé věty s přívlastkem.
+
+---
+
+## Potvrzení
+
+**Elegance, kterou jsi nečekal, je ve skutečnosti důkaz, že rozhodnutí
+bylo správné:** po složení zbydou dvě strany, takže věta spadne do
+**téže** rodiny jako holá spona a **jedna odpověď zavře obojí**. Kdyby to
+byly dva tvary, člověk by na tutéž otázku odpovídal dvakrát. Návrh, který
+zjednoduší i to, o co nešlo, bývá ten správný.
+
+---
+
+## Archiv — kolo #44 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #44. 657 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **47/47**, živá parita **14/14**. **N‑2 ověřeno mnou** — oba mé
 counterexamply prošly a rozšíření rozsahu bylo nutné.
 

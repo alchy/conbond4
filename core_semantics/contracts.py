@@ -224,7 +224,10 @@ CONTRACTS: tuple[Clause, ...] = (
         promise=(
             "uzávěrový index se staví nad ZÁKLADNÍMI fakty, takže odvozený "
             "jádrový atom by dal `A` bez účinku — proto se na jádrové "
-            "predikáty ptá index, ne shoda s faktem"
+            "predikáty ptá index, ne shoda s faktem. A ptá se ho VŽDYCKY, "
+            "než začne odvozovat: zapsaný výrok, který index má, se nesmí "
+            "přeskočit ve prospěch zákonů, jinak systém odpoví `U` na "
+            "tvrzení, které mu člověk právě řekl (G‑3)"
         ),
         anchor="core_semantics.engine:Engine._match_kernel",
         # Průchod je `ask`, ne `_match_kernel`. Doložka o vnitřní funkci se
@@ -234,6 +237,9 @@ CONTRACTS: tuple[Clause, ...] = (
         enforced_by=(
             "test_completeness_has_one_door_too",
             "test_direct_question_about_disjointness_ignores_the_stated_order",
+            "test_a_stated_fact_about_an_algebraic_term_is_recalled",
+            "test_the_recall_cites_the_statement_the_person_made",
+            "test_recall_does_not_replace_the_laws",
         ),
     ),
     # -- oracle → cascade --------------------------------------------------

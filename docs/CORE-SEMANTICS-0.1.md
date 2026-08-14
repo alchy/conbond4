@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.9 · 14. 8. 2026
+**Verze jádra:** 0.1.10 · 14. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -16,6 +16,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.7 | § 5.4 — `PROTECTED_HEADS`: zákaz v hlavě širší než jádrová množina, přibyly `name` a role; § 3.2 intervalová aproximace + axiom o existenci bez uzlu; § 5.1 `complete` jako epistemická deklarace; § 5.6 charakteristika systému; § 7 minimalita podle definované metriky; § 13 T53–T55 | 14. 8. 2026 |
 | 0.1.8 | § 5.4/10 — tělo se při `attach` normalizuje do kanonického bezpečného pořadí, jinak `UnsafeRule` u ZÁPISU; `REQUIRES_BOUND` jako jeden seznam pro zápis i evaluátor; normalizace neobchází bod 7; § 13 T56–T58 | 14. 8. 2026 |
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
+| 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 **Rozsah:** definuje jazyk, typování, denotaci, epistemický status,
 pravidla, modalitu, důkaz a identitu. Neřeší parsing, renderování,
 vnitřek doménových specialistů ani optimalizace.
@@ -430,6 +431,22 @@ Poslední řádek dělá sadu symetrickou pro entitní i druhovou reprezentaci:
 `member*` má pravidlo pro `DIFF` a `subset*` nově taky. Bez něj by
 „vrabec je pták kromě tučňáka" nešlo doložit na úrovni tříd, jen po
 jednotlivcích.
+
+**Napřed RECALL, teprve pak odvození** *(0.1.10 — G‑3)*. Zákony z bodu
+(b) se použijí teprve tehdy, když se `sub ⊆ sup` nenajde přímo
+v uzávěrovém indexu. Do téhle opravy se index při algebraické straně
+přeskakoval úplně, takže `attach(subset(auto, A AND B))` se uložil, index
+tu hranu měl — a přímá otázka na týž fakt vrátila `U`.
+
+Rozdíl, na kterém to stojí: **neúplná sada zákonů je přiznaná mez**
+(nedokážu odvodit všechno, a chybějící důkaz dá `U`, nikdy falešné `A`).
+**Ignorovat vlastní bázi mez není.** Systém, který odpoví „nevím" na
+tvrzení, které mu člověk právě řekl a které má uložené, neselhal
+v odvozování, ale v paměti.
+
+Zákony se tím neobcházejí — přímý dotaz jen předchází. Kde platí obojí,
+vrací se ten přímý, protože je kratší a minimalita důkazu je § 7.
+`member*` se indexu ptal odjakživa; nesouměrný byl `subset*`.
 
 **`disjoint` se hledá v OBOU směrech.** Marker je v bázi uložený
 jednosměrně (`disjoint(a:g1, b:g2)`), ale relace symetrická je — jinak by
@@ -973,6 +990,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T60 | zapsaný výrok se nepřehlíží | `attach(subset(auto, A AND B))` → přímá otázka dá `A` s citací TOHO výroku; zákony § 5.2.1 běží dál beze změny a negativní kontroly (`A OR B ⊆ A`) drží |
 | T59 | vázanost i uvnitř algebraického termu | `h(a:X) ← subset(a AND X, b)` → `UnsafeRule` u ZÁPISU (dřív prošlo a padlo u dotazu na neuzemněnou hlavu); s `member(X,g)` jako vazačem projde a odpoví `A` |
 | T58 | normalizace neobchází bezpečnost negace | proměnná vázaná jen negovaným literálem se přeuspořádáním „bezpečnou" nestane; pozitivní vazač ji naopak povolí |
 
