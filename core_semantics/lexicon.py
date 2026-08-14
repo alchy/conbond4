@@ -676,6 +676,12 @@ _RELATION_SEED: tuple[tuple[str, Operation], ...] = (
     ("cop:druh+Gen", Operation.SUBSET),
     ("cop:poddruh+Gen", Operation.SUBSET),
     ("cop:NOUN≠NOUN", Operation.DISJOINT),
+    # Vlastní jméno v podmětu JE signál individua, takže členství je tu
+    # rozhodnutelné — na rozdíl od `NOUN=NOUN`. Záporná varianta je táž
+    # relace se silnou negací (`member̄`), ne oddělenost: oddělenost je
+    # vztah dvou TŘÍD a Jana třída není.
+    ("cop:PROPN=NOUN", Operation.MEMBER),
+    ("cop:PROPN≠NOUN", Operation.MEMBER),
 )
 
 

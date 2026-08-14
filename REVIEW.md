@@ -1,8 +1,117 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — recall opraven, jádro 0.1.10
+## Status: 🟢 APPROVE — identita fráze je nezávislá na pozici
 
-**Kolo #46.** 671 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #47.** 679 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **47/47**, živá parita **14/14**. **N‑2c ověřeno mnou** — všechny
+tři mé counterexamply prošly a nález o fixtuře je nejcennější kus kola.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+**Identita napříč pozicemi:**
+
+```
+» Petr jel po dlouhé dálnici.   jet(kdo:·Petr, kudy:dlouhý_dálnice)
+» Dlouhá dálnice vede.          vést(kdo:∀dlouhý_dálnice)
+```
+
+Týž uzel, jiná pozice. **Lemmata, ne tvary** — a právě proto to napříč
+pozicemi funguje.
+
+**Moje counterexamply, všechny tři:**
+
+| co | výsledek |
+|---|---|
+| `To auto je modré.` | `být(co:·modrý, kdo:auto)` — nesloženo ✓ |
+| `Filipovo auto je modré.` | `Filipovo` **zůstalo ztraceným členem s otázkou** ✓ |
+| gate *Farmaka* + parita | `N` / 14 ✓ |
+
+**Vyloučení přivlastnění je ze STAVBY, ne z odhadu** — `Poss=Yes`.
+Ověřil jsem u živé služby, že ten příznak opravdu dává.
+
+**Jeho vlastní vyloučení, které jsem nežádal:** `Starý Petr spí.` →
+`spát(kdo:·Petr)`, `PROPN` se neskládá. Důvod je správný: přívlastek na
+vlastním jméně by měnil identitu **pojmenovaného** uzlu a kanonizace jmen
+(M‑2) by pak trefovala jiný uzel podle toho, jestli u jména zrovna stálo
+adjektivum.
+
+**Regrese celá** včetně G‑3 recallu a zákazu eliminace `OR`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Nález kola: fixtura chudší než skutečnost
+
+Builder našel, že `test_quantifier.py` měl u `Filipovo` ručně psanou
+nahrávku **bez `Poss=Yes`**, ačkoli živá služba ten příznak dává. Ověřil
+jsem to voláním služby — dává.
+
+**Proč je to nejdůležitější věc kola:** do téhle změny na tom nezáleželo,
+takže se rozdíl **nikdy neprojevil**. Přesně proto je nebezpečný —
+nahrávka chudší než skutečnost **fixuje chování, které na živém vstupu
+nenastane**. A opravil **fixturu podle živého rozboru, ne podmínku**;
+obráceně by sada dál hlídala svět, který neexistuje.
+
+Je to táž třída jako lekce z A‑20 (*ručně psané nahrávky kódují představu
+autora*), jen o patro níž: tam šlo o rozbor, tady o **jediný chybějící
+příznak**, který se schoval, protože ho nikdo nepotřeboval.
+
+---
+
+## Semantic Warnings
+
+**W‑23 · změna zlaté sady u A1 — ověřeno, není oslabení.** `A1` má nově
+`být(co:·dopravní_prostředek, kdo:∀auto)` místo tří rolí s `jak:·dopravní`.
+Role `jak` u přívlastku byla **povrchové pojmenování něčeho, co členem
+vztahu není**; věta mluví o **jedné** třídě. `asks` z minulého kola
+zůstalo, takže se kritérium nezměkčilo.
+
+---
+
+## Jeden další směr: vlastní jméno v podmětu → `member`
+
+Builder nechal rozhodnutí na mně a nabídl dvě otevřené věci.
+
+**Volím `member`**, ne přivlastnění. Důvod:
+
+- **`member`** je poslední evidovaná mez z N‑2 a je to **dokončení
+  rozdělané práce** — patro jádrových relací dnes vlastní jméno v podmětu
+  vůbec nerozpoznává, takže `Jana je učitelka.` zapisuje `být(...)` tam,
+  kde věcně patří `member(Jana, učitelka)`. Bez toho zůstává v bázi
+  **slabší tvrzení**, než co člověk řekl.
+- **Přivlastnění** Builder sám popsal správně: *odpověď nemá kam vést*,
+  protože „čí" je vztah ke konkrétnímu uzlu, tedy **jiná vrstva**. Otevřít
+  ji teď by znamenalo začít vrstvu, ne dokončit tuhle.
+
+**Nejmenší bezpečná změna:** rodina `cop:PROPN=NOUN` → návrh `member`.
+`PROPN` v podmětu **je** signál individua — na rozdíl od `NOUN=NOUN`, kde
+je to nerozhodnutelné.
+
+**Counterexample, který musí projít:** (a) `Jana je učitelka.` dnes
+**odpovídá `A`** na `Je Jana učitelka?` — po změně musí odpovídat dál,
+ať už jako `member`, nebo po doptání; **ztráta té odpovědi je regrese**;
+(b) `Mourek je kočka.` (PROPN podmět, obecné jméno) musí dát **`member`**,
+ne `subset` — a `Kočka je savec.` se musí dál **ptát**, protože tam
+`PROPN` není.
+
+**Očekávaný výsledek:** `Jana je učitelka.` → `member(Jana, učitelka)`;
+`Je Jana učitelka?` → `A`; dvojznačná holá spona se dál ptá; plná regrese
+včetně gate a parity.
+
+---
+
+## Archiv — kolo #46 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #46. 671 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **47/47**, živá parita **14/14**. **G‑3 opraveno a ověřeno mnou**,
 oba mé counterexamply prošly.
 

@@ -1072,12 +1072,11 @@ def relation_shape(
     Slabší závazek je v otevřeném světě ta správná výchozí volba: netvrdí
     nic nepravdivého, jen netvrdí víc, než věta říká.
 
-    **Vlastní jméno v podmětu se schválně NEROZEZNÁVÁ.** `member` by tam
-    byl významově správnější než dnešní reifikovaný `být`, ale ta věta
-    dnes prochází celým akceptačním dialogem („Jana je učitelka." →
-    „Je Jana učitelka?" → `A`) a přepsat ji potichu na jinou relaci by
-    znamenalo změnit význam scénáře, který drží. Je to **evidovaná mez**,
-    ne tvrzení, že `být(co:·učitelka, kdo:Jana)` je ten správný zápis.
+    **Slovní druh podmětu je v tvaru schválně** *(N‑2d)*. `PROPN` JE
+    signál individua, takže „Jana je učitelka" je členství — a to je
+    rozhodnutelné, na rozdíl od `NOUN=NOUN`, kde „Kočka je savec"
+    (podmnožina) a „Mourek je kočka" (členství) mají týž tvar. Tvrdit
+    o vlastním jméně podmnožinu by znamenalo udělat z individua třídu.
     """
     if predication.predicate != COPULA_LEMMA:
         return None
@@ -1117,11 +1116,7 @@ def relation_shape(
         # ne vztah tříd — ptát se u ní na členství nebo podmnožinu je
         # otázka bez odběratele, ať člověk odpoví cokoli.
         return None
-    if subject.mention.upos != "NOUN":
-        # Vlastní jméno v podmětu je evidovaná mez, ne přehlédnutí — viz
-        # docstring. Ta věta dnes prochází celým akceptačním dialogem
-        # a i pouhé DOPTÁNÍ by z ní udělalo nedořečený tah tam, kde dnes
-        # odpovídá.
+    if subject.mention.upos not in ("NOUN", "PROPN"):
         return None
     link = "≠" if predication.negated else "="
     return Construction(
@@ -1208,9 +1203,15 @@ def _as_relation(
     o vrstvu níž překládat — a ten překlad by byl druhé místo, kde se
     rozhoduje, která strana je která.
 
-    **Negace se nezahazuje, ale ani nepřenáší.** `disjoint` sám nese, že
-    se třídy nepřekrývají; ponechat na něm `negated=True` by znamenalo
-    tvrdit `¬disjoint`, tedy pravý opak toho, co člověk řekl.
+    **Negaci pohltí jen ta relace, která ji SAMA NESE.** `disjoint`
+    znamená „tyhle dvě třídy se nepřekrývají", takže zápor je v ní už
+    obsažený; ponechat na ní `negated=True` by tvrdilo `¬disjoint`, tedy
+    pravý opak toho, co člověk řekl.
+
+    U `member` a `subset` je to naopak: zápor je na nich **kolmý**
+    a musí se přenést. „Jana není učitelka" je `member̄(Jana, učitelka)`,
+    tedy DOLOŽENÉ POPŘENÍ členství (§ 4) — ne oddělenost tříd, protože
+    Jana třída není, a ne mezera, protože o tom se něco ví (I‑21).
 
     **Kvantifikátor je `·` a není to dohad.** Argumenty jádrové relace jsou
     TY TŘÍDY SAMY — `subset(amoxicilin, penicilin)` mluví o dvou skupinách,
@@ -1247,7 +1248,7 @@ def _as_relation(
             )
         ),
         mood=predication.mood,
-        negated=False,
+        negated=predication.negated and operation is not Operation.DISJOINT,
         relation=operation,
     )
 

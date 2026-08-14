@@ -188,10 +188,17 @@ ICE_CREAM = Dialogue(
                 w("učitelka", "učitelka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
                 w(".", ".", "PUNCT", 3, "punct"),
             ),
-            reads="být(co:·učitelka, kdo:·Jana)",
+            reads="member(elem:·Jana, group:·učitelka)",
             anchors=("Jana → Jana (založen)", "učitelka → učitelka (obecné jméno)"),
-            writes="být(co:·učitelka, kdo:Jana)",
-            point="spona: vlastní jméno je uzel, jmenná část je skupina",
+            writes="member(elem:Jana, group:·učitelka)",
+            point=(
+                "spona: vlastní jméno je uzel, jmenná část je skupina — "
+                "a od N‑2d je to ČLENSTVÍ, ne reifikovaný vztah `být`. "
+                "`PROPN` v podmětu JE signál individua, takže tady je to "
+                "rozhodnutelné; u `NOUN=NOUN` (Kočka je savec / Mourek "
+                "je kočka) není a systém se ptá. Do téhle změny v bázi "
+                "leželo SLABŠÍ tvrzení, než co člověk řekl"
+            ),
         ),
         Step(
             text="Děti mají rády zmrzlinu.",
@@ -221,7 +228,7 @@ ICE_CREAM = Dialogue(
                 w("učitelka", "učitelka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
                 w("?", "?", "PUNCT", 3, "punct"),
             ),
-            reads="být(co:·učitelka, kdo:·Jana)",
+            reads="member(elem:·Jana, group:·učitelka)",
             anchors=(
                 "Jana → Jana (kanonicky; týž uzel, o kterém už řeč byla)",
             ),

@@ -186,7 +186,12 @@ CONTRACTS: tuple[Clause, ...] = (
             "lexikalizovaného sousloví (N‑2b). Skládá se v `generate`, tedy "
             "JEDNOU PRO VŠECHNY POZICE — táž fráze musí mířit na týž uzel "
             "bez ohledu na to, kde ve větě stojí; přivlastnění se NESKLÁDÁ, "
-            "protože je to vztah ke konkrétnímu uzlu, ne druh (N‑2c)"
+            "protože je to vztah ke konkrétnímu uzlu, ne druh (N‑2c). "
+            "Slovní druh podmětu je součást tvaru: `PROPN` JE signál "
+            "individua, takže tam je relace rozhodnutelná (`member`), "
+            "kdežto `NOUN=NOUN` rozhodnutelné není a ptá se. Zápor pohltí "
+            "jen `disjoint`, protože ho sama nese; na `member` je kolmý "
+            "a přenáší se jako doložené popření (N‑2d)"
         ),
         anchor="core_semantics.cascade:relation_tier",
         # Průchod je `.utter(`, ne `relation_tier`. Patro samo o sobě
@@ -205,6 +210,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_attribute_is_not_reported_as_a_lost_member",
             "test_the_same_phrase_points_at_the_same_node_in_any_position",
             "test_a_possessive_attribute_is_not_composed",
+            "test_a_proper_name_subject_means_membership",
+            "test_the_bare_noun_copula_still_asks_even_now",
+            "test_a_negated_naming_is_documented_denial_not_disjointness",
+            "test_the_disjoint_relation_still_swallows_its_negation",
         ),
     ),
     Clause(

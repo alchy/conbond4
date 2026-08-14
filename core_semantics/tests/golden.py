@@ -430,9 +430,47 @@ G3 = Golden(
 )
 
 
+G4 = Golden(
+    dialogue="G",
+    text="Mourek je kočka.",
+    tokens=(
+        tok(1, "Mourek", "Mourek", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "kočka", "kočka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Mourek, group:·kočka)",
+    notes=("cop:PROPN=NOUN",),
+    point=(
+        "TÝŽ TVAR jako „Kočka je savec“, jiný slovní druh podmětu — a tím "
+        "jiná relace. `PROPN` je signál individua, takže je to členství; "
+        "tvrdit o vlastním jméně podmnožinu by z Mourka udělalo třídu"
+    ),
+)
+
+G5 = Golden(
+    dialogue="G",
+    text="Mourek není savec.",
+    tokens=(
+        tok(1, "Mourek", "Mourek", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "není", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "savec", "savec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="¬member(elem:·Mourek, group:·savec)",
+    notes=("cop:PROPN≠NOUN",),
+    point=(
+        "ASYMETRIE ZÁPORU: `disjoint` zápor SAMA nese, takže ho pohltí, "
+        "kdežto na `member` je kolmý a musí se přenést. Táž věta s obecným "
+        "jménem („Vrabec není savec“) dá oddělenost tříd, tahle dá DOLOŽENÉ "
+        "POPŘENÍ členství — a Mourek zůstane individuem"
+    ),
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
-    A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3,
+    A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
 )
 
 

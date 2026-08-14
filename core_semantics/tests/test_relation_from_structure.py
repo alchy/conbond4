@@ -80,12 +80,23 @@ DISJOINT_SENTENCE = Reading(
 )
 
 
-def bare(subject: str, subject_lemma: str, upos: str = "NOUN") -> Reading:
-    """«<X> je savec.» — holá kladná spona, ta dvojznačná."""
+def bare(
+    subject: str, subject_lemma: str, upos: str = "NOUN", *, negated: bool = False
+) -> Reading:
+    """«<X> je savec.» — holá spona; kladná je ta dvojznačná."""
     return Reading(
         tokens=(
             w(1, subject, subject_lemma, upos, 3, "nsubj", Case="Nom", Number="Sing"),
-            w(2, "je", "být", "AUX", 3, "cop", Polarity="Pos", **COP),
+            w(
+                2,
+                "není" if negated else "je",
+                "být",
+                "AUX",
+                3,
+                "cop",
+                Polarity="Neg" if negated else "Pos",
+                **COP,
+            ),
             w(3, "savec", "savec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
             w(4, ".", ".", "PUNCT", 3, "punct"),
         ),
@@ -119,6 +130,7 @@ DISJOINT_TEXT = "Vrabec není savec."
 CAT = "Kočka je savec."
 DOG = "Pes je savec."
 NAMED = "Mourek je savec."
+NOT_NAMED = "Mourek není savec."
 PROPERTY = "Auto je modré."
 
 BARE_SHAPE = "cop:NOUN=NOUN"
@@ -132,6 +144,7 @@ def oracle() -> _Recorded:
             CAT: bare("Kočka", "kočka"),
             DOG: bare("Pes", "pes"),
             NAMED: bare("Mourek", "Mourek", upos="PROPN"),
+            NOT_NAMED: bare("Mourek", "Mourek", upos="PROPN", negated=True),
             PROPERTY: PROPERTY_SENTENCE,
         }
     )
@@ -172,14 +185,71 @@ def test_a_property_is_not_a_class_relation() -> None:
     assert relation_shape(_predication(PROPERTY_SENTENCE), PROPERTY_SENTENCE) is None
 
 
-def test_a_proper_name_subject_is_left_alone() -> None:
-    """EVIDOVANÁ MEZ, ne tvrzení, že je to správně. „Mourek je savec." je
-    významově `member`, jenže táž konstrukce s vlastním jménem dnes
-    prochází celým akceptačním dialogem („Jana je učitelka." → „Je Jana
-    učitelka?" → `A`) a i pouhé doptání by z ní udělalo nedořečený tah
-    tam, kde dnes odpovídá. Zavře to samostatný krok, ne tenhle."""
+def test_a_proper_name_subject_means_membership() -> None:
+    """N‑2d. Poslední evidovaná mez z N‑2, zavřená.
+
+    `PROPN` v podmětu **je** signál individua, takže tady je relace
+    rozhodnutelná — na rozdíl od `NOUN=NOUN`, kde „Kočka je savec"
+    (podmnožina) a „Mourek je kočka" (členství) mají týž tvar. Tvrdit
+    o vlastním jméně podmnožinu by udělalo z individua třídu."""
     reading = bare("Mourek", "Mourek", upos="PROPN")
-    assert relation_shape(_predication(reading), reading) is None
+    found = relation_shape(_predication(reading), reading)
+    assert found is not None
+    assert found.shape == "cop:PROPN=NOUN"
+
+    session = Session()
+    result = session.utter(NAMED, oracle())
+    assert result.predication is not None
+    assert str(result.predication) == "member(elem:·Mourek, group:·savec)"
+    assert result.statement_id is not None
+
+
+def test_the_bare_noun_copula_still_asks_even_now() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (b), druhá půlka: `PROPN` rozhodl jen tam,
+    kde JE. „Kočka je savec." se musí dál ptát — jinak by se z jednoho
+    rozhodnutelného případu stal tichý default pro oba."""
+    session = Session()
+    result = session.utter(CAT, oracle())
+    assert result.question is not None
+    assert BARE_SHAPE in result.question
+    assert result.statement_id is None
+
+
+def test_a_named_individual_is_never_a_subclass() -> None:
+    """Kdyby seed přiřadil `PROPN=NOUN` podmnožinu, „Mourek" by se stal
+    TŘÍDOU — a uzávěr by pak přenášel na jeho „členy" tvrzení o kočkách."""
+    session = Session()
+    session.utter(NAMED, oracle())
+    assert all("subset" not in line for line in session.program())
+
+
+def test_a_negated_naming_is_documented_denial_not_disjointness() -> None:
+    """Zápor je na `member` KOLMÝ, takže se přenáší. „Mourek není savec"
+    je `member̄(Mourek, savec)`, tedy DOLOŽENÉ POPŘENÍ (§ 4) — ne
+    oddělenost tříd, protože Mourek třída není, a ne mezera, protože
+    o tom se něco ví (I‑21).
+
+    U `disjoint` je to naopak a ta asymetrie je celý ten rozdíl: „tyhle
+    dvě třídy se nepřekrývají" zápor už samo obsahuje."""
+    session = Session()
+    result = session.utter(NOT_NAMED, oracle())
+    assert result.predication is not None
+    assert result.predication.negated
+    assert str(result.predication) == "¬member(elem:·Mourek, group:·savec)"
+
+    denied = Engine(session.kb).ask(
+        member_of(Entity("Mourek"), Group("savec"))
+    )
+    assert denied.status is QueryStatus.PROVEN_FALSE
+
+
+def test_the_disjoint_relation_still_swallows_its_negation() -> None:
+    """Druhá strana téže asymetrie — kdyby se zápor přenesl i sem,
+    „Vrabec není savec" by tvrdilo `¬disjoint`, tedy pravý opak."""
+    session = Session()
+    result = session.utter(DISJOINT_TEXT, oracle())
+    assert result.predication is not None
+    assert not result.predication.negated
 
 
 # --------------------------------------------------------------------------
