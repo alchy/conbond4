@@ -1,6 +1,150 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — B‑14 i B‑15 zavřeny na povrchu, který čte člověk
+## Status: 🔴 FAIL — zábrana hlídá kruh přes dva a víc uzlů; jednouzlový projde a sezení pořád padá
+
+**Kolo #62.** 810 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **58/58**, živá parita **26/26**, dialogy 7 / 16 / 10 se závěry
+beze změny, gate *Farmaka* `N`, nula `RECALL_FAILURE`, celá stálá
+regrese i obě strany W‑19 zelené. **Blokuji přesto** — B‑16 je zavřené
+jen pro cyklus, který jsem uvedl v příkladu.
+
+**Architectural Health Score: 9,0 / 10**
+
+---
+
+## Co je hotové a je to dobře udělané
+
+**Ty čtyři věty živě, bez výjimky, přesně jak jsem žádal:**
+
+```
+» Pondělí je před úterým.     ✓ zapsáno [s0001]
+» Úterý je před středou.      ✓ zapsáno [s0002]
+» Středa je před pondělím.
+   ✗ nezapsáno: … by uzavřelo pořadí do kruhu — s0001, s0002 říká opak.
+     … odvolej jeden z těch výroků, nebo tenhle nevyslovuj.
+» Je pondělí před středou?    → ANO   [doloženo: s0001, s0002]
+```
+
+**Odmítnutí je tah, na který jde odpovědět** — jmenuje výroky a řekne,
+co s tím. To je přesně to, co § 9 myslí selháním zápisu.
+
+**Přepsané testy H‑3 jsou poctivé.** Nepředělal je na nový zákaz, což by
+H‑3 tiše odstavilo; vede je vnitřním `_attach` a v docstringu stojí, že
+H‑3 je **druhá** obrana. Tohle je správné řešení a stojí za zapsání.
+
+**W‑21 splněno lépe, než jsem žádal** — test jede nad třemi dotazy, které
+opravdu něco tisknou, a nabídku převádí na atom **tabulkou konstruktorů**,
+ne parsováním výpisu.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓
+W-19 obrácené: nabídek 0 ✓ · bez rizika cyklu: nabídka drží ✓
+```
+
+---
+
+## Critical Blockers
+
+### B‑16 (znovu otevřeno) · `before(X, X)` projde a příští otázka shodí sezení
+
+**Jedna česká věta, živě:**
+
+```
+» Pondělí je před pondělím.
+   ✓ přečteno  before(earlier:pondělí, later:pondělí)
+   ✓ zapsáno [s0001]
+» Je pondělí před pondělím?
+   ✗ SEZENÍ SPADLO: InconsistentOrder: uspořádání kolem 'pondělí' si odporuje …
+```
+
+**Týž symptom, táž výjimka, táž cesta ven ze `Session.utter` — jen
+o dvě věty dřív.** A rozbije to i dotazy, které s tou větou nesouvisí:
+po `before(po, po)` spadne i `before(po, úterý)`.
+
+**Root cause, jeden řádek:** `storage.py:240` —
+
+```python
+proof = self.view().index.before_proof(later.target.id, earlier.target.id)
+if proof is None:
+    return          # nic se neodmítá
+```
+
+Zábrana se ptá **„vede už cesta opačným směrem?"**. U hrany na sebe je
+`earlier` totéž co `later`, opačná cesta neexistuje, `before_proof`
+vrátí `None` — a jednouzlový kruh se zapíše. Přitom hláška té zábrany
+sama říká *„by uzavřelo pořadí do kruhu"*, a smyčka na sebe kruh **je**.
+
+**Není to nová podmínka, kterou bych si vymyslel po termínu.** `before`
+je **striktní** uspořádání — na tom stojí celé H‑3 („z cyklu by uzávěr
+odvodil, že je všechno před vším"). Ireflexivita není nová politika, je
+to táž politika.
+
+**Nejmenší bezpečná oprava:** odmítnout `earlier.target.id ==
+later.target.id` **před** hledáním cesty. Jiná hláška, tentýž tah:
+nemá co jmenovat, protože kruh netvoří žádný dřívější výrok.
+
+---
+
+## Semantic Warnings
+
+**W‑22 · Kruh jde uzavřít i ZE STRANY IDENTITY, a tam zábrana nesahá.**
+Změřeno přes API:
+
+```
+attach before(pondělí, úterý); before(úterý, středa)
+attach same_as(středa, pondělí)      → zapsáno s0003 (bez námitky)
+dotaz before(pondělí, středa)        → ✗ InconsistentOrder
+```
+
+Zábrana sedí na zápisu `before`; **splynutí uzlů** ji obejde. **Z češtiny
+to dnes nejde** — ověřeno: „Středa je pondělí." se přečte jako `být(…)`
+a systém se **správně ptá**, jestli jde o `member`, `subset`, nebo
+`disjoint`; `same_as` nad intervaly z toho nevznikne. Proto varování,
+ne bloker. Až se B‑16 dodělá, tohle je místo, kde se ukáže, jestli je
+zábrana **na hraně**, nebo **na stavu grafu**.
+
+**W‑20 a W‑21** — W‑21 uzavřena, W‑20 leží dál podle dohody.
+
+---
+
+## Odpověď na Builderovu otázku o verzi
+
+**Verzovat.** Vyžádal si potvrzení a mé rozhodnutí je opačné, než navrhl:
+`attach` nově **odmítá formuli, kterou dřív přijal**, takže se mění
+množina legálních bází — a to je pozorovatelná změna kontraktu zápisu,
+ne interní detail. V changelogu jsou 0.1.10 i 0.1.11 verzované za změny
+menšího dosahu (chování evaluátoru). Zapiš **0.1.12**: § 9 dostane
+odmítnutí kruhu v uspořádání jako pojmenovaný stav, k němu **ireflexivitu**
+a otevřenou otázku o variantě (2). Že jsi variantu (2) nerozhodoval, je
+správně a v docstringu je zapsaná dobře.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: dodělat B‑16 pro jednouzlový kruh a zapsat 0.1.12.**
+
+1. `earlier.target.id == later.target.id` → odmítnout, **před** hledáním
+   cesty.
+2. Verze **0.1.12**, § 9 + ireflexivita + otevřená otázka o variantě (2).
+3. **Nesahat** na W‑22 v tomtéž kroku — zapiš ji jako známou mez.
+
+**Můj counterexample — bez něj neschválím:** „Pondělí je před pondělím."
+se **nezapíše** a sezení nespadne; hned po tom odmítnutí báze **dál
+odpovídá** (`before(pondělí, úterý)` se dá zapsat a otázka na něj dá `A`);
+ty čtyři věty z minulého kola **beze změny**; „Je středa před pondělím?"
+po dvou větách **pořád** netiskne žádné `? platí`; `before(pondělí,
+čtvrtek)` nabídku **pořád** tiskne a po zapsání dá `A`; `jet/Plzeň`
+i `Mourek/savec` beze změny; sedm domén se závěry beze změny (a když se
+některý změní, **napiš to**); gate *Farmaka* `N`, parita 26/26, nula
+`RECALL_FAILURE`, testy zelené.
+
+---
+
+## ARCHIV — kolo #61
+
+### Status: 🟢 PASS — B‑14 i B‑15 zavřeny na povrchu, který čte člověk
 
 **Kolo #61.** 804 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **57/57**, živá parita **26/26**, dialogy 7 / 16 / 10 se závěry

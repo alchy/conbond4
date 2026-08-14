@@ -16,6 +16,7 @@ from __future__ import annotations
 import pytest
 
 from core_semantics.ast import (
+    same_as_of,
     AttachError,
     Entity,
     Interval,
@@ -247,3 +248,57 @@ def test_within_and_before_are_different_relations() -> None:
     assert engine.ask(before_of(Interval("týden"), MONDAY)).status is (
         QueryStatus.UNKNOWN
     )
+
+
+def test_a_self_loop_is_a_circle_of_one_node() -> None:
+    """B‑16, druhá půlka. Hledání „vede už cesta opačným směrem?" smyčku
+    na sebe MINULO — u hrany na sebe opačná cesta neexistuje, takže se
+    jednouzlový cyklus zapsal a shodil příští otázku, i tu, která s ním
+    nesouvisela.
+
+    Není to nová politika: `before` je STRIKTNÍ uspořádání a celé H‑3 na
+    tom stojí („z cyklu by uzávěr odvodil, že je všechno před vším").
+    Ireflexivita je táž věta, jen o jednom uzlu."""
+    kb = KnowledgeBase()
+    with pytest.raises(AttachError, match="dřív než ono samo"):
+        kb.attach(before_of(MONDAY, MONDAY))
+
+
+def test_a_self_loop_is_refused_on_an_empty_base_too() -> None:
+    """Odmítá se BEZ OHLEDU na to, co v bázi je — proto nemá co jmenovat:
+    kruh netvoří žádný dřívější výrok, tvoří ho ta hrana sama se sebou."""
+    kb = KnowledgeBase()
+    kb.attach(before_of(MONDAY, TUESDAY))
+    with pytest.raises(AttachError, match="dřív než ono samo"):
+        kb.attach(before_of(TUESDAY, TUESDAY))
+
+
+def test_the_base_survives_a_refused_self_loop() -> None:
+    """Odmítnutí nesmí bázi poškodit: hned po něm musí jít zapsat i
+    odpovědět. Dřív se po `before(X, X)` rozbily i dotazy, které s tou
+    větou nesouvisely."""
+    kb = KnowledgeBase()
+    with pytest.raises(AttachError):
+        kb.attach(before_of(MONDAY, MONDAY))
+    kb.attach(before_of(MONDAY, TUESDAY))
+    assert Engine(kb).ask(before_of(MONDAY, TUESDAY)).status is (
+        QueryStatus.PROVEN_TRUE
+    )
+
+
+def test_the_identity_side_is_a_known_limit() -> None:
+    """W‑22, ZAPSANÁ MEZ, ne hotová věc.
+
+    Kruh jde uzavřít i ZE STRANY IDENTITY: `same_as`, které dva uzly
+    sceluje, zábranu na hraně obejde. Z ČEŠTINY se tam dnes dojít nedá —
+    „Středa je pondělí." se čte jako spona a systém se ptá, jestli jde
+    o `member`, `subset`, nebo `disjoint`.
+
+    Test to FIXUJE JAKO MEZ, aby se nezapomnělo: až se na to sáhne,
+    ukáže se, jestli zábrana patří NA HRANU, nebo NA STAV GRAFU. Kdyby
+    se to jednou spravilo, tenhle test spadne — a to je jeho účel."""
+    kb = KnowledgeBase()
+    kb.attach(before_of(MONDAY, TUESDAY))
+    kb.attach(same_as_of(TUESDAY, MONDAY))  # zábrana na hraně to nevidí
+    with pytest.raises(InconsistentOrder):
+        Engine(kb).ask(before_of(MONDAY, TUESDAY))

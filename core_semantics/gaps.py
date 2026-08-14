@@ -257,6 +257,11 @@ class GapFinder:
         přestala odpovídat vůbec (H‑3). Nabídnout člověku větu, po které
         se systém rozbije, je horší než mu nenabídnout nic.
 
+        Totéž platí o SMYČCE NA SEBE: `before(X, X)` zápis odmítne, ať je
+        v bázi cokoli, takže nabídnout ji znamená poslat člověka na větu,
+        kterou nesmí vyslovit. Je to táž vada jako nabízet cestu, kudy
+        vyhodnocení nejde — jen o krok dřív.
+
         Ptá se jen na to, co uzávěr UŽ VÍ — nedomýšlí se, jestli by se
         spor objevil někde jinde.
         """
@@ -270,6 +275,8 @@ class GapFinder:
             later.target, Variable
         ):
             return False
+        if earlier.target.id == later.target.id:
+            return True
         return (
             derivation.index.before_proof(later.target.id, earlier.target.id)
             is not None

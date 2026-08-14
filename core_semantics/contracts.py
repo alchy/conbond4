@@ -283,7 +283,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "možná chvíle. Konzervativní default H‑3 v uzávěru ZŮSTÁVÁ "
             "jako druhá obrana. Varianta „nechat zápis projít a odpovídat "
             "CONFLICT se dvěma důkazy` zůstává OTEVŘENÁ (I‑13) — tenhle "
-            "guard ji nevylučuje (B‑16)"
+            "guard ji nevylučuje. `before` je STRIKTNÍ, takže smyčka na "
+            "sebe je kruh o jednom uzlu a odmítá se stejně (B‑16). ZNÁMÁ "
+            "MEZ: ze strany IDENTITY jde kruh uzavřít dál — `same_as` "
+            "zábranu na hraně obejde (W‑22)"
         ),
         anchor="core_semantics.storage:KnowledgeBase._refuse_ordering_cycle",
         entry="attach(",
@@ -292,6 +295,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_refusal_names_the_statements_that_form_the_circle",
             "test_the_base_stays_answerable_after_a_refusal",
             "test_contradictory_ordering_refuses_to_answer",
+            "test_a_self_loop_is_a_circle_of_one_node",
+            "test_the_base_survives_a_refused_self_loop",
+            "test_the_identity_side_is_a_known_limit",
         ),
     ),
     Clause(

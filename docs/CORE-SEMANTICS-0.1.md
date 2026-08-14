@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.11 · 14. 8. 2026
+**Verze jádra:** 0.1.12 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.12 | § 9 — `InconsistentOrder` jako pojmenované selhání ZÁPISU: hrana, která by uzavřela uspořádání do kruhu, se odmítá u `attach`, ne až u dotazu; k tomu IREFLEXIVITA `before` (smyčka na sebe je kruh o jednom uzlu) a otevřená otázka o `CONFLICT` variantě; § 13 T62 | 15. 8. 2026 |
 **Rozsah:** definuje jazyk, typování, denotaci, epistemický status,
 pravidla, modalitu, důkaz a identitu. Neřeší parsing, renderování,
 vnitřek doménových specialistů ani optimalizace.
@@ -828,7 +829,38 @@ DepthExceeded    hloubka vnoření nad parametr gramatiky
 UnsafeRule       porušení § 5.4/1–7
 CycleDetected    cyklus v dependency grafu naučených pravidel
 Unquantified     group ve filleru bez kvantifikátoru → doptání, ne default
+InconsistentOrder odmítnutí hrany, která uzavírá pořadí do kruhu (§ 5.1)
 ```
+**`InconsistentOrder` je selhání ZÁPISU, ne pád u dotazu** *(0.1.12 —
+B‑16)*. `before` je STRIKTNÍ uspořádání; hrana, po které by vznikl
+cyklus, se odmítá při `attach` a odmítnutí **jmenuje výroky, které ten
+kruh tvoří**. Do téhle změny se taková hrana zapsala bez námitky
+a rozbila se až PŘÍŠTÍ otázka — výjimkou, která utekla ze sezení ven.
+To je nejhorší možná chvíle: báze je už v rozbitém stavu, člověk netuší
+proč, a program nemá jak říct, co se stalo (I‑1). Selhání zápisu je
+naproti tomu **tah dialogu**, na který jde odpovědět — třeba odvoláním
+jednoho z výroků.
+
+**Ireflexivita.** `before(X, X)` je kruh o jednom uzlu a odmítá se
+stejně. Není to nová politika: celé H‑3 stojí na tom, že *„z cyklu by
+uzávěr odvodil, že je všechno před vším"*.
+
+**Konzervativní default H‑3 v uzávěru ZŮSTÁVÁ** jako druhá obrana —
+dovnitř se dá dostat vnitřním zápisem, který používá `add_disjoint` pro
+svou expanzi.
+
+**Otevřená otázka** *(I‑13)*: druhá varianta — nechat zápis projít
+a odpovídat na dotaz `CONFLICT` se dvěma důkazy — se **nerozhoduje**.
+Odmítnutí u zápisu ji nevylučuje; jen brání tomu, aby se do toho stavu
+dalo dojít nechtěně.
+
+**Známá mez** *(W‑22)*: kruh jde uzavřít i **ze strany identity** —
+`same_as`, které dva uzly sceluje, zábranu na hraně obejde. Z češtiny se
+tam dnes dojít nedá (věta typu „Středa je pondělí." se čte jako spona
+a systém se ptá, jestli jde o `member`, `subset`, nebo `disjoint`), a je
+to zapsané jako mez, ne jako hotové: až se na to sáhne, ukáže se, jestli
+zábrana patří NA HRANU, nebo NA STAV GRAFU.
+
 
 ---
 
@@ -1016,6 +1048,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T62 | kruh v uspořádání se odmítá u zápisu | `before(b,a)` po `before(a,b)` → `AttachError`, který JMENUJE výroky kruhu; `before(a,a)` odmítnuto vždy; báze po odmítnutí dál odpovídá; H‑3 v uzávěru zůstává jako druhá obrana |
 | T61 | negace obrací monotonii | `¬P(∀maso)` odpoví na `¬P(∃maso)`; kladné `∀→∃` zůstává `U`; dotaz smí být užší, ne širší |
 | T60 | zapsaný výrok se nepřehlíží | `attach(subset(auto, A AND B))` → přímá otázka dá `A` s citací TOHO výroku; zákony § 5.2.1 běží dál beze změny a negativní kontroly (`A OR B ⊆ A`) drží |
 | T59 | vázanost i uvnitř algebraického termu | `h(a:X) ← subset(a AND X, b)` → `UnsafeRule` u ZÁPISU (dřív prošlo a padlo u dotazu na neuzemněnou hlavu); s `member(X,g)` jako vazačem projde a odpoví `A` |

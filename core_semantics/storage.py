@@ -237,6 +237,26 @@ class KnowledgeBase:
         later = formula.get_role("later")
         if earlier is None or later is None:
             return
+        if earlier.target.id == later.target.id:
+            # SMYČKA NA SEBE JE TAKY KRUH, jen jednouzlový. Hledání
+            # „vede už cesta opačným směrem?" ji minulo, protože opačná
+            # cesta u hrany na sebe neexistuje — a jednouzlový cyklus se
+            # tím zapsal a shodil příští otázku, i tu, která s ním
+            # nesouvisela.
+            #
+            # Není to nová politika: `before` je STRIKTNÍ uspořádání
+            # a celé H‑3 na tom stojí („z cyklu by uzávěr odvodil, že je
+            # všechno před vším"). Ireflexivita je táž věta, jen
+            # o jednom uzlu.
+            #
+            # Hláška nemá co jmenovat — kruh netvoří žádný dřívější
+            # výrok, tvoří ho tenhle sám se sebou.
+            raise AttachError(
+                f"{formula}: nic není dřív než ono samo. `before` je "
+                f"striktní uspořádání, takže smyčka na sebe je kruh "
+                f"o jednom uzlu a z cyklu by tranzitivní uzávěr odvodil, "
+                f"že je všechno před vším (dodatek H‑3)."
+            )
         proof = self.view().index.before_proof(later.target.id, earlier.target.id)
         if proof is None:
             return
