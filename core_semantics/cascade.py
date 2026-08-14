@@ -110,6 +110,13 @@ class RoleReading:
     #: Nese se v roli, takže je součástí žurnálu — a `replay` se proto
     #: neptá podruhé (M‑4).
     resolved: str = ""
+    #: Tokeny, které se do TÉHLE role dostaly složením lemmatu, ne vlastní
+    #: rolí („dopravní“ v „dopravní prostředek“, N‑2b). Nese se to v roli,
+    #: a ne dopočítává ze stromu, protože rozhodnutí složit padlo jinde —
+    #: dopočet by ho hádal zpětně a hádal by ho příště jinak. Bez tohohle
+    #: pole hlásí `dropped_tokens` složený přívlastek jako ZTRACENÝ ČLEN
+    #: a systém se ptá na roli něčeho, co roli mít nemá.
+    absorbed: tuple[int, ...] = ()
 
     def rendered(self) -> str:
         mark = self.quantifier.value if self.quantifier else ""
@@ -926,10 +933,36 @@ RELATION_ROLES: dict[Operation, tuple[str, str]] = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class Construction:
+    """Rozpoznaná konstrukce: TVAR a to, které role tvoří strany relace.
+
+    `right_lemma` je neprázdné jen tam, kde se pravá strana **skládá**
+    z víc členů (jmenná část s přívlastkem). Je to obdoba složeného
+    přísudku z G‑1a, jen na jmenné straně: víc slov, jeden pojem.
+    """
+
+    shape: str
+    left: str
+    right: str
+    right_lemma: str = ""
+    #: Tokeny, které konstrukce POHLTILA — nejsou ztracené členy (N‑5),
+    #: protože se do významu dostaly, jen ne vlastní rolí.
+    absorbed: tuple[int, ...] = ()
+
+
+def _attribute_of(role: RoleReading, reading: Reading) -> Token | None:
+    """Přívlastek jmenné části — `amod` závislý na jejím tokenu."""
+    for child in reading.children(role.mention.token_index):
+        if base_deprel(child.deprel) == "amod":
+            return child
+    return None
+
+
 def relation_shape(
     predication: Predication, reading: Reading
-) -> tuple[str, str, str] | None:
-    """Tvar spony jako `(tvar, levá role, pravá role)` — nebo `None`.
+) -> Construction | None:
+    """Rozpoznaná konstrukce — nebo `None`.
 
     Vrací se **tvar**, ne rovnou operace. Co ten tvar znamená, je naučené
     a odvolatelné tvrzení v lexikonu; kdyby to rozhodovala tahle funkce,
@@ -945,6 +978,35 @@ def relation_shape(
     * **holá spona** — „X je Y" / „X není Y": tvar nese slovní druhy obou
       stran a polaritu, protože na nich to celé visí. `Mourek je kočka`
       (PROPN) a `Kočka je savec` (NOUN) jsou různé relace.
+
+    **Jmenná část s přívlastkem je JEDEN POJEM, ne dva** *(N‑2b)*.
+    „Auto je dopravní prostředek" mluví o třídě „dopravní prostředek";
+    `dopravní` není samostatný člen vztahu. Skládá se proto lemma —
+    přesně jako u složeného přísudku (G‑1a), jen na jmenné straně — a věta
+    tím spadne do TÉŽE rodiny jako holá spona. Jedna odpověď tak zavře
+    „Kočka je savec" i „Auto je dopravní prostředek", protože je to jedna
+    a tatáž otázka: co ta spona tvrdí.
+
+    **Proč složený POJEM, a ne průnik `dopravní AND prostředek`.**
+    Rozhodnuto vědomě, je to volba denotace:
+
+    1. `restriction(t; role:t)` je vyloučená stavbou — filtruje instance
+       přes ROLE a přívlastek fillér role není;
+    2. průnik tvrdí **intersektivitu**: `X ⊆ A AND B` znamená, že věc je
+       zvlášť `A` a zvlášť `B`. U „bývalý prezident" je to nepravda a
+       u lexikalizovaného sousloví („dopravní prostředek") taky —
+       a **morfologie ty případy nerozliší**. Zvolit průnik proto znamená
+       hádat o významu přídavného jména;
+    3. změřeno, ne odhadnuto: průnik by dnes nekoupil ani ten závěr, kvůli
+       kterému by se vyplatil. Zákon `X ⊆ A AND B ⇒ X ⊆ B` v § 5.2.1 NENÍ
+       (je tam opačný směr), takže `dopravní prostředek ⊆ prostředek` by
+       z něj stejně neplynulo;
+    4. co se tím ztrácí, jde **doříct tahem**: „Dopravní prostředek je druh
+       prostředku." už dnes dá `subset`. Nezískaný závěr je lepší než
+       vymyšlený.
+
+    Slabší závazek je v otevřeném světě ta správná výchozí volba: netvrdí
+    nic nepravdivého, jen netvrdí víc, než věta říká.
 
     **Vlastní jméno v podmětu se schválně NEROZEZNÁVÁ.** `member` by tam
     byl významově správnější než dnešní reifikovaný `být`, ale ta věta
@@ -969,15 +1031,31 @@ def relation_shape(
     ]
     if len(genitive) == 1:
         # „X je druh Y" — pravá strana je přívlastek, ne jmenná část.
-        return (
-            f"cop:{complement.mention.lemma}+Gen",
-            subject.name,
-            genitive[0].name,
+        return Construction(
+            shape=f"cop:{complement.mention.lemma}+Gen",
+            left=subject.name,
+            right=genitive[0].name,
+            absorbed=(complement.mention.token_index,),
         )
-    if len(predication.roles) != 2:
-        # Tři a víc členů bez genitivu: konstrukce, kterou tenhle popis
-        # nepokrývá. Mlčet je tu správně — navrhnout relaci z něčeho, čemu
-        # nerozumím, by bylo horší než nenavrhnout nic.
+
+    attribute = _attribute_of(complement, reading)
+    others = [
+        role
+        for role in predication.roles
+        if role is not subject and role is not complement
+    ]
+    composed = ""
+    absorbed: tuple[int, ...] = ()
+    if attribute is not None and [r.mention.token_index for r in others] == [
+        attribute.index
+    ]:
+        composed = f"{attribute.lemma}_{complement.mention.lemma}"
+        absorbed = (attribute.index,)
+        others = []
+    if others:
+        # Další členy, kterým konstrukce nerozumí. Mlčet je tu správně —
+        # navrhnout relaci z něčeho, čemu nerozumím, by bylo horší než
+        # nenavrhnout nic.
         return None
     if complement.mention.upos != "NOUN":
         # JMENNÝ přísudek, ne jakýkoli. „To auto je modré." je VLASTNOST,
@@ -991,8 +1069,13 @@ def relation_shape(
         # odpovídá.
         return None
     link = "≠" if predication.negated else "="
-    shape = f"cop:{subject.mention.upos}{link}{complement.mention.upos}"
-    return (shape, subject.name, complement.name)
+    return Construction(
+        shape=f"cop:{subject.mention.upos}{link}{complement.mention.upos}",
+        left=subject.name,
+        right=complement.name,
+        right_lemma=composed,
+        absorbed=absorbed,
+    )
 
 
 def relation_tier(lexicon: Lexicon) -> Tier:
@@ -1042,7 +1125,7 @@ def _propose_relation(
     found = relation_shape(predication, reading)
     if found is None:
         return predication, None
-    shape, left, right = found
+    shape = found.shape
     matches = lexicon.relation_candidates(shape)
     if len(matches) > 1:
         return predication, (
@@ -1057,13 +1140,13 @@ def _propose_relation(
         )
     operation = matches[0].operation
     return (
-        _as_relation(predication, operation, left, right),
+        _as_relation(predication, operation, found),
         f"[STAVBA: tvar {shape} → jádrová relace {operation.value}]",
     )
 
 
 def _as_relation(
-    predication: Predication, operation: Operation, left: str, right: str
+    predication: Predication, operation: Operation, found: Construction
 ) -> Predication:
     """Přepíše čtení na jádrovou relaci s JÁDROVÝMI jmény rolí.
 
@@ -1085,10 +1168,17 @@ def _as_relation(
     left_role, right_role = RELATION_ROLES[operation]
     by_name = {role.name: role for role in predication.roles}
 
-    def as_class(role: RoleReading, name: str) -> RoleReading:
+    def as_class(
+        role: RoleReading, name: str, lemma: str = "", absorbed: tuple[int, ...] = ()
+    ) -> RoleReading:
+        mention = (
+            replace(role.mention, lemma=lemma, form=lemma) if lemma else role.mention
+        )
         return replace(
             role,
             name=name,
+            mention=mention,
+            absorbed=absorbed,
             quantifier=Quantifier.SELF,
             pending=None,
             awaiting="",
@@ -1100,8 +1190,13 @@ def _as_relation(
         roles=tuple(
             sorted(
                 (
-                    as_class(by_name[left], left_role),
-                    as_class(by_name[right], right_role),
+                    as_class(by_name[found.left], left_role),
+                    as_class(
+                        by_name[found.right],
+                        right_role,
+                        found.right_lemma,
+                        found.absorbed,
+                    ),
                 ),
                 key=lambda r: r.name,
             )
@@ -1287,6 +1382,8 @@ def dropped_tokens(reading: Reading, predication: Predication) -> tuple[Token, .
     přivlastnění je poctivá mez; **nepřiznat ji** je vada.
     """
     used = {role.mention.token_index for role in predication.roles}
+    for role in predication.roles:
+        used |= set(role.absorbed)
     head = _predicate_head(reading)
     if head is not None:
         used |= {head[0].index, head[1].index}

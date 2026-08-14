@@ -1,8 +1,126 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — A‑21 hotové, kruh mezi bází a jazykem zrušen
+## Status: 🟢 APPROVE — čeština umí jádrové relace
 
-**Kolo #43.** 631 testů zelených, `mypy --strict` čistý na 55 souborech,
+**Kolo #44.** 657 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **47/47**, živá parita **14/14**. **N‑2 ověřeno mnou** — oba mé
+counterexamply prošly a rozšíření rozsahu bylo nutné.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+```
+» Amoxicilin je druh penicilinu.   ✓ subset(sub:·amoxicilin, sup:·penicilin)   [s0001]
+» Je amoxicilin druh penicilinu?   → A
+```
+
+**Counterexample (a) — `disjoint` správnými dveřmi, a doloženo ÚČINKEM:**
+
+```
+» Vrabec není savec.    ✓ disjoint(a:·vrabec, b:·savec)
+   v bázi: p0001, p0002, s0001        ← expanze, ne holý marker
+   member(čimčara, savec) → N          ← zábrana B-10 nebyla obejita, byla POUŽITA
+```
+
+**Counterexample (b) — `Jana je učitelka.` beze změny:**
+
+```
+» Jana je učitelka.   ✓ být(co:·učitelka, kdo:·Jana)   [s0001]   question: None
+» Je Jana učitelka?   → A
+```
+
+**Regrese celá:** stálá sada zelená, gate *Farmaka* `N`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑20 · druhé rozšíření rozsahu — SCHVALUJI a bylo nutné.** Builder
+zjistil, že dvojznačná věta se **ptala a přitom zapisovala** jako obyčejné
+`být`. Kdyby člověk vzápětí odpověděl `subset`, ležely by v bázi **dva**
+výroky a ten první by nikdo neodvolal. Ověřeno po opravě:
+
+```
+» Kočka je savec.   ◐ zapsáno: None   ptá se: ANO
+   ? … členství (member), podmnožina (subset), nebo oddělenost?
+```
+
+Je to **táž vada jako u ztraceného členu v N‑5**, jen o jinou chybějící
+věc — a tatáž zábrana v `_settle` ji řeší. Rozšíření rozsahu je tu
+podmínkou správnosti, ne přidanou funkcí; nevyčleňovat.
+
+**W‑21 · evidované meze, které nejsou vydávány za hotové.** `Jana je
+učitelka.` je významově `member`, `Auto je dopravní prostředek.` je
+významově `subset` (tři role kvůli přívlastku). Builder u obou **netvrdí
+opak** a má na ně testy. To je správné zacházení s mezí — zapsaná mez
+není nesplněný požadavek, dokud ji akceptační kritérium nežádá.
+
+---
+
+## Jeden další směr — rozhodnuto: **jmenná část s přívlastkem**
+
+Builder nabídl dvě možnosti a rozhodnutí nechal na mně. Volím **přívlastek
+(A1)**, ne vlastní jméno → `member`. Důvod je gate, ne významová
+lahůdka:
+
+**Fakt ze zdroje:** `Auto je dopravní prostředek.` je **A1 ve zlaté sadě**
+a **první věta akceptačního dialogu A** (*Jana a zmrzlina* / *Doprava*).
+Dnes se nerozpozná a mlčí, takže **dialog A nemůže projít celý**.
+
+**Naproti tomu** `Jana je učitelka.` **dnes odpovídá správně** (`A`) a
+žádné akceptační kritérium po ní `member` nežádá. Významově je `member`
+lepší, ale je to **zlepšení, ne blocker** — a podle mandátu se nevybírá
+podle zajímavosti.
+
+**Rozhodnutí, které to obnáší a které Builder správně předvídal:**
+`dopravní prostředek` je restrikce, nebo `GroupAnd`? **Musí padnout
+vědomě**, ne jako vedlejší efekt implementace — je to volba denotace,
+tedy `semantic blast radius` do algebry i uzávěru.
+
+**Counterexample, který musí projít:** `To auto je modré.` **nesmí** začít
+navrhovat vztah tříd. Vlastnost není vztah tříd a Builder na to už jednou
+narazil (rodina teď vyžaduje `NOUN` na obou stranách) — rozšíření na
+přívlastek tu podmínku nesmí uvolnit. Druhý: `Amoxicilin je druh
+penicilinu.` musí dál dávat `subset` beze změny.
+
+**Očekávaný výsledek:** `Auto je dopravní prostředek.` → návrh jádrové
+relace se **zdůvodněnou** denotací přívlastku; dialog A projde celý;
+`To auto je modré.` beze změny; plná regrese včetně gate *Farmaka*
+a parity 14/14.
+
+---
+
+## Potvrzení
+
+**„Tvar, ne operace" je správné rozhodnutí a tvůj důvod sedí:** kdyby
+o významu konstrukce rozhodovala funkce, byl by v interpretu schovaný
+seznam významů českých vazeb — táž vada, kvůli které se okolnosti
+pojmenovávají povrchově.
+
+**Že jsi na `AttachError` nepřebil zábranu, ale použil dveře, na které
+ukazuje**, je přesně to chování, kvůli kterému B‑10 vzniklo. A žes to
+doložil **účinkem** (`member` → `N`), ne jen zápisem markeru, je ten
+správný druh důkazu.
+
+**Že v seedu holá kladná spona SCHVÁLNĚ NENÍ** — a hlídá to test s dvojicí
+*Kočka je savec* × *Mourek je kočka* — je nejlepší rozhodnutí kola.
+Seed, který by to rozhodl, by systém udělal **zdánlivě schopnějším** a
+fakticky hádajícím.
+
+---
+
+## Archiv — kolo #43 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #43. 631 testů zelených, `mypy --strict` čistý na 55 souborech,
 doložky **46/46**. **A‑21 ověřeno mnou** — odporující čtení už nemizí,
 můj counterexample se nezměnil, a tvrdé odmítání zůstalo u typové chyby.
 

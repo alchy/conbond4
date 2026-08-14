@@ -118,6 +118,17 @@ A1 = Golden(
         tok(5, ".", ".", "PUNCT", 4, "punct"),
     ),
     predication="být(co:·prostředek, jak:·dopravní, kdo:∀auto)",
+    asks=(
+        "od N‑2b spadá i tahle věta do rodiny holé spony: „dopravní "
+        "prostředek“ je JEDEN POJEM, ne dva členy, takže po složení "
+        "lemmatu zbydou dvě strany a otázka je táž jako u „Kočka je "
+        "savec“ — je to členství, nebo podmnožina? Dřív se věta zapsala "
+        "jako reifikovaný vztah `být` se třemi rolemi, což SE NEPTALO, "
+        "ale taky to nikdy nedalo `subset`, a doména na `subset` stojí. "
+        "Otázka je tu tedy POKROK, ne regrese: fixuje se stav, kdy "
+        "systém ví, že neví, místo aby tiše zapsal slabší tvrzení. "
+        "Odpověď na ni je tah `→⊆` a zavře celou třídu vět naráz."
+    ),
     point=(
         "spona: lemma přísudku nese `cop`, obsahem je jmenná část — "
         "jedno pravidlo, ne zvláštní větev na sponovou větu"

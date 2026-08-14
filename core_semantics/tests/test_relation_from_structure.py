@@ -27,6 +27,7 @@ from core_semantics.ast import (
     QueryStatus,
     Quantifier,
     member_of,
+    subset_of,
 )
 from core_semantics.cascade import cascade, relation_shape
 from core_semantics.engine import Engine
@@ -149,11 +150,9 @@ def _predication(reading: Reading):  # type: ignore[no-untyped-def]
 
 def test_the_shape_is_a_construction_not_a_word() -> None:
     """Učí se STAVBA, ne věta — jedna odpověď má zavřít celou třídu vět."""
-    assert relation_shape(_predication(bare("Kočka", "kočka")), bare("Kočka", "kočka")) == (
-        BARE_SHAPE,
-        "kdo",
-        "co",
-    )
+    found = relation_shape(_predication(bare("Kočka", "kočka")), bare("Kočka", "kočka"))
+    assert found is not None
+    assert (found.shape, found.left, found.right) == (BARE_SHAPE, "kdo", "co")
 
 
 def test_the_marker_construction_points_at_the_genitive() -> None:
@@ -162,9 +161,8 @@ def test_the_marker_construction_points_at_the_genitive() -> None:
     druh)`, což je nesmysl, který by se v bázi tvářil jako fakt."""
     found = relation_shape(_predication(SUBSET_SENTENCE), SUBSET_SENTENCE)
     assert found is not None
-    shape, left, right = found
-    assert shape == "cop:druh+Gen"
-    assert (left, right) == ("kdo", "Gen")
+    assert found.shape == "cop:druh+Gen"
+    assert (found.left, found.right) == ("kdo", "Gen")
 
 
 def test_a_property_is_not_a_class_relation() -> None:
@@ -418,3 +416,148 @@ def test_relation_from_structure_transcript_prints() -> None:
         for line in result.lines:
             echo(f"   {line}")
     echo("=" * 72)
+
+
+# --------------------------------------------------------------------------
+# Jmenná část s PŘÍVLASTKEM — N‑2b
+# --------------------------------------------------------------------------
+#
+# „Auto je dopravní prostředek." je PRVNÍ věta akceptačního dialogu A
+# a do N‑2b se nerozpoznávala vůbec: přívlastek dostal vlastní roli `jak`,
+# věta měla tři členy a patro na ni mlčelo.
+#
+# DENOTACE PŘÍVLASTKU JE VĚDOMÉ ROZHODNUTÍ, ne vedlejší efekt. Zvolen je
+# SLOŽENÝ POJEM (`dopravní_prostředek`), ne průnik `dopravní AND
+# prostředek`. Důvody jsou v docstringu `relation_shape`; ten
+# nejpodstatnější je, že průnik tvrdí INTERSEKTIVITU, která u „bývalý
+# prezident" ani u lexikalizovaného sousloví neplatí — a morfologie ty
+# případy nerozliší. Co se tím neplyne, jde doříct tahem; vymyslet to
+# nejde vzít zpět.
+
+ATTRIBUTE_SENTENCE = Reading(
+    tokens=(
+        w(1, "Auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+        w(2, "je", "být", "AUX", 4, "cop", Polarity="Pos", **COP),
+        w(3, "dopravní", "dopravní", "ADJ", 4, "amod", Animacy="Inan", Case="Nom", Degree="Pos", Gender="Masc", Number="Sing", Polarity="Pos"),
+        w(4, "prostředek", "prostředek", "NOUN", 0, "root", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        w(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+ATTRIBUTE_TEXT = "Auto je dopravní prostředek."
+
+
+def _with_attribute() -> _Recorded:
+    mapping = dict(oracle()._mapping)
+    mapping[ATTRIBUTE_TEXT] = ATTRIBUTE_SENTENCE
+    return _Recorded(mapping)
+
+
+def test_an_attribute_makes_one_concept_not_two() -> None:
+    """Po složení lemmatu zbydou DVĚ strany, takže věta spadne do TÉŽE
+    rodiny jako holá spona. Jedna otázka, jedna odpověď, obě třídy vět."""
+    found = relation_shape(
+        _predication(ATTRIBUTE_SENTENCE), ATTRIBUTE_SENTENCE
+    )
+    assert found is not None
+    assert found.shape == BARE_SHAPE
+    assert found.right_lemma == "dopravní_prostředek"
+
+
+def test_the_attribute_is_not_reported_as_a_lost_member() -> None:
+    """Přívlastek se do významu DOSTAL, jen ne vlastní rolí. Hlásit ho
+    jako ztrátu (N‑5) by poslalo člověka pojmenovat roli něčemu, co roli
+    mít nemá — táž vada, kterou u složeného přísudku řeší G‑1a."""
+    session = Session()
+    session.lexicon.teach_relation(
+        BARE_SHAPE, Operation.SUBSET, learned_from="test"
+    )
+    verdict = cascade(ATTRIBUTE_SENTENCE, tiers=session.tiers())
+    assert verdict.decided is not None
+    assert str(verdict.decided.predication) == (
+        "subset(sub:·auto, sup:·dopravní_prostředek)"
+    )
+    assert verdict.lost == ()
+
+
+def test_the_first_sentence_of_dialogue_a_completes() -> None:
+    """Celý tah: zeptá se, odpověď ho dokončí, a do báze jde `subset`."""
+    session = Session()
+    asked = session.utter(ATTRIBUTE_TEXT, _with_attribute())
+    assert asked.question is not None and BARE_SHAPE in asked.question
+    assert asked.statement_id is None
+
+    answer = session.play(
+        names_relation(
+            "Je to podmnožina.", ATTRIBUTE_SENTENCE, BARE_SHAPE, Operation.SUBSET
+        )
+    )
+    assert answer.predication is not None
+    assert str(answer.predication) == "subset(sub:·auto, sup:·dopravní_prostředek)"
+    assert answer.statement_id is not None
+
+
+def test_one_answer_closes_both_families_at_once() -> None:
+    """Že je to JEDNA rodina, není kosmetika: odpověď daná na „Kočka je
+    savec" dočte i „Auto je dopravní prostředek". Kdyby to byly dva tvary,
+    musel by člověk odpovídat dvakrát na tutéž otázku."""
+    session = Session()
+    session.utter(CAT, _with_attribute())
+    session.play(
+        names_relation(
+            "Je to podmnožina.", bare("Kočka", "kočka"), BARE_SHAPE, Operation.SUBSET
+        )
+    )
+    again = session.utter(ATTRIBUTE_TEXT, _with_attribute())
+    assert again.predication is not None
+    assert str(again.predication) == "subset(sub:·auto, sup:·dopravní_prostředek)"
+    assert again.question is None
+
+
+def test_the_property_sentence_did_not_start_proposing_classes() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (a). Rozšíření na přívlastek nesmí uvolnit
+    podmínku, že jmenná část je NOUN — „To auto je modré." je vlastnost."""
+    assert relation_shape(_predication(PROPERTY_SENTENCE), PROPERTY_SENTENCE) is None
+
+
+def test_the_marker_construction_is_unchanged() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (b). Genitivní větev běží PŘED složením,
+    takže „X je druh Y" se rozšířením nezměnilo."""
+    session = Session()
+    result = session.utter(SUBSET_TEXT, _with_attribute())
+    assert result.predication is not None
+    assert str(result.predication) == "subset(sub:·amoxicilin, sup:·penicilin)"
+    assert result.statement_id is not None
+
+
+def test_the_composed_class_is_not_an_intersection() -> None:
+    """DOKLAD ZVOLENÉ DENOTACE. Kdyby se přívlastek zapsal jako průnik,
+    byl by `dopravní` samostatnou třídou v bázi — a systém by tím tvrdil
+    něco, co věta neříká a co u „bývalý prezident" neplatí."""
+    session = Session()
+    session.lexicon.teach_relation(
+        BARE_SHAPE, Operation.SUBSET, learned_from="test"
+    )
+    session.utter(ATTRIBUTE_TEXT, _with_attribute())
+    written = " ".join(session.program())
+    assert "dopravní_prostředek" in written
+    assert " AND " not in written
+
+
+def test_what_the_composition_does_not_claim_can_be_said_by_a_turn() -> None:
+    """Druhá půlka téhož rozhodnutí: `dopravní prostředek ⊆ prostředek`
+    z ničeho neplyne, ale NENÍ ztracené — člověk to smí doříct, a už
+    dnešní genitivní konstrukcí."""
+    session = Session()
+    session.lexicon.teach_relation(
+        BARE_SHAPE, Operation.SUBSET, learned_from="test"
+    )
+    session.utter(ATTRIBUTE_TEXT, _with_attribute())
+    session.kb.attach(
+        subset_of(Group("dopravní_prostředek"), Group("prostředek"))
+    )
+    result = Engine(session.kb).ask(
+        subset_of(Group("auto"), Group("prostředek"))
+    )
+    assert result.status is QueryStatus.PROVEN_TRUE

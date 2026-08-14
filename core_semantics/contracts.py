@@ -180,7 +180,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "potichu: jednoznačná konstrukce se použije a zapíše do stopy, "
             "dvojznačná se ZEPTÁ a do odpovědi se nezapisuje NIC. `disjoint` "
             "jde `add_disjoint`em, ne `attach`em — jinak by se marker dostal "
-            "do indexu a neodvodilo by se z něj nic (N‑2)"
+            "do indexu a neodvodilo by se z něj nic (N‑2). Jmenná část "
+            "s přívlastkem je JEDEN POJEM se složeným lemmatem, ne průnik: "
+            "průnik tvrdí intersektivitu, kterou morfologie nerozliší od "
+            "lexikalizovaného sousloví (N‑2b)"
         ),
         anchor="core_semantics.cascade:relation_tier",
         # Průchod je `.utter(`, ne `relation_tier`. Patro samo o sobě
@@ -194,6 +197,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_bare_copula_asks_instead_of_guessing",
             "test_nothing_is_written_while_the_relation_is_undecided",
             "test_the_menu_is_closed",
+            "test_an_attribute_makes_one_concept_not_two",
+            "test_the_composed_class_is_not_an_intersection",
+            "test_the_attribute_is_not_reported_as_a_lost_member",
         ),
     ),
     Clause(
