@@ -1,8 +1,124 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — akceptační sada uzavřena v zapsaném rozsahu
+## Status: 🟡 PARTIAL — N‑6 věcně správně, ale otázka se klade i po vyřešení
 
-**Kolo #51.** 709 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #52.** 720 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **50/50**, živá parita **16/16**. **Rozhodnutí o denotaci
+schvaluji a je nejlepší z celé série.** PARTIAL je za jeden změřený
+rozpor s podmínkou, kterou jsem pro tohle kolo zadal.
+
+**Architectural Health Score: 9 / 10**
+
+---
+
+## Co je splněno (měřeno mnou)
+
+**Rozhodnutí o denotaci — SCHVALUJI, a je to lepší odpověď než moje
+otázka.** Ptal jsem se „(a) nebo (b)"; Builder odpověděl, že to **nejsou
+alternativy, ale dvě různé otázky**:
+
+> Co fráze *„Filipovo auto"* **denotuje**, je uzel vybraný kritériem —
+> určitý popis. **Čím** ho vybírá, je vztah vlastnictví. Postavit (a)
+> místo (b) by znamenalo, že věta tvrdí dvě věci na téže úrovni — jenže
+> ona jednu **tvrdí** a druhou **předpokládá**.
+
+To je správné rozlišení tvrzení a presupozice a mělo být v mém zadání.
+
+**Proč se vlastník nezapisuje — a je to poctivá mez:** rozbor jméno
+vlastníka **nedává**. Token je `Filipovo` s lemmatem `Filipův`; cesta
+k uzlu `Filip` je **derivační morfologie**, kterou tagger neřeší.
+Useknout `-ův` by byl dohad o češtině zadrátovaný do interpretu — táž
+třída jako seznam významů předložek, kterému se brání INV‑11.
+
+**Změřeno mnou:**
+
+```
+» Filipovo auto je modré.        ◐ být(co:·modrý, kdo:auto)
+   ztracený člen: ŽÁDNÝ ✓        ← otázka bez odběratele zmizela
+   žádná třída Filipův_auto ✓
+» dva kandidáti v bázi           zapsáno: None, ptá se a jmenuje oba ✓
+» To auto je modré.              beze změny ✓
+```
+
+**Regrese celá**, gate *Farmaka* `N`, všech pět domén.
+
+---
+
+## Critical Blockers
+
+### G‑4 · systém se ptá na to, co si sám právě zodpověděl
+
+**Změřeno** — jeden kandidát v bázi:
+
+```
+báze: member(elem:a1, group:·auto)
+
+» Filipovo auto je modré.
+   ◐ přečteno, neúplné  být(co:·modrý, kdo:auto)
+     ? A na koho odkazuje kdo: „auto“? …            ← OTÁZKA
+     auto → a1 (určitý popis; jediný kandidát)      ← A HNED POD NÍ ODPOVĚĎ
+   ✓ zapsáno [s0002]  být(co:·modrý, kdo:a1)
+
+   statement_id = s0002        ← zapsáno správně
+   question     = „A na koho odkazuje…"  ← ale otázka ZŮSTALA
+```
+
+**Fakt:** reference se vyřešila (`a1`), věta se zapsala **správně**,
+a `TurnResult.question` přesto nese otázku, která už byla zodpovězena.
+
+**Logický závěr:** odběratel čtoucí `result.question` položí člověku
+dotaz na roli, která je **už navázaná**. Odpověď by přišla k rozhodnutí,
+které padlo — a v horším případě by správnou vazbu přepsala. Podle
+vlastního pravidla projektu je otázka bez odběratele horší než ticho;
+tohle je o stupeň horší — **otázka, na kterou už systém odpověděl sám**.
+
+**Dotčené smlouvy:** podmínka, kterou jsem pro tohle kolo zadal
+(*„buď odpověď někam vede, nebo se otázka přestane klást"*) — tady se
+klade, i když nebyla potřeba. A značka `◐ přečteno, neúplné` u věty,
+která se **dokončila a zapsala**, tvrdí opak toho, co se stalo.
+
+**Kořenová příčina (hypotéza k ověření Builderem):** otázka se skládá
+z `awaiting='odkaz'` **před** zakotvením, a zakotvení ji při úspěšném
+doložení **nemaže**. Je to zrcadlo tvého vlastního nálezu z kola #49 —
+tam se otázka četla ze **stopy**, tady se počítá **před** krokem, který
+ji ruší.
+
+**Nejmenší bezpečná změna:** otázku skládat **až z výsledku zakotvení** —
+role, která má `resolved`, žádnou otevřenou otázku nemá. Značka `◐` ať
+se řídí týmž stavem.
+
+**Counterexample, který musí projít:** (a) **dva kandidáti** — otázka
+musí zůstat, `statement_id` musí být `None`; (b) **žádný kandidát** —
+otázka musí zůstat a nezapisovat; (c) kvantifikátorová a relační otázka
+beze změny — tam se neřeší odkaz.
+
+**Očekávaný výsledek:** jeden kandidát → `question is None`, značka `✓`,
+zapsáno; dva a nula kandidátů beze změny; plná regrese včetně pěti domén
+a parity 16/16.
+
+---
+
+## Semantic Warnings
+
+**W‑29 · třetí přesun příkladu v `test_lost_role` — ověřeno, je to dobrá
+zpráva.** Postupně: *„Jan nesmí dostat penicilin"* (vyřešil G‑1a),
+*„Filipovo auto je modré"* (vyřešilo N‑6), teď *„Jan má alergii na
+penicilin"*. Smyčka N‑5 se netestuje slaběji — testuje se na členu,
+který **ztracený doopravdy je**. Příklad zastarává, protože se vady
+opravují; to je opak oslabení.
+
+**W‑30 · přepis B‑12 — přijímám s výhradou k formulaci.** Požadavek
+*„o ztrátě se nemlčí"* platí dál a je splněný silněji. Builderovo
+zdůvodnění — *„původní znění bylo zapsané u špatné příčiny"* — je
+správné. Výhrada: přepis testu, který kdysi zachytil bloker, je vždy
+rizikový krok; **je v pořádku, protože ho doprovází důkaz, že se ta
+konkrétní vada nemůže vrátit** (třída `Filipův_auto` má vlastní test).
+
+---
+
+## Archiv — kolo #51 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #51. 709 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **49/49**, živá parita **16/16**. **N‑5b ověřeno mnou** —
 *Zmrzlina* se čte, akceptační sada `test_golden_dialogues` **17 passed**,
 a všech pět domén má verdikt jako podmínku.

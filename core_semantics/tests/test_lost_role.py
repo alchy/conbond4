@@ -23,9 +23,10 @@ from core_semantics.cascade import (
     surface_roles,
 )
 from core_semantics.ast import Entity, Group, member_of
-from core_semantics.lexicon import Mood, czech_seed
+from core_semantics.lexicon import Mood, Operation, czech_seed
 from core_semantics.oracle import Reading, Token, Utterance
 from core_semantics.session import Session, names_role
+from core_semantics.tests.test_grounding import shaped
 
 STAMP = "test"
 
@@ -441,3 +442,74 @@ def test_a_possessive_does_not_become_a_class() -> None:
     verdict = cascade(possessive())
     assert verdict.decided is not None
     assert "Filipův_auto" not in str(verdict.decided.predication)
+
+
+# --------------------------------------------------------------------------
+# Otázka se skládá AŽ Z VÝSLEDKU ZAKOTVENÍ — G‑4
+# --------------------------------------------------------------------------
+#
+# Systém se ptal na to, co si sám právě zodpověděl: vypsal „na koho
+# odkazuje `auto`?", hned pod tím „auto → a1 (jediný kandidát)", větu
+# ZAPSAL — a v `question` pořád nesl dotaz na roli, která je navázaná.
+# Odběratel by se člověka ptal na rozhodnutí, které padlo, a odpověď by
+# v horším případě správnou vazbu přepsala. A značka „◐ přečteno,
+# neúplné" u věty, která se dokončila a zapsala, tvrdila opak toho, co
+# se stalo.
+#
+# Je to zrcadlo nálezu z N‑3: tam se otázka četla ze STOPY, tedy z logu,
+# tady se počítala PŘED krokem, který ji ruší. Obojí má touž opravu —
+# ptát se AŽ VÝSLEDKU.
+
+
+def _settled(cars: tuple[str, ...]):  # type: ignore[no-untyped-def]
+    session = Session(
+        lexicon=shaped(("ADJ", "Sing", "Nom", "root", Operation.SELF))
+    )
+    for car in cars:
+        session.kb.attach(member_of(Entity(car), Group("auto")))
+    return session.utter(POSSESSIVE_TEXT, possessive_oracle())
+
+
+def test_a_resolved_reference_leaves_no_question() -> None:
+    """JÁDRO G‑4."""
+    result = _settled(("a1",))
+    assert result.question is None
+    assert result.statement_id is not None
+
+
+def test_a_completed_sentence_is_not_marked_incomplete() -> None:
+    """Značka je tvrzení o tahu, ne ozdoba: `◐` u věty, která se zapsala,
+    říká něco, co se nestalo."""
+    result = _settled(("a1",))
+    assert result.lines[0].startswith("✓")
+
+
+def test_two_candidates_still_ask_and_do_not_write() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (a). Oprava se nesmí přehnat do druhé
+    strany — nerozhodnutý odkaz otázku POTŘEBUJE."""
+    result = _settled(("a1", "a2"))
+    assert result.question is not None
+    assert "a1" in result.question and "a2" in result.question
+    assert result.statement_id is None
+    assert result.lines[0].startswith("◐")
+
+
+def test_no_candidate_still_asks_and_does_not_write() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (b). Určitý popis nezakládá — jen odkazuje."""
+    result = _settled(())
+    assert result.question is not None
+    assert result.statement_id is None
+    assert result.lines[0].startswith("◐")
+
+
+def test_an_open_quantifier_is_not_silenced_by_the_fix() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (c). Zakotvení ruší jen otázky, které samo
+    zodpovědělo. Role čekající na KVANTIFIKÁTOR žádnou vazbu nedostane,
+    takže se na ni ptát musí dál — jinak by oprava umlčela otázku, která
+    odpověď nemá."""
+    session = Session()
+    session.kb.attach(member_of(Entity("a1"), Group("auto")))
+    result = session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    assert result.question is not None
+    assert "∀" in result.question
+    assert "odkazuje" not in result.question, "odkaz se doložil, ten už řešený je"

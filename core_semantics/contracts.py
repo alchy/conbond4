@@ -772,6 +772,26 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_possessive_does_not_become_a_class",
         ),
     ),
+    Clause(
+        id="S-24",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "otázka se skládá AŽ Z VÝSLEDKU ZAKOTVENÍ: role, kterou "
+            "zakotvení doložilo, otevřenou otázku nemá a značka `◐` se "
+            "řídí týmž stavem. Ptát se na to, co si systém právě sám "
+            "zodpověděl, je horší než otázka bez odběratele — odpověď by "
+            "přišla k rozhodnutí, které padlo, a mohla by správnou vazbu "
+            "přepsat (G‑4)"
+        ),
+        anchor="core_semantics.session:Session._settle",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_resolved_reference_leaves_no_question",
+            "test_a_completed_sentence_is_not_marked_incomplete",
+            "test_two_candidates_still_ask_and_do_not_write",
+            "test_an_open_quantifier_is_not_silenced_by_the_fix",
+        ),
+    ),
     # -- storage → cascade (zpětná hrana) ----------------------------------
     Clause(
         id="B-1",

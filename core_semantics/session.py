@@ -818,21 +818,47 @@ class Session:
         vlastní kopii, rozešly by se — a rozešly by se zrovna v tom, jestli
         se po odpovědi opravdu ZNOVU ZKUSÍ zapsat, což je celý smysl toho,
         že se člověk odpovídat obtěžoval.
+
+        **Otázka se skládá AŽ Z VÝSLEDKU ZAKOTVENÍ** *(G‑4)*. Role, kterou
+        zakotvení doložilo, otevřenou otázku nemá — a značka `◐` se řídí
+        týmž stavem, protože je to tvrzení o tahu, ne ozdoba. Ptát se na
+        to, co si systém právě sám zodpověděl, je horší než otázka bez
+        odběratele: odpověď by přišla k rozhodnutí, které padlo, a mohla
+        by správnou vazbu přepsat.
         """
+        # ZAKOTVENÍ NEJDŘÍV, TEPRVE PAK OTÁZKA *(G‑4)*. Dřív se otázka
+        # skládala z předzakotvené predikace a úspěšné doložení odkazu ji
+        # už nesmazalo: systém vypsal „na koho odkazuje `auto`?", hned pod
+        # tím „auto → a1 (jediný kandidát)", větu ZAPSAL — a v `question`
+        # pořád nesl dotaz na roli, která je navázaná. Odběratel by se
+        # člověka ptal na rozhodnutí, které padlo, a odpověď by v horším
+        # případě správnou vazbu přepsala.
+        #
+        # Je to zrcadlo nálezu z N‑3: tam se otázka četla ze STOPY, tedy
+        # z logu, tady se počítala PŘED krokem, který ji ruší. Obojí má
+        # touž opravu — ptát se AŽ VÝSLEDKU.
+        grounded = ground(predication, self.kb.view())
+        anchored = {anchor.mention.token_index for anchor in grounded.anchors}
+        still_open = tuple(
+            role
+            for role in predication.open_roles()
+            if role.mention.token_index not in anchored
+        )
         question = " ".join(
             part
             for part in (
-                open_roles_question(predication.open_roles()),
+                open_roles_question(still_open),
                 lost_question(turn.lost),
-                # Otázka na význam povrchové role (N‑3). Taky ze STOPY:
-                # v predikaci je vidět jen to, že role zůstala povrchová,
-                # ne že se na ni systém ptá.
+                # Otázka na význam povrchové role (N‑3). Počítá se
+                # z HOTOVÉ predikace, ne ze stopy — jinak by se ptala na
+                # tvary, které pozdější patro spotřebovalo.
                 role_question(predication),
                 # Otázka na to, co stavba tvrdí (N‑2). Čte se ze STOPY,
                 # protože v predikaci po sobě nerozhodnutá relace nic
                 # nenechá — čtení zůstane obyčejným vztahem a nedalo by
                 # se z něj poznat, že o něm systém pochybuje.
                 relation_question(turn.trace),
+                grounded.question,
             )
             if part
         ) or None
@@ -844,15 +870,10 @@ class Session:
         mark = "◐ přečteno, neúplné" if partial else "✓ přečteno"
         lines = [*prefix, f"{mark}  {predication}"]
         lines.extend(f"  {step}" for step in turn.trace)
-        if question:
-            lines.append(f"  ? {question}")
-
-        grounded = ground(predication, self.kb.view())
         lines.extend(f"  {note}" for note in grounded.notes)
         lines.extend(f"  {anchor}" for anchor in grounded.anchors)
-        if grounded.question:
-            lines.append(f"  ? {grounded.question}")
-            question = " ".join(filter(None, (question, grounded.question)))
+        if question:
+            lines.append(f"  ? {question}")
 
         # Věta, ze které něco VYPADLO, se nezapisuje. Zapsat ji teď a po
         # odpovědi znovu by uložilo DVA výroky — nejdřív oseknutý, pak
