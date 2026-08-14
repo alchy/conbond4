@@ -95,6 +95,10 @@ class Step:
     #: téhož tvaru zeptá znovu — a přesně to čeština u některých tvarů
     #: potřebuje (N‑8).
     answers_here: tuple[str, Operation] | None = None
+    #: Operace — krok je ODPOVĚĎ `→⊆` na otázku, KTEROU JÁDROVOU RELACI
+    #: stavba věty tvrdí (N‑2). Tvar konstrukce se dopočítá z předchozího
+    #: kroku, neopisuje se.
+    answers_relation: Operation | None = None
     #: Věc, která je na tomhle kroku VĚCNĚ ŠPATNĚ a ví se proč. Zapsaná
     #: mez není totéž co selhání: krok projde, ale nepředstírá se, že je
     #: v pořádku všechno.
@@ -806,6 +810,115 @@ ORDER = Dialogue(
 )
 
 
+
+# --------------------------------------------------------------------------
+# 8 · Vrabec a savec — `disjoint` a `ne` z VYLOUČENÍ TŘÍD
+# --------------------------------------------------------------------------
+
+EXCLUSION = Dialogue(
+    name="Vrabec a savec",
+    source="„Vrabec není savec. Čimčara je vrabec.“",
+    shapes=(PROPN_SUBJ,),
+    steps=(
+        Step(
+            text="Vrabec není savec.",
+            reading=sentence(
+                w("Vrabec", "vrabec", "NOUN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("není", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("savec", "savec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="disjoint(a:·vrabec, b:·savec)",
+            writes="disjoint(a:·vrabec, b:·savec)",
+            point=(
+                "ODDĚLENOST TŘÍD Z ČESKÉ VĚTY — a zapisuje se SPRÁVNÝMI "
+                "DVEŘMI: `add_disjoint` k markeru vygeneruje dvojici "
+                "pravidel se silnou negací, bez kterých by `disjoint` "
+                "v indexu ležel a NEODVODILO by se z něj nic"
+            ),
+        ),
+        Step(
+            text="Čimčara je vrabec.",
+            reading=sentence(
+                w("Čimčara", "Čimčara", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("vrabec", "vrabec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Čimčara, group:·vrabec)",
+            writes="member(elem:Čimčara, group:·vrabec)",
+            point="druhý článek — bez individua se vyloučení nemá na čem ukázat",
+        ),
+        Step(
+            text="Je Čimčara savec?",
+            reading=sentence(
+                w("Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Čimčara", "Čimčara", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("savec", "savec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Čimčara, group:·savec)",
+            answers="N",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. `N` Z VYLOUČENÍ "
+                "TŘÍD — nikdo neřekl, že Čimčara savec není; plyne to "
+                "z členství a z oddělenosti, a důkaz cituje OBOJE. Je to "
+                "jediná cesta, kterou systém řekne „ne“ jinak než "
+                "z přímého popření"
+            ),
+        ),
+        Step(
+            text="Je Čimčara pták?",
+            reading=sentence(
+                w("Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Čimčara", "Čimčara", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("pták", "pták", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Čimčara, group:·pták)",
+            answers="U",
+            point=(
+                "OTEVŘENÝ SVĚT. O ptácích nikdo nic neřekl, takže `U` — "
+                "oddělenost od savců o nich NEROZHODUJE. Kdyby tu padlo "
+                "`N`, byla by to nevědomost vydávaná za znalost"
+            ),
+        ),
+        Step(
+            text="Kočka je savec.",
+            reading=sentence(
+                w("Kočka", "kočka", "NOUN", 3, "nsubj", Case="Nom", Gender="Fem", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("savec", "savec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            asks=(
+                "HOLÁ KLADNÁ SPONA je dvojznačná: „Kočka je savec“ je "
+                "podmnožina, „Mourek je kočka“ členství, a tvar je týž. "
+                "Systém se ptá a do odpovědi NEZAPISUJE nic"
+            ),
+            point="táž stavba jako první krok, jen kladně — a rozhodnutá není",
+        ),
+        Step(
+            text="Je to podmnožina.",
+            answers_relation=Operation.SUBSET,
+            reads="subset(sub:·kočka, sup:·savec)",
+            writes="subset(sub:·kočka, sup:·savec)",
+            point=(
+                "ODPOVĚĎ JE TAH a učí KONSTRUKCI, ne větu: `cop:NOUN=NOUN` "
+                "od téhle chvíle znamená podmnožinu pro celou doménu"
+            ),
+        ),
+    ),
+    note=(
+        "Osmý akceptační dialog. `disjoint` uměla čeština vyrobit už dřív, "
+        "ale ŽÁDNÁ DOMÉNA ho nepoužívala — takže se nikdy neprověřil řetěz "
+        "member + disjoint → `N`, jediná cesta, kterou systém řekne „ne“ "
+        "z VYLOUČENÍ TŘÍD. Schopnost, kterou nikdo neprojde, se nedá "
+        "odlišit od schopnosti, která nefunguje."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -814,4 +927,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     PETROVICE,
     VEGETARIAN,
     ORDER,
+    EXCLUSION,
 )

@@ -13,11 +13,13 @@ import pytest
 from core_semantics.oracle import RecordedOracle
 from typing import Sequence
 
+from core_semantics.cascade import relation_shape
 from core_semantics.session import (
     Session,
     TurnResult,
     answers_here,
     answers_quantifier,
+    names_relation,
 )
 from core_semantics.tests._console import echo
 from core_semantics.tests.dialogues import DIALOGUES, Dialogue, Step
@@ -48,9 +50,18 @@ def _run(
     done: Sequence[tuple[Step, TurnResult]],
 ) -> TurnResult:
     """Krok je buď VĚTA, nebo TAH."""
-    if step.answers_quantifier is None and step.answers_here is None:
+    if not _is_turn(step):
         return session.utter(step.text, oracle)
     return _answer(session, step, done)
+
+
+def _is_turn(step: Step) -> bool:
+    """Krok je TAH, ne věta."""
+    return (
+        step.answers_quantifier is not None
+        or step.answers_here is not None
+        or step.answers_relation is not None
+    )
 
 
 def _answer(
@@ -62,10 +73,23 @@ def _answer(
     opsaný tvar by se mohl rozejít s tím, na co se systém ptal, a sada by
     hlídala shodu dvou zápisů místo chování."""
     assert done, "tah bez předchozí věty nemá na co odpovídat"
+    previous, result = done[-1]
+    if step.answers_relation is not None:
+        # ODPOVĚĎ NA STAVBU (`→⊆`). Tvar konstrukce se DOPOČÍTÁ z toho, co
+        # předchozí krok přečetl — opsaný tvar by se mohl rozejít s tím,
+        # na co se systém doopravdy ptal.
+        assert previous.reading is not None and result.predication is not None
+        found = relation_shape(result.predication, previous.reading)
+        assert found is not None, f"{step.text!r}: předchozí věta konstrukci nemá"
+        return session.play(
+            names_relation(
+                step.text, previous.reading, found.shape, step.answers_relation
+            )
+        )
     answer = step.answers_quantifier or step.answers_here
     assert answer is not None
     name, operation = answer
-    pending = done[-1][1].predication
+    pending = result.predication
     assert pending is not None, f"{step.text!r}: předchozí krok nic nepřečetl"
     role = pending.reading(name)
     assert role is not None and role.pending is not None, (
@@ -98,7 +122,7 @@ def test_dialogue_reads_writes_and_answers_as_recorded(dialogue: Dialogue) -> No
         # protože to není věta.
         result = (
             session.utter(step.text, oracle)
-            if step.answers_quantifier is None and step.answers_here is None
+            if not _is_turn(step)
             else _answer(session, step, done)
         )
         done.append((step, result))
@@ -238,7 +262,7 @@ def test_the_turn_branch_really_runs_in_the_acceptance_set() -> None:
         oracle = RecordedOracle(dialogue.recordings())
         done: list[tuple[Step, TurnResult]] = []
         for step in dialogue.steps:
-            if step.answers_quantifier is not None or step.answers_here is not None:
+            if _is_turn(step):
                 ran += 1
                 done.append((step, _answer(session, step, done)))
             else:

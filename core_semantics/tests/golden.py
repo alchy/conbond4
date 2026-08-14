@@ -623,11 +623,58 @@ I4 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# Dialog J — `disjoint` a `ne` z vyloučení tříd
+# --------------------------------------------------------------------------
+#
+# „Vrabec není savec." tu SCHVÁLNĚ NENÍ podruhé — v sadě je jako G2 a
+# druhý záznam téže věty by jen zdvojil, co se měří. Přibývá k ní
+# individuum a dvě otázky: jedna, na kterou se odpovídá přes expanzi
+# oddělenosti, a jedna, kde otevřený svět drží `U`.
+
+J2 = Golden(
+    dialogue="J",
+    text="Čimčara je vrabec.",
+    tokens=(
+        tok(1, "Čimčara", "Čimčara", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "vrabec", "vrabec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Čimčara, group:·vrabec)",
+)
+
+J3 = Golden(
+    dialogue="J",
+    text="Je Čimčara savec?",
+    tokens=(
+        tok(1, "Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "Čimčara", "Čimčara", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(3, "savec", "savec", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, "?", "?", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Čimčara, group:·savec)",
+)
+
+J4 = Golden(
+    dialogue="J",
+    text="Je Čimčara pták?",
+    tokens=(
+        tok(1, "Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "Čimčara", "Čimčara", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(3, "pták", "pták", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, "?", "?", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Čimčara, group:·pták)",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
     H1, H2, H3, H4, H5, H6,
     I1, I2, I3, I4,
+    J2, J3, J4,
 )
 
 

@@ -1,6 +1,123 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — zábrana hlídá kruh přes dva a víc uzlů; jednouzlový projde a sezení pořád padá
+## Status: 🟢 PASS — B‑16 zavřeno oběma dveřmi, které z češtiny vedou; jádro 0.1.12
+
+**Kolo #63.** 814 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **58/58**, živá parita **26/26**, dialogy 7 / 16 / 10 se závěry
+beze změny, gate *Farmaka* `N`, nula `RECALL_FAILURE`, celá stálá regrese
+zelená. **Každý bod mého counterexamplu změřen živě.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Měřeno mnou
+
+```
+» Pondělí je před pondělím.
+   ✗ nezapsáno: … nic není dřív než ono samo. `before` je striktní
+     uspořádání, takže smyčka na sebe je kruh o jednom uzlu …
+» Je pondělí před pondělím?   → NEVÍM   (žádné „? platí")
+» Pondělí je před úterým.     ✓ zapsáno [s0001]
+» Je pondělí před úterým?     → ANO
+```
+
+**Sezení nespadlo ani jednou a báze po odmítnutí dál žije** — to bylo
+jádro mé podmínky, protože zákaz, který bázi poškodí, by byl stejně
+špatný jako ta vada.
+
+```
+ireflex ✓ · opačná hrana ✓ · po odmítnutí báze žije ✓
+W-19: obrácené 0 ✓ · smyčka 0 ✓ · bez rizika cyklu 1 ✓
+protipóly: jet → contains(part:Praha, whole:Plzeň) · Mourek → subset(·kočka, ·savec)
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓
+```
+
+**Nález, který udělal Builder sám, je téže třídy jako W‑19 a chytil ho
+o krok dřív, než by ho chytil někdo jiný:** po opravě zápisu začala
+otázka nabízet `? platí before(pondělí, pondělí)?` — **větu, kterou
+zápis vždycky odmítne**. Nabídnout člověku něco, co nesmí vyslovit, je
+táž vada jako nabídnout cestu, kudy vyhodnocení nejde. Opravil to
+sám a bez vyzvání.
+
+**Verze zapsaná podle mého rozhodnutí:** jádro **0.1.12**, § 9 dostalo
+`InconsistentOrder` jako pojmenované selhání **zápisu**, k tomu
+ireflexivitu, poznámku, že H‑3 v uzávěru zůstává jako **druhá** obrana,
+a otevřenou otázku o variantě (2).
+
+**W‑22 zapsaná dvojitě a je to lepší, než jsem žádal:** v jádře jako
+známá mez, v testu jako **fixovaná** mez —
+`test_the_identity_side_is_a_known_limit` staví kruh přes `same_as`
+a **očekává** `InconsistentOrder`, takže až to někdo spraví, ten test
+spadne. Mez, na kterou se zapomene, se mění v tichou vadu; tenhle test
+tomu brání.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑23 (nový, drobný) · report nerozlišuje nabídky, které vedou k `A`,
+od těch, které vedou k `N`.** Změřeno na „Je Mourek savec?" po
+„Vrabec není savec.":
+
+```
+? platí subset(sub:·kočka, sup:·savec)?        → vedlo by na A
+? platí member(elem:Mourek, group:·vrabec)?    → vedlo by na N (přes p0001)
+? platí subset(sub:·kočka, sup:·vrabec)?       → vedlo by na N
+```
+
+Všechny čtyři **někam vedou**, takže moje kritérium z W‑19 splňují a vada
+to není. Ale člověk, který má odpovídat, nevidí, že dvě z nich jsou
+větev „ne". **Nepřidávat na to teď nic** — je to poznámka pro chvíli,
+kdy se bude řešit pořadí nabídek.
+
+**W‑22 uzavřena jako fixovaná mez** (viz výš). **W‑20 leží dál podle
+dohody.**
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: zpátky k jádrovým relacím, které česká věta
+nevyrobí — na řadě je `disjoint`.**
+
+**Gate:** akceptační sada zapisuje krokem **tři z devíti**: `before`,
+`member`, `subset`. Chybí `complete`, `contains`, `disjoint`, `name`,
+`same_as`, `within`.
+
+**Proč právě `disjoint` a proč teď:** změřil jsem, že čeština ho **už
+umí vyrobit** — „Vrabec není savec." dá `disjoint(a:·vrabec, b:·savec)`
+a zapíše ho. Ale **žádná doména ho nepoužívá**, takže se nikdy neprověří
+řetěz `member` + `disjoint` → `N`, což je jediná cesta, jak systém řekne
+„ne" z **vyloučení tříd**. Tři z posledních pěti blokerů měly tvar
+„schopnost v jádře, ke které jazyk nevede"; tady jazyk vede a chybí
+**doména**.
+
+**Bonus, který mám změřený:** sousední věta „Kočka je savec." se
+**správně ptá** (member / subset / disjoint), takže táž doména prověří
+i smyčku doptání — a to je věc, kterou uživatel výslovně chce vidět.
+
+**Můj counterexample — bez něj neschválím:** nová doména zapíše
+`disjoint` **z české věty**; otázka na členství dá **`N`** s důkazem,
+který cituje **oba** zápisy (`member` i `disjoint`); otázka na
+nesouvisející třídu dá **`U`**, ne `N`; aspoň jeden krok domény je
+**doptání**, na které se odpovídá tahem; osm domén se závěry beze změny
+(a když se některý změní, **napiš to**); gate *Farmaka* `N`, parita
+≥ 26/26 s novými větami ve zlaté sadě, nula `RECALL_FAILURE`, testy
+zelené, „Pondělí je před pondělím." se **pořád** nezapíše.
+
+---
+
+## ARCHIV — kolo #62
+
+### Status: 🔴 FAIL — zábrana hlídá kruh přes dva a víc uzlů; jednouzlový projde a sezení pořád padá
 
 **Kolo #62.** 810 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **58/58**, živá parita **26/26**, dialogy 7 / 16 / 10 se závěry
