@@ -1,6 +1,142 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — měří se, PROČ padlo `U`
+## Status: 🔴 FAIL — závěr domény drží jen na čtení, které dialog sám označuje za věcně chybné
+
+**Kolo #56.** 762 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **53/53**, živá parita **22/22**, dialogy 6 domén / 14 zapsaných
+tahů / 8 závěrů. Celá regrese i gate *Farmaka* prošly. **Blokuji přesto** —
+a ne kvůli ničemu z toho, co se měří, ale kvůli tomu, co gate *znamená*.
+
+**Architectural Health Score: 9,0 / 10**
+
+---
+
+## Co jsem změřil sám (ne převzal)
+
+```
+B-1 ✓ · B-2 ✓ · ⪯ ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 4/4 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR-zákaz ✓ · I-16 ✓
+GATE Farmaka → N ✓
+živá parita: vět 22 · shoduje se 22 · liší se 0 · nedostupných 0
+762 passed · mypy: no issues in 58 source files
+dialogy: 6 domén · 14 zápisů · 8 verdiktů · 3 zapsané meze
+RECALL_FAILURE na dialozích: 0
+```
+
+**Builderova čísla sedí do jednoho.** Přehrál jsem celý dialog *Vegetarián
+a steak* a řetěz běží přesně tak, jak ho popsal: `member` → generické
+popření → `subset` → **NE** přes distribuci → **SPOR** se dvěma důkazy,
+doloženo `s0001–s0004`. Nic z toho nerozporuju.
+
+**`limit` gate neoslabuje** — ověřeno v runneru: pole je dokumentace,
+`test_dialogue_reads_writes_and_answers_as_recorded` tvrdí každý krok bez
+ohledu na ně. To je správně a je to důležité; kdyby `limit` krok vypínal,
+byl by to znovu vzorec G‑1.
+
+---
+
+## Critical Blockers
+
+### B‑13 · Relace shody `⪯` bere silnou negaci jako průhlednou — a negace obrací monotonii
+
+**Root cause, jedno místo:** `core_semantics/engine.py:781` —
+
+```python
+# ∃ × ∀ by potřebovalo neprázdnost group; v otevřeném světě
+# nedoložitelné. ∀ × ∃ neplatí nikdy.
+return None
+```
+
+`_compat` vidí **jen role**, polaritu atomu nikdy. Existenční import se
+proto uplatní i pod negací, kde není potřeba. Změřená matice — táž
+dvojice tvarů, kladný a záporný fakt:
+
+```
+            fakt→dotaz    kladný   záporný
+            ∀ → ∀              A         N
+            ∀ → ∃              U         U     ← záporná buňka je věcně N
+            ∃ → ∀              U         U
+            ∃ → ∃              A         N
+```
+
+Záporný sloupec je **mechanické zrcadlo** kladného. Jenže pod negací se
+směr plynutí obrací: z `¬jíst(co:∀maso)` = „pro každé maso neplatí, že
+je jí“ **plyne** `¬jíst(co:∃maso)` — a neplyne to z neprázdnosti, plyne
+to i pro prázdnou třídu. Odvozovací povinnost je `subset(dotaz, fakt)`,
+tedy táž jako v kladné buňce `∀ × ∀`. Kladná buňka `∀ → ∃` má naopak U
+**správně** a musí U zůstat: tam existenční import chybí právem.
+
+**Zasažená smlouva:** § 3.3 (relace shody), I‑3 (spor se musí ohlásit).
+
+**Proč to blokuje tohle kolo, ne příští:** závěr domény `CONFLICT` je
+dosažitelný **jen** se čtením `∀steak`, které dialog sám u kroku 4 popisuje
+jako věcně chybné. Změřil jsem, co udělá čtení správné:
+
+```
+dnešní dialog     fakt ∀ / zápis ∀steak / dotaz ∀steak : CONFLICT (2 důkazy)
+OPRAVENÉ ČTENÍ    fakt ∀ / zápis ∃steak / dotaz ∃steak : A
+smíšené           fakt ∀ / zápis ∃steak / dotaz ∀steak : N
+```
+
+Se správným čtením systém odpoví **ANO, Petr jedl steak** — a spor,
+na který má oba důkazy v bázi, **neohlásí**. To není mez, to je I‑3.
+Dnešní zelený gate tu vadu zakrývá tím, že běží po chybné větvi.
+
+**Riziko, kdyby se to nechalo být:** Builderův navržený směr — doptání
+`→∀` uvnitř akceptačního dialogu — udělá gate **červený**. Jakmile člověk
+na „Petr jedl steak.“ správně odpoví „jen o jednom“, doména o závěr přijde.
+Ten směr je tedy nejen nedostatečný, on tuhle vadu **odkryje** místo aby
+ji spravil. Pořadí není detail.
+
+---
+
+## Semantic Warnings
+
+**W‑14 · Rozsah negace vůči `∃` roli není nikde rozhodnut.** Při opravě
+B‑13 vyplave sousední buňka: `¬P(role: ∃F)` se dá číst jako `¬∃x∈F.P(x)`
+(pak splývá s `∀`) i jako `∃x∈F.¬P(x)`. Tohle **není mechanická úprava** —
+je to rozhodnutí o § 3.3, tedy I‑13. Oprava B‑13 se má omezit na jedinou
+buňku, kterou doména potřebuje, a rozsah negace nechat zapsaný jako
+otevřenou otázku, ne ho vyřešit mimochodem.
+
+**W‑15 · `shapes` jsou na doménu, věta je na větu.** Builderův nález —
+`NOUN/Sing/Acc/obj` je v „Petr jedl steak“ existence a ve „Vegetarián nejí
+maso“ obecnost — je **správný a cenný** a nechal ho vidět z obou stran
+(zlatá sada `obj → ∃`, dialog `∀`, u toho poznámka proč). Nesouhlasím jen
+s dispozicí: zapsat věcnou chybu jako `limit` je poctivé u **meze**, ne
+u kroku, na kterém stojí **závěr gate**.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: `⪯` pod silnou negací (B‑13). Doptání `→∀` uvnitř
+dialogu až po něm.**
+
+1. `_compat` dostane polaritu atomu (nese ji `Atom.negated`, `_match_atom`
+   ji má po ruce) a **jedinou** novou buňku: `dotaz ∃ × fakt ∀`, oba
+   záporné, s důkazní povinností `subset(cíl dotazu, cíl faktu)`.
+2. Kladná buňka `∀ → ∃` **zůstane `U`** — existenční import se nedoplňuje.
+3. Rozsah negace vůči `∃` (W‑14) se **nerozhoduje**, zapíše se jako otázka.
+4. Až pak přepsat krok 4 dialogu na správné `∃steak` a teprve potom
+   stavět `Step`, který je tah.
+
+**Můj counterexample — bez něj neschválím:** po opravě musí platit
+*všech* šest domén beze změny závěrů, gate *Farmaka* `N`, parita 22/22,
+762+ testů, nula `RECALL_FAILURE`, **kladná buňka `∀ → ∃` pořád `U`**,
+dialog B (`konkrétní × ∃` → `None`) beze změny — **a** dialog
+*Vegetarián a steak* dá `CONFLICT` se **dvěma** důkazy i tehdy, když se
+„Petr jedl steak.“ čte jako `∃steak`.
+
+**Očekávaný výsledek:** závěr domény přestane viset na chybném čtení a
+`limit` u kroku 4 se smrskne na to, čím opravdu je — na poznámku o tom,
+že tvar sám kvantifikaci neurčuje.
+
+---
+
+## ARCHIV — kolo #55
+
+### Status: 🟢 APPROVE — měří se, PROČ padlo `U`
 
 **Kolo #55.** 753 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **53/53**, živá parita **16/16**, dialogy 5 domén / 10 zapsaných

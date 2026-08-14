@@ -12,6 +12,7 @@ from decimal import Decimal
 import pytest
 
 from core_semantics.ast import (
+    Atom,
     Comparator,
     DepthExceeded,
     Entity,
@@ -461,3 +462,126 @@ def test_enumeration_never_drops_an_element_silently() -> None:  # W-2
     )
     solutions = Engine(kb).solutions(atom("ovocny", role("x", Variable("y"))))
     assert [binding["y"] for binding, _ in solutions] == [Entity("e1")]
+
+
+# --------------------------------------------------------------------------
+# Negace obrací monotonii — B‑13
+# --------------------------------------------------------------------------
+#
+# Relace shody `⪯` viděla jen role, nikdy polaritu atomu, takže záporný
+# sloupec byl mechanickým zrcadlem kladného. Změřená matice, táž dvojice
+# tvarů:
+#
+#     fakt ∀ → dotaz ∀     kladně A   záporně A
+#     fakt ∀ → dotaz ∃     kladně U   záporně U   ← druhá buňka je věcně N
+#
+# Z `¬P(∀F)` PLYNE `¬P(∃F)`, a neplyne to z neprázdnosti třídy — platí to
+# i pro prázdnou. Kladně by táž buňka existenční import POTŘEBOVALA, a ten
+# se v otevřeném světě nedoloží; pod negací mizí, protože obě strany
+# tvrdí NEPLATNOST, ne existenci.
+
+ALL_Q = Quantifier.FOR_ALL
+EX_Q = Quantifier.EXISTS
+
+
+def _eats(
+    who: Entity | Group, what: str, quantifier: Quantifier, *, negated: bool
+) -> Atom:
+    return atom(
+        "jíst",
+        role("kdo", who) if isinstance(who, Entity) else role("kdo", who, ALL_Q),
+        role("co", Group(what), quantifier),
+        negated=negated,
+    )
+
+
+def _cell(fact_q: Quantifier, query_q: Quantifier, *, negated: bool) -> QueryStatus:
+    kb = KnowledgeBase()
+    kb.attach(_eats(Entity("P"), "maso", fact_q, negated=negated))
+    return (
+        Engine(kb)
+        .ask(_eats(Entity("P"), "maso", query_q, negated=negated))
+        .status
+    )
+
+
+def test_a_negated_universal_answers_the_existential_question() -> None:
+    """JÁDRO B‑13. Dřív `U`, věcně to je doložené."""
+    assert _cell(ALL_Q, EX_Q, negated=True) is QueryStatus.PROVEN_TRUE
+
+
+def test_the_positive_cell_still_needs_a_nonempty_class() -> None:
+    """PROTIPŘÍKLAD REVIEWERA. Kladné ∀ → ∃ zůstává `U`: doplnit ho by byl
+    EXISTENČNÍ IMPORT — „platí to o všech, tedy o nějakém" mlčky
+    předpokládá, že nějaký je, a to se v otevřeném světě nedoloží."""
+    assert _cell(ALL_Q, EX_Q, negated=False) is QueryStatus.UNKNOWN
+
+
+def test_the_universal_cell_is_unchanged_in_both_polarities() -> None:
+    assert _cell(ALL_Q, ALL_Q, negated=False) is QueryStatus.PROVEN_TRUE
+    assert _cell(ALL_Q, ALL_Q, negated=True) is QueryStatus.PROVEN_TRUE
+
+
+def test_the_query_may_go_narrower_but_never_wider() -> None:
+    """Důkazní povinnost je táž jako u kladného ∀ × ∀ — dotaz smí být
+    UŽŠÍ. Z „vegetarián nejí maso" neplyne, že nejí potraviny."""
+    kb = KnowledgeBase()
+    kb.attach(_eats(Entity("P"), "maso", ALL_Q, negated=True))
+    kb.attach(subset_of(Group("steak"), Group("maso")))
+    engine = Engine(kb)
+    assert (
+        engine.ask(_eats(Entity("P"), "steak", EX_Q, negated=True)).status
+        is QueryStatus.PROVEN_TRUE
+    )
+    assert (
+        engine.ask(_eats(Entity("P"), "potravina", EX_Q, negated=True)).status
+        is QueryStatus.UNKNOWN
+    )
+
+
+def test_a_concrete_filler_against_existential_is_still_never_a_match() -> None:
+    """Dialog B beze změny: „obsahuje citron vitamín C?" nesmí sednout na
+    „obsahuje ∃vitamín" — ani pod negací, protože tam se nic neobrací."""
+    kb = KnowledgeBase()
+    kb.attach(
+        atom(
+            "obsahovat",
+            role("kdo", Group("citron"), EX_Q),
+            role("co", Group("vitamín"), EX_Q),
+            negated=True,
+        )
+    )
+    query = atom(
+        "obsahovat",
+        role("kdo", Group("citron"), EX_Q),
+        role("co", Entity("C")),
+        negated=True,
+    )
+    assert Engine(kb).ask(query).status is QueryStatus.UNKNOWN
+
+
+def test_the_vegetarian_conflict_survives_the_correct_reading() -> None:
+    """COUNTEREXAMPLE REVIEWERA, ten hlavní. Závěr šesté domény nesmí
+    stát na chybném čtení `∀steak`: se správným `∃steak` musí `CONFLICT`
+    padnout taky, a s OBĚMA důkazy."""
+    kb = KnowledgeBase()
+    kb.attach(member_of(Entity("Petr"), Group("vegetarián")))
+    kb.attach(
+        atom(
+            "jíst",
+            role("kdo", Group("vegetarián"), ALL_Q),
+            role("co", Group("maso"), ALL_Q),
+            negated=True,
+        )
+    )
+    kb.attach(subset_of(Group("steak"), Group("maso")))
+    kb.attach(
+        atom("jíst", role("kdo", Entity("Petr")), role("co", Group("steak"), EX_Q))
+    )
+    result = Engine(kb).ask(
+        atom("jíst", role("kdo", Entity("Petr")), role("co", Group("steak"), EX_Q))
+    )
+    assert result.status is QueryStatus.CONFLICT
+    assert result.conflict is not None and len(result.conflict) == 2
+    tree = "\n".join(result.proof_tree)
+    assert "distribute" in tree and "subset*" in tree and "member*" in tree

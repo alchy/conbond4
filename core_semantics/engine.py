@@ -706,7 +706,16 @@ class Engine:
             frole = fact.get_role(prole.name)
             if frole is None:
                 return None  # role dotazu ve faktu chybí
-            outcome = self._compat(prole, frole, current, d)
+            outcome = self._compat(
+                prole,
+                frole,
+                current,
+                d,
+                # POLARITA PATŘÍ DO SHODY ROLÍ, ne jen nad ni (B‑13).
+                # Negace obrací monotonii, takže záporný sloupec nesmí
+                # být mechanickým zrcadlem kladného.
+                negated=pattern.is_negated and fact.is_negated,
+            )
             if outcome is None:
                 return None
             current, step = outcome
@@ -718,8 +727,28 @@ class Engine:
         return current, steps
 
     def _compat(
-        self, prole: RoleTerm, frole: RoleTerm, binding: Binding, d: Derivation
+        self,
+        prole: RoleTerm,
+        frole: RoleTerm,
+        binding: Binding,
+        d: Derivation,
+        *,
+        negated: bool = False,
     ) -> tuple[Binding, list[Proof]] | None:
+        """Sedne role dotazu na roli faktu? — § 3.3.
+
+        **`negated` není ozdoba: negace OBRACÍ MONOTONII** *(B‑13)*.
+        Kladné `P(∀F)` říká, že P platí o každém prvku `F`, takže dotaz
+        smí jít DOLŮ (užší třída). Záporné `¬P(∀F)` říká totéž o
+        neplatnosti — a z „o žádném prvku masa to neplatí" plyne i „o
+        nějakém prvku masa to neplatí", protože obojí je tvrzení O TÉŽE
+        MNOŽINĚ, jen jinak kvantifikované.
+
+        Do opravy vidělo tohle porovnání jen role, nikdy polaritu atomu,
+        takže záporný sloupec byl mechanickým zrcadlem kladného. Důsledek
+        byl měřitelný: `¬jíst(co:∀maso)` proti dotazu `¬jíst(co:∃maso)`
+        dalo `U` tam, kde věcně platí `N`.
+        """
         if d.index is None:  # pragma: no cover
             raise EvaluationError("index uzávěrů není postavený")
         index = d.index
@@ -778,6 +807,25 @@ class Engine:
             proof = index.same_class(pt.id, ft.id)
             return (binding, [proof]) if proof else None
 
-        # ∃ × ∀ by potřebovalo neprázdnost group; v otevřeném světě
-        # nedoložitelné. ∀ × ∃ neplatí nikdy.
+        # ∃ × ∀ POD NEGACÍ — jediná buňka, kterou přidává B‑13.
+        #
+        # Kladně by ∃ × ∀ potřebovalo NEPRÁZDNOST třídy („platí to o všech,
+        # tedy o nějakém" mlčky předpokládá, že nějaký je), a ta se
+        # v otevřeném světě nedoloží. Pod negací se to obrací a předpoklad
+        # MIZÍ: „o žádném prvku masa to neplatí" dává „o nějakém prvku masa
+        # to neplatí" i pro PRÁZDNOU třídu, protože obě strany tvrdí
+        # neplatnost, ne existenci.
+        #
+        # Důkazní povinnost je táž jako u kladného ∀ × ∀ — dotaz smí být
+        # UŽŠÍ. Ne širší: z „vegetarián nejí maso" neplyne, že nejí
+        # potraviny.
+        if negated and pq is Quantifier.EXISTS and fq is Quantifier.FOR_ALL:
+            if isinstance(pt, Variable):
+                return None  # výčet přes prvky dělá `member` v těle pravidla
+            proof = self._subset_term(pt, ft, d)
+            return (binding, [proof]) if proof else None
+
+        # Zbytek: ∃ × ∀ KLADNĚ by potřebovalo neprázdnost group; v otevřeném
+        # světě nedoložitelné, a doplnit ji by byl existenční import, který
+        # § 3.2 zakazuje. ∀ × ∃ neplatí nikdy.
         return None

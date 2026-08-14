@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.10 · 14. 8. 2026
+**Verze jádra:** 0.1.11 · 14. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -17,6 +17,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.8 | § 5.4/10 — tělo se při `attach` normalizuje do kanonického bezpečného pořadí, jinak `UnsafeRule` u ZÁPISU; `REQUIRES_BOUND` jako jeden seznam pro zápis i evaluátor; normalizace neobchází bod 7; § 13 T56–T58 | 14. 8. 2026 |
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
+| 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
 **Rozsah:** definuje jazyk, typování, denotaci, epistemický status,
 pravidla, modalitu, důkaz a identitu. Neřeší parsing, renderování,
 vnitřek doménových specialistů ani optimalizace.
@@ -234,6 +235,31 @@ protipříkladu.
 ---
 
 ## 5 · Pravidla, uzávěry, constrainty
+
+**Negace OBRACÍ MONOTONII** *(0.1.11 — B‑13)*. Tabulka výš popisuje
+KLADNÉ atomy. Pod negací se jedna buňka mění:
+
+```
+¬P(∃Q)  ⪯  ¬P(∀F)      ⟸  subset*(Q, F)
+```
+
+Kladně by táž buňka potřebovala **neprázdnost** třídy — „platí to
+o všech, tedy o nějakém" mlčky předpokládá, že nějaký je, a existenční
+import § 3.2 nedovoluje. Pod negací ten předpoklad **mizí**: „o žádném
+prvku `F` to neplatí" dává „o nějakém prvku `Q` to neplatí" i pro
+prázdné `Q`, protože obě strany tvrdí NEPLATNOST, ne existenci. Důkazní
+povinnost je táž jako u kladného `∀ × ∀` — dotaz smí být UŽŠÍ, nikdy
+širší.
+
+**Kladná buňka `∀ → ∃` zůstává `U`.** Doplnit ji by byl přesně ten
+existenční import, který se tady zakazuje.
+
+**Rozsah negace vůči `∃` roli je OTEVŘENÁ OTÁZKA** *(W‑14)*. `¬P(∃F)` jde
+číst jako `¬∃x. P(x)` i jako `∃x. ¬P(x)`; tenhle dodatek to
+**nerozhoduje** a rozhodovat mimochodem nesmí — je to změna § 3.3, tedy
+věc vědomého rozhodnutí (I‑13). Zapsaná buňka platí při obojím čtení,
+protože obě strany mluví o TÉŽE množině.
+
 
 ### 5.1 Jádrové uzávěry — jediné místo s rekurzí
 
@@ -990,6 +1016,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T61 | negace obrací monotonii | `¬P(∀maso)` odpoví na `¬P(∃maso)`; kladné `∀→∃` zůstává `U`; dotaz smí být užší, ne širší |
 | T60 | zapsaný výrok se nepřehlíží | `attach(subset(auto, A AND B))` → přímá otázka dá `A` s citací TOHO výroku; zákony § 5.2.1 běží dál beze změny a negativní kontroly (`A OR B ⊆ A`) drží |
 | T59 | vázanost i uvnitř algebraického termu | `h(a:X) ← subset(a AND X, b)` → `UnsafeRule` u ZÁPISU (dřív prošlo a padlo u dotazu na neuzemněnou hlavu); s `member(X,g)` jako vazačem projde a odpoví `A` |
 | T58 | normalizace neobchází bezpečnost negace | proměnná vázaná jen negovaným literálem se přeuspořádáním „bezpečnou" nestane; pozitivní vazač ji naopak povolí |

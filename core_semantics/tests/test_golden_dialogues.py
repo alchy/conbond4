@@ -11,7 +11,9 @@ from __future__ import annotations
 import pytest
 
 from core_semantics.oracle import RecordedOracle
-from core_semantics.session import Session, TurnResult
+from typing import Sequence
+
+from core_semantics.session import Session, TurnResult, answers_quantifier
 from core_semantics.tests._console import echo
 from core_semantics.tests.dialogues import DIALOGUES, Dialogue, Step
 
@@ -28,8 +30,45 @@ def play(dialogue: Dialogue) -> Played:
     minula celou."""
     session = Session(lexicon=dialogue.lexicon())
     oracle = RecordedOracle(dialogue.recordings())
-    turns = [(step, session.utter(step.text, oracle)) for step in dialogue.steps]
+    turns: list[tuple[Step, TurnResult]] = []
+    for step in dialogue.steps:
+        turns.append((step, _run(session, oracle, step, turns)))
     return turns, session
+
+
+def _run(
+    session: Session,
+    oracle: RecordedOracle,
+    step: Step,
+    done: Sequence[tuple[Step, TurnResult]],
+) -> TurnResult:
+    """Krok je buď VĚTA, nebo TAH."""
+    if step.answers_quantifier is None:
+        return session.utter(step.text, oracle)
+    return _answer(session, step, done)
+
+
+def _answer(
+    session: Session, step: Step, done: Sequence[tuple[Step, TurnResult]]
+) -> TurnResult:
+    """Tah `→∀` složený z toho, na co se systém DOOPRAVDY ptal.
+
+    Tvar se dopočítá z čekající role předchozího kroku, neopisuje se:
+    opsaný tvar by se mohl rozejít s tím, na co se systém ptal, a sada by
+    hlídala shodu dvou zápisů místo chování."""
+    assert done, "tah bez předchozí věty nemá na co odpovídat"
+    assert step.answers_quantifier is not None
+    name, operation = step.answers_quantifier
+    pending = done[-1][1].predication
+    assert pending is not None, f"{step.text!r}: předchozí krok nic nepřečetl"
+    role = pending.reading(name)
+    assert role is not None and role.pending is not None, (
+        f"{step.text!r}: role {name!r} na kvantifikátor nečeká, "
+        f"takže není na co odpovídat"
+    )
+    return session.play(
+        answers_quantifier(step.text, pending, role.pending, operation)
+    )
 
 
 @pytest.mark.parametrize("dialogue", DIALOGUES, ids=lambda d: d.name)
@@ -39,8 +78,19 @@ def test_dialogue_reads_writes_and_answers_as_recorded(dialogue: Dialogue) -> No
     # by ten průchod jen předstíral.
     session = Session(lexicon=dialogue.lexicon())
     oracle = RecordedOracle(dialogue.recordings())
+    done: list[tuple[Step, TurnResult]] = []
     for step in dialogue.steps:
-        result = session.utter(step.text, oracle)
+        # `session.utter(...)` je tu ROZEPSANÉ, ne schované v pomocné
+        # funkci: doložka S‑13 žádá průchod veřejným vstupním bodem a test,
+        # který se k němu dostane přes helper, by ten průchod jen
+        # předstíral. Tah je jediná výjimka — vstupní bod pro větu nemá,
+        # protože to není věta.
+        result = (
+            session.utter(step.text, oracle)
+            if step.answers_quantifier is None
+            else _answer(session, step, done)
+        )
+        done.append((step, result))
         where = f"{dialogue.name} / {step.text!r}"
 
         if step.reads:

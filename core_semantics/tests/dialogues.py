@@ -72,7 +72,9 @@ class Step:
     """
 
     text: str
-    reading: Reading
+    #: Rozbor věty. `None` znamená, že krok NENÍ VĚTA, ale TAH — odpověď
+    #: na otázku, kterou systém položil o krok dřív.
+    reading: Reading | None = None
     reads: str = ""
     #: Očekávané vazby zmínek na uzly, jako `„tvar“ → uzel`.
     anchors: tuple[str, ...] = ()
@@ -82,6 +84,15 @@ class Step:
     answers: str = ""
     asks: str = ""
     refuses: str = ""
+    #: `(jméno role, operace)` — krok je ODPOVĚĎ `→∀` na otázku po
+    #: kvantifikátoru role z PŘEDCHOZÍHO kroku. Tvar se dopočítá z té
+    #: čekající role, neopisuje se: opsaný tvar by se mohl rozejít s tím,
+    #: na co se systém doopravdy ptal.
+    #:
+    #: **Zatím to nestačí na per‑VĚTNOU kvantifikaci** a je poctivé to
+    #: říct tady: tah `→∀` učí TVAR, takže první odpověď zavře celou třídu
+    #: a druhá věta se už nezeptá. Mez je popsaná u dialogu Vegetarián.
+    answers_quantifier: tuple[str, Operation] | None = None
     #: Věc, která je na tomhle kroku VĚCNĚ ŠPATNĚ a ví se proč. Zapsaná
     #: mez není totéž co selhání: krok projde, ale nepředstírá se, že je
     #: v pořádku všechno.
@@ -132,6 +143,7 @@ class Dialogue:
         return {
             step.text: Utterance(text=step.text, readings=(step.reading,))
             for step in self.steps
+            if step.reading is not None
         }
 
 
@@ -619,8 +631,11 @@ VEGETARIAN = Dialogue(
                 "„Petr jedl steak“ správně, ale generické popření zeslábne "
                 "na ¬jíst(co:∃maso, …), tedy „nějaké maso nejí“, a ZÁVĚR "
                 "DOMÉNY SE ZTRATÍ — otázka pak dá `A` místo sporu. Správné "
-                "řešení není jiný tvar, ale doptání NA VĚTU (`→∀`), které "
-                "systém sám dělá, když tvar potvrzený není"
+                "řešení není jiný tvar, ale doptání NA VĚTU — a to dnes "
+                "NEEXISTUJE: tah `→∀` učí TVAR, takže první odpověď zavře "
+                "celou třídu a druhá věta se už nezeptá. Změřeno. Závěr "
+                "domény ale na tom chybném čtení NESTOJÍ: od B‑13 dá "
+                "`CONFLICT` i se správným `∃steak` (test v test_engine)"
             ),
         ),
         Step(

@@ -233,6 +233,26 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="J-7",
+        boundary=KERNEL_LEARNING,
+        promise=(
+            "POLARITA patří do shody rolí, ne jen nad ni: negace obrací "
+            "monotonii, takže pod negací sedne dotaz `∃` na fakt `∀` "
+            "s touž povinností `subset` jako kladné `∀×∀`. Kladná buňka "
+            "`∀→∃` zůstává `U` — doplnit ji by byl existenční import, "
+            "který § 3.2 zakazuje (B‑13)"
+        ),
+        anchor="core_semantics.engine:Engine._compat",
+        entry=".ask(",
+        enforced_by=(
+            "test_a_negated_universal_answers_the_existential_question",
+            "test_the_positive_cell_still_needs_a_nonempty_class",
+            "test_the_query_may_go_narrower_but_never_wider",
+            "test_the_vegetarian_conflict_survives_the_correct_reading",
+            "test_a_concrete_filler_against_existential_is_still_never_a_match",
+        ),
+    ),
+    Clause(
         id="J-2",
         boundary=KERNEL_LEARNING,
         promise=(
