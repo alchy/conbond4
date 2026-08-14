@@ -45,6 +45,13 @@ class Operation(Enum):
     # kvantifikátor na roli (§ 5.2)
     FOR_ALL = "for_all"
     EXISTS = "exists"
+    #: `·` — role mluví o TOM konkrétním uzlu, ne o skupině. Jádro to zná
+    #: jako `Quantifier.SELF` a bez něj nejde do role dosadit individuum.
+    SELF = "self"
+    #: Určitost, NE kvantifikace. „to auto" neotvírá skupinový fillér, ale
+    #: odkazuje na už existující uzel — a rozřešit ten odkaz je práce V3
+    #: (§ 6.12, dialog F: „určitý popis rozřešen při attach").
+    DEFINITE = "definite"
     # komparátory (§ 6)
     LESS_EQUAL = "le"
     LESS = "lt"
@@ -69,6 +76,8 @@ MENU: tuple[tuple[Operation, str], ...] = (
     (Operation.GROUP_DIFF, "to první kromě toho druhého — rozdíl"),
     (Operation.FOR_ALL, "platí o každém členu skupiny"),
     (Operation.EXISTS, "platí o některém členu, ale nevíme o kterém"),
+    (Operation.SELF, "mluví o tom konkrétním, ne o skupině"),
+    (Operation.DEFINITE, "odkazuje na už zmíněný uzel, žádnou skupinu neotvírá"),
     (Operation.LESS_EQUAL, "nejvýše tolik"),
     (Operation.LESS, "míň než tolik"),
     (Operation.GREATER_EQUAL, "aspoň tolik"),
@@ -80,6 +89,14 @@ MENU: tuple[tuple[Operation, str], ...] = (
     (Operation.COMPLETE, "to jsou všichni, které skupina má"),
     (Operation.ALTERNATIVE, "otázka, který z členů platí"),
     (Operation.NEGATION, "doložené popření, ne pouhá nevědomost"),
+)
+
+
+#: Operace, které odpovídají na otázku „jak je fillér v roli kvantifikovaný".
+#: `DEFINITE` je mezi nimi schválně: je to legitimní odpověď („žádnou skupinu
+#: neotvírá, odkazuje na uzel"), jen ji dokončí až V3.
+QUANTIFYING: frozenset["Operation"] = frozenset(
+    {Operation.FOR_ALL, Operation.EXISTS, Operation.SELF, Operation.DEFINITE}
 )
 
 
@@ -109,37 +126,88 @@ class StructuralSignature:
     Na tom stojí renaming test z § 10: přejmenuj entity a vzor musí sedět
     dál. Proto tu nejsou žádné konkrétní lemma podstatných jmen — jen
     spouštěcí slovo, jeho tvar a tah, ve kterém zaznělo.
+
+    `number` a `case` přibyly kvůli kvantifikátoru na roli (L‑3): holé
+    jméno se pozná **jen tvarem**, protože žádné spouštěcí slovo u sebe
+    nemá. Signatura pro ně nese `lemma=""` — a to je přesně ten tvar,
+    který renaming test vyžaduje, protože na slově nezávisí vůbec.
     """
 
     lemma: str
     mood: Mood = Mood.UNKNOWN
     upos: str = ""
     deprel: str = ""
+    number: str = ""
+    case: str = ""
 
     def key(self) -> str:
         return f"{self.lemma}|{self.mood.value}"
 
+    def shape(self) -> str:
+        """Popis tvaru pro člověka — do doptání a do transkriptu."""
+        parts = [p for p in (self.upos, self.number, self.case, self.deprel) if p]
+        return "/".join(parts) if parts else "?"
+
 
 @dataclass(frozen=True, slots=True)
 class Trigger:
-    """Spouštěč. `mood=UNKNOWN` znamená „na tahu nezáleží"."""
+    """Spouštěč. `mood=UNKNOWN` znamená „na tahu nezáleží".
+
+    **Prázdné `lemma` je zástupný znak, ne chybějící údaj.** Spouštěč bez
+    slova sedí na každé slovo daného TVARU — a je to jediný způsob, jak
+    popsat holé jméno, které u sebe žádný determinátor nemá. Ostatní pole
+    se porovnávají stejně: prázdné znamená „na tomhle nezáleží".
+    """
 
     lemma: str
     mood: Mood = Mood.UNKNOWN
     deprel: str = ""
+    upos: str = ""
+    number: str = ""
+    case: str = ""
+
+    @property
+    def structural(self) -> bool:
+        """Spouštěč bez slova — sedí na tvar, ne na lexikum."""
+        return not self.lemma
 
     def matches(self, signature: StructuralSignature) -> bool:
-        if self.lemma != signature.lemma:
+        if self.structural and not (
+            self.upos or self.number or self.case or self.deprel
+        ):
+            # Spouštěč bez slova I bez tvaru by sedl na cokoli. To není
+            # vzor, to je tichý default s razítkem naučeného.
+            return False
+        if self.lemma and self.lemma != signature.lemma:
+            return False
+        if self.structural and signature.lemma:
+            # Lexikální signatura se strukturním vzorem nepáruje. Dvě
+            # různé otázky („co znamená tohle slovo" × „co znamená tenhle
+            # tvar") mají zůstat oddělené, jinak by šlo jedno doložit
+            # odpovědí na druhé.
             return False
         if self.mood is not Mood.UNKNOWN and signature.mood is not Mood.UNKNOWN:
             if self.mood is not signature.mood:
                 return False
-        if self.deprel and signature.deprel and self.deprel != signature.deprel:
-            return False
+        for mine, theirs in (
+            (self.deprel, signature.deprel),
+            (self.upos, signature.upos),
+            (self.number, signature.number),
+            (self.case, signature.case),
+        ):
+            if mine and theirs and mine != theirs:
+                return False
+            if mine and not theirs:
+                # Rozbor ten údaj nedal. Tvrdit shodu by znamenalo dosadit
+                # si ho — a to je právě to hádání, kterému se vzor vyhýbá.
+                return False
         return True
 
     def key(self) -> str:
-        return f"{self.lemma}|{self.mood.value}|{self.deprel}"
+        base = f"{self.lemma}|{self.mood.value}|{self.deprel}"
+        if self.upos or self.number or self.case:
+            return f"{base}|{self.upos}|{self.number}|{self.case}"
+        return base
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,6 +220,18 @@ class LearnedPattern:
     operation: Operation
     learned_from: str
     status: PatternStatus = PatternStatus.HYPOTHESIS
+
+    def key(self) -> str:
+        """Klíč nese SPOUŠTĚČ **i OPERACI**.
+
+        Kdyby nesl jen spouštěč, druhé mapování téhož slova by to první
+        tiše přepsalo — a právě dvojznačná slova jsou ta zajímavá:
+        „žádný" je oddělenost skupin i doložené popření, „nebo" je
+        sjednocení i alternativa. Tichý zápis nad zápisem by tu
+        dvojznačnost odstranil, aniž by se kdokoli zeptal (I‑1). `RoleMapping`
+        to má stejně a ze stejného důvodu.
+        """
+        return f"{self.trigger.key()}->{self.operation.value}"
 
     def with_status(self, status: PatternStatus) -> "LearnedPattern":
         return LearnedPattern(
@@ -168,6 +248,9 @@ class LearnedPattern:
                 "lemma": self.trigger.lemma,
                 "mood": self.trigger.mood.value,
                 "deprel": self.trigger.deprel,
+                "upos": self.trigger.upos,
+                "number": self.trigger.number,
+                "case": self.trigger.case,
             },
             "operation": self.operation.value,
             "learned_from": self.learned_from,
@@ -182,6 +265,9 @@ class LearnedPattern:
                 lemma=trigger["lemma"],
                 mood=Mood(trigger.get("mood", Mood.UNKNOWN.value)),
                 deprel=trigger.get("deprel", ""),
+                upos=trigger.get("upos", ""),
+                number=trigger.get("number", ""),
+                case=trigger.get("case", ""),
             ),
             operation=Operation(raw["operation"]),
             learned_from=raw["learned_from"],
@@ -189,8 +275,77 @@ class LearnedPattern:
         )
 
     def __str__(self) -> str:
+        # Strukturní vzor se popisuje TVAREM, ne klíčem. Klíč je pro
+        # slovník; `|?!|nsubj|NOUN|Sing|Nom` je v transkriptu, který má
+        # číst člověk, jen šum.
+        what = (
+            "tvar " + "/".join(
+                p
+                for p in (
+                    self.trigger.upos,
+                    self.trigger.number,
+                    self.trigger.case,
+                    self.trigger.deprel,
+                )
+                if p
+            )
+            if self.trigger.structural
+            else self.trigger.key()
+        )
         return (
-            f"{self.trigger.key()} -> {self.operation.value} "
+            f"{what} -> {self.operation.value} "
+            f"[{self.status.value}, {self.learned_from}]"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RoleMapping:
+    """Ekvivalence rolí — § 3.7 (`role "kudy" ~ prep("po")+Loc`) a § 12/1.
+
+    Kaskáda pojmenuje okolnost povrchově (`do+Gen`), protože sémantiku
+    hádat nesmí. Že `do+Gen` znamená `kam`, je **naučené a odvolatelné
+    tvrzení**, ne vlastnost kódu — jinak by se do interpretu propašoval
+    seznam významů předložek.
+
+    Není to `Operation`: neukazuje na operaci jádra, ale přejmenovává roli.
+    Proto vlastní druh řádku programu se stejným životním cyklem.
+    """
+
+    surface: str
+    canonical: str
+    learned_from: str
+    status: PatternStatus = PatternStatus.HYPOTHESIS
+
+    @property
+    def active(self) -> bool:
+        return self.status in ACTIVE_STATUSES
+
+    def with_status(self, status: PatternStatus) -> "RoleMapping":
+        return RoleMapping(self.surface, self.canonical, self.learned_from, status)
+
+    def key(self) -> str:
+        return f"{self.surface}->{self.canonical}"
+
+    def to_json_object(self) -> dict[str, Any]:
+        return {
+            "surface": self.surface,
+            "canonical": self.canonical,
+            "learned_from": self.learned_from,
+            "status": self.status.value,
+        }
+
+    @staticmethod
+    def from_json_object(raw: Mapping[str, Any]) -> "RoleMapping":
+        return RoleMapping(
+            surface=raw["surface"],
+            canonical=raw["canonical"],
+            learned_from=raw["learned_from"],
+            status=PatternStatus(raw.get("status", "hypothesis")),
+        )
+
+    def __str__(self) -> str:
+        return (
+            f"role {self.surface} ~ {self.canonical} "
             f"[{self.status.value}, {self.learned_from}]"
         )
 
@@ -198,13 +353,20 @@ class LearnedPattern:
 class Lexicon:
     """Sbírka naučených vzorů. Žádný globální stav, všechno je to data."""
 
-    def __init__(self, patterns: Iterable[LearnedPattern] = ()) -> None:
+    def __init__(
+        self,
+        patterns: Iterable[LearnedPattern] = (),
+        roles: Iterable[RoleMapping] = (),
+    ) -> None:
         self._by_key: dict[str, LearnedPattern] = {}
+        self._roles: dict[str, RoleMapping] = {}
         for pattern in patterns:
             self.add(pattern)
+        for mapping in roles:
+            self.add_role(mapping)
 
     def add(self, pattern: LearnedPattern) -> None:
-        self._by_key[pattern.trigger.key()] = pattern
+        self._by_key[pattern.key()] = pattern
 
     def teach(
         self,
@@ -232,7 +394,59 @@ class Lexicon:
             for pattern in self._by_key.values()
             if pattern.active and pattern.trigger.matches(signature)
         ]
-        return tuple(sorted(found, key=lambda p: p.trigger.key()))
+        return tuple(sorted(found, key=lambda p: p.key()))
+
+    def quantifier_candidates(
+        self, signature: StructuralSignature
+    ) -> tuple[LearnedPattern, ...]:
+        """Kandidáti na kvantifikátor role — podmnožina `candidates`.
+
+        Filtruje se až tady, ne v `matches`: spouštěč nemá vědět, na co se
+        zrovna ptáme. „žádný" sedí na tutéž signaturu jako kvantifikátor
+        i jako oddělenost skupin, a která z těch dvou odpovědí dává v roli
+        smysl, ví kaskáda, ne lexikon.
+        """
+        return tuple(
+            pattern
+            for pattern in self.candidates(signature)
+            if pattern.operation in QUANTIFYING
+        )
+
+    # -- ekvivalence rolí --------------------------------------------------
+
+    def add_role(self, mapping: RoleMapping) -> None:
+        self._roles[mapping.key()] = mapping
+
+    def teach_role(
+        self, surface: str, canonical: str, *, learned_from: str
+    ) -> RoleMapping:
+        mapping = RoleMapping(surface, canonical, learned_from)
+        self.add_role(mapping)
+        return mapping
+
+    def role_candidates(self, surface: str) -> tuple[RoleMapping, ...]:
+        """**Kandidáti, ne jedno mapování.**
+
+        `v+Loc` je v češtině `kde` i `kdy` („v Praze" × „v pondělí") a
+        rozliší to jen význam nominálu, který se nehádá. Dvě možnosti se
+        proto vrátí obě a rozhoduje doptání."""
+        found = [
+            mapping
+            for mapping in self._roles.values()
+            if mapping.active and mapping.surface == surface
+        ]
+        return tuple(sorted(found, key=lambda m: m.canonical))
+
+    def revoke_role(self, key: str) -> RoleMapping | None:
+        mapping = self._roles.get(key)
+        if mapping is None:
+            return None
+        updated = mapping.with_status(PatternStatus.REVOKED)
+        self._roles[key] = updated
+        return updated
+
+    def all_roles(self) -> tuple[RoleMapping, ...]:
+        return tuple(sorted(self._roles.values(), key=lambda m: m.key()))
 
     def confirm(self, key: str) -> LearnedPattern | None:
         return self._set_status(key, PatternStatus.CONFIRMED)
@@ -255,12 +469,15 @@ class Lexicon:
 
     def all(self) -> tuple[LearnedPattern, ...]:
         return tuple(
-            sorted(self._by_key.values(), key=lambda p: p.trigger.key())
+            sorted(self._by_key.values(), key=lambda p: p.key())
         )
 
     def to_json(self) -> str:
         return json.dumps(
-            [pattern.to_json_object() for pattern in self.all()],
+            {
+                "patterns": [p.to_json_object() for p in self.all()],
+                "roles": [m.to_json_object() for m in self.all_roles()],
+            },
             ensure_ascii=False,
             indent=2,
         )
@@ -268,9 +485,14 @@ class Lexicon:
     @staticmethod
     def from_json(text: str) -> "Lexicon":
         raw = json.loads(text)
-        if not isinstance(raw, list):
-            raise ValueError("LEX program musí být seznam vzorů")
-        return Lexicon(LearnedPattern.from_json_object(item) for item in raw)
+        if isinstance(raw, list):  # starší tvar: jen vzory
+            return Lexicon(LearnedPattern.from_json_object(i) for i in raw)
+        if not isinstance(raw, dict):
+            raise ValueError("LEX program musí být objekt se vzory a rolemi")
+        return Lexicon(
+            (LearnedPattern.from_json_object(i) for i in raw.get("patterns", ())),
+            (RoleMapping.from_json_object(i) for i in raw.get("roles", ())),
+        )
 
 
 # --------------------------------------------------------------------------
@@ -295,8 +517,11 @@ _SEED: tuple[tuple[str, Mood, Operation], ...] = (
     # kvantifikátory na roli
     ("každý", Mood.UNKNOWN, Operation.FOR_ALL),
     ("všechen", Mood.UNKNOWN, Operation.FOR_ALL),
+    ("všichni", Mood.UNKNOWN, Operation.FOR_ALL),
     ("nějaký", Mood.UNKNOWN, Operation.EXISTS),
     ("některý", Mood.UNKNOWN, Operation.EXISTS),
+    # určitost, NE kvantifikace — „ten" je lemma i pro „ta"/„to"
+    ("ten", Mood.UNKNOWN, Operation.DEFINITE),
     # komparátory
     ("nejvýše", Mood.UNKNOWN, Operation.LESS_EQUAL),
     ("nanejvýš", Mood.UNKNOWN, Operation.LESS_EQUAL),
@@ -304,18 +529,47 @@ _SEED: tuple[tuple[str, Mood, Operation], ...] = (
     ("minimálně", Mood.UNKNOWN, Operation.GREATER_EQUAL),
     # strukturní
     ("žádný", Mood.UNKNOWN, Operation.DISJOINT),
+    # „žádný" je ZÁMĚRNĚ dvakrát. „Žádný pták není savec" je oddělenost
+    # skupin, „Petr nemá žádné auto" je doložené popření o jednom uzlu —
+    # a rozliší to stavba věty, ne slovo. Dvě možnosti se proto vrátí obě
+    # a rozhoduje doptání; tiše vybrat by znamenalo změnit význam (I‑1).
+    ("žádný", Mood.UNKNOWN, Operation.NEGATION),
+)
+
+
+#: Ekvivalence rolí (§ 3.7, § 12/1). Povrchový tvar vlevo, kanonická role
+#: vpravo. `v+Loc` je záměrně dvakrát: „v Praze" je `kde`, „v pondělí" je
+#: `kdy`, a rozliší to jen význam nominálu, který se nehádá (INV‑11).
+_ROLE_SEED: tuple[tuple[str, str], ...] = (
+    ("do+Gen", "kam"),
+    ("z+Gen", "odkud"),
+    ("ze+Gen", "odkud"),
+    ("po+Loc", "kudy"),
+    ("v+Loc", "kde"),
+    ("v+Loc", "kdy"),
+    ("na+Loc", "kde"),
+    ("Ins", "čím"),
+    ("s+Ins", "s kým"),
 )
 
 
 def czech_seed(*, learned_from: str = "seed") -> Lexicon:
     """Výchozí český lexikon — všechno jako hypotézy."""
     return Lexicon(
-        LearnedPattern(
-            trigger=Trigger(lemma=lemma, mood=mood),
-            operation=operation,
-            learned_from=learned_from,
-        )
-        for lemma, mood, operation in _SEED
+        (
+            LearnedPattern(
+                trigger=Trigger(lemma=lemma, mood=mood),
+                operation=operation,
+                learned_from=learned_from,
+            )
+            for lemma, mood, operation in _SEED
+        ),
+        (
+            RoleMapping(
+                surface=surface, canonical=canonical, learned_from=learned_from
+            )
+            for surface, canonical in _ROLE_SEED
+        ),
     )
 
 

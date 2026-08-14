@@ -12,13 +12,17 @@ from __future__ import annotations
 import pytest
 
 from core_semantics.ast import (
+    AttachError,
     CycleDetected,
     Entity,
     Group,
+    KERNEL_PREDICATES,
+    P_DISJOINT,
     Place,
     Proof,
     ProofKind,
     Quantifier,
+    QueryStatus,
     Rule,
     Sort,
     SortError,
@@ -28,12 +32,14 @@ from core_semantics.ast import (
     atom,
     complete_of,
     contains_of,
+    disjoint_of,
     member_of,
     role,
     same_as_of,
     select_canonical,
     subset_of,
 )
+from core_semantics.engine import Engine
 from core_semantics.storage import KnowledgeBase
 
 # --------------------------------------------------------------------------
@@ -397,6 +403,84 @@ def test_disjoint_expands_to_two_strongly_negated_rules() -> None:
         for st in kb.active()
         if isinstance(st.formula, Rule)
     )
+
+
+def test_bare_disjoint_marker_cannot_be_attached() -> None:
+    """B‑10. Ručně sestavený marker se dřív ZAPSAL, index se naplnil, a
+    neodvodilo se nic — táž báze pak odpovídala `N` nebo `U` podle toho,
+    kterými dveřmi se do ní psalo. Jedny dveře jsou `add_disjoint`."""
+    kb = KnowledgeBase()
+    with pytest.raises(AttachError) as caught:
+        kb.attach(disjoint_of(Group("pes"), Group("kočka")))
+    assert "add_disjoint" in str(caught.value)
+    assert list(kb.active()) == [], "odmítnutý zápis nesmí nechat v bázi zbytek"
+
+
+def test_both_doors_to_disjointness_give_the_same_answer() -> None:
+    """Vada B‑10 byla vidět jen ze srovnání dvou vstupních bodů: stejná
+    věta, stejná báze, jiný verdikt. Tenhle test to srovnání drží."""
+    kb = KnowledgeBase()
+    kb.add_disjoint(Group("pes"), Group("kočka"))
+    kb.attach(member_of(Entity("Rex"), Group("kočka")))
+    assert Engine(kb).ask(member_of(Entity("Rex"), Group("pes"))).status is (
+        QueryStatus.PROVEN_FALSE
+    )
+    # A druhé dveře nejsou pootevřené — jsou zavřené.
+    other = KnowledgeBase()
+    with pytest.raises(AttachError):
+        other.attach(disjoint_of(Group("pes"), Group("kočka")))
+
+
+def test_direct_question_about_disjointness_ignores_the_stated_order() -> None:
+    """W‑1. Odvození `member̄` bylo symetrické od začátku; asymetrická byla
+    jen PŘÍMÁ otázka, protože se porovnávala s faktem, a marker je v bázi
+    jednosměrný. Závěr pak visel na tom, jak to člověk kdysi vyslovil."""
+    kb = KnowledgeBase()
+    kb.add_disjoint(Group("kočka"), Group("pes"))
+    engine = Engine(kb)
+    said = engine.ask(disjoint_of(Group("kočka"), Group("pes")))
+    reversed_ = engine.ask(disjoint_of(Group("pes"), Group("kočka")))
+    assert said.status is QueryStatus.PROVEN_TRUE
+    assert reversed_.status is QueryStatus.PROVEN_TRUE
+    assert engine.ask(disjoint_of(Group("pes"), Group("ovce"))).status is (
+        QueryStatus.UNKNOWN
+    )
+
+
+def test_completeness_has_one_door_too() -> None:
+    """B‑11, zrcadlo B‑10. `complete` v hlavě pravidla se dřív PŘIJALO,
+    atom se ODVODIL a dotaz vrátil `A` — jenže uzávěr se nezměnil, protože
+    index se staví nad základními fakty. Uživatel dostal dvě odpovědi,
+    které si odporují: „skupina je úplná" a hned nato „nevím, jestli tam Z
+    je". Uzavření světa je řečový akt člověka, ne závěr učení."""
+    kb = KnowledgeBase()
+    kb.attach(member_of(Entity("a"), Group("g")))
+    with pytest.raises(UnsafeRule):
+        kb.attach_rule(
+            head=complete_of(Group("g")),
+            body=(member_of(Variable("x", expects=Sort.ENTITY), Group("g")),),
+            rule_id="r_complete",
+        )
+    # Správné dveře účinek mají — a to je ten rozdíl, který dřív nebyl vidět.
+    kb.attach(complete_of(Group("g")))
+    engine = Engine(kb)
+    assert engine.ask(complete_of(Group("g"))).status is QueryStatus.PROVEN_TRUE
+    assert engine.ask(member_of(Entity("Z"), Group("g"))).status is (
+        QueryStatus.PROVEN_FALSE
+    )
+    assert engine.ask(complete_of(Group("jiná"))).status is QueryStatus.UNKNOWN
+
+
+def test_disjoint_is_a_kernel_predicate_so_learning_cannot_write_it() -> None:
+    """Osmý sourozenec znamená i osmou zábranu: naučené pravidlo nesmí mít
+    `disjoint` v nenegované hlavě, jinak by učení přepsalo jádro (I‑16)."""
+    assert P_DISJOINT in KERNEL_PREDICATES
+    with pytest.raises(UnsafeRule):
+        Rule(
+            id="r_bad",
+            head=disjoint_of(Group("a"), Group("b")),
+            body=(member_of(Variable("x", expects=Sort.ENTITY), Group("a")),),
+        )
 
 
 def test_disjoint_expansion_is_not_a_cycle() -> None:

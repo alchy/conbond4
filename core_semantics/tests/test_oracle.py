@@ -18,6 +18,7 @@ from core_semantics.oracle import (
     OracleError,
     OracleUnavailable,
     Reading,
+    SegmentationError,
     Token,
     Transport,
     UDPipeOracle,
@@ -72,6 +73,34 @@ SENTENCE: dict[str, object] = {
             ],
         }
     ]
+}
+
+
+def _sentence(word: str, punct: str = ".") -> dict[str, object]:
+    return {
+        "tokens": [
+            {
+                "id": 1,
+                "form": word,
+                "lemma": word.lower(),
+                "upos": "NOUN",
+                "head": 0,
+                "deprel": "root",
+            },
+            {
+                "id": 2,
+                "form": punct,
+                "lemma": punct,
+                "upos": "PUNCT",
+                "head": 1,
+                "deprel": "punct",
+            },
+        ]
+    }
+
+
+TWO_SENTENCES: dict[str, object] = {
+    "sentences": [_sentence("Praha"), _sentence("Brno", "?")]
 }
 
 
@@ -166,6 +195,48 @@ def test_unreadable_response_is_an_error_not_a_guess() -> None:
 # --------------------------------------------------------------------------
 # Nahrané rozbory a keš
 # --------------------------------------------------------------------------
+
+
+def test_two_sentences_are_a_segmentation_error_not_two_readings() -> None:
+    """Rozhodnutí L‑1. Dřív se druhá věta vydávala za druhé kandidátní
+    čtení téže promluvy, takže se systém ptal „které z toho?" na dvě různé
+    věty. Nerozdělený text není dvojznačnost."""
+    client = UDPipeOracle(
+        transport=_transport({"/version": VERSION, "/v1/parse": TWO_SENTENCES})
+    )
+    with pytest.raises(SegmentationError) as caught:
+        client.parse("Praha. Brno?")
+    assert "2 vět" in str(caught.value)
+    assert "segment()" in str(caught.value)
+
+
+def test_segmentation_error_is_told_apart_from_the_other_two_failures() -> None:
+    """Tři různé situace, tři různé typy: služba mimo, větu neumím
+    přečíst, tohle nebyla věta. Poslední umí volající opravit sám."""
+    assert issubclass(SegmentationError, OracleError)
+    assert not issubclass(SegmentationError, OracleUnavailable)
+    assert not issubclass(OracleUnavailable, SegmentationError)
+
+
+def test_segment_is_a_separate_operation() -> None:
+    """Rozdělení textu je vlastní operace, ne vedlejší účinek rozboru."""
+    client = UDPipeOracle(
+        transport=_transport({"/version": VERSION, "/v1/parse": TWO_SENTENCES})
+    )
+    parts = client.segment("Praha. Brno?")
+    assert [u.text for u in parts] == ["Praha.", "Brno?"]
+    assert all(len(u.readings) == 1 for u in parts), (
+        "každá věta si nese vlastní rozbor; skládat text zpátky z tvarů "
+        "a posílat ho modelu podruhé by mohlo dát jiný strom"
+    )
+    assert all(u.readings[0].provenance == client.provenance for u in parts)
+
+
+def test_single_sentence_still_parses_normally() -> None:
+    client = UDPipeOracle(
+        transport=_transport({"/version": VERSION, "/v1/parse": SENTENCE})
+    )
+    assert len(client.parse("Citron je ovoce.").readings) == 1
 
 
 def test_recorded_oracle_refuses_unknown_text() -> None:

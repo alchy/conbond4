@@ -98,19 +98,25 @@ def test_pattern_starts_as_hypothesis_and_can_be_confirmed() -> None:
     assert pattern.status is PatternStatus.HYPOTHESIS
     assert lexicon.candidates(StructuralSignature(lemma="výhradně"))
 
-    confirmed = lexicon.confirm(trigger.key())
+    # Klíč nese spouštěč I OPERACI — potvrzuje se konkrétní mapování, ne
+    # všechno, co to slovo umí znamenat.
+    confirmed = lexicon.confirm(pattern.key())
     assert confirmed is not None and confirmed.status is PatternStatus.CONFIRMED
 
 
 def test_revoking_removes_the_mapping_not_the_operation() -> None:
     """Odvolání maže mapování; operace v jádru zůstává nedotčená (I‑16)."""
     lexicon = czech_seed()
-    key = Trigger(lemma="kromě", mood=Mood.UNKNOWN).key()
+    key = LearnedPattern(
+        trigger=Trigger(lemma="kromě", mood=Mood.UNKNOWN),
+        operation=Operation.GROUP_DIFF,
+        learned_from="seed",
+    ).key()
     lexicon.revoke(key)
     assert lexicon.candidates(StructuralSignature(lemma="kromě")) == ()
     assert Operation.GROUP_DIFF in {operation for operation, _ in MENU}
     # výrok zůstává v programu se statusem, nemizí
-    assert any(p.trigger.key() == key for p in lexicon.all())
+    assert any(p.key() == key for p in lexicon.all())
 
 
 def test_signature_is_independent_of_entities() -> None:
@@ -126,7 +132,13 @@ def test_signature_is_independent_of_entities() -> None:
 def test_lex_program_round_trips_through_json() -> None:
     """§ 3.7: `LEX` je program — čitelný, diffovatelný, verzovatelný."""
     lexicon = czech_seed()
-    lexicon.confirm(Trigger(lemma="nebo", mood=Mood.ASSERTION).key())
+    lexicon.confirm(
+        LearnedPattern(
+            trigger=Trigger(lemma="nebo", mood=Mood.ASSERTION),
+            operation=Operation.GROUP_OR,
+            learned_from="seed",
+        ).key()
+    )
     restored = Lexicon.from_json(lexicon.to_json())
     assert [str(p) for p in restored.all()] == [str(p) for p in lexicon.all()]
     assert any(

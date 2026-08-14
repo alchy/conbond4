@@ -34,6 +34,7 @@ from .ast import (
     KERNEL_PREDICATES,
     P_DISJOINT,
     P_SAME_AS,
+    disjoint_of,
     Proof,
     Quantifier,
     RESERVED_PREDICATES,
@@ -126,8 +127,20 @@ class ResolvedGraphView:
     def within_proof(self, whole_id: str, part_id: str) -> Proof | None:
         return self.index.within_proof(whole_id, part_id)
 
+    def before_proof(self, earlier_id: str, later_id: str) -> Proof | None:
+        return self.index.before_proof(earlier_id, later_id)
+
+    def ordering_cycles(self) -> frozenset[str]:
+        return self.index.ordering_cycles()
+
     def member_proof(self, elem_id: str, group_id: str) -> Proof | None:
         return self.index.member_proof(elem_id, group_id)
+
+    def is_known(self, node_id: str) -> bool:
+        return self.index.knows(node_id)
+
+    def nodes_named(self, name: str) -> list[str]:
+        return self.index.nodes_named(name)
 
     def known_members(self, group_id: str) -> list[str]:
         return self.index.known_members(group_id)
@@ -171,7 +184,38 @@ class KnowledgeBase:
         provenance: str = "",
         derived_from: str | None = None,
     ) -> str:
-        """Jediný zápis. Smí selhat — a selhání je tah dialogu (§ 9)."""
+        """Jediný zápis. Smí selhat — a selhání je tah dialogu (§ 9).
+
+        **Holý `disjoint` se odmítá.** Zapsat oddělenost znamená vygenerovat
+        i dvojici pravidel se silnou negací (§ 5.3), tedy TŘI výroky. Kdyby
+        se to dělo tady, vrátilo by `attach` jedno id a zapsalo tři —
+        volající by neměl čím ta pravidla odvolat. Horší varianta byla ale
+        ta dosavadní: marker se zapsal, index se naplnil, a NEODVODILO SE
+        NIC. Táž báze pak odpovídala `N` nebo `U` podle toho, kterými
+        dveřmi se do ní psalo. Jedny dveře jsou `add_disjoint`.
+        """
+        if (
+            isinstance(formula, Atom)
+            and formula.predicate == P_DISJOINT
+            and not formula.is_negated
+        ):
+            raise AttachError(
+                f"{formula} se nezapisuje přes `attach` — oddělenost je "
+                f"derivační cukr a musí s ní vzniknout i dvojice pravidel "
+                f"se silnou negací; použij `add_disjoint(a, b)`. Na OTÁZKU "
+                f"„jsou oddělené?“ slouží `disjoint_of(a, b)`."
+            )
+        return self._attach(formula, provenance=provenance, derived_from=derived_from)
+
+    def _attach(
+        self,
+        formula: Formula,
+        *,
+        provenance: str = "",
+        derived_from: str | None = None,
+    ) -> str:
+        """Zápis bez zábran u vchodu. Volá se **jen** z `attach` a z
+        `add_disjoint`, která marker zapisuje jako součást své expanze."""
         if isinstance(formula, Rule):
             sid = formula.id
             if sid in self._statements:
@@ -347,12 +391,7 @@ class KnowledgeBase:
             ¬member(x, B) <- member(x, A)
             ¬member(x, A) <- member(x, B)
         """
-        marker = atom(
-            P_DISJOINT,
-            role("a", g1, Quantifier.SELF),
-            role("b", g2, Quantifier.SELF),
-        )
-        sid = self.attach(marker, provenance=provenance)
+        sid = self._attach(disjoint_of(g1, g2), provenance=provenance)
         x = Variable("x", expects=Sort.ENTITY)
         left = self.attach_rule(
             head=member_of(x, g2, negated=True),

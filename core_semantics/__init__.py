@@ -15,6 +15,7 @@ from .ast import (
     GroupOr,
     GroupTerm,
     as_group_terms,
+    before_of,
     group_and,
     group_diff,
     group_or,
@@ -62,6 +63,7 @@ from .ast import (
     atom,
     complete_of,
     contains_of,
+    disjoint_of,
     measure_of,
     member_of,
     node_key,
@@ -72,7 +74,7 @@ from .ast import (
     subset_of,
     within_of,
 )
-from .closures import ClosureIndex
+from .closures import ClosureIndex, InconsistentOrder
 from .engine import (
     Binding,
     Derivation,
@@ -114,6 +116,8 @@ from .cascade import (
     case_tier,
     generate,
     lexicon_tier,
+    role_mapping_tier,
+    surface_role,
 )
 from .gaps import GapFinder, GapReport, OpenGoal
 from .lexicon import (
@@ -123,6 +127,7 @@ from .lexicon import (
     Mood,
     Operation,
     PatternStatus,
+    RoleMapping,
     StructuralSignature,
     Trigger,
     czech_seed,
@@ -135,11 +140,14 @@ from .oracle import (
     ParseOracle,
     Reading,
     RecordedOracle,
+    SegmentationError,
     Token,
     UDPipeOracle,
     Utterance,
     recorded,
 )
+from .contracts import BOUNDARIES, CONTRACTS, Clause, Column, Status
+from .metrics import Metrics, measure
 from .presenter import (
     AuditReport,
     CZECH_PROFILE,
@@ -159,6 +167,7 @@ from .session import (
     asks_for,
     confirms,
     declares_disjoint,
+    reads,
     revokes,
     says,
 )
@@ -196,7 +205,9 @@ __all__ = [
     "GapFinder",
     "GapReport",
     "HARD_TIERS",
+    "InconsistentOrder",
     "LearnedPattern",
+    "before_of",
     "OpenGoal",
     "Mention",
     "Predication",
@@ -219,6 +230,17 @@ __all__ = [
     "Reading",
     "ReasonLine",
     "RecordedOracle",
+    "RoleMapping",
+    "SegmentationError",
+    "role_mapping_tier",
+    "surface_role",
+    "BOUNDARIES",
+    "Metrics",
+    "measure",
+    "CONTRACTS",
+    "Clause",
+    "Column",
+    "Status",
     "Session",
     "StructuralSignature",
     "Token",
@@ -239,6 +261,7 @@ __all__ = [
     "asks_for",
     "combine",
     "confirms",
+    "reads",
     "revokes",
     "says",
     "extension",
@@ -300,6 +323,7 @@ __all__ = [
     "atom",
     "complete_of",
     "contains_of",
+    "disjoint_of",
     "instantiate",
     "measure_of",
     "member_of",

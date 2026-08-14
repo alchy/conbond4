@@ -1,0 +1,397 @@
+"""V3 — zmínka na uzel, § 3.2 a dodatek L‑5.
+
+Tady se česká věta teprve stává faktem. Do L‑5 kaskáda vybrala čtení,
+vypsala `✓ přečteno` a **skončila** — do báze nešlo nic a otázka se
+nevyhodnotila.
+
+**Rozsah je vymezený tím, co etalon potřebuje, a mez se říká nahlas.**
+
+* vlastní jméno → uzel podle jména
+* obecné jméno → `Group`
+* určitý popis → **doložit existující** uzel; víc kandidátů → doptat se
+* zájmena a elipsa **VEN** — potřebují aktivaci (§ 4), etalon je nemá,
+  protože mluví jmény. Neumíme to a předstírat se to nebude.
+
+**Nový uzel vzniká jen `attach`em, nikdy vyhodnocením** (§ 0.2, No Chase).
+Tenhle modul proto **nic nezapisuje**: složí formuli a vrátí ji. Kdo ji
+zapíše, je tah `!`; otázka `?` z ní jen čte, a ptát se na neznámé jméno
+je legitimní `U`, ne chyba.
+
+**Sort plyne z ROLE, ne ze slova.** „Praha" je `Place` v roli `kam`,
+protože `kam` je prostorová role slovníku jádra (§ 3.6) — ne proto, že by
+si tenhle modul o Praze něco myslel. Role, která zůstala povrchová
+(`v+Loc`, protože je `kde` i `kdy`), sort neurčí a **věta se nezakotví**;
+je to táž nerozhodnutost o patro dřív, ne nová.
+
+---
+
+**Co je tu vědomě NEROZHODNUTÉ a čeká na člověka.** Identita jmen bez UNA
+— zda „Praha" ve dvou větách je týž uzel — je otázka, kterou tenhle modul
+**neřeší tím, že by ji odpověděl**: uzel je pojmenovaný lemmatem, takže
+dvě stejná lemmata splynou, a to je ROZHODNUTÍ, ne vlastnost. Kdyby mělo
+padnout jinak, mění se `name_of` a nic víc — proto je to jedna funkce
+a ne rozsypaná logika.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import TYPE_CHECKING, Callable
+
+from .ast import (
+    PLACE_ROLES,
+    TIME_ROLES,
+    UNQUANTIFIED_ROLES,
+    Atom,
+    Entity,
+    Group,
+    Interval,
+    Place,
+    Quantifier,
+    QueryStatus,
+    Sort,
+    SortError,
+    Term,
+    UnquantifiedRole,
+    atom,
+    role,
+)
+from .cascade import (
+    AWAITING_QUANTIFIER,
+    AWAITING_REFERENCE,
+    Mention,
+    Predication,
+    RoleReading,
+)
+from .storage import ResolvedGraphView
+
+if TYPE_CHECKING:  # pragma: no cover — jen pro typy
+    from .engine import Engine
+
+#: Slovní druhy, které tenhle modul zakotvit NEUMÍ. Zájmeno potřebuje
+#: aktivaci (§ 4) — vědět, o čem se zrovna mluví — a to je celá vrstva,
+#: kterou etalon nepotřebuje, protože mluví jmény.
+UNSUPPORTED_UPOS = ("PRON", "DET")
+
+
+class BindingType(Enum):
+    """Jak zmínka přistála na uzlu (M‑6).
+
+    **Enum, ne volný řetězec.** Na tomhle poli visí rozdíl mezi
+    „zakládám nový uzel" a „odkazuji na existující", tedy věc, kterou
+    hlídá § 0.2 — a rozlišovat ji porovnáváním vět je způsob, jak si
+    jednoho dne odpovědět špatně kvůli překlepu.
+    """
+
+    #: Vlastní jméno na kanonický uzel téhož jména (politika Q1/M‑2).
+    CANONICAL_PROPN = "kanonicky"
+    #: Určitý popis doložený na existující uzel (M‑4).
+    RESOLVED_DEFINITE = "určitý popis"
+    #: Nový uzel — vzniká JEN tahem `!` (§ 0.2, M‑3).
+    CREATED_NEW = "založen"
+    #: Obecné jméno jako skupina; žádný uzel se nezakládá ani nehledá.
+    GROUP = "obecné jméno"
+    #: Místo nebo čas, jejichž sort určila role (§ 3.6).
+    FROM_ROLE = "sort z role"
+
+
+@dataclass(frozen=True, slots=True)
+class Anchor:
+    """Zmínka a uzel, na kterém přistála, i s tím PROČ.
+
+    Bez `binding` by se nedalo poznat, jestli uzel vznikl z vlastního
+    jména, nebo se doložil jako určitý popis — a to je rozdíl mezi
+    „zakládám" a „odkazuji", tedy přesně ta věc, kterou § 0.2 hlídá.
+
+    `detail` je dovysvětlení pro člověka („týž uzel jako v tahu #3"),
+    ne nosič rozhodnutí. Rozhoduje `binding`.
+    """
+
+    mention: Mention
+    term: Term
+    binding: BindingType
+    detail: str = ""
+
+    def __str__(self) -> str:
+        note = f"{self.binding.value}{'; ' + self.detail if self.detail else ''}"
+        return f"{self.mention.form} → {self.term.id} ({note})"
+
+
+@dataclass(frozen=True, slots=True)
+class Grounded:
+    """Výsledek zakotvení. `formula is None` znamená OTÁZKU, ne chybu."""
+
+    formula: Atom | None = None
+    anchors: tuple[Anchor, ...] = ()
+    notes: tuple[str, ...] = ()
+    question: str | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.formula is not None
+
+
+def name_of(mention: Mention) -> str:
+    """Jméno uzlu ze zmínky.
+
+    **Jediné místo, kde se rozhoduje identita jmen.** Dnes je to lemma,
+    takže „Praha" ve dvou větách je týž uzel — v otevřeném světě bez UNA
+    je to ROZHODNUTÍ, ne samozřejmost, a bude‑li se měnit, mění se tady
+    a nikde jinde. Rozsypat tuhle úvahu po modulu by znamenalo, že se
+    příště nedá vzít zpátky.
+    """
+    return mention.lemma
+
+
+def _quantifier_for(term: Term, chosen: Quantifier | None) -> Quantifier | None:
+    return chosen if term.SORT is Sort.GROUP else None
+
+
+def _sort_for(role_name: str, term_id: str, concrete: bool) -> Term:
+    if role_name in PLACE_ROLES:
+        return Place(term_id)
+    if role_name in TIME_ROLES:
+        return Interval(term_id)
+    return Entity(term_id) if concrete else Group(term_id)
+
+
+#: `(uzel, druh vazby, dovysvětlení, otázka)`. Uzel `None` znamená doptání.
+_Resolution = tuple[Term | None, BindingType, str, str | None]
+
+_UNRESOLVED: _Resolution = (None, BindingType.GROUP, "", None)
+
+
+def _ground_role(reading: RoleReading, view: ResolvedGraphView) -> _Resolution:
+    mention = reading.mention
+
+    if reading.resolved:
+        # Reference, kterou ROZHODL ČLOVĚK. Nehledá se znovu: rozhodnutí
+        # je tah v žurnálu, takže se při přehrání nesmí ptát podruhé —
+        # a nesmí ani vyjít jinak, kdyby mezitím v bázi přibyl další
+        # kandidát.
+        return (
+            _sort_for(reading.name, reading.resolved, concrete=True),
+            BindingType.RESOLVED_DEFINITE,
+            "rozhodl jsi ty",
+            None,
+        )
+
+    if mention.upos in UNSUPPORTED_UPOS:
+        return (
+            None,
+            BindingType.GROUP,
+            "",
+            f"Na koho odkazuje „{mention.form}“? Zájmena zatím neumím — "
+            f"potřebují vědět, o čem se právě mluví, a to je vrstva, "
+            f"kterou nemám. Řekni to prosím jménem.",
+        )
+
+    if reading.awaiting == AWAITING_QUANTIFIER:
+        return _UNRESOLVED  # otázku už položila kaskáda; nedublovat ji
+
+    if reading.awaiting == AWAITING_REFERENCE:
+        return _resolve_definite(reading, view)
+
+    if reading.name in UNQUANTIFIED_ROLES:
+        # Místo a čas kvantifikátor nemají a mít nesmí — role sama určuje
+        # sort, takže se tu není na co ptát.
+        return (
+            _sort_for(reading.name, name_of(mention), concrete=False),
+            BindingType.FROM_ROLE,
+            "místo" if reading.name in PLACE_ROLES else "čas",
+            None,
+        )
+
+    if reading.quantifier is None:
+        return _UNRESOLVED
+
+    if reading.quantifier is Quantifier.SELF and mention.upos == "PROPN":
+        return _canonical_name(reading, view)
+    return (
+        _sort_for(reading.name, name_of(mention), concrete=False),
+        BindingType.GROUP,
+        "",
+        None,
+    )
+
+
+def _canonical_name(reading: RoleReading, view: ResolvedGraphView) -> _Resolution:
+    """Vlastní jméno na KANONICKÝ uzel téhož jména (politika Q1, M‑2).
+
+    Doptávat se u každého opakování jména by byl výslech, a protože
+    `same_as` je jen pohled a rozdělení uzlu existuje, je tohle ztotožnění
+    **plně odvolatelné** — proto tu smí být default, který u kvantifikátoru
+    nesmí. Rozdíl je přesně v tom: odvolatelný default s hláškou versus
+    neodvolatelný dohad.
+
+    **Řekne se to nahlas** (podmínka A z M‑2). Tichý default by z toho
+    udělal přesně tu věc, které se tenhle projekt vyhýbá.
+
+    **Konzultuje se `¬same_as`** (podmínka B). Když je o uzlu řečeno, že
+    NENÍ týž jako jiný uzel téhož jména, ztotožnění se nesmí udělat mlčky.
+    """
+    name = name_of(reading.mention)
+    bearers = view.nodes_named(name)
+    if len(bearers) > 1:
+        # Jméno doloženě nese víc uzlů — typicky po rozdělení. Ztotožnit
+        # další zmínku s kterýmkoli z nich by bylo rozhodnutí, které
+        # člověk PRÁVĚ VÝSLOVNĚ ODMÍTL udělat; založit třetí uzel by bylo
+        # ještě horší, protože by to vypadalo, že se nic nestalo.
+        return (
+            None,
+            BindingType.CANONICAL_PROPN,
+            "",
+            f"Kterého „{reading.mention.form}“ myslíš? To jméno nese víc "
+            f"uzlů: " + ", ".join(bearers) + ". Sám to rozhodnout nemůžu — "
+            f"právě proto jsi je rozdělil.",
+        )
+    node = _sort_for(reading.name, bearers[0] if bearers else name, concrete=True)
+    known = view.is_known(node.id)
+    disputed = view.index.disputed_with(node.id)
+    if disputed:
+        return (
+            None,
+            BindingType.CANONICAL_PROPN,
+            "",
+            f"Je „{reading.mention.form}“ týž {node.id}, o kterém už řeč "
+            f"byla? Báze si o jeho totožnosti s "
+            + ", ".join(disputed)
+            + " protiřečí, takže to mlčky ztotožnit nemůžu.",
+        )
+    if known:
+        return (node, BindingType.CANONICAL_PROPN, "týž uzel, o kterém už řeč byla", None)
+    return (node, BindingType.CREATED_NEW, "", None)
+
+
+def _resolve_definite(reading: RoleReading, view: ResolvedGraphView) -> _Resolution:
+    """Určitý popis se **dokládá**, nezakládá.
+
+    „To auto" mluví o autě, které už v bázi je. Kdyby se z určitého popisu
+    zakládal nový uzel, systém by si na každé zopakování téže věci vyrobil
+    dalšího dvojníka a nikdy by se nedozvěděl, že jsou to tíž.
+
+    **I jednoznačné doložení se vypíše** (podmínka z M‑4): odkaz, který
+    vyšel na jediného kandidáta, je pořád rozhodnutí systému, ne fakt
+    z věty.
+    """
+    group = name_of(reading.mention)
+    found = view.known_members(group)
+    if not found:
+        return (
+            None,
+            BindingType.RESOLVED_DEFINITE,
+            "",
+            f"O kterém „{reading.mention.form}“ mluvíš? V bázi žádný není, "
+            f"a určitý popis nezakládá — jen odkazuje.",
+        )
+    if len(found) > 1:
+        return (
+            None,
+            BindingType.RESOLVED_DEFINITE,
+            "",
+            f"O kterém „{reading.mention.form}“ mluvíš? Znám jich víc: "
+            + ", ".join(sorted(found))
+            + ".",
+        )
+    return (
+        Entity(found[0]),
+        BindingType.RESOLVED_DEFINITE,
+        "jediný kandidát",
+        None,
+    )
+
+
+def semantic_rejection(engine: "Engine") -> Callable[[Predication], str | None]:
+    """Důvod, proč báze čtení odmítá — nebo `None` (K‑7).
+
+    Vrací se **pojmenovaný** důvod, ne pravdivostní hodnota. Kdyby patro
+    dostalo jen `True`/`False`, nemělo by co napsat do stopy, a
+    eliminace bez důvodu je přesně to, čemu se K‑7 brání.
+
+    Odmítá se ze tří důvodů a z žádných jiných:
+
+    1. **typová chyba** — zakotvení spadne na sortu nebo kvantifikátoru;
+    2. **formální konflikt** — v bázi je doložené `p̄` k tomu, co by
+       čtení tvrdilo;
+    3. **nesplnitelný constraint** — dotaz na výslednou formuli vyjde
+       `CONFLICT`, tedy báze by po zápisu tvrdila `p` i `p̄`.
+
+    **Nezakotvitelné čtení se neodmítá.** Chybějící kvantifikátor není
+    rozpor, je to otevřená otázka — a smíchat obojí by znamenalo vyhodit
+    čtení za to, že se na ně systém ještě nezeptal.
+    """
+
+    def reject(predication: Predication) -> str | None:
+        try:
+            grounded = ground(predication, engine.kb.view())
+        except SortError as exc:
+            return f"typová chyba: {exc}"
+        if grounded.formula is None:
+            return None  # nedá se posoudit, tedy se neodmítá
+        result = engine.ask(grounded.formula)
+        if result.status is QueryStatus.CONFLICT:
+            return f"báze tvrdí i opak: {grounded.formula}"
+        if result.status is QueryStatus.PROVEN_FALSE:
+            return f"báze má doložené, že {grounded.formula} neplatí"
+        return None
+
+    return reject
+
+
+def ground(predication: Predication, view: ResolvedGraphView) -> Grounded:
+    """Zmínky na uzly a čtení na formuli.
+
+    **Nic nezapisuje.** Vrátí formuli; zapsat ji je tah `!`, a jen tam smí
+    vzniknout nový uzel (§ 0.2).
+    """
+    anchors: list[Anchor] = []
+    notes: list[str] = []
+    questions: list[str] = []
+    fillers = []
+
+    for reading in predication.roles:
+        term, binding, detail, question = _ground_role(reading, view)
+        if question:
+            questions.append(question)
+        if term is None:
+            if not question:
+                notes.append(
+                    f"[NEZAKOTVENO: role {reading.name} — "
+                    + (
+                        "čeká na kvantifikátor"
+                        if reading.awaiting == AWAITING_QUANTIFIER
+                        else "role zůstala povrchová, takže neurčuje sort "
+                        "filleru"
+                    )
+                    + "]"
+                )
+            continue
+        anchors.append(Anchor(reading.mention, term, binding, detail))
+        # Kvantifikátor nese JEN skupina. Individuum, místo ani čas ho
+        # `RoleTerm` nepřipustí a je to správně: `∀` nad jedním uzlem nic
+        # neznamená a `·` u vlastního jména taky ne — konkrétnost je
+        # vlastnost sortu, ne značka navíc. `Operation.SELF` z L‑3 tedy
+        # říká „tohle je individuum", a odpověď na to je Entity BEZ
+        # kvantifikátoru, ne Entity se značkou `·`.
+        fillers.append(
+            role(reading.name, term, _quantifier_for(term, reading.quantifier))
+        )
+
+    if questions or notes or len(fillers) != len(predication.roles):
+        return Grounded(
+            anchors=tuple(anchors),
+            notes=tuple(notes),
+            question=" ".join(questions) if questions else None,
+        )
+
+    try:
+        formula = atom(
+            predication.predicate, *fillers, negated=predication.negated
+        )
+    except UnquantifiedRole as exc:  # pragma: no cover — pojistka, ne cesta
+        return Grounded(
+            anchors=tuple(anchors),
+            notes=(f"[NEZAKOTVENO: {exc}]",),
+        )
+    return Grounded(formula=formula, anchors=tuple(anchors))

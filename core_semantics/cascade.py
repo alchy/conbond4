@@ -30,10 +30,16 @@ strukturám.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Sequence
 
-from .lexicon import Lexicon, Mood, StructuralSignature
+from .ast import UNQUANTIFIED_ROLES, Quantifier
+from .lexicon import (
+    Lexicon,
+    Mood,
+    Operation,
+    StructuralSignature,
+)
 from .oracle import Reading, Token
 from .storage import ResolvedGraphView
 
@@ -71,6 +77,45 @@ class Mention:
 
 
 @dataclass(frozen=True, slots=True)
+class RoleReading:
+    """Role čtení: jméno, zmínka, a **jak je fillér kvantifikovaný**.
+
+    Kvantifikátor je vlastní pole, ne součást `Mention`, schválně. Zmínka
+    je nezpochybnitelná kotva — úsek promluvy, který tam prostě je.
+    Kvantifikátor je oproti tomu **výklad** té zmínky, a ten se může
+    ukázat jako špatný a jde odvolat. Kdyby seděly v jednom objektu,
+    nešlo by z čtení poznat, co dal rozbor a co dovodila kaskáda.
+
+    `quantifier is None` znamená „ještě nerozhodnuto", ne „žádný". Jádro
+    bez kvantifikátoru skupinu do role nepustí (`UnquantifiedRole`), takže
+    tenhle stav je otevřená otázka, kterou musí někdo zodpovědět — ne
+    hodnota, se kterou se dá počítat.
+    """
+
+    name: str
+    mention: Mention
+    quantifier: Quantifier | None = None
+    #: Slovo, ze kterého kvantifikátor plyne. `None` = plyne z tvaru.
+    determiner: Mention | None = None
+    #: Odkud se kvantifikátor vzal — do stopy a do vysvětlení (I‑14).
+    source: str = ""
+    #: Tvar, na který se čeká odpověď, dokud `quantifier` chybí.
+    pending: StructuralSignature | None = None
+    #: NA CO se čeká. Dvě otevřené role nemusí čekat na totéž: holé jméno
+    #: čeká na kvantifikátor, „ta učitelka" na to, KTERÝ uzel to je. Slít
+    #: obojí do jedné otázky by znamenalo ptát se na špatnou věc.
+    awaiting: str = ""
+    #: Uzel, který na otevřenou referenci ROZHODL ČLOVĚK (tah `?→`).
+    #: Nese se v roli, takže je součástí žurnálu — a `replay` se proto
+    #: neptá podruhé (M‑4).
+    resolved: str = ""
+
+    def rendered(self) -> str:
+        mark = self.quantifier.value if self.quantifier else ""
+        return f"{self.name}:{mark}{self.mention.lemma}"
+
+
+@dataclass(frozen=True, slots=True)
 class Predication:
     """Čtení převedené na strukturu: lemma přísudku a role → zmínka.
 
@@ -78,11 +123,15 @@ class Predication:
     (determinismus, I‑22)."""
 
     predicate: str
-    roles: tuple[tuple[str, Mention], ...]
+    roles: tuple[RoleReading, ...]
     mood: Mood = Mood.UNKNOWN
+    #: SILNÁ negace `p̄` (§ 4), ne nepřítomnost důkazu. „Tučňák nelétá"
+    #: je doložené tvrzení o tučňácích, ne přiznání, že o nich nic nevíme —
+    #: a splynout to nesmí (I‑21).
+    negated: bool = False
 
     def __post_init__(self) -> None:
-        names = [name for name, _ in self.roles]
+        names = [r.name for r in self.roles]
         if len(names) != len(set(names)):
             # Táž kontrola jako v `Atom`. Bez ní by V2 vyrobila čtení,
             # které V3 nikdy nepřevede na platný atom — jádro duplicitní
@@ -93,20 +142,27 @@ class Predication:
             )
 
     def role(self, name: str) -> Mention | None:
-        for role_name, mention in self.roles:
-            if role_name == name:
-                return mention
+        found = self.reading(name)
+        return found.mention if found else None
+
+    def reading(self, name: str) -> RoleReading | None:
+        for role in self.roles:
+            if role.name == name:
+                return role
         return None
 
+    def open_roles(self) -> tuple[RoleReading, ...]:
+        """Role, které na něco teprve čekají — na kvantifikátor nebo na
+        rozřešení odkazu."""
+        return tuple(r for r in self.roles if r.awaiting)
+
     def signature(self) -> str:
-        names = ",".join(name for name, _ in self.roles)
+        names = ",".join(r.name for r in self.roles)
         return f"{self.predicate}({names})"
 
     def __str__(self) -> str:
-        body = ", ".join(
-            f"{name}:{mention.lemma}" for name, mention in self.roles
-        )
-        return f"{self.predicate}({body})"
+        bar = "¬" if self.negated else ""
+        return f"{bar}{self.predicate}({', '.join(r.rendered() for r in self.roles)})"
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,10 +187,27 @@ class Verdict:
     survivors: tuple[Candidate, ...]
     trace: tuple[str, ...]
     question: str | None = None
+    #: Role, které čekají na kvantifikátor, jako `(jméno role, tvar)`.
+    #: Prázdné neznamená „vše rozhodnuto" u nerozhodnutého čtení — počítá
+    #: se jen z jediného přeživšího, protože ptát se na kvantifikátor
+    #: v čtení, které možná není to pravé, je otázka na špatnou věc.
+    pending: tuple[tuple[str, StructuralSignature], ...] = ()
 
     @property
     def decided(self) -> Candidate | None:
+        """Vybrané čtení, **a jen když zbylo právě jedno**.
+
+        Nula znamená „tuhle větu neumím přečíst", dva a víc znamená otázku.
+        Vracet v obou případech `survivors[0]` by z kaskády udělalo hadače
+        s dobrým vysvětlením — a tichá volba měnící význam není cesta
+        nikdy (I‑1)."""
         return self.survivors[0] if len(self.survivors) == 1 else None
+
+    @property
+    def complete(self) -> bool:
+        """Rozhodnuto A bez otevřených rolí — teprve tohle jde poslat V3."""
+        decided = self.decided
+        return decided is not None and not decided.predication.open_roles()
 
     def render(self) -> tuple[str, ...]:
         lines = [f"kandidátů: {len(self.survivors)}"]
@@ -176,15 +249,53 @@ def _predicate_head(reading: Reading) -> tuple[Token, Token] | None:
     return root, root
 
 
-def _role_for(token: Token) -> str | None:
-    """Povrchové pojmenování role (§ 12/1). Sémantika se nehádá."""
+#: Deprel okolností, které se pojmenovávají povrchově z předložky a pádu.
+CIRCUMSTANCE_DEPRELS = ("obl", "nmod")
+
+
+def surface_role(token: Token, reading: Reading) -> str:
+    """Povrchové pojmenování okolnosti z PŘEDLOŽKY A PÁDU (§ 12/1).
+
+    Pojmenovat okolnost jejím `deprel` nestačí: „v pondělí" i „do Prahy"
+    jsou obě `obl`, takže by dostaly totéž jméno role a věta by spadla na
+    duplicitě — a dvě příslovečná určení má v češtině obrovská část vět.
+
+    Rozbor všechno potřebné dodává: u okolnosti visí dítě s `deprel=case`
+    nesoucí lemma předložky a nominál nese `Case`. Sémantika se přitom
+    nehádá (INV‑11) — `v+Loc` je popis tvaru, ne významu. Že `v+Loc`
+    znamená jednou `kde` a jednou `kdy`, řeší naučené mapování rolí, ne
+    tenhle kód.
+    """
+    preposition = next(
+        (
+            child.lemma
+            for child in reading.children(token.index)
+            if child.deprel == "case"
+        ),
+        None,
+    )
+    case = token.feat("Case")
+    if preposition and case:
+        return f"{preposition}+{case}"
+    if preposition:
+        return preposition
+    if case:
+        return case
+    return token.deprel
+
+
+def _role_for(token: Token, reading: Reading) -> str | None:
+    """Jméno role pro závislý člen. Jádro rolí je uzavřené, okolnosti
+    povrchové (§ 12/1)."""
     if token.deprel == "nsubj":
         return ROLE_SUBJECT
     if token.deprel in ("obj", "iobj"):
         return ROLE_OBJECT
     if token.deprel in ("amod", "advmod"):
         return ROLE_MANNER
-    if token.deprel in ("obl", "nmod", "xcomp", "ccomp"):
+    if token.deprel in CIRCUMSTANCE_DEPRELS:
+        return surface_role(token, reading)
+    if token.deprel in ("xcomp", "ccomp"):
         return token.deprel
     return None
 
@@ -215,32 +326,32 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
     carrier, anchor = head
 
     nominals: list[Token] = []
-    fixed: list[tuple[str, Mention]] = []
+    fixed: list[RoleReading] = []
     for token in reading.children(anchor.index):
         if token.deprel == "cop":
             continue
         if token.deprel in NOMINAL_DEPRELS:
             nominals.append(token)
             continue
-        role = _role_for(token)
+        role = _role_for(token, reading)
         if role is not None:
-            fixed.append((role, _mention(token)))
+            fixed.append(RoleReading(role, _mention(token)))
 
-    variants: list[tuple[tuple[str, Mention], ...]] = []
+    variants: list[tuple[RoleReading, ...]] = []
     if carrier is not anchor:
         # Spona: jmenná část JE obsah — to říká stavba věty, ne odhad.
         # Nominály tedy plní jen podmět.
-        fixed.append((ROLE_OBJECT, _mention(anchor)))
-        variants = [((ROLE_SUBJECT, _mention(token)),) for token in nominals] or [()]
+        fixed.append(RoleReading(ROLE_OBJECT, _mention(anchor)))
+        variants = [(RoleReading(ROLE_SUBJECT, _mention(t)),) for t in nominals] or [()]
     elif len(nominals) == 2:
         first, second = nominals
         variants = [
-            ((ROLE_SUBJECT, _mention(a)), (ROLE_OBJECT, _mention(b)))
+            (RoleReading(ROLE_SUBJECT, _mention(a)), RoleReading(ROLE_OBJECT, _mention(b)))
             for a, b in ((first, second), (second, first))
         ]
     else:
         kept = tuple(
-            (_role_for(token) or ROLE_SUBJECT, _mention(token))
+            RoleReading(_role_for(token, reading) or ROLE_SUBJECT, _mention(token))
             for token in nominals
         )
         variants = [kept]
@@ -249,13 +360,20 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
     for variant in variants:
         if not variant and not fixed:
             continue
-        roles = tuple(sorted((*fixed, *variant), key=lambda pair: pair[0]))
+        roles = tuple(sorted((*fixed, *variant), key=lambda r: r.name))
+        names = [r.name for r in roles]
+        if len(names) != len(set(names)):
+            # Dvě určení se stejným povrchovým tvarem („v Praze v pondělí").
+            # Rozlišit by je šlo jen podle významu nominálu, a ten se nehádá
+            # (INV‑11). Tahle varianta se proto negeneruje a kaskáda se ptá.
+            continue
         follows_parser = all(
             _role_for(
-                next(t for t in nominals if t.index == mention.token_index)
+                next(t for t in nominals if t.index == r.mention.token_index),
+                reading,
             )
-            in (role, None)
-            for role, mention in variant
+            in (r.name, None)
+            for r in variant
         )
         if follows_parser:
             origin = "rozbor parseru"
@@ -301,7 +419,7 @@ def agreement_tier(
     survivors = []
     for candidate in candidates:
         subject = candidate.predication.role(ROLE_SUBJECT)
-        number = subject.feat("Number") if subject else None
+        number = subject.feat("Number") if subject is not None else None
         if number is None or number == verb_number:
             survivors.append(candidate)
     if len(survivors) == len(candidates):
@@ -309,6 +427,56 @@ def agreement_tier(
     return tuple(survivors), (
         f"[PROČ: shoda čísla — přísudek {verb_number}, "
         f"podmět musí být týž]"
+    )
+
+
+#: Determinátory, které v češtině nesou zápornou shodu. Sloveso je u nich
+#: záporné taky, a přesto je to JEDNA negace.
+NEGATIVE_CONCORD_LEMMAS = ("žádný", "nikdo", "nic", "nijaký")
+
+
+def negation_tier(
+    candidates: tuple[Candidate, ...], reading: Reading
+) -> tuple[tuple[Candidate, ...], str | None]:
+    """Negace z `Polarity=Neg` — L‑4. Tvrdý signál, žádné učení.
+
+    Česká negace je předpona přísudku (`nelétá`, `nesmí`) a rozbor ji dává
+    jako `Polarity=Neg`. Je to morfologie stejně jako shoda čísla nebo pád,
+    takže se sem nic neučí — není co, `Polarity=Neg` má jeden význam.
+
+    **Je to SILNÁ negace `p̄`, ne nepřítomnost důkazu (I‑21).** „Tučňák
+    nelétá" je doložené tvrzení o tučňácích; „o tučňácích nic nevím" je
+    něco úplně jiného a jádro to drží jako dva různé stavy. Kdyby se
+    zápor přečetl jako mezera, dialog E by přestal dávat `CONFLICT` a
+    začal dávat „nevím".
+
+    **Záporná shoda se nesčítá.** „Petr nemá žádné auto" má zápor dvakrát
+    — na slovese i na determinátoru — a je to JEDNA negace, ne dvě. Sčítat
+    je by z popření udělalo tvrzení, což je přesně opačný význam.
+    """
+    head = _predicate_head(reading)
+    if head is None or head[0].feat("Polarity") != "Neg":
+        return candidates, None
+    concord = [
+        token.form
+        for token in reading.tokens
+        if token.lemma in NEGATIVE_CONCORD_LEMMAS
+    ]
+    note = f"[ZÁPOR: „{head[0].form}“ nese Polarity=Neg — silná negace p̄]"
+    if concord:
+        note = (
+            f"[ZÁPOR: „{head[0].form}“ + „{'“, „'.join(concord)}“ — záporná "
+            f"shoda, tedy JEDNA negace, ne dvě]"
+        )
+    return (
+        tuple(
+            Candidate(
+                replace(candidate.predication, negated=True),
+                origin=candidate.origin,
+            )
+            for candidate in candidates
+        ),
+        note,
     )
 
 
@@ -333,27 +501,54 @@ def case_tier(
     return tuple(survivors), "[PROČ: pádová mřížka — podmět Nom, předmět Acc]"
 
 
-def base_consistency_tier(view: ResolvedGraphView) -> Tier:
-    """Konzistence s bází: přednost má čtení, jehož vztahová signatura
-    v grafu už existuje.
+#: Důvod, proč báze čtení odmítá — nebo `None`, když žádný nemá.
+#: Injektuje se zvenčí, protože rozhodnout se dá až nad ZAKOTVENOU
+#: formulí, a zakotvení je V3. Kaskáda o něm nemá vědět.
+SemanticCheck = Callable[[Predication], str | None]
 
-    Statistika a báze **navrhují**, nerozhodují (I‑2) — patro proto smí
-    jen zúžit množinu, nikdy ji doplnit.
+
+def base_consistency_tier(reject: SemanticCheck) -> Tier:
+    """Konzistence s bází — **jen z DEFINOVANÉHO sémantického důvodu** (K‑7).
+
+    Dřív tohle patro nechávalo čtení, jejichž vztah už v bázi je, a
+    ostatní vyhazovalo. To ale není konzistence, to je POPULARITA: báze
+    dává přednost tomu, co už jednou přečetla, čímž si své dřívější
+    čtení potvrzuje. Self‑confirming loop — čím víc se systém splete
+    stejným směrem, tím jistěji se splete znovu, a nikdy se to
+    neprojeví jako chyba, protože každý další krok „sedí".
+
+    Báze proto smí čtení eliminovat jen z důvodu, který jde pojmenovat:
+
+    * **formální konflikt** — zakotvená formule by tvrdila `p` tam, kde
+      je doložené `p̄`;
+    * **typová chyba** — fillér nesedí do sortu role;
+    * **nesplnitelný constraint** — třeba porušená oddělenost skupin.
+
+    „Tahle interpretace se mi nehodí" mezi ně nepatří.
+
+    **Nejde‑li čtení zakotvit, NEELIMINUJE SE.** Nedá se o něm nic
+    tvrdit, a mlčky ho vyřadit by byla táž tichá volba v jiném kabátě.
+    Praktický důsledek: dokud role čekají na kvantifikátor, tohle patro
+    většinou neudělá nic — a je to poctivější než dřívější aktivita,
+    která rozhodovala z nesprávného důvodu.
     """
 
     def tier(
         candidates: tuple[Candidate, ...], reading: Reading
     ) -> tuple[tuple[Candidate, ...], str | None]:
-        known = [
-            candidate
-            for candidate in candidates
-            if view.known_members(candidate.predication.predicate)
-        ]
-        if not known or len(known) == len(candidates):
+        reasons = [(c, reject(c.predication)) for c in candidates]
+        survivors = tuple(c for c, why in reasons if why is None)
+        if len(survivors) == len(candidates):
             return candidates, None
-        return tuple(known), (
-            "[PROČ: vztah téhož jména už v bázi je]"
-        )
+        if not survivors:
+            # Odmítnout VŠECHNO by znamenalo tvrdit, že věta nedává smysl,
+            # jenže rozporná věta smysl dává — jen se s bází neshoduje.
+            # To je nález pro člověka, ne důvod k mlčení.
+            note = "; ".join(why for _, why in reasons if why)
+            what = "čtení je" if len(candidates) == 1 else "každé čtení je"
+            return candidates, f"[POZOR: {what} v rozporu s bází — {note}]"
+        dropped = "; ".join(why for _, why in reasons if why)
+        return survivors, f"[PROČ: rozpor s bází — {dropped}]"
 
     return tier
 
@@ -392,9 +587,292 @@ def lexicon_tier(lexicon: Lexicon) -> Tier:
 # Kaskáda
 # --------------------------------------------------------------------------
 
+def role_mapping_tier(lexicon: Lexicon) -> Tier:
+    """Přejmenuje povrchovou roli na kanonickou podle NAUČENÉHO mapování.
+
+    Přepisuje jen tam, kde je mapování **jednoznačné** a kde nové jméno
+    nekoliduje. Má‑li povrchový tvar víc kandidátů (`v+Loc` je `kde` i
+    `kdy`), patro to zapíše do trace a jméno nechá povrchové — vybrat tiše
+    by znamenalo uhádnout význam nominálu, což INV‑11 zakazuje.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        renamed: list[Candidate] = []
+        for candidate in candidates:
+            roles: list[RoleReading] = []
+            taken = {r.name for r in candidate.predication.roles}
+            for role in candidate.predication.roles:
+                options = lexicon.role_candidates(role.name)
+                if len(options) > 1:
+                    notes.append(
+                        f"[POZOR: {role.name} může být "
+                        + " nebo ".join(o.canonical for o in options)
+                        + "]"
+                    )
+                    roles.append(role)
+                    continue
+                if len(options) == 1 and options[0].canonical not in taken:
+                    taken.discard(role.name)
+                    taken.add(options[0].canonical)
+                    roles.append(replace(role, name=options[0].canonical))
+                    continue
+                roles.append(role)
+            renamed.append(
+                Candidate(
+                    # `replace`, ne nový `Predication`. Stavět ho znovu
+                    # znamená vyjmenovat všechna pole — a co se zapomene,
+                    # tiše zmizí. Takhle zmizel zápor, dokud to nechytil
+                    # test: „Tučňák nelétá" se přejmenováním rolí změnilo
+                    # na „Tučňák létá".
+                    replace(
+                        candidate.predication,
+                        roles=tuple(sorted(roles, key=lambda r: r.name)),
+                    ),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(renamed), "; ".join(notes) if notes else None
+
+    return tier
+
+
+#: Na co otevřená role čeká.
+AWAITING_QUANTIFIER = "kvantifikátor"
+AWAITING_REFERENCE = "odkaz"
+
+#: Zmínky, které se v roli stanou uzlem nebo skupinou, a potřebují proto
+#: kvantifikátor. **Přívlastek je mezi nimi**: „modrý" je podle § 6.12
+#: (dialog F) `group("modrý")`, tedy skupina jako každá jiná — a skupina
+#: bez kvantifikátoru se do role nedostane.
+QUANTIFIED_UPOS = ("NOUN", "PROPN", "PRON", "ADJ")
+
+#: Překlad z uzavřeného menu do jádra. `DEFINITE` tu ZÁMĚRNĚ není: určitost
+#: není kvantifikace, odkazuje na už existující uzel a rozřešit ten odkaz
+#: je práce V3. Kvantifikátor se z ní proto neodvozuje — vyplyne až z toho,
+#: který uzel to je.
+QUANTIFIER_OF: dict[Operation, Quantifier] = {
+    Operation.FOR_ALL: Quantifier.FOR_ALL,
+    Operation.EXISTS: Quantifier.EXISTS,
+    Operation.SELF: Quantifier.SELF,
+}
+
+
+def _determiner_of(mention: Mention, reading: Reading) -> Token | None:
+    """Determinátor zmínky — dítě s `deprel=det`."""
+    return next(
+        (
+            child
+            for child in reading.children(mention.token_index)
+            if child.deprel == "det"
+        ),
+        None,
+    )
+
+
+def _token_at(index: int, reading: Reading) -> Token | None:
+    return next((t for t in reading.tokens if t.index == index), None)
+
+
+def quantifier_tier(lexicon: Lexicon) -> Tier:
+    """Kvantifikátor na roli — L‑3. Řadí se **za** mapování rolí.
+
+    Jádro vyžaduje kvantifikátor u každého skupinového filleru; bez něj
+    padá `role('kdo', Group('Učitelka'))` na `UnquantifiedRole` a z české
+    věty se skupinou v roli nejde postavit ani jeden platný atom.
+
+    Rozhoduje se ve dvou krocích a **žádný z nich není dohad**:
+
+    1. **Explicitní determinátor** — „každý", „nějaký", „ten". Slovo se
+       najde v lexikonu jako naučený vzor s proveniencí a statusem.
+    2. **Holé jméno** — čeština nemá členy, takže tohle je většinový
+       případ. Rozhoduje se podle TVARU (`upos`, číslo, pád, `deprel`),
+       a i to je naučený vzor, jen se spouštěčem bez slova.
+
+    **Když nerozhodne ani jeden krok, nedosadí se nic.** Role zůstane
+    s `quantifier=None` a nese `pending` — tvar, na který se čeká
+    odpověď. Implicitní hodnota v kódu by byla tichá volba měnící význam:
+    „Kočka je savec" je o každé kočce, „Kočka spí na gauči" o jedné
+    konkrétní, a rozhodnout to podle tvaru bez potvrzení znamená hádat
+    (I‑1). Dvojznačnost se hlásí stejně — víc kandidátů znamená otázku,
+    ne favorita.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        decided: list[Candidate] = []
+        for candidate in candidates:
+            roles: list[RoleReading] = []
+            for role in candidate.predication.roles:
+                if (
+                    role.quantifier is not None
+                    or role.mention.upos not in QUANTIFIED_UPOS
+                    # Místo a čas se NEKVANTIFIKUJÍ — `RoleTerm` to u nich
+                    # ani nepřipustí. Ptát se na kvantifikátor role `kam`
+                    # by byla otázka bez odběratele: ať člověk odpoví
+                    # cokoli, jádro to zahodí.
+                    or role.name in UNQUANTIFIED_ROLES
+                ):
+                    roles.append(role)
+                    continue
+                resolved, note = _quantify(role, candidate.predication.mood, reading, lexicon)
+                if note:
+                    notes.append(note)
+                roles.append(resolved)
+            decided.append(
+                Candidate(
+                    replace(candidate.predication, roles=tuple(roles)),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(decided), "; ".join(notes) if notes else None
+
+    return tier
+
+
+def _quantify(
+    role: RoleReading, mood: Mood, reading: Reading, lexicon: Lexicon
+) -> tuple[RoleReading, str | None]:
+    determiner = _determiner_of(role.mention, reading)
+    if determiner is not None:
+        signature = StructuralSignature(
+            lemma=determiner.lemma,
+            mood=mood,
+            upos=determiner.upos,
+            deprel=determiner.deprel,
+        )
+        origin = f"determinátor „{determiner.form}“"
+    else:
+        token = _token_at(role.mention.token_index, reading)
+        signature = StructuralSignature(
+            lemma="",
+            # NÁLADA SE DO TVARU NEDÁVÁ, a je to podstatné. U spouštěcího
+            # SLOVA na ní záleží („nebo" je v tvrzení sjednocení a v otázce
+            # alternativa), ale jak je kvantifikované holé jméno, na tahu
+            # dialogu nezávisí: „Učitelka učí." a „Učí učitelka?" mluví
+            # o týchž učitelkách. Kdyby tam nálada byla, člověk by dostal
+            # DVAKRÁT TUTÉŽ otázku — jednou za větu, jednou za otázku —
+            # a druhá by se od první nedala rozeznat ani textem.
+            mood=Mood.UNKNOWN,
+            upos=role.mention.upos,
+            deprel=token.deprel if token else "",
+            number=role.mention.feat("Number") or "",
+            case=role.mention.feat("Case") or "",
+        )
+        origin = f"tvar {signature.shape()}"
+
+    matches = lexicon.quantifier_candidates(signature)
+    if len(matches) > 1:
+        return (
+            replace(role, pending=signature, awaiting=AWAITING_QUANTIFIER),
+            f"[POZOR: {role.name} — {origin} připouští "
+            + " nebo ".join(m.operation.value for m in matches)
+            + "]",
+        )
+    if not matches:
+        return (
+            replace(role, pending=signature, awaiting=AWAITING_QUANTIFIER),
+            f"[CHYBÍ: kvantifikátor role {role.name} ({origin})]",
+        )
+    quantifier = QUANTIFIER_OF.get(matches[0].operation)
+    if quantifier is None:
+        # `DEFINITE`. Poctivá odpověď, jen se čeká na NĚCO JINÉHO —
+        # kvantifikátor z určitosti plyne teprve tehdy, až se ví, na který
+        # uzel se odkazuje, a to je V3.
+        return (
+            replace(
+                role,
+                determiner=_mention(determiner) if determiner else None,
+                source=f"{origin} → určitost",
+                awaiting=AWAITING_REFERENCE,
+            ),
+            f"[URČITOST: {role.name} odkazuje na už zmíněný uzel; "
+            f"rozřešení je V3]",
+        )
+    return (
+        replace(
+            role,
+            quantifier=quantifier,
+            determiner=_mention(determiner) if determiner else None,
+            source=origin,
+        ),
+        None,
+    )
+
+
+#: Slovní druhy, které něco znamenají. Předložka nebo spojka se do role
+#: nedostane nikdy a hlásit ji jako ztrátu by byl šum, ve kterém by
+#: skutečná ztráta zanikla.
+MEANINGFUL_UPOS = ("NOUN", "PROPN", "ADJ", "VERB", "NUM", "PRON")
+
+#: Značka ztráty ve stopě. Je to konstanta, protože ji píše kaskáda a čte
+#: `Session` — a poznávat vlastní hlášku podle uhodnutého prefixu je přesně
+#: ten druh vazby, který se tiše rozejde.
+DROPPED_PREFIX = "[ZAHOZENO:"
+
+
+def has_dropped(trace: Sequence[str]) -> bool:
+    return any(step.startswith(DROPPED_PREFIX) for step in trace)
+
+
+def dropped_tokens(reading: Reading, predication: Predication) -> tuple[Token, ...]:
+    """Významové tokeny, které se nedostaly do žádné role ani do přísudku.
+
+    **Mlčky zahodit kus věty je horší než ji nepřečíst.** Čtení, ze
+    kterého něco vypadlo, se tváří úplně — a „Filipovo auto je modré"
+    tak vyjde jako tvrzení o všech autech, se značkou „přečteno" a bez
+    jediného znaménka, že se něco ztratilo. Neschopnost přečíst
+    přivlastnění je poctivá mez; **nepřiznat ji** je vada.
+    """
+    used = {role.mention.token_index for role in predication.roles}
+    head = _predicate_head(reading)
+    if head is not None:
+        used |= {head[0].index, head[1].index}
+    return tuple(
+        token
+        for token in reading.tokens
+        if token.upos in MEANINGFUL_UPOS and token.index not in used
+    )
+
+
+def _dropped_note(reading: Reading, predication: Predication) -> str | None:
+    lost = dropped_tokens(reading, predication)
+    if not lost:
+        return None
+    parts = []
+    for token in lost:
+        head = _token_at(token.head, reading)
+        under = f" pod „{head.form}“" if head is not None else ""
+        parts.append(f"„{token.form}“ ({token.deprel}{under})")
+    return (
+        DROPPED_PREFIX + " " + ", ".join(parts) + " — pro tenhle vztah role "
+        "není, takže se do čtení nedostalo]"
+    )
+
+
+def _colliding_circumstances(reading: Reading) -> str | None:
+    """Povrchový tvar, který ve větě nese víc než jedno určení."""
+    head = _predicate_head(reading)
+    if head is None:
+        return None
+    seen: dict[str, int] = {}
+    for token in reading.children(head[1].index):
+        if token.deprel in CIRCUMSTANCE_DEPRELS:
+            name = surface_role(token, reading)
+            seen[name] = seen.get(name, 0) + 1
+    duplicates = sorted(name for name, count in seen.items() if count > 1)
+    return ", ".join(duplicates) if duplicates else None
+
+
 #: Tvrdá patra, která nepotřebují bázi ani naučené vzory. Pořadí je pořadí
-#: ze § 5.2: morfologie dřív než cokoli statistického.
-HARD_TIERS: tuple[Tier, ...] = (agreement_tier, case_tier)
+#: ze § 5.2: morfologie dřív než cokoli statistického. `negation_tier` sem
+#: patří ze stejného důvodu jako shoda a pád — `Polarity=Neg` je tvar, ne
+#: dohad, a učit se na něm není co.
+HARD_TIERS: tuple[Tier, ...] = (agreement_tier, case_tier, negation_tier)
 
 
 def cascade(
@@ -411,19 +889,84 @@ def cascade(
     candidates = generate(reading, mood=mood)
     trace: list[str] = [f"generátor: {len(candidates)} čtení"]
     if not candidates:
+        collision = _colliding_circumstances(reading)
         return Verdict(
             survivors=(),
             trace=tuple(trace),
-            question=None,
+            question=(
+                f"Dvě určení mají týž tvar ({collision}) — které z nich je "
+                f"které? Tvarově je rozlišit neumím."
+                if collision
+                else None
+            ),
         )
     for tier in tiers:
         candidates, why = tier(candidates, reading)
         if why:
             trace.append(f"{why} → zbývá {len(candidates)}")
-        if len(candidates) <= 1:
+        if not candidates:
             break
-    question = None
+        # Smyčka se po rozhodnutí NEUKONČUJE. Ukončení by bylo správné pro
+        # filtry, ale patra, která čtení PŘEPISUJÍ (přejmenování rolí),
+        # by se pak nespustila vůbec — a to je tichá závislost na tom,
+        # kolik kandidátů zbylo. Filtry nad jedním kandidátem nic nedělají.
     if len(candidates) > 1:
         options = " / ".join(str(c.predication) for c in candidates)
-        question = f"Čtu to jako: {options} — které z toho?"
-    return Verdict(survivors=candidates, trace=tuple(trace), question=question)
+        return Verdict(
+            survivors=candidates,
+            trace=tuple(trace),
+            question=f"Čtu to jako: {options} — které z toho?",
+        )
+    # Ztráta se hlásí jen u rozhodnutého čtení: u dvou kandidátů se liší,
+    # a hlásit ztrátu z čtení, které možná není to pravé, mate.
+    if len(candidates) == 1:
+        note = _dropped_note(reading, candidates[0].predication)
+        if note:
+            # Do STOPY, ne odvozením z predikace. Ztracený token v predikaci
+            # nikde není — to je celý ten problém — takže na rozdíl od
+            # otázky na kvantifikátor se tohle spočítat zpětně nedá a musí
+            # se to nést s tahem.
+            trace.append(note)
+    open_roles = tuple(
+        role
+        for candidate in candidates
+        for role in candidate.predication.open_roles()
+    )
+    pending = tuple(
+        (role.name, role.pending) for role in open_roles if role.pending is not None
+    )
+    return Verdict(
+        survivors=candidates,
+        trace=tuple(trace),
+        question=open_roles_question(open_roles),
+        pending=pending,
+    )
+
+
+def open_roles_question(roles: Sequence[RoleReading]) -> str | None:
+    """Doptání na otevřené role.
+
+    Dvě věty, ne jedna: role bez kvantifikátoru a role čekající na odkaz
+    jsou různé otázky a odpověď na jednu tu druhou nezodpoví. Nabídka
+    kvantifikátorů je z UZAVŘENÉHO menu, takže odpověď nemůže vyrobit
+    novou sémantiku (I‑15).
+    """
+    quantifier = [r for r in roles if r.awaiting == AWAITING_QUANTIFIER]
+    reference = [r for r in roles if r.awaiting == AWAITING_REFERENCE]
+    parts: list[str] = []
+    if quantifier:
+        shapes = ", ".join(
+            f"{r.name} ({r.pending.shape() if r.pending else '?'})"
+            for r in quantifier
+        )
+        parts.append(
+            f"Nevím, o kom to platí — {shapes}. "
+            f"O každém (∀), o některém (∃), nebo o tom konkrétním (·)?"
+        )
+    if reference:
+        named = ", ".join(f"{r.name}: „{r.mention.form}“" for r in reference)
+        parts.append(
+            f"A na koho odkazuje {named}? Určitost říká, že to je někdo "
+            f"už zmíněný, ale kdo, z věty nepoznám."
+        )
+    return " ".join(parts) if parts else None

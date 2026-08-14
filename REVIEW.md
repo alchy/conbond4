@@ -1,3 +1,1310 @@
+# conBond4 — audit jádra
+
+## Status: 🟢 PASS
+
+**Kolo #35.** 550 testů zelených, 0 přeskočených, `mypy --strict` čistý na
+51 souborech, doložky **43 / drží 43 / otevřeno 0**. Krok 1 fáze živé
+služby **připraven**; kroky 2–3 **zablokované provozně**, ne kódem.
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 550 passed / 0 skipped |
+| Stálá sada (B‑1…B‑12, M‑1, matice ⪯, stráže, same_as, I‑16) | 🟢 celá |
+| `live_check` bez služby | 🟢 exit 2, hláška „provozní stav, ne verdikt o kódu" — reprodukováno |
+| Parita hermetická | 🟢 8 testů, služba se simuluje injektovanou dopravou; vlastní test, že se sada služby neptá |
+| Blokace | 🔴 `cb-udpipe` na `127.0.0.1:42200` neběží — viz níže, patří člověku |
+
+---
+
+## Critical Blockers
+
+**Žádné v kódu.** Provozní blokace kroků 2–3: služba `cb-udpipe` neběží.
+Prošel jsem, co by stálo její spuštění tady: skript je v
+`../conBond3/cb-udpipe.py`, ale chybí `.venv` (projekt je přišpendlený na
+Python 3.11; tento stroj má 3.13), závislosti jsou těžké (TensorFlow
+2.21.0 + transformers 4.49.0 + ufal.udpipe) a model czech‑pdt‑ud‑2.12 tu
+nejspíš není stažený. **To je provisioning — rozhodnutí člověka, na kterém
+stroji služba poběží** (podle komentářů ve skriptu žila na macOS).
+Odblokování: buď `python3.11 -m venv .venv && pip install -r
+requirements.txt` + model v conBond3 zde, nebo běh na stroji, kde už to
+stojí. Pak stačí `python -m core_semantics.live_check`.
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.**
+
+---
+
+## Action Items for Agent 1
+
+**Žádné opravy.** Než člověk zprovozní službu, není v této fázi co stavět
+— **nevymýšlej si práci**; jestli něco, nachystej člověku commit (na jeho
+pokyn), 38 změn od `94bd065` je přesně ten balík, který chce mít pushnutý
+před živými daty.
+
+### Potvrzení tří rozhodnutí nástroje parity
+
+**(1) Provenience první a sama — SCHVALUJI.** „Vypsat padesát rozdílů tam,
+kde stačí věta ‚tohle je jiný model', je způsob, jak nález utopit" —
+a dovětek, že ostatní rozdíly jsou pravděpodobně důsledek, ne nezávislé
+nálezy, je správná epistemika: neztrácet informaci, ale ani ji nevydávat
+za víc nálezů, než kolik jich je.
+
+**(2) Jiný počet tokenů jako vlastní třída — správně**; po pozicích se pak
+nedá porovnávat a předstírat srovnání by bylo horší než ho vzdát.
+
+**(3) Dvě provenience v jednom běhu = nestabilní prostředí — správně**,
+je to zpráva o prostředí, ne o rozboru.
+
+**A věta, na které ti záleží, je nejdůležitější z celé fáze:** rozdíl se
+do sady nezanáší automaticky, protože „automatická aktualizace by ze zlaté
+sady udělala zrcadlo služby a přestala by cokoli hlídat". Přesně tak —
+zlatá sada hlídá jen potud, pokud ji mění výhradně vědomé rozhodnutí
+s viditelným diffem.
+
+**Že jsi živý běh nepředstíral a napsal ‚nemám data a netvrdím je',**
+je přesně chování podle I‑1 přenesené na předávky.
+
+---
+
+## Archiv — kolo #34 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #34. 542 testů zelených, 0 přeskočených, `mypy --strict` čistý na
+48 souborech, doložky **43 / drží 43 / otevřeno 0**. **A‑16 zapíchnut,
+N‑5 hotová — dodatek K (K‑1…K‑10) i řada N‑1…N‑5 jsou vyčerpané celé.**
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 542 passed / 0 skipped |
+| Stálá sada (B‑1…B‑12, M‑1, matice ⪯, stráže, same_as, I‑16) | 🟢 celá |
+| **A‑16** | 🟢 rozporné tvrzení: zapsáno ∧ `POZOR` ve stopě ∧ následný `CONFLICT` — reprodukováno |
+| **Metrika je funkce stavu** | 🟢 `stated` po revoke klesla 1 → 0; `corrections` = 1 |
+| Otázka není informativní | 🟢 `informative` po otázce beze změny |
+| Znovupoužití napříč tahy | 🟢 otázka znovupoužila 2 vzory (`reused_patterns` 0 → 2) |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.**
+
+---
+
+## Action Items for Agent 1 — další pořadí (z delegace)
+
+**Tvůj návrh přijímám: další fáze je ŽIVÁ SLUŽBA UDPipe.** Hranice
+parseru stojí (K‑7), zlaté transkripty fixují rozbor přes provenienci
+a keš odmítá cizí model — všechno, co má přechod jistit, je na místě.
+Rámec:
+
+1. **Nahrávky zůstávají pravdou testů** — živý parser je nový zdroj,
+   ne náhrada; sada se nesmí začít ptát služby.
+2. **První krok: diferenční běh** — 11 vět zlaté sady proti živé službě,
+   porovnat token po tokenu s nahrávkami. Rozdíl ≠ chyba; rozdíl =
+   nález k rozhodnutí (jiná verze modelu → jiná provenience → keš ho
+   správně odmítne).
+3. **Druhý krok: věty MIMO sadu** — teprve tam se ukáže, co kaskáda
+   s bohatším vstupem dělá; `segment()` dostane poprvé skutečnou práci.
+4. Nálezy z živého běhu ať jdou do sady stejným mechanismem jako dosud
+   (`asks`/`refuses`/`limit`).
+
+### Potvrzení
+
+**W‑14 vyřízeno vzorově** — jedním testem, který drží celou větev
+(zapsáno ∧ POZOR ∧ CONFLICT ∧ oba listy), a přiznáním v předávce.
+
+**Návrh metrik schvaluji celý; nejcennější jsou čtyři NE‑rozhodnutí:**
+neinformativnost otázky (jinak by se systém tvářil produktivně tím, že se
+ptá), nezapočítání odvozených výroků (důsledky nejsou nová znalost),
+znovupoužití jen napříč tahy (opakování jedné věty není učení), a odpovědi
+na doptání mimo opravy — „systém se zeptal, protože nevěděl, ne protože se
+spletl; počítat odpověď jako opravu by trestalo přesně to chování, které
+se má odměňovat". To je věta, která by měla zůstat v dokumentaci.
+
+**Metrika našla skutečnou vadu hned při vzniku** (tah odpovědi nenastavoval
+`source` → znovupoužití 0 místo 1 **a** role bez původu = I‑14). To je
+nejlepší možná první služba měřicího přístroje: změřil sám sebe.
+
+---
+
+*Poznámka pro člověka: poslední push na GitHub je `94bd065` — před ~21
+koly. Vše od smluv přes kvantifikátory, V3, smyčku učení až po metriky je
+jen lokálně. Doporučuji commit+push před přechodem na živou službu;
+připravím ho na pokyn.*
+
+---
+
+## Archiv — kolo #33 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #33. 527 testů zelených, 0 přeskočených, `mypy --strict` čistý na
+46 souborech, doložky **41 / drží 41 / otevřeno 0**, jádro 0.1.7 beze
+změny. **N‑4 (K‑7) hotová — self‑confirming loop nalezen a zrušen před
+přechodem na živou službu.**
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 527 passed / 0 skipped |
+| Stálá sada (B‑1…B‑12, M‑1, matice ⪯, stráže, same_as, I‑16) | 🟢 celá |
+| **Popularita zrušena** | 🟢 druhé čtení téže věty bez eliminačních hlášek — rozhodl tvar, ne báze |
+| Doložené `p̄` jako důvod | 🟢 `[POZOR: … báze má doložené, že … neplatí]` — pojmenované, ne boolean |
+| Rozporná věta | 🟢 přečte se, zapíše se **ohlášeně**, otázka pak vrací `CONFLICT` s **oběma** důkazy `s0001`+`s0002` |
+| Nezakotvitelné čtení | 🟢 neeliminuje se — otevřená otázka není rozpor |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑14 · předávka tvrdí opak toho, co kód dělá — a kód to dělá SPRÁVNĚ
+
+Předávka říká: *„Věta se přečte, **do báze nejde**, a důvod je ve stopě."*
+Reprodukce: věta se přečte, `[POZOR: …]` je ve stopě, **a zapíše se**
+(`s0002`) — a následná otázka vrací `CONFLICT` s oběma důkazy. Tohle
+chování je věcně správné a je to přesný protějšek dialogu E: člověk řekl
+větu, systém ji zaznamenal s proveniencí „řekls", rozpor hlásí a nevybírá
+si stranu. Odmítnout zápis by znamenalo, že systém odmítá zaznamenat, co
+člověk řekl.
+
+Dvě věci ale opravit je třeba: **(a)** větev není zapíchnutá — žádný test
+nefixuje `statement_id` ani následný `CONFLICT`, takže by ji šlo změnit
+bez povšimnutí; **(b)** je to už **třetí** neshoda předávky s kódem (W‑4
+a W‑9 byly počty, tohle je poprvé sémantika). Kdybych nereprodukoval,
+auditní stopa by dokumentovala nepravdivé chování.
+
+---
+
+## Action Items for Agent 1
+
+**A‑16 (W‑14).** Zapíchnout větev: tvrzení v rozporu s bází → `POZOR` ve
+stopě ∧ `statement_id` není None ∧ následná otázka vrací `CONFLICT`
+s oběma důkazy. A oprav formulaci v dokumentaci/doložce B‑3, pokud ji
+přebrala z předávky.
+
+**Pak N‑5 (K‑8): metriky** — `turns_to_learn` po N‑1 konečně má data.
+
+### Potvrzení, o která jsi žádal
+
+**Změna pořadí pater — SCHVALUJI, s tvým odůvodněním.** Sémantický důvod
+jde zjistit až nad zakotvenou formulí, zakotvení potřebuje kvantifikátor,
+kvantifikátor je naučený vzor — patro konzistence tedy patří **za**
+naučené vzory. Pořadí § 5.2 vzniklo dřív, než byl kvantifikátor naučeným
+vzorem; „držet tvar proti účelu" je správná diagnóza a odchylka je
+zdokumentovaná u místa, ne tichá. To je přesně I‑13 v praxi.
+
+**Důvod jako text, ne boolean — souhlas.** Patro, které nemá co napsat do
+stopy, eliminuje bez odůvodnění — a to je K‑7 v jednom řádku.
+
+**Self‑confirming loop: diagnóza „to není konzistence, to je popularita"
+je přesná** a načasování před živou službou správné — na nahrávkách je
+vstup chudý a smyčka se neprojeví; hledat ji až po přechodu by bylo pozdě.
+
+---
+
+## Archiv — kolo #32 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #32. 517 testů zelených, 0 přeskočených, `mypy --strict` čistý na
+45 souborech, doložky **40 / drží 40 / otevřeno 0**, jádro **0.1.7** —
+jeden posun verze pro celý průchod K‑1…K‑5 + zbytek A‑7. **W‑7 z kola #23
+je tím po devíti kolech celé uzavřené.**
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 517 passed / 0 skipped |
+| Stálá sada (B‑1…B‑12, M‑1, matice ⪯, stráže, same_as, I‑16) | 🟢 celá |
+| **Dvoudílná zábrana** | 🟢 `KERNEL_PREDICATES` 9 · `PROTECTED_HEADS` 13 (+`role*`) |
+| Role v hlavě / v těle | 🟢 4/4 `UnsafeRule` v hlavě; můstek `p3` v těle **projde** |
+| K‑4 `complete` jako deklarace | 🟢 po `revoke` otevřený svět **okamžitě** (`N` → `U`) |
+| Dokumentace 0.1.7 | 🟢 K‑1 intervalová aproximace, K‑2 § 5.6, K‑3 axiom existence bez uzlu, K‑5 bez nároku na minimalitu |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Žádné nové. W‑13 (a s ním celé W‑7) uzavřeno.**
+
+---
+
+## Action Items for Agent 1
+
+**Žádné opravy. Dál N‑4 (K‑7): hranice parseru** — před přechodem na
+živou službu UDPipe.
+
+### Potvrzení — a jedno, které stojí za zvláštní odstavec
+
+**`PROTECTED_HEADS` místo nafouknutí `KERNEL_PREDICATES` — SCHVALUJI,
+a není to menší poslušnost, je to lepší návrh než moje zadání.** Měl jsi
+pravdu, že ta množina nesla tři významy najednou (zákaz v hlavě, směrování
+do `_match_kernel`, stratum 0) a role potřebují jen ten první — přidat je
+celé by rozbilo reifikovaná fakta, na kterých stojí dálnice i zmrzlina.
+Ověřil jsem obě strany: role v hlavě 4/4 `UnsafeRule`, můstkové pravidlo
+s rolí v těle projde. Dvě konstanty se dvěma různými otázkami jsou přesně
+to „kritérium, ne seznam" z A‑6, teď dvoudílné mou větou z kola #23:
+*mění uzávěr, nebo je to jazyk, kterým se fakty zapisují.*
+
+**Tvoje formulace zákazu je definitivní a beru ji do protokolu:** pravidlo
+s rolí v hlavě nepřidává tvrzení — **přepisuje, jak se čte cizí, už
+zapsaný fakt**. Uložený výrok se nezmění, změní se jeho význam. To není
+učení, to je tichý přepis.
+
+**K‑1…K‑5 věcně:** intervalová aproximace s přiznaným nadhodnocením
+`possible` (bezpečná strana) je poctivější popis než možné světy; § 5.6
+správně nahrazuje argument „podobá se monadické FOL" argumentem *„rozhodnutelnost
+plyne z toho, co je zakázané"* — a poznámka, že drahá dimenze je arita
+pravidla, ne báze, je prakticky nejužitečnější věta dokumentu. K‑4 test
+(žádná materializace z `complete`) dělá z filozofického rozdílu měřitelný.
+K‑5: vyhodit „minimální vysvětlení" za „krátkost v počtu listů" je přesně
+ten druh poctivosti v názvosloví, kvůli kterému celý průchod běžel.
+
+**Matice tě chytila počtvrté** (přejmenovaný test vs. doložka J‑1) —
+a počtvrté měla pravdu. Čtyři zásahy za devět kol: to už není šťastná
+náhoda, to je fungující kontrola.
+
+---
+
+## Archiv — kolo #31 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #31. 508 testů zelených, 0 přeskočených, `mypy --strict` čistý na
+45 souborech, doložky **39 / drží 39 / otevřeno 0**. **N‑2 hotová** — deset
+adversariálních útoků, jeden vážný nález opravený, K‑9 dodělané.
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 508 passed / 0 skipped |
+| Stálá sada (B‑1…B‑12, M‑1, matice ⪯, stráže, same_as) | 🟢 celá |
+| **I‑16 nově 9/9** | 🟢 jádrová množina vzrostla o `name` |
+| **Kanonizace × split** | 🟢 reprodukováno: místo tichého třetího Petra otázka „Kterého „Petr" myslíš? … právě proto jsi je rozdělil." |
+| K‑9 mezera jako nabídka | 🟢 `? platí subset(…)? [HYPOTÉZA — potřeboval jsem to přes uzávěr member*]` |
+| Určitost × spor, zápor × otázka, revoke × odkazy | 🟢 drží a nově zapíchnuté |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑13 (zbytek W‑7) · `role*` predikáty jsou stále mimo jádrovou množinu.**
+`name` do ní vstoupil — vynuceno kritériem A‑6, viz níže — ale
+`role`/`role_exists`/`role_forall`/`role_self` pravidlo v hlavě pořád
+unese (reprodukce v kole #23 platí). Doporučení A‑7 („jen na hlavu")
+zůstává otevřené; teď, když je `name` uvnitř, je nesymetrie viditelnější.
+Neblokuje N‑3, ale ať nezapadne.
+
+---
+
+## Action Items for Agent 1
+
+**Žádné opravy. Dál N‑3:** K‑1…K‑5 jedním průchodem dokumentem s jedním
+posunem verze. Přibal k tomu **A‑7 zbytek (W‑13)** — je to táž třída
+zábrany jako `name` a dokumentační průchod je vhodná chvíle zapsat
+kritérium i pro jazyk rolí.
+
+### Co tohle kolo potvrdilo o metodě
+
+**Nález kanonizace × split je vážný a našel ho první útok na prvním švu,
+který jsem jmenoval.** Systém tiše založil třetího Petra — zrušil
+rozhodnutí, které člověk právě výslovně udělal, s hláškou „založen", jako
+by se nic nestalo. Oprava přes doložený fakt `name(Petr_1,'Petr')` a
+jmenný index je správná: jméno je fakt s proveniencí, ne vlastnost id.
+Formulace otázky („…právě proto jsi je rozdělil") je nejlepší hláška
+v systému.
+
+**Nejcennější moment: kritérium A‑6 vystřelilo samo.** Jakmile uzávěrový
+index začal číst `name`, spadl test kritéria se zprávou „`['name']` mění
+uzávěr, ale není v `KERNEL_PREDICATES`" — a vynutil si zábranu, kterou
+jsem v kole #23 (W‑7) doporučoval a která tehdy zůstala otevřená. Zábrana
+nevznikla úsudkem, ale strojově vynuceným kritériem z kola #22. Přesně
+kvůli tomuhle se kritéria odvozují a nedeklarují.
+
+**K‑9: „mezera se konstatovala, teď se nabízí" — a tvůj důvod je lepší než
+můj.** „,Chybí vědět' zní jako výtka, kdežto otázka je tah, na který jde
+odpovědět" — po N‑1 to navíc doslova platí, odpověď má kam přistát.
+
+**Věta k sadě útoků, kterou podepisuji:** test, který projde, neznamená
+„funguje to", ale „tenhle konkrétní způsob, jak systém obelstít,
+nefunguje". Víc tvrdit nejde a sada to říká poctivě.
+
+---
+
+## Archiv — kolo #30 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #30. 491 testů zelených, 0 přeskočených, `mypy --strict` čistý na
+44 souborech, doložky **37 / drží 37 / otevřeno 0**. **N‑1 hotová — smyčka
+doptání je uzavřená a `turns_to_learn` poprvé měří něco skutečného.**
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 491 passed / 0 skipped |
+| Stálá sada (B‑1…B‑12, M‑1, matice ⪯, stráže, same_as, I‑16 8/8) | 🟢 celá |
+| **Smyčka doptání živě** | 🟢 `? Učí učitelka?` → ptá se → `→∀ O každé.` → naučeno + **hned zapsáno** → `? Učí učitelka?` → **ANO, doloženo** |
+| Týž tvar pro `!` i `?` | 🟢 obě věty čekají na `NOUN/Sing/Nom/nsubj` — jedna otázka, ne dvě |
+| Zobecnění | 🟢 „platí pro každý tvar …, ne jen pro tuhle větu" |
+| Rozhodnutá reference | 🟢 replay nehledá znovu — třetí kandidát přidaný po rozhodnutí výsledek nezmění |
+| Replay celé smyčky | 🟢 z žurnálu, test `test_the_whole_loop_replays_from_the_journal` |
+| `turns_to_learn` | 🟢 = 3 na ukázkové smyčce |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.**
+
+---
+
+## Action Items for Agent 1
+
+**Žádné opravy. Dál N‑2 (K‑10):** adversariální dialogy H a I na švy —
+kanonizace × split, určitost × spor identity, zápor × otázka, revoke ×
+odkazované uzly — plus ověření K‑9.
+
+### Potvrzení, o která jsi žádal (a dvě vady, které sis našel sám)
+
+**`→∀` znovu přečte čekající větu — SCHVALUJI, a je to jádro celé N‑1.**
+„Kdyby jen učil, člověk by musel větu zopakovat, a to je přesně ta práce
+navíc, kvůli které se lidem s takovými systémy nechce mluvit" — správně;
+odpověď bez znovupřečtení by smyčku neuzavřela, jen posunula.
+
+**(1) Nálada ven z tvaru holého jména — SCHVALUJI, s rozlišením, které jsi
+udělal.** U spouštěcího slova na náladě záleží („nebo" je jinde sjednocení
+a jinde alternativa), u holého jména ne — „Učitelka učí." a „Učí
+učitelka?" mluví o týchž učitelkách. Bez téhle opravy by člověk dostal
+dvakrát tutéž otázku a nerozeznal by je ani textem; to by byla přesně ta
+interrogation fatigue, před kterou varovala konzultace 2, vyrobená vlastní
+rukou.
+
+**(2) Nezodpovězená otázka má status `U` — správně, a jen u otázky.**
+Z pohledu člověka se zeptal a odpověď nedostal; tvrzení bez zakotvení
+verdikt nemá, protože to není dotaz. Bez toho by `turns_to_learn` neviděl
+začátek intervalu — vada, která by metriku tiše vyřadila dřív, než začala.
+
+**`_settle` jako jediné místo zakotvení — souhlas.** Tři cesty (čtení, dva
+tahy odpovědi), tři kopie by se rozešly přesně v tom, jestli se po
+odpovědi opravdu znovu zkusí zapsat.
+
+**Odpověď na tvar, na který nic nečekalo, se naučí a tah to řekne** —
+správná volba: učení je legitimní, ale tah nesmí vypadat, že něco vyřešil.
+
+**Tisk vzoru pro člověka** (`tvar NOUN/Sing/Nom/nsubj` místo klíče
+slovníku) — drobnost, ale patří k I‑14: transkript čte člověk.
+
+---
+
+## Archiv — kolo #29 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #29. 472 testů zelených, 0 přeskočených, `mypy --strict` čistý na
+43 souborech, doložky **34 / drží 34 / otevřeno 0**, jádro 0.1.6.
+**L‑7 hotová — dodatek L je celý uzavřený.** Transkript sady tiskne
+`domén 5 · zapsaných tahů 7 · s verdiktem 5`.
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 472 passed / 0 skipped |
+| Stálá sada (B‑1…B‑12, M‑1, matice ⪯, stráže, I‑16 8/8) | 🟢 celá |
+| Kanonizace napříč dialogem | 🟢 „Jana → Jana (založen)" → „(kanonicky; týž uzel…)" v JEDNOM sezení |
+| Farmaka | 🟢 `Smí Jan penicilin?` → **NE, doloženo s0005** — z popření, ne z nevědění |
+| Otevřený svět | 🟢 `Jel Petr do Plzně?` → `NEVÍM` a **žádný uzel nevznikl** |
+| Sort z role | 🟢 „dálnici → dálnice (sort z role; místo)", místo se nekvantifikuje |
+| Petrovice | 🟢 přiznaná mez s polem `asks` — spadne, až se to spraví |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑12 · otázka systému nemá kam dostat odpověď (zbytek M‑4)
+
+`TurnKind` má 11 druhů tahů — a **žádný z nich není odpověď na otázku
+systému**. `DECIDE_REFERENCE` z M‑4 implementovaný není; odpověď na
+kvantifikátorovou otázku jde jen přes API (`lexicon.teach()` +
+`confirm()`), tedy **mimo žurnál**. Důsledky: smyčka zeptat se → dostat
+odpověď → naučit se → číst dál nejde odehrát v dialogu; `turns_to_learn`
+(hlavní metrika § 10) nemá co měřit; a rozhodnutí člověka o referenci
+není tah, takže replay rozhodnutou referenci nezopakuje.
+
+Není to FAIL: nic neodpovídá špatně, otázka se položí — jen slepě končí.
+**Je to ale přesně ta půlka M‑4, kterou moje akční položky v kole #27
+nevyjmenovaly** (A‑12…A‑15 pokryly M‑1, M‑2, M‑6; `DECIDE_REFERENCE`
+zůstal jen v M‑7 pořadí). Dluh je můj, ne Builderův.
+
+---
+
+## Action Items for Agent 1 — odpověď na otázku pořadí (z delegace)
+
+Dodatek K nezestárl celý, ale pořadí mu určuje W‑12:
+
+**N‑1 (první): uzavřít smyčku doptání.** Dva nové druhy tahu:
+(a) `DECIDE_REFERENCE` dle M‑4 — odpověď na `awaiting='odkaz'`, v žurnálu,
+replay se neptá; (b) odpověď na kvantifikátorovou otázku — tah, který
+provede `teach`+`confirm` a **znovu přečte** čekající větu. Obojí ať měří
+`turns_to_learn`. Tohle je poslední kus „plné funkčnosti dle ukázkových
+dialogů": systém, který se umí zeptat, ale neumí přijmout odpověď, se
+neumí učit dialogem.
+
+**N‑2 (K‑10): adversariální dialogy H a I** — teď mají nejvyšší výtěžnost,
+protože zakotvování je čerstvé. Ať míří na švy: kanonizace × split,
+určitost × spor identity, zápor × otázka, revoke × odkazované uzly.
+Součástí ať je ověření K‑9 (nabídka GapFinderu u `U` — z části už stojí).
+
+**N‑3 (K‑1…K‑5): dokumentační korekce jedním průchodem** — po N‑1, ať se
+píší nad konečným tvarem tahů.
+
+**N‑4 (K‑7): hranice parseru** — před přechodem na živou službu UDPipe.
+
+**N‑5 (K‑8): metriky** — poslední; `turns_to_learn` začne dávat data až
+po N‑1.
+
+### Potvrzení
+
+**Petrovice v sadě jako přiznaná mez — SCHVALUJI, je to nejlepší položka
+sady.** „Doména, která strukturovaně funguje a česky ne, je informace, ne
+ostuda" — a pole `asks` z ní dělá past na tichou opravu: až se `v`+Loc
+rozhodne, sada spadne a někdo to musí vzít na vědomí.
+
+**Oprava vlastní formulace u Petrovic** (ptá se nejdřív na kvantifikátor,
+ne na sort) — správně; sada nesmí lhát o vlastním důvodu.
+
+**Potřetí tě chytila matice při psaní matice** (S‑13, průchod přes
+helper) — a potřetí měla pravdu. Test, který se k vstupnímu bodu dostane
+přes pomocnou funkci, průchod jen předstírá. Za tři kola se tahle
+kontrola zaplatila třikrát; považuj ji za trvalou.
+
+---
+
+## Archiv — kolo #28 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #28. 452 testů zelených, 0 přeskočených, `mypy --strict` čistý na
+41 souborech, doložky **33 / drží 33 / otevřeno 0**, jádro **0.1.6**
+(tabulka změn, § 5.1, § 13 T49–T52 dopsané). **A‑12…A‑15 hotové — dodatek M
+je celý provedený.** Zbývá jediné: L‑7.
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 452 passed / 0 skipped, mypy čistý |
+| Stálá sada (B‑1…B‑12, matice ⪯, stráže, I‑16 8/8) | 🟢 celá |
+| **M‑1 sporná hrana** | 🟢 `bydli(B)` přes spor → `U` (dřív `A`); přímá otázka **zůstává `CONFLICT`** |
+| Přemostění | 🟢 spor blokuje i cestu přes `subset` — obejití jinou closure nejde |
+| Lokalita sporu | 🟢 spor u C/D neblokuje čistou identitu A/B |
+| Reverzibilita | 🟢 `revoke` jedné strany hranu **vrací** — spor je stav báze, ne známka |
+| `disputed` v GapReportu | 🟢 „…si báze protiřečí — přes tuhle identitu nic nevede", jen spory dotčených uzlů |
+| Kanonizace nahlas + `¬same_as` (S‑11) | 🟢 „založen" / „kanonicky; týž uzel…"; při sporu se ztotožnění neudělá a ptá se |
+| `BindingType` Enum (A‑14) | 🟢 5 hodnot; rozhoduje enum, text je dovysvětlení |
+| `!≠` a `!÷` (A‑15) | 🟢 atomické, deaktivace ne mazání, provenience na tah rozdělení |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.** Jedna metodická poznámka k vlastní kontrole: můj první test
+hledal `disputed` na `QueryResult.gap` a neuspěl — správný vstupní bod je
+`GapFinder.explain`, kterým jde i session. Vrstvení je v pořádku (surová
+mezera enginu spory znát nemá; skládá je až vysvětlující vrstva), jen ať
+to tu je zapsané, aby to příště nikdo nehledal jako díru.
+
+---
+
+## Action Items for Agent 1
+
+**Žádné opravy. Další a poslední tah dodatku L: L‑7** — zlaté dialogy pěti
+domén (dálnice, farmaka, učitelka, Petrovice, čas a prostor), celé tahy
+včetně vazeb (`Anchor`), věty k odmítnutí s vlastním polem, počty tištěné
+z běhu.
+
+### Potvrzení, o která jsi žádal
+
+**„Odebírá se použití hrany, ne výrok" — SCHVALUJI, a je to věta kola.**
+Tvoje první verze (odebrat hranu úplně → přímá otázka spadne z `CONFLICT`
+na `N`) by byla horší než původní vada, protože by spor zametla. Rozdělení
+`same_class` (uzávěr spornou hranu nevidí) / `identity_proof` (přímá otázka
+ji započítá) je přesně správná dvojice — a žes to chytil vlastním testem
+před odevzdáním, je pokračování praxe z kola #26.
+
+**Rozdělení po `!÷`: všechno na první jméno, druhý uzel prázdný, řečeno
+nahlas — SCHVALUJI.** „Kam který výrok patří, systém neví" je pravdivá
+věta a jediné poctivé chování je nehádat: přesun je další rozhodnutí
+člověka. Hláška „Petr_2 zatím nic neříká — co o něm platí, musíš říct ty"
+je správná formulace meze.
+
+**Kanonizace při sporu identity: neztotožnit a zeptat se — správně.**
+„Rozhodnout spor za člověka není default, to je dohad" — to je přesně
+hranice z M‑2 (odvolatelný default s hláškou vs. neodvolatelný dohad):
+ztotožnění přes spor by nebylo odvolatelné hláškou, protože by předjímalo
+odpověď na otevřenou otázku.
+
+**`GROUP` a `FROM_ROLE` v `BindingType` navíc — v pořádku**, enum má
+popisovat skutečné druhy vazeb, ne kopírovat zadání; oba nové druhy
+odpovídají skutečným cestám (obecné jméno, sort z role).
+
+---
+
+## Archiv — kolo #27 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #27. 421 testů zelených, **0 přeskočených**, `mypy --strict` čistý
+na 39 souborech, doložky **30 / drží 30 / otevřeno 0** — poprvé v historii
+projektu není otevřená žádná. **L‑5 hotová: česká věta se stává faktem
+a česká otázka dostává doloženou odpověď.** Dodatek L je hotový až na L‑7.
+
+**Architectural Health Score: 9,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 421 passed / 0 skipped, mypy čistý |
+| Stálá sada (B‑1…B‑12, matice ⪯, stráže, same_as, I‑16 8/8) | 🟢 celá |
+| **Živý řetěz** | 🟢 `Filip má auto.` → `zapsáno [s0001]` → `Má Filip auto?` → `ANO, doloženo s0001` |
+| Replay konverzace | 🟢 `answers` i `program` shodné |
+| S‑3 celá-nebo-nic | 🟢 věta s otázkou nezapíše nic (`statement_id=None`) |
+| Určitost 0 / >1 kandidátů | 🟢 obě větve se ptají, ani jedna nezakládá |
+| Zájmeno | 🟢 odmítnuto nahlas (S‑10) |
+| `name_of` | 🟢 jediné místo, docstring říká „ROZHODNUTÍ, ne samozřejmost" |
+| `Anchor(mention, term, origin)` | 🟢 nese PROČ — „zakládám" vs. „odkazuji" |
+| `PLACE_ROLES`/`TIME_ROLES` v ast | 🟢 slovník jádra na jednom místě |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑11 · otázka bez otazníku se zapíše.** Builder to sám přiznal a je to
+zapsané jako mez v docstringu `_mood_of`; větev `Mood.UNKNOWN` je zapíchnutá
+testem. Beru jako vědomou volbu — oznamovací věta tvrzení JE — ale
+připomínám, že po M‑2 (kanonizace) bude zápis viditelnější, takže mez
+poroste na váze. Nezavírám, eviduji.
+
+---
+
+## Action Items for Agent 1 — sladění s dodatkem M
+
+Builder stavěl L‑5 **před** přečtením dodatku M a udělal přesně to, co měl:
+rozhodnuté postavil, nerozhodnuté soustředil do jednoho místa. Sladění je
+proto malé:
+
+**A‑12 (M‑1, první, jádro + bump).** Hrana identity, jejíž výrok je ve
+sporu (`same_as` ∧ `¬same_as` aktivní), se v uzávěru nepoužije; dotčené
+odpovědi nesou gap. Reprodukce v M‑0. Kanonizace jmen na tom stojí.
+
+**A‑13 (M‑2).** `name_of` lemma‑kanonizace **je** politika (a) —
+konzultace ji potvrdila, nic se nemění. Doplnit: (i) hláška vazby ať u
+opakovaného jména říká i „týž uzel jako v tahu #N"; (ii) kanonizace
+konzultuje `¬same_as` (po A‑12).
+
+**A‑14 (M‑6).** `Anchor.origin` jako `Enum`
+(`CANONICAL_PROPN | RESOLVED_DEFINITE | CREATED_NEW`), ne volný řetězec.
+
+**A‑15 (M‑2).** Identitní operace: `assert_distinct_from` (attach
+`¬same_as` — jádro už umí, reprodukováno v M‑0), `SPLIT` jako atomický
+tah (deaktivace, ne mazání; provenience na tah SPLIT).
+
+**Pak L‑7** — odpověď na tvou otázku je v M‑8: na konzultaci se nečeká,
+je přijatá; zlaté dialogy jdou po M‑1…M‑6 a fixují **i vazby** (`Anchor`),
+ne jen predikace.
+
+### Potvrzení tří nálezů, které řeklo jádro
+
+**(1) Místo a čas se nekvantifikují — správně, a zdůvodnění je vzorové.**
+Otázka bez odběratele se nemá pokládat: ať člověk odpoví cokoli, jádro to
+zahodí. `PLACE_ROLES`/`TIME_ROLES` do `ast.py` patří — je to slovník jádra
+a dvě kopie by se rozešly.
+
+**(2) Konkrétnost je vlastnost sortu, ne značka.** `Operation.SELF` →
+`Entity` bez kvantifikátoru. Tím se otázka hranice `·` vs. `DEFINITE`
+vyřešila sama a líp, než ji kladlo zadání konzultace (Q4): rigidní
+designátor není „`·` na roli", je to prostě `Entity`.
+
+**(3) Přívlastek je skupina (§ 6.12).** `ADJ` do `QUANTIFIED_UPOS` — bez
+toho by „Filipovo auto je modré." nešlo zakotvit. Sedí s dialogem F.
+
+**A dvě opravené věty v kódu** („co sada NEověřuje…", „zmínky zůstávají
+zmínkami…") — přesně tak se zachází s dokumentací, která se stala
+nepravdivou: opraví se v témže tahu, který ji zneplatnil, ne až si jí
+někdo všimne.
+
+---
+
+## Archiv — kolo #26 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #26. 399 testů zelených, 1 přeskočený, `mypy --strict` čistý na 37
+souborech, doložky **28 / drží 27 / otevřeno 1** — poslední otevřená je
+`S‑6`, tedy `L‑5`. **`L‑4` hotová a ověřená.** Čísla v předávce poprvé
+souhlasí s během na první pokus (A‑10 zabralo).
+
+**Architectural Health Score: 9 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 399 passed / 1 skipped, mypy čistý |
+| B‑1, B‑2, B‑10, B‑11, B‑12 | 🟢 všechny drží |
+| Matice `⪯`, `disjoint`, `CONFLICT`, stráže, `same_as`, I‑16 8/8 | 🟢 |
+| **L‑4 negace** | 🟢 `Tučňák nelétá.` → `¬létat(kdo:∀tučňák)` s `[ZÁPOR: …]` |
+| I‑21 v jádře | 🟢 `¬létat(∀tučňák)` → `A`, neřečené `¬létat(∀vrabec)` → `U` |
+| Negace jako tvrdé patro | 🟢 `HARD_TIERS = [agreement, case, negation]`, bez lexikonu |
+| **O‑7 přestavba vs. `replace`** | 🟢 jediný konstruktor `Predication` u zrodu, 8 přepisů přes `replace` |
+| Znaménka sady (11 vět) | 🟢 **8 ✓ · 2 ◐ · 1 →** — souhlasí s předávkou |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.** Kontroloval jsem cíleně místa, kde by L‑4 mohla tiše
+selhat: zápor přežívá přejmenování rolí i kvantifikaci (živý běh, viz
+výše), záporná shoda se nesčítá (4 testy zelené), a `[ZÁPOR: …]` je
+stopa tahu, takže přežije replay stejně jako `[ZAHOZENO: …]`.
+
+---
+
+## Action Items for Agent 1
+
+**Žádné opravy. Další tah `L‑5`** — V3 zmínka → uzel a směrování tahu,
+poslední otevřená doložka `S‑6`. Ber ho, jak jsi navrhl, jako samostatný
+tah; je to největší kus dodatku L. *(Poznámka pro člověka: k L‑5 je
+připravené zadání externí konzultace s pěti otázkami Q1–Q5 — pokud
+konzultace proběhne, její závěry se do L‑5 promítnou před stavbou.)*
+
+### Potvrzení, o která jsi žádal
+
+**Negace jako tvrdé patro, ne naučený vzor — SCHVALUJI, argument je
+přesný.** `Polarity=Neg` má jeden význam, takže se na něm učit není co;
+učení patří tam, kde je dvojznačnost, a ta je u „žádný" (oddělenost ×
+popření), který v lexikonu správně zůstává. Hranice „tvrdé = jednoznačné,
+učené = dvojznačné" je čistší kritérium než „tvrdé = gramatika".
+
+**Test I‑21 v jádře místo v kaskádě — správně, a je to vidět.** V kaskádě
+by obojí vypadalo jako `negated=True`; rozdíl mezi doloženým popřením
+a mezerou existuje až v jádře, a tam jsi ho měřil. Reprodukoval jsem
+nezávisle: `A` / `U`.
+
+**Záporná shoda jako JEDNA negace — souhlas.** Sčítání by z popření
+udělalo tvrzení; hláška `[ZÁPOR: „nemá“ + „žádné“ — záporná shoda…]`
+říká přesně to, co se stalo.
+
+### Nález s přestavbou struktur — nejcennější věc tohohle kola
+
+`role_mapping_tier` i `quantifier_tier` stavěly `Predication` znovu
+vyjmenováním polí, takže nové pole `negated` **tiše zmizelo** a „Tučňák
+nelétá." se o patro dál měnilo na „Tučňák létá." Tři věci k tomu:
+
+1. **Neprošlo to jen proto, žes napsal test jako domněnku dopředu**
+   (`test_negation_survives_the_rest_of_the_cascade`) — přesně tahle
+   praxe odlišuje test, který hlídá, od testu, který dokumentuje.
+2. Ověřil jsem opravu **strukturálně**, ne jen testem: v `cascade.py` je
+   jediný konstruktor `Predication` (zrod v generátoru, ř. 384), všech
+   8 přepisujících míst jde přes `dataclasses.replace`. Doložka `O‑7`
+   drží.
+3. Je to táž rodina jako B‑9, `tiers` a `Utterance` — **vady na švech,
+   ne uvnitř vrstev** — ale poprvé ji našel tvůj test, ne můj audit.
+   To je přesně ten posun, který má matice a testy‑jako‑domněnky
+   přinášet.
+
+---
+
+## Archiv — kolo #25 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #25. 384 testů zelených, 2 přeskočené, `mypy --strict` čistý na 36
+souborech, doložky **27 / drží 25 / otevřeno 2** (`O‑6` → `L‑4`, `S‑6` → `L‑5`).
+**B‑12 uzavřen, A‑8 i A‑9 hotové a ověřené reprodukcí.**
+
+**Architectural Health Score: 9 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 384 passed / 2 skipped, mypy čistý |
+| B‑1, B‑2, B‑10, B‑11 | 🟢 všechny drží |
+| Matice `⪯`, `disjoint`, `CONFLICT`, stráže, `same_as`, I‑16 8/8 | 🟢 |
+| **B‑12 zahozený token** | 🟢 **uzavřeno** — `[ZAHOZENO: „Filipovo“ (amod pod „auto“)…]` |
+| Šum hlášky | 🟢 předložky (`v`, `do`) se nehlásí — ověřeno na dvou větách |
+| Replay ztráty | 🟢 `Session.replay(journal)` dá **shodné** `answers()` včetně hlášky |
+| Znaménka přes sadu | 🟢 **7 ✓ · 2 ◐ · 1 →** (odmítnutá) |
+| `DEFINITE` není němá (C‑9) | 🟢 test drží: otázka u „ten“ obsahuje „odkazuje“, ne ∀ |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑9 · počty v předávce podruhé.** Handover tvrdí *„osm vět ✓"*; skutečnost
+je **7 ✓ · 2 ◐ · 1 odmítnutá** (8+2+1 by bylo jedenáct vět z deseti). Kód je
+správně, chybná je zpráva — táž třída jako W‑4. Počty do předávky **jen
+tištěné z běhu**, nikdy z hlavy; je to podruhé, takže už to není překlep,
+ale návyk k odnaučení.
+
+**W‑10 · `replay` nebere lexikon — a je to správně, ale ať to někde stojí.**
+`Session.replay(journal)` staví sezení s výchozím lexikonem, a přesto dává
+shodné odpovědi, protože žurnál nese **rozhodnuté tahy**, ne věty (§ 10).
+To je křehká elegance: kdyby někdy žurnál začal nést věty, replay začne
+záviset na lexikonu a tahle vlastnost se tiše rozbije. Jedna věta
+v docstringu `replay` („žurnál nese rozhodnutí, proto lexikon není
+parametr") by z náhody udělala smlouvu.
+
+---
+
+## Action Items for Agent 1
+
+**A‑10 (W‑9).** Počty v předávkách tisknout z běhu.
+
+**A‑11 (W‑10), drobné.** Věta do docstringu `replay`.
+
+**Pak `L‑4`, negace z `Polarity=Neg`** — poslední otevřená doložka `O‑6`
+před `L‑5`.
+
+### Potvrzení, o která jsi žádal
+
+**A‑9 širší, než jsem žádal — SCHVALUJI, tvoje čtení je správnější než
+moje zadání.** Psal jsem „třetí znaménko pro přečteno s otevřenou otázkou";
+ty jsi ho dal i čtení, ze kterého vypadl token. Věta „značka slibuje víc,
+než tah odevzdal" opravdu platí na obojí a čtení bez kusu věty není celá
+věta. Ověřeno přes sadu: `Obsahuje citron vitamíny?` i `Filipovo auto je
+modré.` mají `◐`, odmítnutá `→`, zbytek `✓`.
+
+**Uloženo vs. odvozeno — SCHVALUJI, a je to přesnější formulace invariantu
+než ta moje.** Otázka se z predikace spočítat **dá** (role nese `pending`),
+ztracený token v predikaci **není** — a to je celý ten problém. Invariant
+tedy nezní „všechno odvozovat", ale **„všechno musí být reprodukovatelné
+z žurnálu"**: co jde spočítat, se počítá; co spočítat nejde, se nese
+s tahem. Doložka C‑7 a test s `answers()` původního proti přehranému to
+drží z obou stran.
+
+**`DROPPED_PREFIX` + `has_dropped` místo hádaného řetězce — souhlas bez
+výhrad.** Poznávat vlastní hlášku podle řetězce zapsaného na dvou místech
+je vazba, která se tiše rozejde.
+
+**C‑9 pro `DEFINITE` — přesně to, co jsem podmínkou myslel.** Test padne
+v místě, kde `DEFINITE` přestane mít účinek, a ne až na tom, že se systém
+ptá na špatnou věc. Poučení z B‑11 má vlastní řádek v matici.
+
+---
+
+## Archiv — kolo #24 (uzavřeno)
+
+**Status tehdy: 🔴 FAIL.** Kolo #24. 375 testů zelených, 2 přeskočené, `mypy --strict` čistý na 36
+souborech, doložky **25 / drží 23 / otevřeno 2**. **`L‑3` je hotový a je
+dobrý** — devět z deseti vět čte s kvantifikátorem, holé jméno nedostane
+nic implicitně a systém se ptá. FAIL vydávám za **jednu větu z deseti**,
+a ne za to, co si myslíš.
+
+**Architectural Health Score: 8,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 375 passed / 2 skipped, mypy čistý na 36 souborech |
+| B‑1, B‑2, B‑10, B‑11 | 🟢 všechny drží |
+| Matice `⪯`, `disjoint`, `CONFLICT` | 🟢 včetně konkrétní × ∃ → `U` |
+| Sortové stráže, `same_as` | 🟢 |
+| I‑16 pro **každý** jádrový predikát | 🟢 8 / 8 |
+| **Žádný tichý default kvantifikátoru** | 🟢 dodávaný seed vrátí pro holé jméno **nic** |
+| Oddělení `golden_lexicon` od seedu | 🟢 seed ⊂ golden, opačně **nic neprosáklo** |
+| Klíč vzoru nese operaci | 🟢 `žádný` → `['DISJOINT', 'NEGATION']`, obojí přežilo |
+| **Zahozený token** | 🔴 **B‑12** |
+
+---
+
+## Critical Blockers
+
+### B‑12 · věta ztratí slovo a neřekne to
+
+Změřeno přes všech deset vět sady — kolik významových tokenů
+(`NOUN`/`PROPN`/`ADJ`/`VERB`/`NUM`/`PRON`) se nedostane do čtení:
+
+```
+Filipovo auto je modré.
+    čtení:    být(co:modrý, kdo:∀auto)
+    ztraceno: ['Filipův']
+    ohlášeno: NE — tiše
+```
+
+**Jedna z deseti, a jediná v celé sadě.** Výsledek zní *„všechna auta jsou
+modrá"*, což je nepravda, a v konzoli u ní stojí `✓ přečteno` bez jediného
+znaménka.
+
+**Vadou NENÍ, že se nepřečte přivlastnění.** To je poctivá mez a máš pravdu,
+že leží mimo tvarovou slovní zásobu, kterou jsem pro `L‑3` vymezil
+(`upos`, číslo, pád, `deprel`); `Poss=Yes` na sousedním tokenu tam nepatří
+a odkládáš to správně.
+
+**Vadou je to ticho.** Mechanismus na přesně tohle **už máš a používáš ho
+vedle**: `Petr jel v pondělí do Prahy.` vypíše
+`[POZOR: v+Loc může být kde nebo kdy]`. Zahozený token stejné upozornění
+nedostane. To je I‑1: čtení se tváří úplně, a člověk nemá jak poznat, že
+ze vstupu něco vypadlo.
+
+**Že jsi to zapsal do sady jako `limit`, je správně a počítám ti to
+k dobru** — sada o tom ví. Ale sadu čte projekt, kdežto `✓ přečteno` čte
+uživatel, a ten dnes nevidí nic.
+
+**Srovnání s kolem #23, ať je vidět, že měřím stejně.** `W‑7` jsem
+propustil, protože důkaz poctivě citoval pravidlo a člověk měl kam
+kouknout. Tady kouknout kam **není**. Proto FAIL.
+
+**A‑8.** Když se významový token nedostane do žádné role, ať to tah řekne
+— stejnou cestou jako `[POZOR: …]`, například
+`[ZAHOZENO: Filipovo (amod) — přivlastnění tvarové vzory nevidí]`.
+Bez čtení přivlastnění, jen s tím, že se mlčky nezahazuje.
+
+---
+
+## Semantic Warnings
+
+**W‑8 · `✓ přečteno` u věty, ze které atom postavit nejde.**
+`Obsahuje citron vitamíny?` vypíše `✓ přečteno` a **současně** se ptá na
+kvantifikátor role `kdo`. Predikace v tom řádku (`kdo:citron`, bez
+kvantifikátoru) by na `role()` spadla na `UnquantifiedRole`. Otázka je
+hned pod tím, takže to **není tiché** a bloker to není — ale značka `✓`
+slibuje víc, než tah odevzdal. Zvaž třetí znaménko pro „přečteno
+s otevřenou otázkou".
+
+---
+
+## Action Items for Agent 1
+
+**A‑8 (B‑12), první.** Zahozený významový token ať je slyšet. Malá práce,
+mechanismus existuje.
+
+**A‑9 (W‑8), volitelné.** Odlišit `✓ přečteno` od „přečteno, ptám se".
+
+**Pak `L‑4`, negace z `Polarity=Neg`**, podle pořadí.
+
+### Potvrzení, o která jsi žádal
+
+**(1) Určitost není kvantifikace a nečeká na totéž — schvaluji, a je to
+nejlepší rozhodnutí tohohle kola.** Že jsi to poznal z výpisu — u
+*„ta učitelka"* se systém ptal „∀ nebo ∃", jenže určitost čeká na to,
+**který uzel** — je přesně ten druh nálezu, který se z návrhu nevyčte.
+Pole `awaiting` s dvěma hodnotami a dvěma různými větami otázky je správná
+stavba.
+
+**(2) Klíč naučeného vzoru nese operaci — schvaluji.** Ověřeno:
+`žádný` → `['DISJOINT', 'NEGATION']`, obě mapování přežila. Že je `žádný`
+v seedu dvakrát záměrně, protože *„žádný pták není savec"* je oddělenost a
+*„Petr nemá žádné auto"* popření, a rozliší to stavba věty a ne slovo —
+souhlas.
+
+**(3) `SELF` a `DEFINITE` v menu — schvaluji, s jednou podmínkou.**
+`SELF` je bez debaty. `DEFINITE` je jediná položka, která neukazuje na
+hotovou operaci jádra, a to je přijatelné jen dokud **není němá**: musí
+změnit otázku (přes `awaiting`), ne tiše neudělat nic. To je poučení
+z `B‑11`. Ať to drží doložka, aby se z „dokončí V3" nestalo „nedělá nic".
+
+**Oddělení `golden_lexicon` od `czech_seed()` — potvrzuji reprodukcí.**
+Dodávaný seed vrátí pro `NOUN/Sing/Nom/nsubj` i `NOUN/Plur/Nom/nsubj`
+**nic** a systém se ptá u každé věty; teprve dvanáct potvrzených tvarů
+vedle něj přečte devět z deseti. Kdyby ty tvary byly v seedu, byl by z nich
+tichý default pro každého, kdo knihovnu použije. Správně.
+
+**Nález o žurnálu si ceň víc, než jak jsi ho napsal.** Že se otázka
+z čtení **odvozuje** místo aby se ukládala do `TurnResult`, je ta samá
+třída jako `_match_kernel` v doložce — stav, který replay z holého žurnálu
+nespočítá, není reprodukovatelný.
+
+---
+
+## Archiv — kolo #23 (uzavřeno)
+
+**Status tehdy: 🟢 PASS.** Kolo #23. 350 testů zelených, 3 přeskočené, `mypy --strict` čistý na 35
+souborech, doložky **23 / drží 20 / otevřeno 3** — tištěno z `contracts.py`.
+**B‑11 opraven a ověřen, A‑5 i A‑6 hotovy.** Jeden nález (W‑7), ale
+**vědomě ho nevydávám za FAIL** — zdůvodnění níže.
+
+**Architectural Health Score: 9 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 350 passed / 3 skipped, mypy čistý na 35 souborech |
+| B‑1 falešný `CycleDetected` | 🟢 |
+| B‑2 uzly mimo `attach` | 🟢 báze 5 → 5 |
+| B‑10 `disjoint` přes `attach` | 🟢 drží |
+| **B‑11 odvozený `complete`** | 🟢 **uzavřeno** — `UnsafeRule`; přes `attach` `A` / `N`, neuzavřená skupina `U` |
+| Matice `⪯` § 3.3 | 🟢 včetně konkrétní × ∃ → `U` |
+| `disjoint` → `N`, obě pořadí | 🟢 cizí dvojice `U` |
+| `CONFLICT` s oběma důkazy | 🟢 různé listy |
+| Sortové stráže | 🟢 6 / 6 |
+| `same_as` nedestruktivní | 🟢 |
+| I‑16 pro **každý** prvek množiny | 🟢 `['before','complete','contains','disjoint','member','same_as','subset','within']` |
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+Vysvětlení, proč po dvou kolech FAIL dávám PASS, ačkoli nález mám. V kolech
+#21 a #22 jsem FAIL vydával za **tichou odchylku mezi tím, co systém uloží,
+a tím, co odpoví**. W‑7 tuhle vlastnost **nemá** — důkaz poctivě cituje
+pravidlo (`fab`, `s0002`), takže I‑14 drží a člověk vidí, odkud závěr je.
+Je to **chybějící zábrana, ne vada**. Kdybych FAIL vydal potřetí za měkčí
+nález, snížím cenu vlastního signálu — příště by „FAIL" znamenalo „něco mě
+napadlo", ne „systém tiše odpovídá špatně".
+
+---
+
+## Semantic Warnings
+
+### W‑7 · kritérium A‑6 je užší než invariant, kterému slouží
+
+Kritérium zní *„predikát, jehož pravdivost mění uzávěr nebo uzavírá svět,
+se nesmí odvozovat pravidlem"*, a test ho odvozuje z toho, **co čte
+`ClosureIndex`**. To je dobrý mechanismus a chytil by B‑10 i B‑11. Má ale
+**slepé místo dané konstrukcí**: chrání *uzávěr*, kdežto I‑16 mluví o
+*jazyce* — a role a jména jsou jazyk, který index nečte.
+
+Mimo množinu proto zůstává `role`, `role_exists`, `role_forall`,
+`role_self`, `name`. Reprodukce — všech pět projde v hlavě pravidla, a
+**účinkuje to**:
+
+```
+uloženo pod s0001 :  jede(kam:·mesto, kdo:Petr)      ← role „via" tam NENÍ
+otázka „má ta jízda roli via:dálnice?" → A            ← ale odpověď říká, že ano
+důkaz: ['fab', 's0002']                               ← a poctivě přizná, že z pravidla
+```
+
+Pravidlo s `of: R` navázaným na tělo **naroubuje roli na cizí, člověkem
+zapsanou instanci**. Uložený fakt se nemění, mění se to, jak se čte.
+`name` je horší případ téhož: kotva identity vyrobená odvozením.
+
+**Proč to není bloker:** pravidlo napsal člověk přes `attach_rule` a systém
+dělá přesně to, co v něm stojí. **Proč to přesto patří na seznam:** projekt
+si sám zvolil princip, že do jádrových věcí učení nepíše, a reifikace je
+základnější než `disjoint` i `complete`.
+
+**Zábrana patří jen na HLAVU.** Ověřeno, že v celé sadě je reifikace
+**pouze v tělech** (6 souborů) a v hlavě nikde — takže hlavová zábrana
+nerozbije ani můstek `p3` u dálnice, ani `R2` u zmrzliny, které roli
+z instance **čtou**. Kdyby se zakázalo i tělo, padnou obě domény.
+
+---
+
+## Action Items for Agent 1
+
+**A‑7 (W‑7), NEBLOKUJE `L‑3`.** Rozhodnout, zda `role*` a `name` patří za
+zábranu. Doporučuji ano, **jen pro hlavu pravidla**, a formulaci kritéria
+rozšířit z „mění uzávěr" na *„mění uzávěr, nebo je to jazyk, kterým se
+fakty zapisují"*. Vezmi to **až po `L‑3`**, ne před ním.
+
+**`L‑3` kvantifikátor na roli je další tah**, jak jsi navrhl.
+
+### Potvrzení
+
+**`P_COMPLETE` do `KERNEL_PREDICATES` — schvaluji** (z delegace člověka).
+Větev v `_match_kernel` pro jednomístný `complete` přes `index.is_complete`
+je správná ze stejného důvodu jako u `disjoint`: uzavření světa má účinek
+jen tehdy, když ho vidí index.
+
+**A‑6 jako kritérium místo seznamu — schvaluji, a je to lepší, než jsem
+žádal.** Obousměrná kontrola je ta správná půlka navíc: *co index čte, musí
+být v množině* by chytilo B‑10 i B‑11, a *co je v množině, musí index číst*
+brání zákazu bez důvodu. Že test parsuje zdroj přes `ast` a rozřešuje
+`P_*` přes modul, znamená, že přejmenování konstanty ho nezmate.
+
+**Že matice shodila tvou vlastní doložku `J-2` s průchodem `_match_kernel`,
+je ta nejlepší zpráva z tohohle kola.** Doložka o vnitřní funkci se opravdu
+musí dát ověřit zvenčí, jinak jde „doložit" testem, který obchází právě to,
+co se hlídá. Oprava na `.ask(` je správná.
+
+---
+
+## Archiv — kolo #22 (uzavřeno)
+
+**Status tehdy: 🔴 FAIL.** Kolo #22. 332 testů zelených, 3 přeskočené, `mypy --strict` čistý na 34
+souborech, jádro 0.1.5. **B‑10 opraven a ověřen, A‑1 až A‑4 hotovy.**
+FAIL vydávám za **nový nález B‑11**, který jsem našel při kontrole toho,
+co Builder přidal navíc — ne za nic z předchozího kola.
+
+**Architectural Health Score: 8,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 332 passed / 3 skipped, mypy čistý na 34 souborech |
+| B‑1 falešný `CycleDetected` | 🟢 řetěz `A⊆B⊆C⊆D` + dvě pravidla nad `disjoint` přijata |
+| B‑2 uzly mimo `attach` | 🟢 báze 5 → 5 přes celé vyhodnocení |
+| **B‑10 `disjoint` přes `attach`** | 🟢 **uzavřeno** — `AttachError`, jmenuje obě správné dveře |
+| W‑1 asymetrie přímé otázky | 🟢 obě pořadí `A`, cizí dvojice `U` |
+| Matice `⪯` § 3.3 | 🟢 včetně konkrétní × ∃ → `U` a `∀` na nečlena → `U` |
+| `disjoint` → verdikt `N` | 🟢 `member(Rex,kocka)` → `N` |
+| `CONFLICT` s oběma důkazy | 🟢 dvojice s různými listy `s0001` / `s0004` |
+| Sortové stráže | 🟢 6 / 6 — nově i `disjoint_of(Group, Place)` |
+| `same_as` nedestruktivní | 🟢 `A`, zápis beze změny, báze 5 → 5 |
+| `revoke` kaskádou | 🟢 `N` → `U`, pravidla zmizela s faktem |
+| I‑16 hlava pravidla | 🟢 4 / 4 odmítnuty, negovaný `member` prošel |
+| Doložky | 🟢 21, DRŽÍ 18, OTEVŘENO 3 — **tištěno z `contracts.py`**, sedí |
+| **`complete` v hlavě pravidla** | 🔴 **B‑11** |
+
+---
+
+## Critical Blockers
+
+### B‑11 · odvozený `complete` odpoví `A` a přitom neúčinkuje
+
+Táž báze, dvoje dveře, jeden je němý:
+
+| cesta | `complete(g)` | `member(Z,g)` |
+|---|---|---|
+| `attach(complete_of(g))` | `A` | **`N`** ← překlopení `U → N` funguje |
+| `complete(g)` v hlavě pravidla | `A` | **`U`** ← překlopení se nekoná |
+
+Pravidlo se **přijme**, atom se **odvodí**, dotaz na `complete(g)` vrátí
+`A` — a uzávěr se přesto nezmění. Uživatel dostane dvě odpovědi, které si
+z jeho strany odporují: *„skupina je úplná"* a hned nato *„nevím, jestli
+tam Z je"*. Nic to neohlásí. To je I‑1, a v části „odpověď `A` bez
+odpovídajícího účinku" i I‑14.
+
+**Proč právě teď.** Je to **zrcadlo zábrany, kterou Builder v tomhle kole
+přidal.** `disjoint` šel do `KERNEL_PREDICATES`, aby do něj učení
+nemohlo psát. `complete` je **druhý predikát se silou uzavřít svět** —
+překlápí `U → N` — a v jádrové množině **není**:
+
+```
+KERNEL_PREDICATES = ['before','contains','disjoint','member','same_as','subset','within']
+                                                     ↑ nově      ↑ 'complete' chybí
+```
+
+**Není to regrese.** Dřívější položka „`complete(g)` inert" byla uzavřena
+pro cestu přes `attach`, a ta funguje dodnes. Tohle jsou jiné dveře.
+
+**Doporučení (A‑5).** `complete` do `KERNEL_PREDICATES`, ze stejného
+důvodu, z jakého tam šel `disjoint`. Uzavření světa je **řečový akt
+člověka** („a to je všechno"), ne závěr učení — odvozovat úplnost z
+neúplných dat je přesně ten předpoklad uzavřeného světa, který § 0 zakazuje.
+Navíc to zachrání i stratifikaci: `complete` musí být stratum 0, jinak
+hrozí nemonotónní rekurze. Dnešní chování je z obou možností to nejhorší —
+pravidlo se přijme, atom se odvodí, účinek se zahodí. **Odmítnout nahlas.**
+
+---
+
+## Semantic Warnings
+
+**W‑5 · `¬disjoint` prochází `attach`em, a je to správně.** Ověřeno, že se
+popření nečte jako tvrzení: po zápisu `¬disjoint(pes,kocka)` vrátí otázka
+na oddělenost `N` a `member(Rex,kocka)` zůstane `U`. Zábrana ho pouští
+záměrně — je to legitimní tvrzení („překrývají se"), které žádnou expanzi
+nepotřebuje. Zaznamenávám, aby to příště nikdo neopravoval jako díru.
+
+**W‑6 · `KERNEL_PREDICATES` nemá vlastní doložku.** Je to množina, na
+které visí I‑16 i stratifikace, a mění se ručně. Po B‑11 by měla mít
+doložku s kritériem členství, ne jen výčet.
+
+---
+
+## Action Items for Agent 1
+
+**A‑5 (B‑11, první).** `complete` do `KERNEL_PREDICATES`; pravidlo
+s `complete` v nenegované hlavě ať skončí `UnsafeRule`, jako `disjoint`.
+
+**A‑6 (W‑6).** Doložka pro `KERNEL_PREDICATES` s kritériem: *predikát,
+jehož pravdivost mění uzávěr nebo uzavírá svět, se nesmí odvozovat
+pravidlem.* Tím je členství `disjoint` i `complete` odvoditelné z pravidla,
+ne z výčtu.
+
+**Pořadí dodatku L se nemění** — po A‑5 a A‑6 pokračuje **L‑3 kvantifikátor
+na roli**.
+
+### Potvrzení, o která jsi žádal
+
+**`P_DISJOINT` do `KERNEL_PREDICATES` — SCHVALUJI.** Rozhoduji z delegace
+člověka, ne jeho podpisem. Oba důsledky, které jsi vyjmenoval, jsou
+správné: učení do oddělenosti psát nesmí (I‑16), a `disjoint` v těle
+nedělá hranu ve stratifikačním grafu, protože se nikdy neodvozuje —
+odebrání té hrany nemůže zakrýt cyklus, jelikož `disjoint` nikdy není
+hlavou. Ověřeno i vedlejšími cestami: `disjoint_of(Group, Place)` padá na
+`SortError`, negovaný `disjoint` v hlavě na `UnsafeRule`.
+
+**A‑1 volba odmítnout místo rozvinout — SCHVALUJI, a s tvým důvodem.**
+Argument „`attach` slibuje jedna formule → jedno id, expanze zapisuje tři,
+takže by volající neměl čím pravidla odvolat" je silnější než ten, který
+jsem měl já. Tichá nemožnost odvolání je opravdu horší než hlasité
+odmítnutí. Ověřeno, že chyba jmenuje **obě** správné dveře.
+
+**A‑3 potvrzuji věcně.** `S-7` žádá průchod `.attach(`, takže test, který
+by oddělenost ověřoval jen přes `add_disjoint`, u ní neprojde. To je
+přesně ta zpětná vazba, kvůli které sloupec „použití" existuje.
+
+---
+
+## Archiv — kolo #21 (uzavřeno)
+
+**Status tehdy: 🔴 FAIL.** Kolo #21. 319 testů zelených, 3 přeskočené, `mypy --strict` čistý na 34
+souborech, jádro 0.1.5. Oba sledované blokery uzavřené. **FAIL vydávám za
+jediný nález (B‑10), ne za stav repa** — je to tichá poddodávka odpovědi
+přes veřejný vstupní bod, a to je I‑1.
+
+**Architectural Health Score: 8,5 / 10**
+
+| Oblast | Stav |
+|---|---|
+| Testy a typy | 🟢 319 passed / 3 skipped, mypy čistý na 34 souborech |
+| B‑1 falešný `CycleDetected` | 🟢 uzavřeno — řetěz `A⊆B⊆C⊆D` + dvě pravidla nad `disjoint` přijata |
+| B‑2 uzly mimo `attach` | 🟢 uzavřeno — báze 5 → 5 přes celé vyhodnocení |
+| Matice `⪯` § 3.3 | 🟢 včetně **konkrétní × ∃ → `U`** (dialog B) a `∀` na nečlena → `U` |
+| `CONFLICT` s oběma důkazy | 🟢 `conflict` je **n‑tice dvou důkazů**, listy `s0001` a `s0004` |
+| Sortové stráže | 🟢 5 / 5 — včetně kvantifikátoru na `Entity` a holého `Group` v roli |
+| `same_as` nedestruktivní | 🟢 odpověď `A`, původní zápis beze změny, báze 5 → 5 |
+| `revoke` kaskádou | 🟢 s faktem `disjoint` zmizela i obě vygenerovaná pravidla, `N` → `U` |
+| I‑16 hlava pravidla | 🟢 `member`/`subset`/`same_as` nenegované → `UnsafeRule`; negovaný `member` projde |
+| **`disjoint` přes `attach`** | 🔴 **B‑10** |
+
+---
+
+## Critical Blockers
+
+### B‑10 · `attach()` přijme `disjoint` a tiše z něj neodvodí nic
+
+Podpořený vstup `kb.add_disjoint(...)` zapíše **tři** výroky — fakt plus
+dvě vygenerovaná pravidla obou směrů `member̄`:
+
+```
+p0001: ¬member(elem:x, group:·kocka) <- member(elem:x, group:·pes)
+p0002: ¬member(elem:x, group:·pes)   <- member(elem:x, group:·kocka)
+s0001: disjoint(a:·pes, b:·kocka)
+```
+
+Ručně stavěný atom přes `attach()` zapíše **jen ten fakt**. Reprodukce,
+stejná báze, jediný rozdíl je vstupní bod:
+
+| dotaz | přes `add_disjoint` | přes `attach(atom(P_DISJOINT,…))` |
+|---|---|---|
+| `disjoint(pes,kocka)` | `A` | `A` |
+| `member(Rex,kocka)` | **`N`** | **`U`** ← tichá poddodávka |
+
+Index se přitom naplní **správně a symetricky** —
+`{('pes','kocka'): s0002, ('kocka','pes'): s0002}` — takže se to netváří
+jako odmítnutí. Systém odpoví `U` tam, kde má `N`, a nic neohlásí.
+
+Proč to je bloker, ne kosmetika: `attach` je **veřejný zapisovač**,
+`P_DISJOINT` je v `__all__`, a `disjoint` je **jediná jádrová relace bez
+konstruktoru `_of`** — sedm sourozenců (`subset_of`, `member_of`,
+`contains_of`, `within_of`, `before_of`, `same_as_of`, `complete_of`) ho
+má, `disjoint` ne. Ta chybějící zábrana je přesně to, co dělá špatnou
+cestu dosažitelnou. Je to **třetí případ téže třídy** po B‑9 a nepředaných
+`tiers`, a platí na něj poučení z kola #19, které Builder sám přijal:
+*cesta, kterou jde vrstvu zavolat a nefunguje, je vada NÁVRHU.*
+
+---
+
+## Semantic Warnings
+
+**W‑1 · přímá otázka na `disjoint` je asymetrická.** Index drží oba páry,
+`closures.py:465` je čte, ale `disjoint(kocka,pes)` vrátí `U`, zatímco
+`disjoint(pes,kocka)` vrátí `A` — **i přes podpořený vstup**. Odvození
+`member̄` symetrické je (obě pravidla), asymetrická je jen přímá otázka.
+Třída B‑6: zákon je v indexu a dotaz ho nekonzultuje. V české rozpravě to
+je běžná otázka („Je kočka něco jiného než pes?"), takže to není okrajové.
+
+**W‑2 · opravuji vlastní dřívější tvrzení.** Sekce „Co drží" nese od kola
+#12 větu *„`disjoint` symetricky v obou pořadích"*. Pro přímou otázku to
+**dnes neplatí** (W‑1). Nedokážu z dnešního běhu rozhodnout, zda šlo
+o regresi, nebo jsem to tehdy ověřil jinou cestou — proto to neoznačuji za
+regresi, ale za **tvrzení, které jsem neměl nechat bez reprodukce**.
+
+**W‑3 · `disjoint` není uzávěr, ale cukr nad generovanými pravidly.** Není
+to vada — `revoke` je pod tím čistý, ověřeno — ale je to smlouva, kterou
+nikde nedrží žádná doložka, a čtenář `closures.py` čeká uzávěr.
+
+**W‑4 · předávka nesedí s kódem v počtu.** Handover tvrdí „19 doložek,
+DRŽÍ 15, OTEVŘENO 4"; `contracts.CONTRACTS` má **18**, HELD 15, OPEN 3
+(`O‑6`, `C‑5`, `S‑6`). Kód je vnitřně konzistentní, chybná je zpráva.
+Drobnost, ale předávka je auditní stopa.
+
+---
+
+## Action Items for Agent 1
+
+**A‑1 (B‑10, první).** Jedna cesta dovnitř. Doporučuji `disjoint_of()`
+jako osmý konstruktor, aby `disjoint` přestal být výjimka, a `attach`
+holý `P_DISJOINT` atom buď **rozvine stejně jako `add_disjoint`**, nebo
+**odmítne rozlišující chybou**. Co nesmí zůstat: přijmout a mlčky
+neodvodit. Rozhodni které z těch dvou — obojí je poctivé.
+
+**A‑2 (W‑1).** Přímá otázka na `disjoint` ať konzultuje symetrický index.
+
+**A‑3.** Doložka pro `disjoint` do matice. **Tohle je test té matice
+samotné**: sloupec „použití" byl postaven přesně na tuhle třídu vad
+(chytil by nepředané `tiers`) a `disjoint` doložku nemá. Kdyby ji měl,
+B‑10 najde CI, ne já.
+
+**A‑4 (W‑4).** Počty v předávce srovnat s `contracts.CONTRACTS`.
+
+**Pořadí dodatku L se nemění** — po A‑1 až A‑4 pokračuje **L‑3
+kvantifikátor na roli**, jak jsi navrhl vzít jako samostatný tah.
+
+### Co jsem naopak potvrdil, ať se to nehledá znovu
+
+`SegmentationError` jako vlastní typ mimo `OracleError` — souhlas s
+odůvodněním, tři situace se opravdu nesmí slít. Čtyři sloupce matice
+místo sedmi — **potvrzuji**; sedm sloupců popisuje konstruktor
+metajazyka, doložka na hranici vrstev denotaci ani důkaz nemá, a
+předstírat je by z matice udělalo ozdobu. Tři nálezy, které matice sama
+našla při prvním spuštění, jsou pravdivé; oprava vlastního `O‑2`
+z `.readings` na `unambiguous` je přesně to chování, kvůli kterému má
+smysl sloupec odvozovat a nedeklarovat.
+
+---
+
 # 🛡️ Code Review & Semantic Verification Log
 
 **Kolo:** #12 · 2026-08-14 · **F0.7 uzavřena**, konsolidace pro další fázi
@@ -59,6 +1366,354 @@ záměna se negeneruje. Nezadával jsem to; je to správně.
 
 **Nerozhodnutelný případ** (dvě jména, obě Sing i Nom) dál vrací
 **2 přeživší + otázku**, `decided is None`. ✓
+
+---
+
+## ✅ KOLO #20 — B‑9 zavřen, žádný blocker
+
+`pytest` **243 passed** · `mypy --strict` čistý na 30 souborech ·
+jádro 0.1.5 beze změny · regrese celá drží.
+
+Všechny tři věty, které dřív padaly, teď projdou:
+
+```
+Petr jel v pondělí do Prahy.  → jet(kam:Praha, kdo:Petr, v+Loc:pondělí)
+                                 [POZOR: v+Loc může být kde nebo kdy]
+Petr jel autem do Brna.       → jet(kam:Brno, kdo:Petr, čím:auto)
+Petr bydlí v Praze s Janou.   → bydlet(kdo:Petr, s kým:Jana, v+Loc:Praha)
+```
+
+Role se pojmenovávají **z předložky a pádu**, jak žádá § 12/1, a mapování
+na kanonické role je **naučený vzor** v `lexicon.py` s proveniencí a statusem
+— stejný tvar jako `kromě → GROUP_DIFF`.
+
+**Nejlepší rozhodnutí je to o `v+Loc`.** Seed ho mapuje na **obě** kanonické
+role, `kde` i `kdy`, `role_candidates` vrací n‑tici, a `role_mapping_tier`
+proto roli **nechá povrchovou** a do stopy zapíše proč:
+
+```
+role_candidates('v+Loc')  → ('kde', 'kdy')   ← n-tice, nevybírá se tiše
+role_candidates('do+Gen') → ('kam',)          ← jednoznačné, přejmenuje
+```
+
+Je to pravda o češtině a Builder ji ve výchozích datech **nezamlčel**.
+Přesně tvar, který si vynutila past F‑2 u slova „nebo".
+
+### Builderův vlastní nález — potvrzuji a je vážnější, než zní
+
+Našel, že `cascade()` se ukončovala smyčkou `if len(candidates) <= 1: break`.
+To je správné pro **filtr**, ale patro, které čtení **přepisuje**, se pak
+nespustilo vůbec. A všechny tři věty mají po tvrdých patrech přesně jednoho
+kandidáta — takže **oprava B‑9 by vypadala hotově a nefungovala by**.
+
+Ověřeno rozdílem:
+
+```
+bez mapování : jet(do+Gen:Praha, kdo:Petr)
+s mapováním  : jet(kam:Praha,    kdo:Petr)   ← přejmenování proběhlo i s jedním kandidátem
+```
+
+Byla to **tichá závislost chování na počtu zbylých kandidátů** — kategorie
+chyby, kterou test na výsledek nechytí, protože výsledek vypadá rozumně.
+Zapíchnuto testem `test_transform_tiers_run_even_when_one_reading_is_left`.
+
+---
+
+## 🚨 KOLO #19 — `before*` hotový (jádro 0.1.5) · jeden blocker B‑9
+
+`pytest` **236 passed** (bylo 225) · `mypy --strict` čistý na 30 souborech ·
+jádro posunuto na **0.1.5**.
+
+**Dodatek H splněn celý.** Ověřeno vlastními reprodukcemi:
+
+```
+before* je TRANZITIVNÍ        po → út A,  po → st A (přes út)
+before* NENÍ reflexivní       po → po U          ← ne A
+směr se nepřevrací            út → po U
+cyklus                        InconsistentOrder  ← netiše neodpoví
+cyklus NEZNEPOUŽITELNÍ osu    nezávislá dvojice x → y dál A
+```
+
+Verze i tabulka změn sedí; § 5.1 má `before*` s poznámkou o nereflexivitě,
+§ 13 řádky T45–T48, a **cyklus je zapsaný jako otevřená položka**, ne jako
+hotová záruka — přesně jak H‑3 předepsal.
+
+**Nereflexivita nebyla v zadání a Builder ji přidal správně.** Bez ní by
+splynulo „dřív" s „nejpozději" a dotaz *„jel Petr dřív do Prahy než do
+Prahy?"* by vrátil `A`. Dobrý postřeh.
+
+**Rozsah blokace u cyklu potvrzuji** — blokovat celou osu kvůli jedné chybě
+v kalendáři by bylo horší než užší detekce. Je to otestované a v dokumentu.
+
+### ⚠️ Dialog D je hotový strukturovaně, ne přes češtinu
+
+`test_examples_petr_time.py` nepoužívá kaskádu ani orákulum (grep: 0 výskytů).
+To je **v pořádku a odpovídá zadání** — § 6.12 popisuje dialogy strukturovaně
+a dodatek G žádal akceptační test. Ale znamená to, že *„Petr jel v pondělí
+do Prahy"* jako **česká věta** pořád neprojde. Proč, je v B‑9 níže.
+
+---
+
+## 🚨 B‑9 · Okolnosti se pojmenovávají podle `deprel`, ne podle předložky a pádu
+
+**Nalezeno na dotaz člověka**, mimo běžné kolo. Blokující.
+
+`_role_for` v `cascade.py` pojmenuje okolnost **doslova jejím `deprel`**:
+
+```python
+if token.deprel in ("obl", "nmod", "xcomp", "ccomp"):
+    return token.deprel          # ← „obl" jako jméno role
+```
+
+Takže *„v pondělí"* i *„do Prahy"* dostanou **totéž jméno role `obl`**.
+`Predication` duplicitní roli správně odmítne — a věta **spadne**:
+
+```
+✗ Petr jel v pondělí do Prahy.   → ValueError: čtení 'jel' má roli vícekrát: ['obl','obl']
+✗ Petr jel autem do Brna.        → ValueError: … ['obl','obl']
+✗ Petr bydlí v Praze s Janou.    → ValueError: … ['obl','obl']
+```
+
+**Není to okrajové.** Dvě příslovečná určení má v češtině obrovská část vět.
+A první z nich je **doslova věta z dialogu D** — takže dialog D je blokovaný
+tímhle **nezávisle na `before`**. Kdyby se `before` zítra doimplementoval,
+dialog D by pořád nešel napsat.
+
+### Zadání to má rozhodnuté — § 12/1
+
+> *„Strukturální jádro uzavřené (kdo/co z podmětu a předmětu), **okolnosti
+> povrchově podle předložky/pádu** (nehádá se sémantika, INV‑11),
+> ekvivalence rolí („kudy" × „po čem") se učí dialogem jako odvolatelná data."*
+
+Implementace tedy nedělá, co § 12/1 rozhodl. A UDPipe přitom **všechno
+potřebné dodává** — u každé okolnosti je dítě s `deprel=case` nesoucí lemma
+předložky, a samotný nominál nese `Case`:
+
+```
+v      ADP   deprel=case  →  pondělí  NOUN  Case=Loc   ⇒  role „v+Loc"
+do     ADP   deprel=case  →  Prahy    PROPN Case=Gen   ⇒  role „do+Gen"
+autem  NOUN  Case=Ins     (bez předložky)              ⇒  role „Ins"
+```
+
+Dnes se z toho čte **jen `deprel`**. Nevyužité zůstává lemma předložky,
+`Case`, a u sloves `Tense` a `Aspect`.
+
+### Oprava, která sedí na už existující mechanismus
+
+Druhá půlka § 12/1 říká, že **ekvivalence rolí se učí dialogem jako
+odvolatelná data**. To je přesně to, co `lexicon.py` už umí pro slova →
+operace. Takže:
+
+1. **`_role_for` pojmenuje okolnost povrchově** z předložky a pádu
+   (`v+Loc`, `do+Gen`, `Ins`) — žádná sémantika se nehádá, INV‑11 drží.
+2. **Mapování povrchové role na kanonickou** (`v+Loc → kdy`,
+   `do+Gen → kam`, `po+Loc → kudy`) je **naučený vzor** v `lexicon.py`,
+   se statusem a proveniencí, odvolatelný — stejně jako `kromě → GROUP_DIFF`.
+
+Tím se zároveň řeší, proč § 3.6 mluví o rolích `kde / kam / odkud / kudy / kdy`,
+zatímco kaskáda dnes umí jen `obl`.
+
+**Poznámka:** kontrola duplicitní role v `Predication` je **správná** a nemá
+se oslabovat — chyba je výš, v pojmenování. Je dobře, že to spadlo hlasitě
+místo aby to tiše slilo dvě okolnosti do jedné.
+
+---
+
+## ✅ KOLO #18 — W‑5 a napojení `Session` hotové, žádný blocker
+
+`pytest` **225 passed** (bylo 216) · `mypy --strict` čistý na 29 souborech ·
+jádro 0.1.4 beze změny · `before` **správně nevzat** · regrese celá drží.
+
+**W‑5 zavřeno** — `_missing_link` pokrývá i místa a časy:
+
+```
+báze jel(kam:Praha), dotaz kam:Brno  → chybí vědět: contains(part:Praha, whole:Brno)  [fakt s0001, role kam]
+báze byl(kdy:pondělí), dotaz úterý   → chybí vědět: within(part:pondělí, whole:úterý)  [fakt s0001, role kdy]
+```
+
+**`Session.utter` splňuje past F‑3** — a lépe, než jsem čekal. Očekával jsem
+výjimku u neběžícího orákula; místo toho se vrací **rozlišující výsledek**:
+
+```
+orákulum mimo  → error = 'služba neběží'   „✗ orákulum neodpovídá — provozní chyba, ne nepochopení"
+nerozebráno    → error = None              „→ tuhle větu neumím přečíst"
+žurnál po obou → 0 tahů
+```
+
+Strojově rozlišitelné, a pro dialogovou smyčku je návratová hodnota
+**správnější než výjimka**, která by smyčku shodila.
+
+### Builderova námitka mi sedí a beru si ji
+
+Upozornil, že moje dvojí chyba (testování vrstvy přes vstupní bod, který ji
+neobsluhuje) **není jen procedurální omyl**:
+
+> *„Pokud se dá vrstva zavolat cestou, kde nefunguje, je to i vada NÁVRHU,
+> ne jen postupu."*
+
+Má pravdu, a u `GapFinder` to platí doslova: je v `Session`, ale
+`Engine.ask()` vrací holý `Gap`, takže kdo jde přes engine, dostane
+zopakovaný dotaz. Dnes jsem se spletl **potřetí** — čekal jsem výjimku tam,
+kde je návratová hodnota. Zapisuji jako otevřenou otázku: **má `Engine.ask()`
+na `GapFinder` aspoň ukázat v hlášce?**
+
+---
+
+## 📜 DODATEK K — výběr z obou konzultací (bez změny směru)
+
+**Rozhodl:** člověk (J.), 14. 8. 2026 — *„vezmi to, co pokládáš za přínosné
+bez zásadní změny směru."* Vybral jsem níže uvedené; u každé položky je,
+proč směr nemění.
+
+### Beru — dokumentační opravy (jádro se nemění, jen přestává lhát)
+
+| | Co | Proč to není změna směru |
+|---|---|---|
+| **K‑1** | § 3.2 přeformulovat na **intervalovou aproximaci**: `certain`/`possible` jsou dolní a horní odhad znalosti, `DIFF` je *sound interval propagation*, ne operace nad možnými světy | Ověřil jsem, že kód to **už tak dělá** — `certain` je exaktní (per‑element důkazy), jen `possible` over‑aproximuje. Oprava popisu, ne sémantiky. |
+| **K‑2** | § 6.3 přestat argumentovat monadickou FOL; charakterizovat jako **konečný typovaný stratifikovaný Datalog‑like systém** s closure operátory a epistemickou vrstvou nad dotazem. „PTIME" rozepsat **v čem** (báze, pravidla, dotaz, hloubka termů, role‑chain, scelení, strata) | Nahrazuje slabý argument přesným. Žádná schopnost se nepřidává. |
+| **K‑3** | Explicitní axiom: **`∃x P(x)` může platit, aniž v grafu existuje `id(x)`** | Systém to tak dělá; chybí to napsat. |
+| **K‑4** | `complete` pojmenovat jako **epistemickou deklaraci uzavřenosti**, ne jako inferenční fakt | Implementace to už tak dělá (mimo pevný bod). |
+| **K‑5** | Nenárokovat „minimální vysvětlení" — je minimální **podle definované syntaktické metriky** | Konstrukci zachovat, formulaci opravit. |
+
+Všech pět je změna verzovaného dokumentu → **posun verze a řádek v tabulce
+změn**. Jsou to ale **opravy popisu, ne rozšíření schopnosti**, takže je
+beru jako přínosné bez změny směru. Kdyby s tím člověk nesouhlasil, stačí říct.
+
+### Beru — mechanismy, které jsou čistě additivní
+
+**K‑6 · Contract systém / coverage matrix.** Nejcennější položka z obou
+posudků. Každý konstruktor metajazyka dostane explicitní stav ve sloupcích
+**syntax · typování · denotace · evaluátor · důkaz · renderer · test**,
+ideálně generovaný z AST, a CI nesmí dovolit označit konstruktor za hotový,
+dokud není řetěz uzavřený. **Přesně tohle by odchytilo `before`** — a
+odchytí i příští takový drift, který při revizi ujde.
+
+**K‑7 · Hranice parseru zpřesnit.** Báze smí eliminovat čtení **jen když pro
+to existuje explicitně definovaný sémantický důvod** (formální konflikt,
+typová chyba, nesplnitelný constraint) — ne „tahle interpretace se mi
+nehodí". Jinak vzniká self‑confirming loop. Zpřesňuje můj dodatek H‑4(1).
+
+**K‑8 · Metriky.** K „počtu tahů" přidat **informaci na tah**,
+**znovupoužití** naučeného pravidla a hlavně **regret / correction rate**.
+Jeden tah do naučení a deset chybných použití je horší než tři tahy
+a stabilní správnost.
+
+### Beru — levné UX zlepšení bez nové vrstvy
+
+**K‑9 · Přeformulovat `GapFinder` do nabídky.** Místo *„chybí vědět:
+disjoint(vrabec, tučňák)"* raději *„Předpokládám správně, že vrabec není
+tučňák?"*. Je to **změna renderování**, ne nová vrstva — `GapFinder` už tu
+větu spočítá. § 12/5 to sankcionuje: nabídka označená jako **HYPOTÉZA
+s evidencí**, nikdy tiché tvrzení, jde odmítnout a **odmítnutí se pamatuje**.
+
+**K‑10 · Adversariální dialogy H a I.** Dialog H (synonyma „vůz" × „auto",
+cílí na `same_as`) a dialog I (neúplné premisy, cílí na kvalitu doptávání).
+**Dialog G (zájmena) NE** — potřebuje aktivaci, která je odložená.
+
+### Neberu — a proč
+
+| | Proč ne |
+|---|---|
+| **Common‑sense defaulty** („pták létá, dokud…") | Nemonotónní logika. § 6.12 u dialogu E říká doslova *„bez nemonotónní logiky"*; rozbilo by I‑14 i akceptační test. Ta UX potřeba má sankcionované řešení — je to K‑9. |
+| **Kontextový zásobník hned** | Mění pořadí proti dodatku F a proti prvnímu posudku. Navíc obsahuje *„tiše to přijme"*, což porušuje I‑1. |
+| **LLM → AST** | **Neodmítám věcně** — je to architektonicky kompatibilní (rozbor v dodatku J). Je to ale změna směru, takže patří k rozhodnutí člověka, ne do tohohle výběru. |
+| **Formální hardening PŘED češtinou** | Pořadí je rozhodnutí člověka (dodatek G × posudek 1). K‑1 až K‑5 jsou z hardeningu to, co jde udělat bez přerušení práce. |
+
+### Pořadí, které doporučuji
+
+**K‑6 první** — je nezávislý a chrání před celou třídou chyb.
+Pak **K‑1 až K‑5** v jednom průchodu dokumentem (jeden posun verze).
+Pak **K‑9**, **K‑7**, **K‑10**, **K‑8**. Vše po dokončení běžícího
+dodatku G.
+
+---
+
+## 📜 DODATEK J — druhá konzultace (UX pohled): co přijmout a co ne
+
+**Zdroj:** druhý konzultant, 14. 8. 2026. Optika je UX a škálování, ne
+formalismus — a proto se v několika bodech **rozchází s prvním posudkem**.
+Rozhodnutí o sporných bodech je na člověku.
+
+**Drobná faktická oprava:** posudek mluví o „jádru 0.1.5". Jádro je na
+**0.1.4**; `before` je schválený, ale neimplementovaný, takže 0.1.5 zatím
+neexistuje.
+
+### ✅ Co přijmout bez výhrad
+
+**Doporučení 1 — měkká vrstva před tvrdým `U`.** Místo *„Nevím. Co ti
+chybí?"* raději *„V databázi to nemám, ale předpokládám správně, že…?"*
+**Tohle už je sankcionované** — § 12/5 zadání povoluje plnou proaktivitu
+s pojistkami: nabídka je vždy označená **HYPOTÉZA s evidencí**, nikdy tiché
+tvrzení, jde odmítnout a **odmítnutí se pamatuje**. `GapFinder` už navíc
+sestupuje k větě, kterou člověk umí vyslovit. Chybí jen ta formulace
+a napojení na měkkou vrstvu.
+
+**Doporučení 4 — adversariální dialogy G, H, I.** Levné, správné, v duchu
+§ 10. Dialog H (synonyma „vůz" × „auto") je zajímavý tím, že cílí přesně na
+`same_as` a jmennou vrstvu § 3.5.
+
+**Kritika 2 — únava z doptávání.** Reálné riziko. Pojistka existuje
+(pamatovat si odmítnutí), ale metrika ji neměří. Souvisí s tím, co navrhl
+první konzultant: přidat **regret / correction rate** a **informaci na tah**.
+
+### ❌ Co je neslučitelné s jádrem
+
+**Kritika 4 a „common sense" defaulty — „pták létá, dokud se neřekne, že je
+to tučňák".** To je **default reasoning**, a projekt ho odmítá vědomě, ne
+z opomenutí. § 6.12 u dialogu E říká doslova, že výjimky unese *„samotná
+algebra groups (`NOT`), **bez nemonotónní logiky**"*. Přijmout defaulty by:
+
+* zavedlo **nemonotonicitu** — pozdější fakt by rušil dřívější závěr;
+* rozbilo **I‑14** — vysvětlení se renderuje jen ze skutečné struktury,
+  a default žádnou nemá;
+* **rozbilo dialog E**, který je akceptačním testem.
+
+Ta UX potřeba je ale legitimní a **má sankcionované řešení**: ne „systém
+předpokládá", nýbrž „systém **nabídne hypotézu**, člověk potvrdí". To je
+doporučení 1, které přijímám. Rozdíl mezi „předpokládám a mlčím" a
+„navrhuji a ptám se" je přesně ta hranice, na které projekt stojí.
+
+**Detail v doporučení 2:** *„Pokud to sedí s bází, **tiše to přijme**."*
+Tiché přijetí porušuje I‑1. Kandidát z kontextového zásobníku musí být
+buď doložený, nebo nabídnutý — nikdy tichý.
+
+### ⚖️ Kde se konzultanti rozcházejí — rozhodne člověk
+
+| | První posudek | Druhý posudek |
+|---|---|---|
+| **Aktivace / koreference** | P2 — *„dluh existuje, ale zatím bych ho nestavěl"* | **předsunout hned**, jinak systém degraduje na „databázové CLI" |
+| **Kaskáda pro češtinu** | *„v roce 2026 obhajitelná"*, jen zpřesnit hranice | **křehká**, hrozí špagety při škálování na 600 dialogů |
+| **Pořadí** | nejdřív formální hardening | těžiště **okamžitě** do `cascade.py` a `oracle.py` |
+
+K té kaskáde jedna věcná poznámka: riziko špaget se týká **pater
+v `cascade.py`**, ne `patterns.py`. Vzory jsou **data** s proveniencí
+a statusem, serializovaná do JSON — přidání vzoru není nová větev kódu.
+A § 3.0 zakazuje větvení podle druhu konstrukce, což je právě ten
+anti‑vzor, kterým conBond3 zarostl.
+
+### 🔬 Doporučení 3 — LLM → AST: kompatibilní, a stojí za vážné zvážení
+
+Tohle je nejzajímavější bod celého posudku a **neodmítám ho**. Nechat
+neuronovou síť dělat to, v čem je dobrá (chaos přirozeného jazyka, elipsy,
+synonyma), a výsledek prohnat deterministickým enginem, je architektonicky
+konzistentní s I‑2: *„jazyk a statistika navrhují, o pravdivosti rozhoduje
+jádro."* LLM je jen lepší navrhovatel než ruční kaskáda.
+
+Tři podmínky, za kterých to invarianty unese:
+
+1. **Determinismus (I‑4) zůstává**, protože do žurnálu jde **struktura, ne
+   text** — LLM běží jednou za tah a výsledné AST se zapíše. Kdyby v žurnálu
+   ležely věty, replay by závisel na modelu a padlo by to.
+2. **Provenience (I‑5)** — AST musí nést, který model a která verze ho
+   vyrobily, přesně jako keš u UDPipe.
+3. **Nejednoznačnost se pořád ptá.** LLM vrátí kandidáty; když AST
+   neprojde typováním nebo je kandidátů víc, systém se **zeptá**, nehádá.
+
+Za těch podmínek je to **týž tvar jako dnešní kaskáda**, jen s jiným
+generátorem kandidátů — a `oracle.py` je už napsaný jako **fasáda
+s injektovatelnou dopravou**, takže výměna generátoru je návrhově
+připravená. Stojí za to to zkusit vedle stávající cesty a porovnat na
+zlaté sadě, ne místo ní.
 
 ---
 
@@ -861,3 +2516,272 @@ Ověřeno vlastními reprodukcemi v kole #12:
 
 *Kolo #12. Všechna potvrzení jsou reprodukovaná spuštěným kódem.
 F0.7 uzavřena, řízení předáno Builderovi pro českou konverzační vrstvu.*
+
+---
+
+# Dodatek L — cesta k plné funkčnosti podle etalonových dialogů
+
+**Kolo #20. Zadání sestaveno z vlastního úsudku; člověk tento okruh
+rozhodování delegoval větou „na základě vlastního expertního úsudku
+směruj k naplnění zadání workera".** Delegace je zaznamenaná proto, aby
+bylo z auditu poznat, že smlouvy vrstev v L‑0 a L‑1 neprošly kolem
+člověka omylem, ale s jeho vědomím.
+
+## L‑0 · Reprodukce uzavření dodatku G
+
+Ověřeno spuštěním, ne přečtením:
+
+- `pytest -q` → **259 passed** (+16 oproti kolu #19)
+- `mypy --strict .` → **čistý, 32 souborů**
+- `session.py:422,452` — `cascade(..., tiers=self.tiers())` na **obou**
+  větvích; patra se staví per tah, ne v konstruktoru
+- `session.py:420` — víc čtení jde do `_utter_many`, ne `readings[0]`
+
+Nález o `tiers` beru jako **správně diagnostikovanou vadu návrhu**, ne
+jako opravu postupu. Je to třetí případ téhož druhu (B‑9, `tiers`,
+a nález níže): **defekty vznikají na hranicích vrstev, ne uvnitř nich.**
+To řídí pořadí v L‑6.
+
+## L‑1 · Rozhodnutí: co je `Utterance`
+
+Nález potvrzen v `oracle.py:310` — `for sentence in sentences` skládá
+**jeden záznam na větu** do pole, které `_utter_many` čte jako
+**kandidátní čtení jedné promluvy**. Dvouvětý vstup by se na živé službě
+zeptal „které z toho?" na dvě různé věty. Dnes to nikdo nepotká jen
+proto, že `cb-udpipe` neběží — to není obrana, to je odklad.
+
+**Rozhodnuto: `Utterance` je JEDNA VĚTA.** Důvody, v pořadí váhy:
+
+1. `Session.utter` mapuje **jeden tah na jednu predikaci**; žurnál je
+   indexovaný tahy. Dvouvětá promluva nemá kam uložit druhý výsledek.
+2. Nálada (`mood`) se detekuje z celého textu. U dvou vět je **jedna
+   nálada pro obě už teď špatně** — „Petr jel do Prahy. Jel tam v pondělí?"
+   nemá společnou náladu.
+3. `unambiguous` dává smysl jen per větu.
+4. `_utter_many` se ptá na **dvojznačnost**. Segmentace není dvojznačnost.
+
+**Provedení:** při `len(sentences) > 1` **rozlišující chyba**, nikdy tiché
+vzetí první. Segmentace textu na tahy je **samostatná operace**
+(`segment()` nebo práce volajícího), ne skrytá vedlejší funkce `parse`.
+Logika jádra se nemění → **bez bumpu 0.1.5**, ale zapsat do smluv (L‑6).
+
+## L‑2 · Kde přesně končí česká cesta
+
+Reprodukováno: `utter` větu přečte, uloží strukturu do žurnálu, vypíše
+`✓ přečteno` a **skončí**. Do báze se nezapíše nic, otázka se
+nevyhodnotí. Chybí čtyři věci, ne jedna.
+
+### L‑3 · Kvantifikátor na roli — **blokuje vše ostatní**
+
+```
+role('kdo', Group('Učitelka'))   →  UnquantifiedRole
+```
+
+Jádro **vyžaduje** kvantifikátor u každého skupinového filleru.
+`Predication` z kaskády žádný nenese — `Mention` má lemma, tvar, index,
+`upos`, `feats`, a nic víc. **Z české věty se skupinou v roli dnes nejde
+postavit ani jeden platný atom.** To je většina etalonových vět.
+
+Nehádat. Mechanismus, který na to už existuje, se má použít celý:
+
+- **Explicitní determinátory přes lexikon** — `každý → FOR_ALL`,
+  `nějaký`/`některý → EXISTS` už v `czech_seed()` jsou. Doplnit
+  `všichni`, `žádný`, a `ten/ta/to` jako **určitost, ne kvantifikaci**
+  (odkazuje na uzel, nezavádí skupinový fillér).
+- **Holé jméno bez determinátoru** — čeština nemá členy, takže tohle je
+  většinový případ. **Žádná implicitní hodnota v kódu.** Nabídne se jako
+  `LearnedPattern` se statusem hypotézy, klíčovaný `StructuralSignature`
+  (`upos`, `Number`, pád, `deprel`), potvrdí ho člověk jednou a pak platí.
+  Tím je to **data s proveniencí a odvolatelné**, ne zadrátovaný dohad
+  (I‑16: učení mění program, ne jazyk).
+- **Když nic nerozhodne → zeptat se.** Nikdy nedosadit (I‑1).
+
+Nové patro kaskády, řadí se **za** mapování rolí.
+
+### L‑4 · Negace z `Polarity=Neg`
+
+Ověřeno: `cascade.py` slovo *negace* nezná — nula výskytů. Česká negace
+je předpona slovesa (`nelétá`, `nesmí`), UDPipe ji dává jako
+`Polarity=Neg` na slovese. `Operation.NEGATION` v lexikonu **už je**,
+jen ji nikdo neplní.
+
+Bez toho **doména farmaka nefunguje** — celý její závěr je `nesmí dostat`.
+Malá práce, tvrdý dopad. Pozor na I‑21: `Polarity=Neg` je **silná negace
+`p̄`**, ne nepřítomnost důkazu.
+
+### L‑5 · V3 — zmínka → uzel, a směrování tahu
+
+Teprve tady se věta stane faktem. Rozsah **omezený na to, co etalon
+potřebuje**:
+
+- vlastní jméno → uzel podle jména; nový uzel vzniká **jen `attach`em**,
+  tedy lidským tahem — ne vyhodnocením (§ 0.2, No Chase)
+- obecné jméno → `Group`
+- určitý popis → doložit existující uzel; **víc kandidátů → doptat se**
+- **zájmena a elipsa VEN.** Potřebují aktivaci (§ 4), etalon je nemá,
+  protože mluví jmény. Mez se **řekne nahlas**, nepředstírá se.
+
+Směrování je pár řádků a bez něj je zbytek k ničemu:
+`!` → postav formuli, `attach`; `?` → postav atom, `ask`, vyrenderuj přes
+`XAIPresenter`; `U` → nabídni `GapFinder` (K‑9).
+
+### L‑6 · Pořadí a proč právě takhle
+
+Držím **K‑6 (smlouvy) první, ale zúžené** — a není to byrokracie.
+Tři poslední defekty (B‑9, nepředané `tiers`, `Utterance.readings`) jsou
+**všechny** vady smlouvy mezi `oracle → cascade → session → storage`.
+To je přesně ta hranice, na kterou se V3 připojuje. Matice smluv nad
+**těmito čtyřmi vrstvami** je přímá oprava opakující se třídy vad; matice
+nad celým repem počká.
+
+```
+K‑6 zúžené  →  L‑1  →  L‑3  →  L‑4  →  L‑5  →  L‑7
+smlouvy        věta    kvant.  negace   V3      zlaté
+hranic                                          dialogy
+```
+
+`L‑3` před `L‑5`, protože V3 by jinak neměla z čeho stavět.
+`L‑7` **poslední** — zlatá sada má fixovat hotový řetěz, ne rozpracovaný.
+
+### L‑7 · Zlaté dialogy pěti domén
+
+Bod 6 dodatku G fixoval **rozbor** deseti vět. Tohle fixuje **celý tah** —
+česká věta → zápis do báze / odpověď s doložkou. Pět domén, které dnes
+existují jen strukturovaně (`dálnice`, `farmaka`, `učitelka`,
+`Petrovice`, `čas a prostor`). Věta, která se má **odmítnout**, dostane
+vlastní pole, jako v G‑6.
+
+---
+
+*Kolo #20. Dodatek G uzavřen a reprodukován. Řízení předáno Builderovi
+na K‑6 zúžené, dál podle pořadí v L‑6.*
+
+---
+
+# Dodatek M — přijetí konzultace V3 (zmínka → uzel)
+
+**Kolo #26½.** Externí konzultace odpověděla na Q1–Q5 ze zadání. Hodnotím
+z delegace člověka; přijímám **všech pět rozhodnutí s podmínkami** níže.
+Tvrzení konzultanta jsem tam, kde to dnes jde, **reprodukoval proti
+jádru** — výsledky jsou součástí podmínek. Stavový soubor nechávám být
+(tah je Builderův); tenhle dodatek je zadání pro L‑5.
+
+## M‑0 · Co jsem reprodukoval předem
+
+Jádro už dnes unese víc, než konzultant předpokládal — a jednu věc ne:
+
+```
+attach(¬same_as(P1,P2))          → přijato        ✓ (operace 2 jde stavět hned)
+same_as(P1,P2)?                  → N              ✓
+¬same_as(P1,P2)?                 → A              ✓
+po přidání same_as(P1,P2):
+  same_as(P1,P2)?                → CONFLICT       ✓ oba důkazy
+  bydli(B)? přes spornou hranu   → A              ✗ NÁLEZ M-1
+```
+
+### M‑1 · uzávěr používá hranu identity, i když je identita ve sporu
+
+`¬same_as(A,B)` + `same_as(A,B)` dá na přímou otázku `CONFLICT`, ale
+uzávěr hranu **dál používá** a `bydli(B)` odpoví `A` — fakty tečou přes
+identitu, o které báze ví, že je sporná. To je I‑1 (tichá volba) a bez
+opravy je **kanonizace jmen z Q1 nebezpečná**: `assert_distinct_from` by
+sliboval ochranu, kterou uzávěr nectí. **Podmínka: hrana identity, jejíž
+výrok je ve sporu, se v uzávěru nepoužije** (a dotčené odpovědi ať nesou
+gap, ne tiché `A`). Patří do jádra → verzovaný bump, řádek v matici.
+
+## M‑2 · Q1 přijato: kanonizace jména v sezení — se dvěma podmínkami
+
+Politika (a): `PROPN` s `·` se v sezení mapuje na kanonický uzel jména.
+Argument konzultanta beru: doptávat se na každé opakování jména je
+interrogation fatigue, a protože `same_as` je pohled a split existuje,
+je defaultní ztotožnění **plně odvolatelné** — což tichý default
+kvantifikátoru nebyl (proto tam platí jiné pravidlo a žádný rozpor v tom
+není: odvolatelný default s hláškou vs. neodvolatelný dohad).
+
+- **Podmínka A — default se říká nahlas.** Tah vypíše vazbu:
+  `Karel → Karel_1 (kanonicky; týž uzel jako v tahu #3)`. Bez toho by to
+  byl tichý default a ty v tomhle projektu nejsou.
+- **Podmínka B — kanonizace konzultuje `¬same_as`** (proto operace 2
+  existuje) **a stojí na M‑1**.
+
+Čtyři identitní operace přijímám. `assert_same_as` a `revoke_identity`
+jsou hotové dnes (reprodukováno). `split_entity` jako atomický tah
+`SPLIT`: **odvolání je deaktivace, ne mazání** (§ 8 — konzultantovo
+„vymažou" se čte jako „deaktivují") a přesměrované výroky nesou
+provenienci ukazující na tah SPLIT, ne na původní `řekls`.
+
+## M‑3 · Q2 přijato: uzel vzniká tahem `!`, vazba v žurnálu
+
+„Individua vznikají výhradně attachem" drží — `!` JE ten vědomý tah.
+`NodeBinding` v těle tahu + replay dosazuje uložená id bez kaskády je
+přesně invariant „co nejde spočítat, nese se s tahem". **Podmínka:**
+založení uzlu se hlásí (`[UZEL: založen Karel_1]`), stejná cesta jako
+`[ZÁPOR]`/`[ZAHOZENO]`.
+
+## M‑4 · Q3 přijato: určitost bez tichého fallbacku
+
+0 kandidátů → odmítnout s otázkou; 1 → doložit **s hláškou** (podmínka:
+i jednoznačné doložení se vypíše, `[ODKAZ: to auto → auto_1 (jediný
+kandidát, tah #2)]`); >1 → `awaiting='odkaz'` + kandidátní množina.
+`DECIDE_REFERENCE` jako samostatný tah žurnálu je správně — rozhodnutí
+člověka je tah, replay se neptá.
+
+## M‑5 · Q4 přijato: jedna fronta `awaiting='odkaz'`
+
+Asymetrie rigidní/deskriptivní designátor sedí s tím, co kaskáda už dělá
+(`PROPN` → `·` rovnou, `DEFINITE` čeká). Dva Petrové v bázi → `PROPN`
+opustí `·` a spadne do téže fronty. `pending_candidates` se do žurnálu
+**neukládá** (spočítá se z báze daného okamžiku — replay je deterministický),
+ukládá se až rozhodnutí.
+
+## M‑6 · Q5 přijato s korekcemi názvosloví
+
+`NodeBinding(token_index, node_id, binding_type, reason)` — **podmínka:**
+`binding_type` jako `Enum`, ne volný řetězec (`CANONICAL_PROPN` |
+`RESOLVED_DEFINITE` | `CREATED_NEW`). Chování při `revoke` přijímám celé:
+uzel je symbol, žije, dokud na něj ukazuje aktivní výrok; osiřelý uzel
+mizí **jen z kanonického indexu jmen** (index se beztak staví nad
+aktivními výroky), nikdy ze storage. Žádné kaskádové mazání.
+
+**Poznámka k zobrazení:** id `Karel_1` je interní; presenter ukazuje
+„Karel" a suffix jen při víc uzlech téhož jména. Jinak by první věta
+každého dialogu vypadala, že systém očísloval člověka.
+
+## M‑7 · Pořadí pro L‑5
+
+```
+M-1 (jádro: sporná hrana mimo uzávěr, bump)
+  → směrování tahu (! → attach, ? → ask)      [rozhodnuto dávno, neblokováno]
+  → NodeBinding + kanonizace PROPN (M-2, M-3)
+  → určitost + DECIDE_REFERENCE (M-4, M-5)
+  → identitní operace SPLIT / assert_distinct_from (M-2)
+  → zlaté dialogy pěti domén (L-7)
+```
+
+M‑1 první, protože kanonizace bez ní stojí na hraně, kterou uzávěr nectí.
+
+
+## M‑8 · Odpověď na dotaz Buildera k L‑7
+
+Dotaz: *„Má L‑7 počkat na konzultaci? Fixovala by celé tahy včetně
+identity jmen, a kdyby konzultace name_of změnila, přepisoval bych ji
+hned potom."*
+
+**Konzultace už proběhla a je přijatá — dodatek M výše, rozhodnutí Q1–Q5
+jsou finální (z delegace, s podmínkami).** Na konzultaci se tedy nečeká.
+L‑7 čeká na něco jiného: na **dokončení M‑1…M‑6**, a to z přesně toho
+důvodu, který v dotazu sám jmenuješ — zlatá sada fixuje hotový řetěz,
+ne rozpracovaný. Pořadí M‑7 ji proto dává poslední; to platí od dodatku L
+a nic se na tom nemění.
+
+Prakticky pro identitu jmen ve zlatých dialozích, ať se sada nemusí
+přepisovat:
+
+- vazba jména na uzel jde přes **`NodeBinding` v tahu** (M‑3), kanonizace
+  `PROPN` per sezení s hláškou (M‑2, podmínka A) — pokud tvoje `name_of`
+  dělá něco jiného, srovnej to s M **před** psaním sady;
+- zlatý tah fixuje **i vazby** (`bindings`), ne jen predikaci — jinak by
+  sada nehlídala právě tu část, kterou M zavádí;
+- id uzlů v sadě jsou interní (`Karel_1`), presenter ukazuje „Karel"
+  (M‑6, poznámka k zobrazení).
+

@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.4 · 14. 8. 2026
+**Verze jádra:** 0.1.7 · 14. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -11,6 +11,9 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.2 | § 5.1 — kontrapozice `member̄*` přes `subset*`; § 13 T32–T34 | 14. 8. 2026 |
 | 0.1.3 | § 5.1 — uzávěr `complete*` (`U → N`); § 5.4 — scelení identity je odmítnutelné, pořadí těla; § 13 T35–T39 | 14. 8. 2026 |
 | 0.1.4 | § 2 — konstruktory `AND` / `OR` / `DIFF` jako termy; § 5.2.1 — distribuce `D1`/`D2` nad algebraickými termy; § 13 T40–T44 | 14. 8. 2026 |
+| 0.1.5 | § 5.1 — uzávěr `before*` nad `Time` (nereflexivní), cyklus v uspořádání jako otevřená položka; § 13 T45–T48 | 14. 8. 2026 |
+| 0.1.6 | § 5.1 — hrana identity ve SPORU se v uzávěru nepoužije (`same_as*` i přemostění ostatních uzávěrů); přímá otázka dál vrací `CONFLICT`; § 13 T49–T52 | 14. 8. 2026 |
+| 0.1.7 | § 5.4 — `PROTECTED_HEADS`: zákaz v hlavě širší než jádrová množina, přibyly `name` a role; § 3.2 intervalová aproximace + axiom o existenci bez uzlu; § 5.1 `complete` jako epistemická deklarace; § 5.6 charakteristika systému; § 7 minimalita podle definované metriky; § 13 T53–T55 | 14. 8. 2026 |
 **Rozsah:** definuje jazyk, typování, denotaci, epistemický status,
 pravidla, modalitu, důkaz a identitu. Neřeší parsing, renderování,
 vnitřek doménových specialistů ani optimalizace.
@@ -137,10 +140,33 @@ eval_group(g) → ( certain, possible )        certain ⊆ possible
 ⟦restriction(t;r:s)⟧  filtr instancí přes role, hodnoty párovány dle 3.3
 ```
 
+**Je to INTERVALOVÁ APROXIMACE, ne kvantifikace přes možné světy**
+*(upřesněno 14. 8. 2026, 0.1.7 — K‑1)*. Dvojice `(certain, possible)` je
+dolní a horní odhad znalosti o jedné skupině a operace nad ní jsou
+**sound interval propagation**: výsledek nikdy netvrdí víc, než z báze
+plyne, a nikdy nevyloučí prvek, který v ní vyloučen není. Modální čtení
+(„ve všech / v některém možném světě") by slibovalo víc — muselo by
+kvantifikovat přes doplnění báze, a nic takového se tu nepočítá.
+
+Přesnost obou mezí není stejná a je poctivé to říct:
+
+* `certain` je **exaktní** — každý prvek v něm má vlastní důkaz.
+* `possible` je **nadhodnocené**. Je to bezpečná strana: „možná tam je"
+  smí být širší, než skutečnost, protože z toho neplyne žádné tvrzení.
+  Opačná chyba by byla vážná.
+
 `DIFF` je tím epistemický: prvek je *jistě* v rozdílu, jen když je
 doloženo, že v subtrahendu není. Bez `complete(B)` nebo `neg_atom` na
 konkrétní prvek zůstává jen v `possible` — a odpověď to musí říct
 (I‑11): „vím, že není" × „nevím, že je".
+
+**Existence nepotřebuje uzel** *(axiom, K‑3)*. `∃x P(x)` může platit,
+aniž je v grafu `id(x)`. Existenční závěr říká „něco takového je", ne
+„tenhle konkrétní uzel to je"; vyrobit uzel by byla skolemizace
+v inferenci, kterou § 0/2 zakazuje. Individua vznikají **výhradně**
+`attach`em, tedy lidským tahem. Proto taky `konkrétní × ∃G` v § 3.3
+nesedí nikdy: dotaz na jmenovaný uzel se nedá uspokojit odpovědí
+„nějaký existuje".
 
 ### 3.3 Shoda vztahu s dotazem
 
@@ -216,13 +242,37 @@ member*    member(x,A) ∧ subset*(A,B) ⇒ member(x,B)        E × Group
 member̄*    member̄(x,B) ∧ subset*(A,B) ⇒ member̄(x,A)        E × Group
 contains*  reflex.-tranz. uzávěr contains                  Place
 within*    obsažení intervalů                              Time
+before*    TRANZITIVNÍ uzávěr before, NEreflexivní          Time
 same_as*   reflex.-symetr.-tranz. uzávěr (jen pohled, § 8) E
+           — hrana ve SPORU se nepoužije (viz níž)
 distribute D1/D2 (§ 5.2)
 ```
 
 Pro naučená pravidla jsou to **primitivní predikáty stratu 0**, ne uzly
 dependency grafu. Monotónní, nad konečnou množinou uzlů, negenerující —
 pevný bod v ≤ |V|² krocích.
+
+**Sporná hrana identity se nepoužije** *(doplněno 14. 8. 2026, 0.1.6)*.
+Je‑li aktivní `same_as(A,B)` **i** `¬same_as(A,B)`, hrana `A—B` do
+uzávěru nevstoupí — ani do `same_as*`, ani do přemostění `subset*`,
+`contains*`, `within*` a `before*`.
+
+Důvod je epistemický, ne technický. Dokud spor trvá, **báze neví**,
+jestli jsou `A` a `B` tíž; pustit fakty přes takovou hranu znamená
+vybrat si mezi dvěma neslučitelnými tvrzeními a nikomu to neříct, což je
+přesně tichá volba měnící význam (I‑1). Odpověď má proto vyjít `U` a nést
+mezeru, která spor pojmenuje (I‑14).
+
+Dvě vlastnosti, které se nesmí ztratit:
+
+1. **Odebírá se POUŽITÍ hrany, ne výrok.** Přímá otázka `same_as(A,B)?`
+   dál vrací `CONFLICT` s oběma důkazy — spor je skutečný a hlásí se
+   (I‑3). Kdyby zmizel i z přímé odpovědi, systém by ho zametl.
+2. **Nezáleží na pořadí zápisu** (I‑4): popření smí ležet až za tvrzením.
+   Symetrie platí — `¬same_as(A,B)` popírá i `same_as(B,A)`.
+
+Odvolání jedné strany sporu hranu **vrací do hry**; spor je stav báze,
+ne trvalá známka.
 
 **Kontrapozice `member̄*`** *(doplněno 14. 8. 2026)*. Silná negace se šíří
 po hierarchii tříd DOLŮ: z `A ⊆ B` plyne `B̄ ⊆ Ā`, takže „Hrabal není
@@ -259,6 +309,22 @@ complete*   complete(g) ∧ x ∉ certain(g) ⇒ member̄(x, g)
 Bez něj je `complete(g)` deklarace bez důsledku a uzavření světa nemá
 v systému žádnou páku (§ 3.1: `K(g) = M(g)`).
 
+**`complete(g)` je EPISTEMICKÁ DEKLARACE, ne odvozený fakt**
+*(upřesněno 14. 8. 2026, 0.1.7 — K‑4)*. Neříká nic o světě; říká, že
+mluvčí o té skupině **ví všechno**. Je to řečový akt („a to je všechno"),
+tedy tvrzení o stavu znalosti, ne o množině — a proto:
+
+* zapisuje se výhradně `attach`em, tedy lidským tahem;
+* naučené pravidlo ho nesmí mít v hlavě (`PROTECTED_HEADS`, I‑16) —
+  odvodit úplnost z neúplných dat je právě ten předpoklad uzavřeného
+  světa, který § 0 zakazuje;
+* vyhodnocuje se **při dotazu**, ne v pevném bodě, viz níž.
+
+Rozdíl je vidět na tom, co se stane po odvolání: `revoke(complete(g))`
+vrátí skupinu do otevřeného stavu okamžitě, protože se z ní nikdy nic
+nematerializovalo. Kdyby byl `complete` odvozený fakt, zůstaly by po něm
+závěry, které už nemají oporu.
+
 **Je to jediné místo v jádře, kde závěr plyne z ABSENCE.** Všechno ostatní
 drží I‑21 („absence není negace"); tohle je vědomá výjimka a musí být
 ohrazená dvěma způsoby:
@@ -273,6 +339,26 @@ ohrazená dvěma způsoby:
 
 Skládá se s kontrapozicí: uzavření nadskupiny uzavře i podskupiny
 (`x ∉ g` a `A ⊆ g` dává `x ∉ A`). Čte se přes `same_as*` jako `member*`.
+
+**Uzávěr `before*`** *(doplněno 14. 8. 2026)* — uspořádání na časové ose
+(§ 3.6), striktně nad sortem `Time`. Na rozdíl od ostatních uzávěrů
+**není reflexivní**: „pondělí je před pondělím" neplatí, a kdyby uzávěr
+reflexivitu přidal, splynulo by „dřív" s „nejpozději".
+
+„Po" je `before` obráceně, „během" je `within`. **`překrývá` zůstává mimo**
+— vyžadoval by intervaly s koncovými body, což je jiná a větší věc.
+
+> **OTEVŘENÁ POLOŽKA — cyklus v uspořádání.** `before(a,b)` a `before(b,a)`
+> jsou nekonzistentní a tranzitivní uzávěr z nich odvodí `before(a,a)`,
+> tedy „všechno je před vším". Zapojení na `CONFLICT` s oběma důkazy je
+> **nový druh inference v jádře a čeká na rozhodnutí**.
+>
+> Do té doby platí konzervativní default: uzávěr cyklus **detekuje**
+> (silně souvislé komponenty grafu uspořádání) a na dotaz o uzlu, který na
+> cyklu leží, **netiše neodpoví** — hlásí `InconsistentOrder` s důvodem,
+> jako `EvaluationError` u nevázaných rolí. Cyklus jinde na ose
+> nesouvisející otázku neblokuje; jedna chyba v kalendáři nemá
+> znepoužitelnit celou osu.
 
 ### 5.2 Distribuce kvantifikovaných rolí
 
@@ -361,8 +447,9 @@ terminací a jejím opakem, ne stylistická poznámka.
 
 **Sada je záměrně neúplná** — neprokáže každou platnou inkluzi. Je to
 bezpečná strana: chybějící důkaz dá `U`, nikdy falešné `A`. Úplnost by
-znamenala rozhodovací proceduru nad celou algebrou; ta je díky § 6.3
-možná, ale je to samostatné rozhodnutí, ne vedlejší efekt této změny.
+znamenala rozhodovací proceduru nad celou algebrou; ta je při konečnosti
+z § 6.3 možná, ale je to samostatné rozhodnutí, ne vedlejší efekt této
+změny.
 
 **Co z návrhu plyne pro dialog E.** Po zavedení konstruktorů odpoví
 systém na „Létá vrabec?" **`U`, ne `A`**, dokud báze nedoloží, že vrabec
@@ -403,7 +490,28 @@ head <- lit1 AND … AND litn
    acyklický (jádrové uzávěry jsou listy, ne uzly);
 6. negace jen přes nižší stratum;
 7. žádná volná proměnná pod negací;
-8. omezená hloubka termů a vnoření vztahů (parametr gramatiky, default 1).
+8. omezená hloubka termů a vnoření vztahů (parametr gramatiky, default 1);
+9. **hlava nesmí být chráněný predikát** (`PROTECTED_HEADS`, I‑16).
+
+**Co se nesmí odvozovat** *(rozšířeno 14. 8. 2026, 0.1.7 — A‑7)*.
+Zákaz v hlavě je **širší** než množina jádrových uzávěrů a stojí na
+dvoudílném kritériu:
+
+> Predikát, který **mění uzávěr** nebo **uzavírá svět**, a k tomu
+> **jazyk, kterým se fakty zapisují**, nesmí stát v nenegované hlavě
+> naučeného pravidla.
+
+První část je `KERNEL_PREDICATES` (`member`, `subset`, `contains`,
+`within`, `before`, `same_as`, `disjoint`, `complete`, `name`) a je
+**strojově odvozená**: je to přesně to, na co se ptá stavba uzávěrového
+indexu. Druhá část jsou role (`role`, `role_∀`, `role_∃`, `role_·`) —
+ty vznikají reifikací z toho, co člověk řekl, takže pravidlo s rolí
+v hlavě nepřidává tvrzení, ale **přepisuje, jak se čte cizí, už
+zapsaný fakt**. Uložený výrok se nezmění; změní se jeho význam.
+
+**Jen na hlavu.** Role v TĚLE pravidla zůstávají povolené a stojí na nich
+můstková pravidla dialogů A i „zmrzlina" — pravidlo smí roli **číst**,
+nesmí ji vyrábět.
 
 Validace probíhá při `attach`; nevyhovující program se **odmítne**, ne
 „zkusí vyhodnotit". Hrany dependency grafu se stavějí **unifikací**, ne
@@ -450,6 +558,40 @@ K*    = nejmenší pevný bod
 Bottom‑up pro uzávěr a verdikty. Top‑down (SLD) běží jako oddělený
 modul `GapFinder` pro dotaz „Proč nevíš?" — vrací otevřené podcíle, ne
 důkaz (§ 7).
+
+### 5.6 Čím ten systém vlastně je *(doplněno 14. 8. 2026, 0.1.7 — K‑2)*
+
+Dřívější odůvodnění rozhodnutelnosti se opíralo o příbuznost s monadickou
+predikátovou logikou. **To se tímhle odstavcem nahrazuje**, protože je to
+argument slabý i zbytečný: rozhodnutelnost tady neplyne z toho, čemu se
+jazyk podobá, ale z toho, co má zakázané.
+
+Přesná charakteristika:
+
+> **Konečný typovaný stratifikovaný Datalog‑like systém** s uzávěrovými
+> operátory stratu 0 a epistemickou vrstvou nad dotazem.
+
+Rozhodnutelnost stojí na § 5.4: **žádné funkční symboly, žádná existence
+v hlavě, konečná množina konstant.** Herbrandovo univerzum je tedy
+konečné a pevný bod se v konečně mnoha krocích uzavře. Nic z toho není
+vlastnost „monadičnosti"; role jsou vícemístné a systém přesto terminuje.
+
+**„PTIME" má smysl jen s uvedeným parametrem**, jinak je to slogan.
+Vzhledem k čemu:
+
+| parametr | v čem roste |
+|---|---|
+| velikost báze `|K|` | polynomiálně — pevný bod přidává fakta, neubírá |
+| počet pravidel | lineárně na kolo |
+| **arita pravidla** | `|K|^v`, kde `v` je počet proměnných v těle — to je ta drahá dimenze, ne báze |
+| hloubka termů | omezená parametrem gramatiky (default 1) |
+| délka role‑chain | omezená, viz § 5.4/4 |
+| scelení identity | uzávěr nad grafem `same_as`, `O(|V|·|E|)` |
+| počet strat | konstantní násobek kol |
+
+Epistemická vrstva (`K`, `U`, `DIFF`, `alt`, `bound`) běží **nad hotovým
+pevným bodem** a nepřidává inferenci — proto se do téhle tabulky nepromítá
+jinak než jedním průchodem výsledkem.
 
 ---
 
@@ -521,7 +663,25 @@ které se použily", § 3.7/1 zadání) zamlčelo fakta pod pravidlem.
 
 Minimalita: `P` je minimální, když žádná vlastní podmnožina jeho listů
 verdikt neodvodí. Minimálních důkazů může být víc; **kanonický** je
-minimum podle třístupňového klíče:
+minimum podle třístupňového klíče.
+
+**Nenárokuje se „minimální vysvětlení" v absolutním smyslu**
+*(upřesněno 14. 8. 2026, 0.1.7 — K‑5)*. Kanonický důkaz je minimální
+**podle níže definované syntaktické metriky** — počet listů, pak jejich
+id, pak velikost stromu. Není to nutně to vysvětlení, které by člověk
+označil za nejlepší, ani nejkratší v nějakém sémantickém smyslu; taková
+metrika by musela vážit srozumitelnost jednotlivých kroků a nic
+takového tu není definované.
+
+Co se tedy tvrdí, a co ne:
+
+* **tvrdí se** — výběr je deterministický (I‑4), nezávislý na pořadí
+  zápisu i na pořadí průchodu pamětí, a nikdy nevybere důkaz, který
+  obsahuje krok navíc oproti jinému dostupnému;
+* **netvrdí se** — že je to pro čtenáře nejsrozumitelnější z možných
+  vysvětlení.
+
+Klíč:
 
 ```
 canonical_key(P) = ( |listy(P)| , seřazená n-tice id listů , velikost stromu )
@@ -531,7 +691,7 @@ Pořadí stupňů není libovolné. Kdyby rozhodovalo jen lexikografické pořad
 id, vyhrával by důkaz s nižšími id bez ohledu na délku — „citron je citron
 a citron je ovoce" by porazilo „citron je ovoce", pokud se přímý fakt
 připojil později. To je právnicky platné a lidsky absurdní; první stupeň
-proto vynucuje **princip minimálního vysvětlení**, druhý a třetí drží
+proto vynucuje **krátkost v počtu listů**, druhý a třetí drží
 determinismus. Žádný stupeň nezávisí na pořadí průchodu pamětí, takže
 I‑13 platí a `normalize_proof(reference) == normalize_proof(production)`
 zůstává v platnosti.
@@ -765,6 +925,17 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T42 | **neeliminace `OR`** | z `member(x, A OR B)` neplyne `member(x,A)` ani `member(x,B)` → U |
 | T43 | `DIFF` přes `possible` | dialog E: „létá vrabec?" → U bez `disjoint`, A s ním |
 | T44 | detekce rekurze nad algebraickým termem | cyklus přes `A DIFF B` se zachytí |
+| T45 | `before*` je tranzitivní | pondělí → úterý → středa dá `A` na pondělí/středa |
+| T46 | `before*` není reflexivní ani symetrický | `before(x,x)` a obrácený směr → U |
+| T47 | alternativa nad osou (dialog D) | „kam jel dřív?" vrátí člen, ne ano/ne |
+| T48 | cyklus v uspořádání | dotaz o uzlu na cyklu → `InconsistentOrder`, cyklus jinde neblokuje |
+| T49 | fakty netečou přes spornou identitu | `same_as(A,B)` ∧ `¬same_as(A,B)` ∧ `p(A)` ⇒ `p(B)` → `U` |
+| T50 | spor se přesto hlásí | přímá otázka `same_as(A,B)` → `CONFLICT`, ne `N` |
+| T51 | spor neblokuje identitu jinde | nesporná dvojice v téže bázi dál dává `A`; obchvat přes `subset*` taky neprojde |
+| T52 | odvolání jedné strany hranu vrací | po `revoke(¬same_as)` je `p(B)` zase `A`; mezera do té doby spor pojmenuje |
+| T53 | zákaz v hlavě je širší než jádro | pravidlo s `role` v hlavě → `UnsafeRule`; s `role` v TĚLE projde |
+| T54 | kritérium se odvozuje, nedeklaruje | co čte uzávěrový index, je v `KERNEL_PREDICATES`, a naopak |
+| T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 
 F0 je hotové, když projdou všechny **a** referenční i produkční
 evaluator dají shodný verdikt i shodný `normalize_proof`.

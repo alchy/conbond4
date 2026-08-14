@@ -46,6 +46,16 @@ class OracleUnavailable(OracleError):
     """Služba neběží nebo neodpovídá."""
 
 
+class SegmentationError(OracleError):
+    """Text nese víc vět, a `parse` umí jednu (rozhodnutí L‑1).
+
+    **Vlastní typ, ne `OracleError`.** Volající má tři různé situace, které
+    se nesmí slít: služba je mimo, větu neumím přečíst, a *tohle nebyla
+    věta*. První je provozní porucha, druhá poctivé nepochopení, třetí
+    chyba vstupu, kterou volající umí opravit sám — zavolá `segment`.
+    """
+
+
 # --------------------------------------------------------------------------
 # Tvar rozboru
 # --------------------------------------------------------------------------
@@ -93,6 +103,12 @@ class Reading:
         return None
 
     def children(self, index: int) -> tuple[Token, ...]:
+        """Závislé členy daného tokenu — **jediná cesta**, kterou kaskáda
+        vidí morfologii a stavbu věty.
+
+        Kdyby si vrstva nad tím sahala na text znovu nebo si rysy domýšlela,
+        přestal by být rozbor orákulum a stal by se z něj druhý parser,
+        který s tím prvním nemusí souhlasit."""
         return tuple(token for token in self.tokens if token.head == index)
 
     def by_deprel(self, deprel: str) -> tuple[Token, ...]:
@@ -104,7 +120,16 @@ class Reading:
 
 @dataclass(frozen=True, slots=True)
 class Utterance:
-    """Promluva a její kandidátní čtení (§ 5.1).
+    """JEDNA VĚTA a její kandidátní čtení (§ 5.1, rozhodnutí L‑1).
+
+    **Jedna věta, ne text.** `Session.utter` mapuje jeden tah na jednu
+    predikaci a žurnál je indexovaný tahy, takže druhá věta nemá kam jít.
+    Nálada se navíc detekuje z celého textu — „Petr jel do Prahy. Jel tam
+    v pondělí?" žádnou společnou nemá. Rozdělit text je práce `segment`.
+
+    `readings` jsou proto **kandidátní čtení téže věty**, ne věty. Rozdíl
+    není akademický: na dvojznačnost se kaskáda ptá, na nerozdělený text
+    se ptát nemá co.
 
     Prázdná n-tice čtení je legitimní výsledek — orákulum smí říct „neumím",
     a je to poctivější než vrátit dohad."""
@@ -300,6 +325,41 @@ class UDPipeOracle:
         return f"udpipe2 model={model} tokenizer={tokenizer}"
 
     def parse(self, text: str) -> Utterance:
+        """Rozbor JEDNÉ věty (L‑1).
+
+        Dřív se sem skládal **jeden záznam na větu** do pole, které kaskáda
+        čte jako kandidátní čtení téže promluvy. Dvouvětý vstup se pak
+        zeptal „které z toho?" na dvě různé věty — a to není dvojznačnost,
+        to je nerozdělený text. Segmentace má vlastní operaci (`segment`).
+        """
+        readings = self._readings(text)
+        if len(readings) > 1:
+            raise SegmentationError(
+                f"text {text!r} nese {len(readings)} vět, ale rozbor umí "
+                f"jednu; rozděl ho napřed přes `segment()` a pošli každou "
+                f"větu jako vlastní tah"
+            )
+        return Utterance(text=text, readings=tuple(readings))
+
+    def segment(self, text: str) -> tuple[Utterance, ...]:
+        """Rozdělí text na věty — **samostatná operace**, ne vedlejší
+        účinek rozboru.
+
+        Vrací rovnou promluvy i s rozborem, ne holé řetězce: text by se
+        musel skládat zpátky z tvarů a znovu posílat modelu, a druhý rozbor
+        téhož se nemusí shodovat s prvním.
+
+        `Utterance.text` je proto **rekonstrukce z tvarů**, ne výřez
+        původního řetězce — `Token` nenese `SpaceAfter`, takže původní
+        mezerování zrekonstruovat nejde. Je to popiska tahu; význam nese
+        rozbor, ne ona.
+        """
+        return tuple(
+            Utterance(text=_render_forms(reading), readings=(reading,))
+            for reading in self._readings(text)
+        )
+
+    def _readings(self, text: str) -> list[Reading]:
         payload = self._call(
             "/v1/parse", {"text": text, "trace": None}, PARSE_TIMEOUT_S
         )
@@ -323,7 +383,7 @@ class UDPipeOracle:
                     provenance=self.provenance,
                 )
             )
-        return Utterance(text=text, readings=tuple(readings))
+        return readings
 
     def _call(
         self, path: str, body: Mapping[str, object] | None, timeout: float
@@ -337,6 +397,17 @@ class UDPipeOracle:
         if not isinstance(decoded, dict):
             raise OracleError(f"{path}: očekáván objekt, přišlo {type(decoded)}")
         return decoded
+
+
+def _render_forms(reading: Reading) -> str:
+    """Popiska věty z tvarů. Před interpunkcí se mezera nedělá — je to
+    kosmetika transkriptu, na významu nic nestojí."""
+    out: list[str] = []
+    for token in reading.tokens:
+        if out and token.upos != "PUNCT":
+            out.append(" ")
+        out.append(token.form)
+    return "".join(out)
 
 
 def recorded(text: str, tokens: Sequence[Token], *, provenance: str) -> Utterance:

@@ -17,6 +17,7 @@ Implementace formálního jádra podle [docs/CORE-SEMANTICS-0.1.md](docs/CORE-SE
 | F1.1 | `core_semantics/oracle.py` | hotovo — fasáda vnějšího orákula (§ 5.1), kandidátní čtení, keš s proveniencí |
 | F1.1 | `core_semantics/lexicon.py` | hotovo — program `LEX` (§ 3.7), uzavřené menu operací, vzory s proveniencí a statusem |
 | F1.2 | `core_semantics/cascade.py` | hotovo — V2 kaskáda čtení (§ 5.2): generátor, tvrdé filtry, konzistence s bází, naučené vzory, doptání |
+| F1.2 | `Session.utter()` | hotovo — česká věta na vstupu: orákulum → kaskáda → strukturovaný tah; do žurnálu jde struktura, ne text |
 | F1.2 | V3 rozřešení zmínek | čeká — § 5.3; aktivace grafu (§ 4) neexistuje, takže jedno patro kaskády bude chybět |
 | F1.3 | zlaté transkripty | čeká — fixovaný rozbor, aby upgrade modelu nezpůsobil tichý drift |
 | F0.5 | `closed_context` (§ 12) | čeká — **potřebuje vlastní specifikaci dřív než kód**: lokální doména, UNA uvnitř kontextu, kardinality, enumerace modelů |
@@ -35,6 +36,7 @@ Implementace formálního jádra podle [docs/CORE-SEMANTICS-0.1.md](docs/CORE-SE
 | 🍦 zmrzlina | skládání dvou `∃`-relací; zákaz výběru svědka z řetězu |
 | 🏡 Petrovice | unifikace přes dva fakty; pruning důkazu; zákaz naučené rekurze |
 | 🩺 léky | kaskáda `subset*` do silné negace; OWA u pacienta bez anamnézy |
+| 🕐 Petr a čas | `before*` na ose, `contains*` u míst, alternativa nad osou |
 
 ## Spuštění testů
 

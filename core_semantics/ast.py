@@ -449,6 +449,7 @@ P_MEMBER = "member"
 P_SUBSET = "subset"
 P_CONTAINS = "contains"
 P_WITHIN = "within"
+P_BEFORE = "before"
 P_SAME_AS = "same_as"
 P_COMPLETE = "complete"
 P_NAME = "name"
@@ -485,9 +486,75 @@ MEASURE_PREDICATES: frozenset[str] = frozenset(
 
 #: Predikáty, které obsluhují jádrové uzávěry (§ 5.1). Naučené pravidlo je
 #: nesmí mít v hlavě v nenegovaném tvaru — jinak by učení přepsalo jádro (I‑16).
+#:
+#: **Kritérium členství, ne seznam.** Do množiny patří právě ten predikát,
+#: jehož pravdivost MĚNÍ UZÁVĚR nebo UZAVÍRÁ SVĚT — tedy každý, který
+#: `ClosureIndex` čte ze základních faktů při stavbě indexu. Důvod je
+#: mechanický a platí na obě strany:
+#:
+#: * index se staví jen nad základními fakty, takže atom odvozený pravidlem
+#:   se do uzávěru nikdy nedostane. Pravidlo by se přijalo, atom odvodil,
+#:   dotaz vrátil `A` — a účinek by se zahodil. Táž báze by pak odpovídala
+#:   dvěma způsoby podle toho, kterými dveřmi se do ní psalo.
+#: * uzavření světa je **řečový akt člověka** („a to je všechno"), ne závěr
+#:   učení. Odvodit úplnost z neúplných dat je přesně ten předpoklad
+#:   uzavřeného světa, který § 0 zakazuje.
+#:
+#: Zároveň to drží stratifikaci: jsou to predikáty stratu 0, takže se
+#: z těla pravidla nestává hrana závislosti. Cyklus se tím zakrýt nemůže —
+#: žádný z nich se neodvozuje, takže žádný není hlavou.
 KERNEL_PREDICATES: frozenset[str] = frozenset(
-    {P_MEMBER, P_SUBSET, P_CONTAINS, P_WITHIN, P_SAME_AS}
+    {
+        P_MEMBER,
+        P_SUBSET,
+        P_CONTAINS,
+        P_WITHIN,
+        P_BEFORE,
+        P_SAME_AS,
+        P_DISJOINT,
+        P_COMPLETE,
+        # `name` sem přibylo, až když ho začala číst kanonizace jmen
+        # (N‑2): jméno určuje, KTERÝ uzel zmínka trefí, takže mění uzávěr
+        # stejně jako `same_as`. Odvodit si jméno pravidlem by znamenalo
+        # vyrobit si kotvu identity — a přesně to má I‑16 zakázané.
+        # Nepřidával jsem to dopředu; vynutilo si to kritérium samo.
+        P_NAME,
+    }
 )
+
+#: Role, jejichž fillér je MÍSTO, a role, jejichž fillér je ČAS (§ 3.6).
+#: Je to slovník JÁDRA, ne domněnka o slově: `kam` je prostorová role, ať
+#: za ní stojí cokoli. Bydlí to tady, protože z toho žije kaskáda i V3 —
+#: dvě kopie téhož seznamu by se rozešly a poznalo by se to až sortovou
+#: chybou o vrstvu níž.
+#:
+#: **Fillér těchhle rolí NENESE kvantifikátor.** `RoleTerm` ho připouští
+#: jen u `Group`/`Variable`; místo ani čas se nekvantifikují, mluví se
+#: o nich samotných.
+PLACE_ROLES: tuple[str, ...] = ("kam", "kde", "odkud", "kudy")
+TIME_ROLES: tuple[str, ...] = ("kdy",)
+UNQUANTIFIED_ROLES: frozenset[str] = frozenset(PLACE_ROLES + TIME_ROLES)
+
+#: Predikáty, které naučené pravidlo NESMÍ mít v nenegované hlavě (I‑16).
+#:
+#: **Je to širší množina než `KERNEL_PREDICATES`, a ten rozdíl je celý
+#: smysl téhle konstanty.** `KERNEL_PREDICATES` odpovídá na otázku „na co
+#: se ptá uzávěrový index" a nese proto ještě dvě další věci: směrování
+#: v evaluátoru a stratum 0. Zákaz v hlavě je ale otázka TŘETÍ a širší:
+#:
+#: > Co se nesmí odvozovat? To, co MĚNÍ UZÁVĚR, **a k tomu jazyk, kterým
+#: > se fakty zapisují.**
+#:
+#: Role jsou ten jazyk. `role(R, kdo, W)` vzniká reifikací při `attach`,
+#: tedy z toho, co člověk řekl; pravidlo s `role` v hlavě by NAROUBOVALO
+#: roli na cizí, člověkem zapsanou instanci — uložený fakt by se nezměnil,
+#: změnilo by se, jak se čte. To není učení nového tvrzení, to je tichý
+#: přepis staršího.
+#:
+#: **Jen na hlavu.** Reifikace v TĚLECH pravidel zůstává povolená a stojí
+#: na ní domény dálnice i zmrzliny — pravidlo smí roli ČÍST, nesmí ji
+#: vyrábět.
+PROTECTED_HEADS: frozenset[str] = KERNEL_PREDICATES | ROLE_PREDICATES
 
 #: Predikáty s pevným významem. Fakt s jiným predikátem je VZTAH a engine
 #: ho reifikuje na uzel s rolemi.
@@ -551,6 +618,16 @@ def within_of(whole: IntervalTerm, part: IntervalTerm) -> Atom:
     return atom(P_WITHIN, role("whole", whole), role("part", part))
 
 
+def before_of(earlier: IntervalTerm, later: IntervalTerm) -> Atom:
+    """Uspořádání na časové ose (§ 3.6). Striktně nad sortem `Time`.
+
+    „Po" je `before` obráceně, „během" je `within`; „překrývá" by
+    vyžadoval intervaly s koncovými body, a to je jiná, větší věc."""
+    _require_sort("before/earlier", earlier, Sort.TIME)
+    _require_sort("before/later", later, Sort.TIME)
+    return atom(P_BEFORE, role("earlier", earlier), role("later", later))
+
+
 def measure_of(
     subject: Term,
     comparator: Comparator,
@@ -608,6 +685,31 @@ def same_as_of(left: Term, right: Term) -> Atom:
     )
 
 
+def disjoint_of(a: GroupTerm, b: GroupTerm) -> Atom:
+    """Oddělenost dvou skupin — **osmý sourozenec, ne výjimka**.
+
+    Do dneška byl `disjoint` jediná jádrová relace bez konstruktoru, a ta
+    chybějící zábrana dělala špatnou cestu dosažitelnou: `P_DISJOINT` je
+    ve veřejném rozhraní, `attach` je veřejný zapisovač, takže se dal
+    ručně sestavený marker zapsat — a báze pak tvrdila oddělenost, ze
+    které se nic neodvodilo.
+
+    **Konstruktor sám o sobě nestačí a nemá to předstírat.** Zapsat
+    oddělenost do báze znamená vygenerovat i dvojici pravidel se silnou
+    negací (§ 5.3), a to jsou tři výroky, ne jeden — proto to dělá
+    `KnowledgeBase.add_disjoint` a `attach` holý marker odmítne. Tenhle
+    konstruktor je pro **otázku** („jsou kočky a psi oddělení?") a pro
+    tělo pravidla.
+    """
+    _require_sort("disjoint/a", a, Sort.GROUP)
+    _require_sort("disjoint/b", b, Sort.GROUP)
+    return atom(
+        P_DISJOINT,
+        role("a", a, Quantifier.SELF),
+        role("b", b, Quantifier.SELF),
+    )
+
+
 def complete_of(group: GroupTerm) -> Atom:
     """`complete(g)` — jediný způsob, jak z dolního odhadu udělat rovnost
     `K(g) = M(g)` (§ 3.1). Bez něj je výčet vždy jen „znám tyto"."""
@@ -653,9 +755,9 @@ class Rule:
                 f"{sorted(v.id for v in floundering)} jsou volné pod negací "
                 f"(§ 5.4/7)"
             )
-        if self.head.predicate in KERNEL_PREDICATES and not self.head.is_negated:
+        if self.head.predicate in PROTECTED_HEADS and not self.head.is_negated:
             raise UnsafeRule(
-                f"pravidlo {self.id!r} by přepsalo jádrový predikát "
+                f"pravidlo {self.id!r} by přepsalo chráněný predikát "
                 f"{self.head.predicate!r}; učení mění program, nikdy jazyk (I‑16)"
             )
 

@@ -67,6 +67,7 @@ CZECH_PROFILE: dict[str, Any] = {
         "closure:complete*": "skupina je uzavřená, a tenhle prvek v ní není",
         "closure:contains*": "místo leží uvnitř jiného místa",
         "closure:within*": "interval leží uvnitř jiného intervalu",
+        "closure:before*": "první je na časové ose dřív než druhý",
         "closure:same_as*": "jde o týž uzel pod jiným jménem",
         "closure:subset*/alg": "podmnožina plyne ze stavby výrazu",
         "closure:member*/alg": "členství plyne ze stavby výrazu",

@@ -18,11 +18,25 @@ from core_semantics.cascade import (
     cascade,
     case_tier,
     generate,
+    Predication,
+    RoleReading,
     lexicon_tier,
+    negation_tier,
+    quantifier_tier,
+    role_mapping_tier,
+    surface_role,
 )
-from core_semantics.ast import Entity, Group, member_of
-from core_semantics.lexicon import Mood, czech_seed
+from core_semantics.ast import Entity, Group, Quantifier, member_of
+from core_semantics.lexicon import (
+    LearnedPattern,
+    Mood,
+    Operation,
+    Trigger,
+    czech_seed,
+)
 from core_semantics.oracle import Reading, Token
+from core_semantics.engine import Engine
+from core_semantics.grounding import semantic_rejection
 from core_semantics.storage import KnowledgeBase
 
 STAMP = "test"
@@ -92,7 +106,7 @@ def test_generator_builds_roles_even_when_the_parser_gave_no_subject() -> None:
     candidates = generate(LEMON)
     assert len(candidates) == 2
     for candidate in candidates:
-        roles = [name for name, _ in candidate.predication.roles]
+        roles = [r.name for r in candidate.predication.roles]
         assert roles == [ROLE_OBJECT, ROLE_SUBJECT]  # kanonicky setříděné
     subjects = {
         c.predication.role(ROLE_SUBJECT).lemma  # type: ignore[union-attr]
@@ -112,7 +126,13 @@ def test_duplicate_role_cannot_be_constructed() -> None:
 
     mention = Mention(lemma="x", form="x", token_index=1, upos="NOUN")
     with pytest.raises(ValueError, match="vícekrát"):
-        Predication("obsahovat", ((ROLE_OBJECT, mention), (ROLE_OBJECT, mention)))
+        Predication(
+            "obsahovat",
+            (
+                RoleReading(ROLE_OBJECT, mention),
+                RoleReading(ROLE_OBJECT, mention),
+            ),
+        )
 
 
 def test_parser_reading_comes_first() -> None:
@@ -203,10 +223,11 @@ def test_base_consistency_narrows_but_never_adds() -> None:
         _token(2, "Petr", "Petr", "PROPN", 1, "nsubj", Number="Sing", Case="Nom"),
         _token(3, "Pavel", "Pavel", "PROPN", 1, "obj", Number="Sing", Case="Nom"),
     )
-    tier = base_consistency_tier(kb.view())
+    tier = base_consistency_tier(semantic_rejection(Engine(kb)))
     survivors, why = tier(generate(ambiguous), ambiguous)
-    # oba kandidáti mají týž predikát, takže patro nerozhodne — a to je
-    # správně: signatura vztahu je u obou čtení stejná
+    # Ani jedno čtení není s bází v rozporu, takže patro NEROZHODNE.
+    # Dřív by rozhodlo — vztah `vidět` v bázi je — a to byla popularita,
+    # ne konzistence (K‑7).
     assert len(survivors) == 2
     assert why is None
 
@@ -235,7 +256,104 @@ def test_verdict_renders_its_reasoning() -> None:
     assert any("PROČ" in line for line in rendered)
 
 
+# „Petr jel v pondělí do Prahy." — DVĚ příslovečná určení, oba `obl`
+TWO_CIRCUMSTANCES = _reading(
+    _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Number="Sing", Case="Nom"),
+    _token(2, "jel", "jet", "VERB", 0, "root", Number="Sing"),
+    _token(3, "v", "v", "ADP", 4, "case"),
+    _token(4, "pondělí", "pondělí", "NOUN", 2, "obl", Number="Sing", Case="Loc"),
+    _token(5, "do", "do", "ADP", 6, "case"),
+    _token(6, "Prahy", "Praha", "PROPN", 2, "obl", Number="Sing", Case="Gen"),
+)
+
+
+def test_two_circumstances_do_not_collide() -> None:
+    """B‑9: pojmenovat okolnost jejím `deprel` nestačí — „v pondělí"
+    i „do Prahy" jsou obě `obl`, takže by dostaly totéž jméno role a věta
+    by spadla na duplicitě. A dvě určení má v češtině obrovská část vět;
+    tahle je doslova z dialogu D."""
+    candidates = generate(TWO_CIRCUMSTANCES)
+    assert candidates
+    roles = [r.name for r in candidates[0].predication.roles]
+    assert "v+Loc" in roles and "do+Gen" in roles
+    assert len(roles) == len(set(roles))
+
+
+def test_surface_role_reads_preposition_and_case_not_semantics() -> None:
+    """`v+Loc` je popis TVARU, ne významu (INV‑11)."""
+    assert surface_role(TWO_CIRCUMSTANCES.tokens[3], TWO_CIRCUMSTANCES) == "v+Loc"
+    assert surface_role(TWO_CIRCUMSTANCES.tokens[5], TWO_CIRCUMSTANCES) == "do+Gen"
+    # bez předložky rozhoduje pád
+    instrumental = _reading(
+        _token(1, "jel", "jet", "VERB", 0, "root", Number="Sing"),
+        _token(2, "autem", "auto", "NOUN", 1, "obl", Case="Ins"),
+    )
+    assert surface_role(instrumental.tokens[1], instrumental) == "Ins"
+
+
+def test_learned_mapping_renames_an_unambiguous_surface_role() -> None:
+    """Že `do+Gen` znamená `kam`, je naučené a odvolatelné tvrzení, ne
+    vlastnost kódu (§ 3.7, § 12/1)."""
+    tier = role_mapping_tier(czech_seed())
+    renamed, _ = tier(generate(TWO_CIRCUMSTANCES), TWO_CIRCUMSTANCES)
+    roles = [r.name for r in renamed[0].predication.roles]
+    assert "kam" in roles
+
+
+def test_ambiguous_surface_role_is_reported_not_resolved() -> None:
+    """`v+Loc` je „v Praze" i „v pondělí". Rozliší to jen význam nominálu,
+    a ten se nehádá — patro to zapíše do trace a jméno nechá povrchové."""
+    tier = role_mapping_tier(czech_seed())
+    renamed, why = tier(generate(TWO_CIRCUMSTANCES), TWO_CIRCUMSTANCES)
+    assert why is not None and "v+Loc" in why
+    assert "kde" in why and "kdy" in why
+    roles = [r.name for r in renamed[0].predication.roles]
+    assert "v+Loc" in roles  # nepřejmenováno
+
+
+def test_revoking_a_role_mapping_leaves_the_surface_name() -> None:
+    lexicon = czech_seed()
+    lexicon.revoke_role("do+Gen->kam")
+    renamed, _ = role_mapping_tier(lexicon)(
+        generate(TWO_CIRCUMSTANCES), TWO_CIRCUMSTANCES
+    )
+    roles = [r.name for r in renamed[0].predication.roles]
+    assert "do+Gen" in roles and "kam" not in roles
+
+
+def test_identical_surface_forms_lead_to_a_question() -> None:
+    """„v Praze v pondělí" — dvě určení téhož tvaru. Rozlišit by je šlo jen
+    podle významu nominálu, takže se kaskáda ptá, místo aby hádala."""
+    ambiguous = _reading(
+        _token(1, "bydlí", "bydlet", "VERB", 0, "root", Number="Sing"),
+        _token(2, "v", "v", "ADP", 3, "case"),
+        _token(3, "Praze", "Praha", "PROPN", 1, "obl", Case="Loc"),
+        _token(4, "v", "v", "ADP", 5, "case"),
+        _token(5, "pondělí", "pondělí", "NOUN", 1, "obl", Case="Loc"),
+    )
+    verdict = cascade(ambiguous)
+    assert verdict.survivors == ()
+    assert verdict.question is not None and "v+Loc" in verdict.question
+
+
+def test_transform_tiers_run_even_when_one_reading_is_left() -> None:
+    """Kaskáda se po rozhodnutí NESMÍ ukončit.
+
+    Ukončení je správné pro filtry, ale patro, které čtení PŘEPISUJE, by
+    se pak nespustilo vůbec — a to je tichá závislost na tom, kolik
+    kandidátů zbylo. Věta s jedním čtením přejmenování rolí potřebuje
+    stejně jako věta s pěti.
+    """
+    tiers = (*HARD_TIERS, role_mapping_tier(czech_seed()))
+    verdict = cascade(TWO_CIRCUMSTANCES, tiers=tiers)
+    decided = verdict.decided
+    assert decided is not None
+    roles = [r.name for r in decided.predication.roles]
+    assert "kam" in roles  # přejmenováno i při jediném kandidátovi
+    assert any("v+Loc" in step for step in verdict.trace)
+
+
 def test_hard_tiers_run_morphology_before_anything_statistical() -> None:
     """§ 5.2: statistika je až za tvrdými filtry, protože dialogový objem
     anotací jsou desítky, ne tisíce."""
-    assert HARD_TIERS == (agreement_tier, case_tier)
+    assert HARD_TIERS == (agreement_tier, case_tier, negation_tier)

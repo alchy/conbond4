@@ -29,9 +29,11 @@ from .ast import (
     GroupAnd,
     GroupDiff,
     P_COMPLETE,
+    P_BEFORE,
     P_CONTAINS,
     P_DISJOINT,
     P_MEMBER,
+    P_NAME,
     P_SAME_AS,
     P_SUBSET,
     P_WITHIN,
@@ -43,6 +45,20 @@ from .ast import (
 )
 
 _REFL_SUFFIX = "/refl"
+
+
+class InconsistentOrder(RuntimeError):
+    """Uspořádání na časové ose si odporuje.
+
+    `before(a,b)` a `before(b,a)` dají tranzitivním uzávěrem `before(a,a)`
+    — a pak je všechno před vším. Dotaz „jel dřív do Prahy?" i „…do Brna?"
+    by oba vrátily `A` a nebylo by na tom nic vidět.
+
+    **Konzervativní default (dodatek H‑3):** uzávěr cyklus detekuje a
+    NETIŠE NEODPOVÍ. Zapojení na `CONFLICT` s oběma důkazy je nový druh
+    inference v jádře a čeká na rozhodnutí člověka; do té doby je to
+    hlášená chyba, jako u nevázaných rolí.
+    """
 
 
 # --------------------------------------------------------------------------
@@ -102,6 +118,16 @@ def _reconstruct(
     return out
 
 
+def _cyclic_nodes(graph: nx.DiGraph) -> frozenset[str]:
+    """Uzly ležící na cyklu — silně souvislé komponenty > 1 plus smyčky."""
+    found: set[str] = set()
+    for component in nx.strongly_connected_components(graph):
+        if len(component) > 1:
+            found |= component
+    found |= {node for node in graph.nodes if graph.has_edge(node, node)}
+    return frozenset(found)
+
+
 def _closure(label: str, steps: list[Step]) -> Proof:
     """Sestaví důkaz uzávěru. Identitní krok dostane VLASTNÍ uzel
     `closure(same_as*)` — cesta smí vést přes rovnost, ale nesmí se
@@ -137,6 +163,7 @@ class ClosureIndex:
         self._subset = nx.DiGraph()  # hrana sub -> sup
         self._contains = nx.DiGraph()  # hrana whole -> part (Place)
         self._within = nx.DiGraph()  # hrana whole -> part (Time)
+        self._before = nx.DiGraph()  # hrana earlier -> later (Time)
         self._member: dict[str, dict[str, str]] = {}  # elem -> {group: stmt}
         self._complete: dict[str, str] = {}  # group -> stmt
         self._sorts: dict[str, Sort] = {}  # id -> sort, pro sortové stráže
@@ -155,6 +182,30 @@ class ClosureIndex:
                     self._sorts.setdefault(r.target.id, r.target.SORT)
                     self._terms_by_id.setdefault(r.target.id, r.target)
 
+        #: Dvojice, u kterých je identita POPŘENÁ. Sbírá se předem, protože
+        #: `¬same_as` může v bázi ležet až za `same_as` a pořadí zápisu
+        #: nesmí měnit, co uzávěr udělá (I‑4).
+        self._denied_identity: set[frozenset[str]] = set()
+        for sid, a in facts:
+            if a.predicate == P_SAME_AS and a.is_negated:
+                left, right = a.get_role("left"), a.get_role("right")
+                if left and right:
+                    self._denied_identity.add(
+                        frozenset((left.target.id, right.target.id))
+                    )
+        #: Dvojice, o kterých báze tvrdí obojí — `p` i `p̄`.
+        self._disputed_identity: dict[frozenset[str], tuple[str, ...]] = {}
+
+        #: Jméno → uzly, které ho doloženě nesou.
+        self._named: dict[str, set[str]] = {}
+        for sid, a in facts:
+            if a.predicate == P_NAME and not a.is_negated:
+                bearer, label = a.get_role("of"), a.get_role("value")
+                if bearer and label:
+                    self._named.setdefault(label.target.id, set()).add(
+                        bearer.target.id
+                    )
+
         for sid, a in facts:
             if a.is_negated:
                 continue  # negovaný atom není hrana uzávěru
@@ -162,6 +213,23 @@ class ClosureIndex:
                 left, right = a.get_role("left"), a.get_role("right")
                 if left and right:
                     u, v = left.target.id, right.target.id
+                    if frozenset((u, v)) in self._denied_identity:
+                        # M‑1. Přímá otázka na tuhle identitu vrací
+                        # `CONFLICT`, ale uzávěr ji dosud používal DÁL —
+                        # fakty tekly přes hranu, o které báze ví, že je
+                        # sporná, a odpověď vycházela jako tiché `A`.
+                        # To je tichá volba měnící význam (I‑1): systém se
+                        # rozhodl, které z dvou neslučitelných tvrzení
+                        # platí, a nikomu to neřekl.
+                        #
+                        # Sporná hrana se proto NEPOUŽIJE. Odpověď tím
+                        # spadne na `U` — tedy na „nevím", což je pravda:
+                        # dokud spor trvá, nevíme, jestli jsou to tíž.
+                        self._disputed_identity.setdefault(
+                            frozenset((u, v)), ()
+                        )
+                        self._disputed_identity[frozenset((u, v))] += (sid,)
+                        continue
                     self._add_edge(self._same_as, u, v, sid, P_SAME_AS)
                     # Rovnost musí umět přemostit řetěz UPROSTŘED:
                     # `Ford ⊆ Automobil ≡ Auto ⊆ Vozidlo`. Kolaps tříd jen
@@ -169,7 +237,12 @@ class ClosureIndex:
                     # proto vkládá i do grafů uzávěrů — ale se svým DRUHEM,
                     # takže se v důkazu pojmenuje `closure(same_as*)` a
                     # nevydává se za podmnožinový krok (§ 3.3, I‑14).
-                    for graph in (self._subset, self._contains, self._within):
+                    for graph in (
+                        self._subset,
+                        self._contains,
+                        self._within,
+                        self._before,
+                    ):
                         self._add_edge(graph, u, v, sid, P_SAME_AS)
                         self._add_edge(graph, v, u, sid, P_SAME_AS)
             elif a.predicate == P_SUBSET:
@@ -194,6 +267,16 @@ class ClosureIndex:
                     g = group.target.id
                     if g not in slot or sid < slot[g]:
                         slot[g] = sid
+            elif a.predicate == P_BEFORE:
+                earlier, later = a.get_role("earlier"), a.get_role("later")
+                if earlier and later:
+                    self._add_edge(
+                        self._before,
+                        earlier.target.id,
+                        later.target.id,
+                        sid,
+                        P_BEFORE,
+                    )
             elif a.predicate == P_DISJOINT:
                 first, second = a.get_role("a"), a.get_role("b")
                 if first and second:
@@ -221,6 +304,11 @@ class ClosureIndex:
                         targets |= nx.descendants(self._subset, direct)
                 for target in targets:
                     self._members_of.setdefault(target, set()).add(element)
+
+        # Uzly, které leží na cyklu uspořádání. Detekce je při stavbě, ale
+        # dopad je jen na dotazy o těchto uzlech — cyklus jinde na ose
+        # nemá blokovat nesouvisející otázku (dodatek H‑3).
+        self._ordering_cycles: frozenset[str] = _cyclic_nodes(self._before)
 
         self._canon: dict[str, str] = {}
         self._classes: dict[str, list[str]] = {}
@@ -293,6 +381,24 @@ class ClosureIndex:
             return None
         return _closure("same_as*", edges)
 
+    def identity_proof(self, a_id: str, b_id: str) -> Proof | None:
+        """Odpověď na PŘÍMOU otázku „je to týž uzel?".
+
+        Liší se od `same_class` v jediné, ale podstatné věci: **sporná
+        hrana se tu započítá.** Výrok `same_as(A,B)` v bázi je, a když
+        vedle něj leží `¬same_as(A,B)`, je správná odpověď `CONFLICT` —
+        ne `N`. Odebírá se POUŽITÍ hrany v uzávěru, ne sám výrok; kdyby
+        zmizel i z přímé odpovědi, systém by spor zametl místo aby ho
+        ohlásil (I‑3).
+        """
+        direct = self.same_class(a_id, b_id)
+        if direct is not None:
+            return direct
+        sids = self._disputed_identity.get(frozenset((a_id, b_id)))
+        if not sids:
+            return None
+        return Proof(ProofKind.FACT, min(sids))
+
     def equivalence_classes(self) -> dict[str, list[str]]:
         classes: dict[str, list[str]] = {}
         for node, rep in self._canon.items():
@@ -338,6 +444,31 @@ class ClosureIndex:
             self._within, whole_id, part_id, "within*", Sort.TIME
         )
 
+    def before_proof(self, earlier_id: str, later_id: str) -> Proof | None:
+        """`before*` — tranzitivní uzávěr uspořádání, striktně nad `Time`.
+
+        **Není reflexivní.** „Pondělí je před pondělím" neplatí, a kdyby
+        uzávěr reflexivitu přidal, splynulo by „dřív" s „nejpozději".
+        """
+        for node in (earlier_id, later_id):
+            if node in self._ordering_cycles:
+                raise InconsistentOrder(
+                    f"uspořádání kolem {node!r} si odporuje — z cyklu by "
+                    f"tranzitivní uzávěr odvodil, že je všechno před vším; "
+                    f"neodpovídám, dokud se to nevyřeší (dodatek H‑3)"
+                )
+        if not self._sort_ok(earlier_id, Sort.TIME) or not self._sort_ok(
+            later_id, Sort.TIME
+        ):
+            return None
+        if earlier_id == later_id:
+            return None
+        steps = _bfs_path(self._before, earlier_id, later_id)
+        return None if steps is None else _closure("before*", steps)
+
+    def ordering_cycles(self) -> frozenset[str]:
+        return self._ordering_cycles
+
     def member_proof(self, elem_id: str, group_id: str) -> Proof | None:
         """`member*`: member(x,A) ∧ subset*(A,B) ⇒ member(x,B).
 
@@ -375,6 +506,45 @@ class ClosureIndex:
         return sorted(
             {self.canonical(elem) for elem in self._members_of.get(group_id, ())}
         )
+
+    def nodes_named(self, name: str) -> list[str]:
+        """Uzly, které to jméno DOLOŽENĚ nesou (`name(of, value)`).
+
+        Kanonizace jmen se ptá sem, ne na shodu id s lemmatem. Rozdíl je
+        vidět po rozdělení uzlu: jméno „Petr" pak nese víc uzlů, a
+        ztotožnit další zmínku s kterýmkoli z nich by bylo rozhodnutí,
+        které člověk právě VÝSLOVNĚ odmítl udělat."""
+        return sorted(self._named.get(name, set()))
+
+    def knows(self, node_id: str) -> bool:
+        """Vystupuje ten uzel v nějakém aktivním výroku?
+
+        Neptá se na členství ani na typ — jen na to, jestli o něm už řeč
+        byla. Na tom stojí rozlišení „zakládám nový uzel" × „mluvím o tom,
+        co znám", a to je rozdíl, který § 0.2 hlídá."""
+        return node_id in self._terms_by_id
+
+    def disputed_identities(self) -> tuple[tuple[str, str], ...]:
+        """Dvojice, jejichž identita je ve SPORU, takže se hrana nepoužila.
+
+        Není to jen účetnictví: bez tohohle by odpověď spadla z `A` na `U`
+        a nikdo by se nedozvěděl PROČ. Mezera, kterou nejde vysvětlit, je
+        skoro tak špatná jako tichá odpověď (I‑14)."""
+        return tuple(
+            sorted(tuple(sorted(pair)) for pair in self._disputed_identity)  # type: ignore[misc]
+        )
+
+    def identity_is_disputed(self, first_id: str, second_id: str) -> bool:
+        return frozenset((first_id, second_id)) in self._disputed_identity
+
+    def disputed_with(self, node_id: str) -> tuple[str, ...]:
+        """Uzly, se kterými je identita daného uzlu ve sporu."""
+        found = [
+            next(iter(pair - {node_id}), node_id)
+            for pair in self._disputed_identity
+            if node_id in pair
+        ]
+        return tuple(sorted(found))
 
     def disjoint_proof(self, first_id: str, second_id: str) -> Proof | None:
         """Doložená oddělenost dvou skupin, hledaná v OBOU směrech.

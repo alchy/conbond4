@@ -33,8 +33,12 @@ from .ast import (
     Interval,
     KERNEL_PREDICATES,
     Label,
+    P_BEFORE,
     P_CONTAINS,
     P_MEMBER,
+    P_COMPLETE,
+    P_DISJOINT,
+    P_NAME,
     P_SAME_AS,
     P_SUBSET,
     P_WITHIN,
@@ -379,10 +383,55 @@ class Engine:
                 yield binding, proof
             return
 
+        if p == P_NAME:
+            # Ptá se indexu ze stejného důvodu jako `disjoint` a `complete`:
+            # jméno se stalo hranou uzávěru (rozhoduje, který uzel zmínka
+            # trefí), takže odvozený `name` by dal `A` bez účinku.
+            bearer = substitute(self._role(pattern, "of").target, binding)
+            label = substitute(self._role(pattern, "value").target, binding)
+            if isinstance(bearer, Variable) or isinstance(label, Variable):
+                raise EvaluationError(
+                    f"{pattern}: enumerace přes jména není ve F0; obě role "
+                    f"musí být v okamžiku vyhodnocení vázané"
+                )
+            if bearer.id in index.nodes_named(label.id):
+                yield binding, Proof(ProofKind.CLOSURE, "name", ())
+            return
+
+        if p == P_COMPLETE:
+            # Jednomístný, takže mimo tabulku dvojic. Ptá se indexu ze
+            # stejného důvodu jako `disjoint`: uzavření světa má účinek jen
+            # tehdy, když ho index vidí, a index se staví nad ZÁKLADNÍMI
+            # fakty. Odvozený `complete` by dal `A` bez jediného účinku na
+            # členství — a to je odpověď, která si sama odporuje.
+            group = substitute(self._role(pattern, "group").target, binding)
+            if isinstance(group, Variable):
+                raise EvaluationError(
+                    f"{pattern}: enumerace uzavřených skupin není ve F0; "
+                    f"role `group` musí být v okamžiku vyhodnocení vázaná"
+                )
+            sid = index.is_complete(group.id)
+            if sid is not None:
+                yield binding, Proof(
+                    ProofKind.CLOSURE, "complete", (Proof(ProofKind.FACT, sid),)
+                )
+            return
+
         pairs = {
             P_CONTAINS: ("whole", "part", index.contains_proof),
             P_WITHIN: ("whole", "part", index.within_proof),
-            P_SAME_AS: ("left", "right", index.same_class),
+            P_BEFORE: ("earlier", "later", index.before_proof),
+            # `identity_proof`, ne `same_class`: sporná hrana se v uzávěru
+            # nepoužívá (M‑1), ale na PŘÍMOU otázku se započítá, protože
+            # ten výrok v bázi pořád je a odpovědí má být `CONFLICT`, ne `N`.
+            P_SAME_AS: ("left", "right", index.identity_proof),
+            # `disjoint` se ptá indexu, ne shody s faktem. Marker je v bázi
+            # jednosměrný (`a:kočka, b:pes`), ale relace symetrická je —
+            # shoda s faktem by tedy dala `N` na jedno pořadí a `U` na druhé,
+            # a závěr by visel na tom, jak to člověk kdysi vyslovil.
+            # Odvození `member̄` symetrické bylo od začátku; asymetrická byla
+            # jen přímá otázka, což je táž třída vady jako B‑6.
+            P_DISJOINT: ("a", "b", index.disjoint_proof),
         }
         left_name, right_name, prover = pairs[p]
         left = substitute(self._role(pattern, left_name).target, binding)

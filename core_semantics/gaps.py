@@ -69,7 +69,18 @@ class OpenGoal:
     depth: int = 0
 
     def render(self) -> str:
-        return f"chybí vědět: {self.atom}   [{self.via}]"
+        """Mezera jako NABÍDKA, ne jako konstatování (K‑9).
+
+        „Chybí vědět: subset(vrabec, tučňák)" po člověku chce, aby si sám
+        domyslel, co s tím — a hlavně to vypadá jako výtka. Táž informace
+        položená jako otázka je tah dialogu, na který jde odpovědět, a
+        odpověď je přesně to, co systému chybí.
+
+        **Je to změna RENDEROVÁNÍ, ne nové inference.** Nabízí se to, co
+        prohledávání skutečně potřebovalo a nenašlo — nic se nedomýšlí.
+        Označení HYPOTÉZA je povinné (§ 12/5): systém se ptá, netvrdí.
+        """
+        return f"? platí {self.atom}? [HYPOTÉZA — potřeboval jsem to přes {self.via}]"
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,14 +89,27 @@ class GapReport:
     open_goals: tuple[OpenGoal, ...]
     known: tuple[str, ...] = ()
     exhausted: bool = False
+    #: Identity, které jsou ve sporu a kvůli tomu se hrana nepoužila (M‑1).
+    #: Bez tohohle by odpověď spadla z `A` na `U` a nikdo by se nedozvěděl
+    #: proč — a mezera, kterou nejde vysvětlit, je skoro tak špatná jako
+    #: tichá odpověď (I‑14).
+    disputed: tuple[tuple[str, str], ...] = ()
 
     def render(self) -> tuple[str, ...]:
         lines: list[str] = []
         lines.extend(f"vím: {item}" for item in self.known)
+        lines.extend(
+            f"POZOR: o tom, jestli je {a} totéž co {b}, si báze protiřečí — "
+            f"dokud to nerozhodneš, přes tuhle identitu nic nevede"
+            for a, b in self.disputed
+        )
         if self.open_goals:
             lines.extend(goal.render() for goal in self.open_goals)
         else:
-            lines.append(f"chybí vědět: {self.query}")
+            # Ani tady se neříká „chybí vědět". Když se nenašel žádný
+            # konkrétní podcíl, je poctivá odpověď „tohle mi nikdo neřekl
+            # a neplyne to" — ne výčitka, že to člověk zapomněl.
+            lines.append(f"? platí {self.query}? [HYPOTÉZA — nikdo to neřekl]")
         if self.exhausted:
             lines.append(
                 "(hledání jsem zastavil na mezi hloubky — můžou být další)"
@@ -120,6 +144,26 @@ class GapFinder:
             open_goals=self._dedupe(goals),
             known=self._what_is_known(query, derivation),
             exhausted=self._exhausted,
+            disputed=self._disputed_for(query, derivation),
+        )
+
+    def _disputed_for(
+        self, query: Atom, derivation: Derivation
+    ) -> tuple[tuple[str, str], ...]:
+        """Sporné identity, které se dotýkají uzlů z dotazu.
+
+        Hlásí se JEN ty, o které jde. Vypsat všechny spory v bázi by
+        znamenalo, že u velké báze zanikne ten jediný, na kterém odpověď
+        opravdu ztroskotala."""
+        if derivation.index is None:  # pragma: no cover
+            return ()
+        touched = {
+            r.target.id for r in query.roles if r.target.SORT is not Sort.VARIABLE
+        }
+        return tuple(
+            pair
+            for pair in derivation.index.disputed_identities()
+            if touched & set(pair)
         )
 
     # -- vnitřnosti --------------------------------------------------------
