@@ -10,6 +10,11 @@ from __future__ import annotations
 from decimal import Decimal
 
 from core_semantics.ast import (
+    contains_of,
+    before_of,
+    QueryStatus,
+    Place,
+    Interval,
     Comparator,
     Entity,
     Group,
@@ -244,3 +249,76 @@ def test_report_admits_when_the_search_was_cut_short() -> None:
         atom("cíl", role("who", Entity("e1")))
     )
     assert report.open_goals or report.exhausted
+
+
+# --------------------------------------------------------------------------
+# Vysvětlení nesmí nabízet článek, který evaluátor neumí použít — W‑19
+# --------------------------------------------------------------------------
+#
+# „Je středa před pondělím?" odpovídalo `U` (správně) a nabízelo
+# `within(part:pondělí, whole:středa)`. Člověk to mohl zapsat a odpověď
+# zůstala `U`.
+#
+# KOŘEN: `_fact_goals` hledá článek přes `⪯`, tedy přes relaci shody
+# rolí — jenže na JÁDROVÝ predikát se `⪯` nikdy nezavolá: `_match` je
+# posílá rovnou do `_match_kernel`, kde se odpovídá z uzávěrového indexu.
+# Vysvětlující vrstva modelovala cestu, kterou vyhodnocení nejde.
+#
+# Není to chyba SMĚRU, je to chyba CESTY — a proto se nesmí spravit
+# příliš: u BĚŽNÉHO predikátu ten návrh funguje a dialog D na něm stojí.
+
+
+def _ordered() -> KnowledgeBase:
+    kb = KnowledgeBase()
+    kb.attach(before_of(Interval("pondělí"), Interval("úterý")))
+    kb.attach(before_of(Interval("úterý"), Interval("středa")))
+    return kb
+
+
+def test_every_offered_link_actually_changes_the_answer() -> None:
+    """MĚŘENO POSTUPEM REVIEWERA, ne pohledem: každý nabídnutý článek se
+    zapíše do báze a otázka se položí znovu. Hypotéza, po které se nic
+    nezmění, je vysvětlení, ze kterého se nedá stavět dál."""
+    query = before_of(Interval("středa"), Interval("pondělí"))
+    report = GapFinder(Engine(_ordered())).explain(query)
+    for goal in report.open_goals:
+        kb = _ordered()
+        kb.attach(goal.atom)
+        assert Engine(kb).ask(query).status is not QueryStatus.UNKNOWN, (
+            f"{goal.atom} nabídnuto, a odpověď se po jeho zapsání nezměnila"
+        )
+
+
+def test_a_kernel_query_is_not_offered_a_matching_link() -> None:
+    """`⪯` se na jádrový predikát nezavolá, takže článek pro ni je
+    nabídka cesty, kterou vyhodnocení nejde."""
+    report = GapFinder(Engine(_ordered())).explain(
+        before_of(Interval("středa"), Interval("pondělí"))
+    )
+    assert all("within" not in str(goal.atom) for goal in report.open_goals)
+
+
+def test_a_hypothesis_that_would_break_the_base_is_not_offered() -> None:
+    """Poslední záchranná nabídka zní „řekni tohle a budeš to vědět".
+    U uspořádání to nemusí být pravda: opačná hrana by uzavřela cyklus
+    a báze by na tu otázku přestala odpovídat vůbec (H‑3). Nabídnout
+    člověku větu, po které se systém rozbije, je horší než nic."""
+    report = GapFinder(Engine(_ordered())).explain(
+        before_of(Interval("středa"), Interval("pondělí"))
+    )
+    assert report.open_goals == ()
+    assert any("nikdo to neřekl" in line for line in report.render())
+
+
+def test_an_ordinary_predicate_still_gets_its_link() -> None:
+    """PROTIPŘÍKLAD REVIEWERA. Oprava se nesmí přehnat: u běžného
+    predikátu návrh funguje a dialog D na něm stojí."""
+    kb = KnowledgeBase()
+    kb.attach(atom("jet", role("kdo", Entity("Petr")), role("kam", Place("Praha"))))
+    query = atom("jet", role("kdo", Entity("Petr")), role("kam", Place("Plzeň")))
+    report = GapFinder(Engine(kb)).explain(query)
+    offered = [str(goal.atom) for goal in report.open_goals]
+    assert "contains(part:Praha, whole:Plzeň)" in offered
+
+    kb.attach(contains_of(Place("Plzeň"), Place("Praha")))
+    assert Engine(kb).ask(query).status is QueryStatus.PROVEN_TRUE

@@ -1,6 +1,146 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — N‑8 hotové; jedna podmínka mého counterexamplu byla vnitřně rozporná a je to moje chyba
+## Status: 🟢 PASS — `before` z české věty drží; a odkryl vadu ve vrstvě, která vysvětluje
+
+**Kolo #59.** 794 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **56/56**, živá parita **26/26**, dialogy 7 domén / 16 zapsaných
+tahů / 10 závěrů, nula `RECALL_FAILURE`, gate *Farmaka* `N`. **Všechny
+čtyři body mého counterexamplu splněny a změřeny mnou.** W‑18 splněno.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Můj counterexample, položka po položce (živě, ne z nahrávky)
+
+| podmínka | výsledek |
+|---|---|
+| `before` **z české věty** | ✓ `s0001`, `s0002` |
+| tranzitivní odpověď | ✓ `A`, důkaz „první je na časové ose dřív než druhý" |
+| důkaz cituje **oba** zápisy | ✓ `[doloženo: s0001, s0002]` |
+| opačný směr `U`, ne `N` | ✓ `U` |
+| šest stávajících domén beze změny | ✓ (7. je nový dialog: 6→7, 14→16, 8→10) |
+| gate / parita / testy / doložky / recall | `N` · 26/26 · 794 · 56/56 · 0 |
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR-zákaz ✓ · I-16 ✓ · ∀→∃ U/N ✓
+```
+
+**Stráže jsem rozšířil o dvě nové a obě drží:** `before_of(Interval, Place)`
+odmítnuto (porovnání napříč osami) a kvantifikátor na roli nad časem
+odmítnut (§ 3.6). Builderovo rozhodnutí, že **sort stran plyne z relace,
+ne ze jména role**, je správné a je to nejlepší věc na tomhle kole:
+`whole`/`part` má `contains` i `within`, takže jméno role nestačí — a
+hádat se nemá co (INV‑11).
+
+**W‑18 splněno dobře.** `point` u kroku říká, že `CONFLICT` je **důsledek**
+správného `∃steak`, a vysvětluje proč: dokud se psalo `∀steak`, měla ta
+otázka jen důkaz proti; se správným čtením má i důkaz pro.
+
+**Pokrytí jádra roste:** zapsané krokem `before`, `member`, `subset` —
+**tři z devíti**. Zbývá `complete`, `contains`, `disjoint`, `name`,
+`same_as`, `within`.
+
+---
+
+## Critical Blockers
+
+**Žádné.** Odpovědi jsou správné, verdikty doložené.
+
+---
+
+## Semantic Warnings
+
+### W‑19 · Vysvětlení `U` u JÁDROVÉHO dotazu nabízí článek, který evaluátor neumí použít
+
+Tenhle nález je můj, není v Builderově hlášení, a je to nejvážnější věc,
+kterou jsem na kole našel.
+
+„Je středa před pondělím?" odpoví `U` — **správně** — a k tomu nabídne:
+
+```
+? platí within(part:pondělí, whole:středa)? [HYPOTÉZA — potřeboval jsem to přes fakt s0001, role earlier]
+```
+
+**Přidal jsem přesně to, co si řekl. Odpověď zůstala `U`.** Změřeno
+čtyřmi způsoby — oba směry `within`, jednotlivě i v páru:
+
+```
+within(part:pondělí, whole:středa)              → U
+within(part:středa,  whole:pondělí)             → U
+within(po⊂st) + within(ut⊂po)                   → U
+within(st⊂po) + within(po⊂ut)                   → U
+```
+
+**Root cause, jedno místo:** `gaps.py:_fact_goals` se ptá
+`self.engine._compat(...)`, tedy relace shody `⪯`, a `_missing_link`
+vrátí článek, který by `⪯` potřebovala. Jenže `before` je **jádrový**
+predikát: `engine.py:303` posílá jádrové predikáty do `_match_kernel`,
+kde se odpovídá z `before_proof`, což je **BFS nad grafem uspořádání** —
+`_compat` se tam nezavolá **nikdy** a `within` do toho grafu nevede.
+Vysvětlující vrstva tedy modeluje cestu, kterou vyhodnocení nejde.
+
+**Není to chyba směru, je to chyba cesty.** Ověřil jsem si i protipól,
+aby se to nespravilo příliš: u **běžného** predikátu návrh **funguje** —
+
+```
+jet(kdo:Petr, kam:Plzeň)  →  U
+? platí contains(part:Brno, whole:Plzeň)?
+po přidání článku          →  A   ✓
+```
+
+Dialog D na tomhle stojí a **nesmí se rozbít**.
+
+**Zasažená smlouva:** I‑14 (vysvětlení se renderuje jen ze skutečného
+důkazu — „potřeboval jsem to" je tvrzení o hledání a u jádrového dotazu
+je nepravdivé) a uživatelovo pravidlo, že **ptát se není vada, pokud jde
+ze získané odpovědi stavět dál**. Tady stavět dál nejde.
+
+**Proč to nedrží gate:** verdikt `U` je správný a akceptační sada piní
+**verdikt, ne text hypotézy** — ověřeno, krok má `answers: U` a `point`,
+hypotézy v `anchors` nejsou. Náprava je proto celá ve vysvětlující
+vrstvě.
+
+**W‑20 (drobnost, Builder ji hlásí sám) · `[CHYBÍ: co znamená role
+před+Ins]`** zůstává ve stopě z patra mapování rolí, které běží před
+relačním a nevidí, že roli vzápětí někdo spotřebuje. Otázka z toho
+nevzniká (G‑4 drží, ověřeno: `vznikla otázka na uživatele? NE`), takže
+je to šum v transkriptu. Týž tvar má `Gen` u podtřídy — uklidit obojí
+najednou, **ne teď**.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑19 — vysvětlení `U` musí kopírovat cestu, kterou
+se doopravdy hledalo.**
+
+1. `_fact_goals` nesmí nabízet článek `⪯` pro dotaz, který jde do
+   `_match_kernel`. Nejmenší bezpečná varianta: pro jádrové predikáty
+   ho **nenabízet vůbec** a nechat pravdivé „nikdo to neřekl".
+2. Lepší, když se povede: nabídnout článek, který **ta** cesta umí —
+   u `before` je to chybějící **hrana uspořádání** (`before(X, Y)`),
+   ne `within`.
+3. Nesahat na běžné predikáty. `contains` u `jet(kam:…)` funguje a
+   dialog D na tom stojí.
+
+**Můj counterexample — bez něj neschválím:** „Je středa před pondělím?"
+dá `U` a nenabídne **žádnou** hypotézu, kterou po přidání do báze
+odpověď nezmění — ověřím to tak, že **každý** nabídnutý článek zapíšu
+a znovu se zeptám; `jet(kdo:Petr, kam:Plzeň)` **pořád** nabídne
+`contains(part:Brno, whole:Plzeň)` a po jeho přidání dá `A`; sedm domén
+se závěry beze změny (a když se některý změní, **napiš to**); gate
+*Farmaka* `N`, parita 26/26, nula `RECALL_FAILURE`, testy zelené.
+
+**Očekávaný výsledek:** systém se pořád ptá — o to nejde a ptát se má —
+ale co si vyžádá, to umí spotřebovat.
+
+---
+
+## ARCHIV — kolo #58
+
+### Status: 🟢 PASS — N‑8 hotové; jedna podmínka mého counterexamplu byla vnitřně rozporná a je to moje chyba
 
 **Kolo #58.** 780 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **55/55**, živá parita **22/22**, dialogy 6 domén / 14 zapsaných

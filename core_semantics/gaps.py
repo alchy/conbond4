@@ -32,6 +32,8 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from .ast import (
+    KERNEL_PREDICATES,
+    P_BEFORE,
     Atom,
     GroupDiff,
     P_DISJOINT,
@@ -59,6 +61,12 @@ MAX_DEPTH = 2
 #: se z rozboru mezery stalo úplné prohledávání.
 MAX_BRANCHES = 8
 
+#: `via` pro cíl, ke kterému NEVEDLA ŽÁDNÁ cesta. Konstanta, protože ji
+#: píše `_goals_for` a čte renderování — a hláška poskládaná do věty
+#: („potřeboval jsem to přes žádné pravidlo tohle nevyrábí") je nesmysl,
+#: který si nikdo nevšimne, dokud ho neuvidí v transkriptu.
+NO_PATH = "nikdo to neřekl a žádné pravidlo to nevyrábí"
+
 
 @dataclass(frozen=True, slots=True)
 class OpenGoal:
@@ -80,6 +88,11 @@ class OpenGoal:
         prohledávání skutečně potřebovalo a nenašlo — nic se nedomýšlí.
         Označení HYPOTÉZA je povinné (§ 12/5): systém se ptá, netvrdí.
         """
+        # „potřeboval jsem to přes X" dává smysl jen tam, kde X je CESTA.
+        # U cíle, který je sám dotaz, žádná cesta nevedla — a tvrdit ji by
+        # bylo vysvětlení, které si vymýšlí (I‑14).
+        if self.via == NO_PATH:
+            return f"? platí {self.atom}? [HYPOTÉZA — {NO_PATH}]"
         return f"? platí {self.atom}? [HYPOTÉZA — potřeboval jsem to přes {self.via}]"
 
 
@@ -211,15 +224,38 @@ class GapFinder:
                 if str(deeper.atom) != str(blocked):
                     goals.append(deeper)
 
-        if not produced and not goals:
-            goals.append(
-                OpenGoal(
-                    atom=query,
-                    via="žádné pravidlo tohle nevyrábí",
-                    depth=depth,
-                )
-            )
+        if not produced and not goals and not self._contradicts_base(
+            query, derivation
+        ):
+            goals.append(OpenGoal(atom=query, via=NO_PATH, depth=depth))
         return goals
+
+    def _contradicts_base(self, query: Atom, derivation: Derivation) -> bool:
+        """Vyrobilo by přidání dotazu SPOR? Pak se nenabízí *(W‑19)*.
+
+        Poslední záchranná nabídka zní „řekni tohle a budeš to vědět".
+        U uspořádání to ale nemusí být pravda: když je doložený OPAČNÝ
+        směr, opačná hrana by uzavřela cyklus a báze by na tu otázku
+        přestala odpovídat vůbec (H‑3). Nabídnout člověku větu, po které
+        se systém rozbije, je horší než mu nenabídnout nic.
+
+        Ptá se jen na to, co uzávěr UŽ VÍ — nedomýšlí se, jestli by se
+        spor objevil někde jinde.
+        """
+        if query.predicate != P_BEFORE or derivation.index is None:
+            return False
+        earlier = query.get_role("earlier")
+        later = query.get_role("later")
+        if earlier is None or later is None:
+            return False
+        if isinstance(earlier.target, Variable) or isinstance(
+            later.target, Variable
+        ):
+            return False
+        return (
+            derivation.index.before_proof(later.target.id, earlier.target.id)
+            is not None
+        )
 
     def _blocked_literal(
         self, body: Sequence[Atom], binding: Binding, derivation: Derivation
@@ -255,7 +291,22 @@ class GapFinder:
 
         Bez tohohle patra hlásí report „žádné pravidlo tohle nevyrábí"
         i tam, kde odpověď leží na dosah a chybí jediný článek. Nahlásí
-        se konkrétní role a to, co by ji uzavřelo."""
+        se konkrétní role a to, co by ji uzavřelo.
+
+        **Jen pro BĚŽNÉ predikáty** *(W‑19)*. Článek se hledá přes
+        `⪯`, tedy přes relaci shody rolí — jenže na JÁDROVÝ predikát se
+        `⪯` nikdy nezavolá: `_match` posílá jádrové predikáty rovnou do
+        `_match_kernel`, kde se odpovídá z uzávěrového indexu. Nabídnout
+        tam článek `⪯` znamenalo nabídnout cestu, kterou vyhodnocení
+        NEJDE: „Je středa před pondělím?" se ptalo na `within(pondělí,
+        středa)`, člověk to mohl zapsat a odpověď zůstala `U`.
+
+        Vysvětlení, ze kterého se nedá stavět dál, je horší než poctivé
+        „nikdo to neřekl" — a `via` u něj navíc TVRDÍ („potřeboval jsem
+        to přes…") něco, co není pravda (I‑14).
+        """
+        if query.predicate in KERNEL_PREDICATES:
+            return []
         goals: list[OpenGoal] = []
         for fact in derivation.candidates(query):
             if fact == query:

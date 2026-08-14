@@ -718,6 +718,27 @@ CONTRACTS: tuple[Clause, ...] = (
         enforced_by=("test_i5_the_gap_is_an_offer_not_a_reproach",),
     ),
     Clause(
+        id="S-28",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "mezera nabízí JEN články, které evaluátor umí použít: na "
+            "jádrový predikát se `⪯` nikdy nezavolá (jde do "
+            "`_match_kernel`), takže článek pro ni je nabídka cesty, "
+            "kterou vyhodnocení nejde. A nenabízí se ani hypotéza, po "
+            "které by se báze rozbila — opačná hrana uspořádání by "
+            "uzavřela cyklus (H‑3). U běžného predikátu návrh zůstává "
+            "(W‑19)"
+        ),
+        anchor="core_semantics.gaps:GapFinder._fact_goals",
+        entry="explain(",
+        enforced_by=(
+            "test_every_offered_link_actually_changes_the_answer",
+            "test_a_kernel_query_is_not_offered_a_matching_link",
+            "test_a_hypothesis_that_would_break_the_base_is_not_offered",
+            "test_an_ordinary_predicate_still_gets_its_link",
+        ),
+    ),
+    Clause(
         id="S-19",
         boundary=SESSION_STORAGE,
         promise=(
