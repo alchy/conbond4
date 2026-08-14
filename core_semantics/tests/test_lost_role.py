@@ -22,10 +22,18 @@ from core_semantics.cascade import (
     role_question,
     surface_roles,
 )
-from core_semantics.ast import Entity, Group, member_of
+from core_semantics.ast import (
+    Entity,
+    Group,
+    QueryStatus,
+    atom,
+    member_of,
+    role,
+)
+from core_semantics.engine import Engine
 from core_semantics.lexicon import Mood, Operation, czech_seed
 from core_semantics.oracle import Reading, Token, Utterance
-from core_semantics.session import Session, names_role
+from core_semantics.session import Session, names_owner, names_role, says
 from core_semantics.tests.test_grounding import shaped
 
 STAMP = "test"
@@ -513,3 +521,114 @@ def test_an_open_quantifier_is_not_silenced_by_the_fix() -> None:
     assert result.question is not None
     assert "∀" in result.question
     assert "odkazuje" not in result.question, "odkaz se doložil, ten už řešený je"
+
+
+# --------------------------------------------------------------------------
+# Vlastníka pojmenuje ČLOVĚK — N‑7
+# --------------------------------------------------------------------------
+#
+# N‑6 zúžilo referenci, ale vztah vlastnictví do báze nešel: rozbor dá
+# `Filipovo` s lemmatem `Filipův` a cesta odtud k uzlu `Filip` je
+# derivační morfologie, kterou tagger neřeší.
+#
+# CO JE NA TVARU A CO NA SLOVĚ. Že přivlastnění označuje VLASTNÍKA, je
+# vlastnost konstrukce a platí pro každé `amod` s `Poss=Yes` — to se
+# neučí, protože to není rozhodnutí. KDO je ten vlastník, je vlastnost
+# JEDNÉ ZMÍNKY, takže to leží v žurnálu jako tah, ne v lexikonu jako
+# vzor. Uložit `Filipův → Filip` jako vzor by znamenalo učit se každé
+# jméno zvlášť a tvářit se, že jde o zákonitost.
+
+
+def _owned() -> Session:
+    session = Session(
+        lexicon=shaped(("ADJ", "Sing", "Nom", "root", Operation.SELF))
+    )
+    session.kb.attach(member_of(Entity("a1"), Group("auto")))
+    return session
+
+
+def _owns(owner: str = "Filip", node: str = "a1"):  # type: ignore[no-untyped-def]
+    return atom("vlastnit", role("kdo", Entity(owner)), role("co", Entity(node)))
+
+
+def test_the_owner_turn_writes_the_ownership() -> None:
+    """JÁDRO N‑7 — a měří se ÚČINKEM, ne zápisem: na otázku po vlastnictví
+    musí přijít `A` s citací toho výroku."""
+    session = _owned()
+    session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    session.play(names_owner("Filipovo = Filip.", possessive(), "Filip"))
+    result = Engine(session.kb).ask(_owns())
+    assert result.status is QueryStatus.PROVEN_TRUE
+    assert result.proof is not None and result.proof.leaves()
+
+
+def test_the_sentence_is_not_written_twice() -> None:
+    """Tah přidává, co se z věty zapsat nedalo — nezapisuje ji ZNOVU.
+    Dva výroky o téže věci a nikdo, kdo by ten první odvolal, je táž vada,
+    kterou u ztraceného členu hlídá zábrana v `_settle`; tudy by ji šlo
+    obejít zezadu."""
+    session = _owned()
+    session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    session.play(names_owner("Filipovo = Filip.", possessive(), "Filip"))
+    written = [line for line in session.program() if "@tah" in line]
+    assert sum("být(" in line for line in written) == 1
+    assert sum("vlastnit(" in line for line in written) == 1
+
+
+def test_the_ownership_is_pinned_to_the_node_not_to_the_class() -> None:
+    """„Nějaké auto patří Filipovi" je jiné tvrzení než „TOHLE auto patří
+    Filipovi" — a jen to druhé věta nese."""
+    session = _owned()
+    session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    session.play(names_owner("Filipovo = Filip.", possessive(), "Filip"))
+    written = " ".join(session.program())
+    assert "vlastnit(co:a1" in written
+    assert "vlastnit(co:·auto" not in written
+
+
+def test_without_a_resolved_reference_nothing_is_written() -> None:
+    """Dokud se neví, KTERÝ uzel se míní, není ke komu vlastnictví
+    připnout — a vymyslet si uzel by bylo zakládání individua evaluací
+    (§ 0.2)."""
+    session = Session(
+        lexicon=shaped(("ADJ", "Sing", "Nom", "root", Operation.SELF))
+    )
+    before = session.program()
+    result = session.play(names_owner("Filipovo = Filip.", possessive(), "Filip"))
+    assert result.statement_id is None
+    assert session.program() == before
+    assert any("není ke komu" in line for line in result.lines)
+
+
+def test_the_owner_is_a_decision_not_a_pattern() -> None:
+    """PROTIPŘÍKLAD REVIEWERA. Kdo je vlastník, se NEUKLÁDÁ jako vzor:
+    jinak by se systém „naučil", že každé přivlastnění znamená Filipa."""
+    session = _owned()
+    session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    session.play(names_owner("Filipovo = Filip.", possessive(), "Filip"))
+    assert all("Filip" not in str(m) for m in session.lexicon.all_roles())
+    assert all("Filip" not in str(p) for p in session.lexicon.all())
+
+
+def test_someone_who_never_answers_sees_no_change() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (a). Nová schopnost nesmí změnit chování
+    těch, kdo ji nepoužijí."""
+    session = _owned()
+    result = session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    assert result.statement_id is not None
+    assert result.question is None
+    assert all("vlastnit" not in line for line in session.program())
+
+
+def test_the_whole_owner_loop_replays_from_the_journal() -> None:
+    """Báze se tu plní TAHEM, ne `kb.attach`em: přímý zápis do báze
+    v žurnálu není, takže by test měřil neúplný záznam a přehrání by
+    padlo na něčem jiném, než co má hlídat."""
+    session = Session(
+        lexicon=shaped(("ADJ", "Sing", "Nom", "root", Operation.SELF))
+    )
+    session.play(says("Auto a1 existuje.", member_of(Entity("a1"), Group("auto"))))
+    session.utter(POSSESSIVE_TEXT, possessive_oracle())
+    session.play(names_owner("Filipovo = Filip.", possessive(), "Filip"))
+    replayed = Session.replay(session.journal)
+    assert replayed.program() == session.program()

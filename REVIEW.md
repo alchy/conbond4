@@ -1,8 +1,104 @@
 # conBond4 — audit jádra
 
-## Status: 🟡 PARTIAL — N‑6 věcně správně, ale otázka se klade i po vyřešení
+## Status: 🟢 APPROVE — otázka se ptá jen na to, co zůstalo otevřené
 
-**Kolo #52.** 720 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #53.** 728 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **51/51**, živá parita **16/16**, dialogy 5 domén / 10 zapsaných
+tahů / 6 závěrů. **G‑4 opraveno a ověřeno mnou ve všech třech větvích.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+```
+jeden kandidát    značka ✓   question = None   zapsáno s0002
+dva kandidáti     značka ◐   question = JE     zapsáno None
+žádný kandidát    značka ◐   question = JE     zapsáno None
+```
+
+Značka se řídí týmž stavem jako otázka — tvrzení o tahu, ne ozdoba.
+
+**Můj counterexample (c) — otázka bez odpovědi se neumlčela:**
+
+```
+Vrabec létá. (holá knihovna)   ◐  ptá se na kvantifikátor ✓
+Kočka je savec.                ◐  ptá se na relaci ✓
+```
+
+**Regrese celá** včetně G‑3 recallu, zákazu eliminace `OR` a I‑16; gate
+*Farmaka* `N`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Co na tomhle kole stojí za zapsání
+
+**Builder sám pojmenoval, co je na tom nálezu nepříjemné:** touž vadu
+v jiném kabátě **popsal o čtyři kola dřív** (kolo #49, otázka čtená ze
+stopy) a podruhé ji nepoznal. Zapsal si to do **docstringu, ne do
+předávky** — což je správné místo, protože předávku nikdo znovu nečte.
+
+**Jeho test, který jsem nežádal, je nejcennější kus kola:**
+`test_an_open_quantifier_is_not_silenced_by_the_fix`. Bez něj by šlo
+opravu **přehnat do druhé strany** a umlčet otázku, která odpověď nemá —
+a to by byla **horší** vada než původní, protože by se projevila jako
+**ticho**. Přesně ta symetrie, kterou by měl hlídat každý „přestaň se
+ptát" fix.
+
+**Matice ho chytila popáté** — doložku `S-24` nejdřív zakotvil na
+`Grounded.anchors`, tedy na holé datové pole bez dokumentace. Přesun na
+`Session._settle` je správný: **smlouvu nenese struktura, ale místo,
+které rozhoduje.**
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.**
+
+---
+
+## Jeden další směr: **tah, kterým člověk pojmenuje vlastníka**
+
+Builder to navrhl dvakrát a nechal rozhodnutí na mně. **Potvrzuji.**
+
+**Problém:** `Filipovo auto je modré.` dnes zúží referenci, ale vztah
+vlastnictví **do báze nejde**. Rozbor jméno vlastníka nedává (`Filipův`
+→ `Filip` je derivační morfologie) a hádat ho by byl dohad zadrátovaný
+do interpretu.
+
+**Proč právě tohle:** je to **jediná otevřená položka, kterou lze
+odstranit prací**, a ne mez. `Postřižiny` a `Roník` jsou znalost světa —
+tam není co stavět. Přivlastnění má naproti tomu **hotovou mašinerii**:
+`→=` a `→@` jsou tentýž tvar smyčky, jen na jiné otázce.
+
+**Nejmenší bezpečná změna:** tah, kterým člověk poví, **koho** to
+přivlastňovací adjektivum označuje (`Filipovo = Filip`), a z toho vztah
+vlastnictví. Vzor ať je **na tvaru**, ne na slově — jinak se učí každé
+jméno zvlášť.
+
+**Counterexample, který musí projít:** (a) **bez** té odpovědi se
+`Filipovo auto je modré.` chová **přesně jako dnes** — zúžení reference,
+žádná třída, otázka na odkaz; nová schopnost nesmí změnit dosavadní
+chování těch, kdo ji nepoužijí; (b) `To auto je modré.` beze změny —
+tam přivlastnění není; (c) všech pět domén, gate a parita 16/16.
+
+**Očekávaný výsledek:** po odpovědi je v bázi **doložený vztah
+vlastnictví** s proveniencí tahu; otázka na vlastníka se **neklade**
+tam, kde odpověď není potřeba (viz G‑4); plná regrese.
+
+---
+
+## Archiv — kolo #52 (uzavřeno)
+
+**Status tehdy: 🟡 PARTIAL.** Kolo #52. 720 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **50/50**, živá parita **16/16**. **Rozhodnutí o denotaci
 schvaluji a je nejlepší z celé série.** PARTIAL je za jeden změřený
 rozpor s podmínkou, kterou jsem pro tohle kolo zadal.

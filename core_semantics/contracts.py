@@ -792,6 +792,29 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_an_open_quantifier_is_not_silenced_by_the_fix",
         ),
     ),
+    Clause(
+        id="S-25",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "VLASTNÍKA pojmenuje člověk tahem, ne morfologie: z lemmatu "
+            "`Filipův` se uzel `Filip` neodvozuje. Co je na TVARU (že "
+            "přivlastnění označuje vlastníka) není rozhodnutí a neučí se; "
+            "KDO to je, je vlastnost jedné zmínky, takže leží v žurnálu "
+            "jako tah, ne v lexikonu jako vzor. Tah PŘIDÁVÁ fakt, "
+            "nezapisuje větu znovu, a vlastnictví se připne jen k UZLU "
+            "(N‑7)"
+        ),
+        anchor="core_semantics.session:Session._name_owner",
+        entry="names_owner(",
+        enforced_by=(
+            "test_the_owner_turn_writes_the_ownership",
+            "test_the_sentence_is_not_written_twice",
+            "test_the_ownership_is_pinned_to_the_node_not_to_the_class",
+            "test_without_a_resolved_reference_nothing_is_written",
+            "test_the_owner_is_a_decision_not_a_pattern",
+            "test_someone_who_never_answers_sees_no_change",
+        ),
+    ),
     # -- storage → cascade (zpětná hrana) ----------------------------------
     Clause(
         id="B-1",

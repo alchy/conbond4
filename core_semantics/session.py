@@ -76,7 +76,7 @@ from .cascade import (
 from .engine import Engine
 from .epistemics import BoundResult, query_bound
 from .gaps import GapFinder
-from .grounding import Grounded, ground, semantic_rejection
+from .grounding import BindingType, Grounded, ground, semantic_rejection
 from .lexicon import (
     Lexicon,
     Mood,
@@ -198,6 +198,11 @@ class TurnKind(Enum):
     #: věty tvrdí (N‑2). Vlastní druh tahu, protože se tím nenaučí, jak se
     #: věta ČTE, ale co se z ní zapíše do JÁDRA — a to je jiná váha.
     NAME_RELATION = "→⊆"
+    #: ODPOVĚĎ na otázku, KOHO označuje přivlastňovací přívlastek (N‑7).
+    #: Vlastní druh tahu, protože zapisuje DVA výroky: větu a k ní vztah
+    #: vlastnictví. Ani `→=`, ani `→@` to nejsou — první rozhoduje odkaz
+    #: uvnitř jedné formule, druhý učí tvar; tenhle přidává FAKT.
+    NAME_OWNER = "→'"
 
 
 @dataclass(frozen=True, slots=True)
@@ -343,6 +348,26 @@ def names_relation(
         shape_name=shape,
         operation=operation,
     )
+
+
+def names_owner(text: str, reading: Reading, owner_id: str) -> Turn:
+    """ODPOVĚĎ na otázku „koho označuje to přivlastnění?" (N‑7).
+
+    **Proč to musí říct člověk.** Rozbor dá `Filipovo` s lemmatem
+    `Filipův`; cesta odtud k uzlu `Filip` je derivační morfologie, kterou
+    tagger neřeší. Useknout „‑ův" by byl dohad o češtině zadrátovaný do
+    interpretu — táž třída jako seznam významů předložek (INV‑11).
+
+    **Co je na tvaru a co na slově.** Že přivlastnění vůbec označuje
+    VLASTNÍKA, je vlastnost konstrukce a platí pro každé `amod` s
+    `Poss=Yes`; to se neučí, protože to není rozhodnutí. KDO je ten
+    vlastník, je naproti tomu vlastnost jedné zmínky — tady se
+    rozhoduje, a proto to leží v žurnálu jako tah, ne v lexikonu jako
+    vzor. Uložit dvojici `Filipův → Filip` jako vzor by znamenalo učit
+    se každé jméno zvlášť a tvářit se u toho, že jde o naučenou
+    zákonitost.
+    """
+    return Turn(TurnKind.NAME_OWNER, text, reading=reading, node_id=owner_id)
 
 
 def answers_quantifier(
@@ -541,6 +566,7 @@ class Session:
             TurnKind.DECIDE_REFERENCE: self._decide_reference,
             TurnKind.NAME_ROLE: self._name_role,
             TurnKind.NAME_RELATION: self._name_relation,
+            TurnKind.NAME_OWNER: self._name_owner,
             TurnKind.REVOKE: self._revoke,
             TurnKind.QUESTION: self._question,
             TurnKind.BOUND: self._bound,
@@ -1014,6 +1040,87 @@ class Session:
                 f"nečekalo — naučilo se to, ale nic to tu nezavřelo]"
             )
         return self._settle(index, turn, resolved, prefix)
+
+    def _name_owner(self, index: int, turn: Turn) -> TurnResult:
+        """`→'` — člověk pojmenoval vlastníka a vzniká vztah vlastnictví.
+
+        **Věta se tímhle tahem NEZAPISUJE ZNOVU.** Zapsala ji ta věta
+        sama, když se dočetla; tenhle tah přidává, co se z ní zapsat
+        nedalo. Kdyby prošel `_settle`, ležel by v bázi týž výrok dvakrát
+        a ten první by nikdo neodvolal — je to táž vada, kterou u
+        ztraceného členu a u nerozhodnuté relace hlídá zábrana v `_settle`,
+        jen by ji tudy šlo obejít zezadu.
+
+        Čte se proto znovu jen proto, aby se zjistilo, KE KTERÉMU UZLU se
+        přivlastnění vztahuje. Čtení nic nezapisuje.
+
+        **Vlastnictví se připne jen k UZLU.** Dokud se odkaz nerozřešil,
+        není ke komu: „nějaké auto patří Filipovi" je jiné tvrzení než
+        „TOHLE auto patří Filipovi", a jen to druhé věta nese.
+        """
+        assert turn.reading is not None
+        verdict = cascade(
+            turn.reading, mood=_mood_of(turn.text), tiers=self.tiers()
+        )
+        lines = [f"✓ rozhodnuto  přivlastnění → {turn.node_id}"]
+        if verdict.decided is None:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(*lines, "→ větu se ani tak přečíst nepodařilo"),
+                trace=verdict.trace,
+            )
+        predication = verdict.decided.predication
+        grounded = ground(predication, self.kb.view())
+        lines.append(f"  čtení: {predication}")
+        owned = self._possessed_node(grounded)
+        if owned is None:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(
+                    *lines,
+                    "→ vlastnictví se nezapsalo: dokud se neví, KTERÝ uzel "
+                    "se míní, není ke komu ho připnout",
+                ),
+                predication=predication,
+                trace=verdict.trace,
+            )
+        fact = atom(
+            "vlastnit", role("kdo", Entity(turn.node_id)), role("co", owned)
+        )
+        try:
+            sid = self.kb.attach(fact, provenance=f"tah {index}")
+        except AttachError as exc:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(*lines, f"✗ nezapsáno: {exc}"),
+                error=str(exc),
+            )
+        return TurnResult(
+            index=index,
+            turn=turn,
+            lines=(*lines, f"✓ zapsáno [{sid}]  {fact}"),
+            predication=predication,
+            trace=verdict.trace,
+            statement_id=sid,
+        )
+
+    @staticmethod
+    def _possessed_node(grounded: Grounded) -> Entity | None:
+        """Uzel, ke kterému se přivlastnění vztahuje — nebo `None`.
+
+        Poznává se podle DRUHU VAZBY (`RESOLVED_DEFINITE`), ne podle
+        jména role: která role je ta přivlastněná, ví stavba věty, ne
+        seznam jmen. A bere se ze ZAKOTVENÍ, protože teprve ono řekne,
+        na který uzel zmínka přistála — v predikaci je vidět jen to, že
+        na nějaký čeká.
+        """
+        for anchor in grounded.anchors:
+            if anchor.binding is BindingType.RESOLVED_DEFINITE:
+                return Entity(anchor.term.id)
+        return None
 
     def _decide_reference(self, index: int, turn: Turn) -> TurnResult:
         """`→=` — člověk řekl, KTERÝ uzel se míní."""
