@@ -249,6 +249,65 @@ def _mention(token: Token) -> Mention:
     )
 
 
+def attributes_of(token: Token, reading: Reading) -> tuple[Token, ...]:
+    """Přívlastky, které se do jména třídy SKLÁDAJÍ — N‑2c.
+
+    „Dopravní prostředek" je JEDEN POJEM, ne dvě věci. Skládá se proto
+    lemma, přesně jako u složeného přísudku (G‑1a), jen na jmenné straně.
+
+    **Skládá se v `generate`, tedy JEDNOU PRO VŠECHNY POZICE.** Dřív to
+    dělalo patro jádrových relací, takže se fráze složila ve jmenném
+    přísudku a nikde jinde — „dopravní prostředek" z jedné věty a týž
+    přívlastek z druhé mířily na RŮZNÉ UZLY, ačkoli člověk mluvil o téže
+    věci. Tichá nekonzistence identity je horší než chybějící schopnost:
+    nedá se o ní poznat, že nastala.
+
+    **Lemmata, ne tvary** — a proto to funguje napříč pozicemi: „dlouhá
+    dálnice" i „po dlouhé dálnici" dají `dlouhý_dálnice`. Je to
+    identifikátor uzlu, ne text pro člověka.
+
+    Dvě vyloučení, obě ze STAVBY, ne z odhadu:
+
+    * **jen `NOUN`** nese třídu. Přívlastek na vlastním jméně by měnil
+      identitu pojmenovaného uzlu, a to je jiná operace než pojmenovat
+      třídu;
+    * **přivlastnění NE** (`Poss=Yes`). „Filipovo auto" není druh auta,
+      je to vztah ke KONKRÉTNÍMU uzlu. Složit ho na `Filipův_auto` by
+      z každého majitele udělalo novou třídu a **umlčelo by to otázku**,
+      kterou na přivlastnění systém právem klade (N‑5).
+    """
+    if token.upos != "NOUN":
+        return ()
+    return tuple(
+        child
+        for child in reading.children(token.index)
+        if base_deprel(child.deprel) == "amod" and child.feat("Poss") != "Yes"
+    )
+
+
+def _composed_mention(token: Token, reading: Reading) -> Mention:
+    parts = attributes_of(token, reading)
+    if not parts:
+        return _mention(token)
+    lemma = "_".join([*(p.lemma for p in parts), token.lemma])
+    return Mention(
+        lemma=lemma,
+        form=" ".join([*(p.form for p in parts), token.form]),
+        token_index=token.index,
+        upos=token.upos,
+        feats=token.feats,
+    )
+
+
+def _nominal(token: Token, reading: Reading, name: str) -> RoleReading:
+    """Role s **složeným** fillérem a se zapsanými pohlcenými tokeny."""
+    return RoleReading(
+        name,
+        _composed_mention(token, reading),
+        absorbed=tuple(t.index for t in attributes_of(token, reading)),
+    )
+
+
 def _predicate_head(reading: Reading) -> tuple[Token, Token] | None:
     """Vrátí `(nositel lemmatu přísudku, hlava predikace)`.
 
@@ -426,10 +485,20 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
         members = [t for t in members if t.index != inner.index]
         members.extend(reading.children(inner.index))
 
+    # Přívlastky se do jmen tříd SKLÁDAJÍ, takže se nesmí zároveň stát
+    # samostatnými členy. Sbírá se to PŘED smyčkou, protože přívlastek
+    # jmenné části visí na kořeni, tedy mezi `members` — a bez tohohle
+    # kroku by „dopravní" bylo i složené, i vlastní rolí.
+    absorbed = {
+        attribute.index
+        for token in (anchor, *members)
+        for attribute in attributes_of(token, reading)
+    }
+
     nominals: list[Token] = []
     fixed: list[RoleReading] = []
     for token in members:
-        if token.deprel == "cop":
+        if token.deprel == "cop" or token.index in absorbed:
             continue
         # Do ZÁMĚNY kdo/co jdou jen HOLÉ jádrové členy. Podtypovaný
         # (`nsubj:pass`) je sice vidět, ale permutovat ho by znamenalo
@@ -440,23 +509,26 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
             continue
         role = _role_for(token, reading)
         if role is not None:
-            fixed.append(RoleReading(role, _mention(token)))
+            fixed.append(_nominal(token, reading, role))
 
     variants: list[tuple[RoleReading, ...]] = []
     if carrier is not anchor:
         # Spona: jmenná část JE obsah — to říká stavba věty, ne odhad.
         # Nominály tedy plní jen podmět.
-        fixed.append(RoleReading(ROLE_OBJECT, _mention(anchor)))
-        variants = [(RoleReading(ROLE_SUBJECT, _mention(t)),) for t in nominals] or [()]
+        fixed.append(_nominal(anchor, reading, ROLE_OBJECT))
+        variants = [(_nominal(t, reading, ROLE_SUBJECT),) for t in nominals] or [()]
     elif len(nominals) == 2:
         first, second = nominals
         variants = [
-            (RoleReading(ROLE_SUBJECT, _mention(a)), RoleReading(ROLE_OBJECT, _mention(b)))
+            (
+                _nominal(a, reading, ROLE_SUBJECT),
+                _nominal(b, reading, ROLE_OBJECT),
+            )
             for a, b in ((first, second), (second, first))
         ]
     else:
         kept = tuple(
-            RoleReading(_role_for(token, reading) or ROLE_SUBJECT, _mention(token))
+            _nominal(token, reading, _role_for(token, reading) or ROLE_SUBJECT)
             for token in nominals
         )
         variants = [kept]
@@ -937,26 +1009,18 @@ RELATION_ROLES: dict[Operation, tuple[str, str]] = {
 class Construction:
     """Rozpoznaná konstrukce: TVAR a to, které role tvoří strany relace.
 
-    `right_lemma` je neprázdné jen tam, kde se pravá strana **skládá**
-    z víc členů (jmenná část s přívlastkem). Je to obdoba složeného
-    přísudku z G‑1a, jen na jmenné straně: víc slov, jeden pojem.
+    Skládání jmenné části tu NENÍ a je to od N‑2c záměr: dělá ho
+    `generate` jednou pro všechny pozice, takže sem už fráze přichází
+    složená. Kopie pravidla v patře by znamenala, že se táž fráze skládá
+    dvakrát podle dvou předpisů — a ty se dřív nebo později rozejdou.
     """
 
     shape: str
     left: str
     right: str
-    right_lemma: str = ""
     #: Tokeny, které konstrukce POHLTILA — nejsou ztracené členy (N‑5),
     #: protože se do významu dostaly, jen ne vlastní rolí.
     absorbed: tuple[int, ...] = ()
-
-
-def _attribute_of(role: RoleReading, reading: Reading) -> Token | None:
-    """Přívlastek jmenné části — `amod` závislý na jejím tokenu."""
-    for child in reading.children(role.mention.token_index):
-        if base_deprel(child.deprel) == "amod":
-            return child
-    return None
 
 
 def relation_shape(
@@ -1038,20 +1102,11 @@ def relation_shape(
             absorbed=(complement.mention.token_index,),
         )
 
-    attribute = _attribute_of(complement, reading)
     others = [
         role
         for role in predication.roles
         if role is not subject and role is not complement
     ]
-    composed = ""
-    absorbed: tuple[int, ...] = ()
-    if attribute is not None and [r.mention.token_index for r in others] == [
-        attribute.index
-    ]:
-        composed = f"{attribute.lemma}_{complement.mention.lemma}"
-        absorbed = (attribute.index,)
-        others = []
     if others:
         # Další členy, kterým konstrukce nerozumí. Mlčet je tu správně —
         # navrhnout relaci z něčeho, čemu nerozumím, by bylo horší než
@@ -1073,8 +1128,6 @@ def relation_shape(
         shape=f"cop:{subject.mention.upos}{link}{complement.mention.upos}",
         left=subject.name,
         right=complement.name,
-        right_lemma=composed,
-        absorbed=absorbed,
     )
 
 
@@ -1168,17 +1221,14 @@ def _as_relation(
     left_role, right_role = RELATION_ROLES[operation]
     by_name = {role.name: role for role in predication.roles}
 
-    def as_class(
-        role: RoleReading, name: str, lemma: str = "", absorbed: tuple[int, ...] = ()
-    ) -> RoleReading:
-        mention = (
-            replace(role.mention, lemma=lemma, form=lemma) if lemma else role.mention
-        )
+    def as_class(role: RoleReading, name: str) -> RoleReading:
+        # `absorbed` se ZÁMĚRNĚ nepředává: `replace` ho zdědí z role, kterou
+        # složil `generate`. Přepsat ho tady na prázdno by přivlastnilo
+        # skládání téhle funkci — a přívlastek by se vzápětí ohlásil jako
+        # ztracený člen, ačkoli v lemmatu je.
         return replace(
             role,
             name=name,
-            mention=mention,
-            absorbed=absorbed,
             quantifier=Quantifier.SELF,
             pending=None,
             awaiting="",
@@ -1191,12 +1241,7 @@ def _as_relation(
             sorted(
                 (
                     as_class(by_name[found.left], left_role),
-                    as_class(
-                        by_name[found.right],
-                        right_role,
-                        found.right_lemma,
-                        found.absorbed,
-                    ),
+                    as_class(by_name[found.right], right_role),
                 ),
                 key=lambda r: r.name,
             )

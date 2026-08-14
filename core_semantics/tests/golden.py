@@ -117,7 +117,7 @@ A1 = Golden(
         tok(4, "prostředek", "prostředek", "NOUN", 0, "root", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
         tok(5, ".", ".", "PUNCT", 4, "punct"),
     ),
-    predication="být(co:·prostředek, jak:·dopravní, kdo:∀auto)",
+    predication="být(co:·dopravní_prostředek, kdo:∀auto)",
     asks=(
         "od N‑2b spadá i tahle věta do rodiny holé spony: „dopravní "
         "prostředek“ je JEDEN POJEM, ne dva členy, takže po složení "

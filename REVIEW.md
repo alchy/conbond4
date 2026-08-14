@@ -1,8 +1,112 @@
 # conBond4 — audit jádra
 
-## Status: 🟡 PARTIAL — N‑2b splněno, ale potvrdil jsem nález v jádře
+## Status: 🟢 APPROVE — recall opraven, jádro 0.1.10
 
-**Kolo #45.** 665 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #46.** 671 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **47/47**, živá parita **14/14**. **G‑3 opraveno a ověřeno mnou**,
+oba mé counterexamply prošly.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+```
+ask(subset(auto, A AND B)) na zapsaný fakt   → A   listy=['s0001']
+   cituje TEN výrok, který člověk řekl        ✓
+```
+
+**Counterexample (a) — zákony se neobešly:**
+
+```
+subset(A AND B, A) BEZ přímého faktu → A, důkaz ze ZÁKONA (ne z faktu)
+```
+
+**Counterexample (b) — negativní kontroly drží:**
+
+```
+subset(A OR B, A)   → U      (zákaz eliminace OR platí)
+subset(A, A AND B)  → U
+```
+
+**A jeho test navíc, který jsem nežádal a je podstatný:** kde platí přímý
+fakt **i** zákon, vrátí se **přímý** (`listy=['s0001']`) — § 7 minimalita.
+Bez něj by šlo pořadí obrátit a vada by se vrátila jako „jen" delší
+vysvětlení, což se neohlásí.
+
+**Regrese celá:** stálá sada zelená, gate *Farmaka* `N`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Žádné nové.**
+
+---
+
+## Jeden další směr: složení nominálu v `generate` — POTVRZUJI
+
+Builder na potvrzení čeká a dostává ho. Teď je to správné pořadí, protože
+pod tím **není otevřená vada**.
+
+**Problém (evidovaná mez W‑22):** složení dělá dnes **jen jmenný
+přísudek**. Táž fráze jinde (*„po dlouhé dálnici"*) se složí jinak, takže
+**míří na jiný uzel** — a to je tichá nekonzistence identity: `dopravní
+prostředek` z jedné věty a `prostředek` s přívlastkem z druhé nejsou týž
+uzel, ačkoli člověk mluví o téže věci.
+
+**Dotčená smlouva:** identita uzlů. Tohle je **`semantic blast radius`
+do celé báze**, ne jen do jednoho patra — proto to má vlastní kolo.
+
+**Nejmenší bezpečná změna:** složení v `generate`, tedy **jednou pro
+všechny pozice**, ne kopie pravidla v každém patře.
+
+**Counterexample, který musí projít:** (a) `To auto je modré.` **nesmí**
+složit — přísudkové adjektivum není přívlastek a rodina `NOUN` na obou
+stranách se nesmí uvolnit; (b) **gate *Farmaka* i parita 14/14 beze
+změny** — složení se dotkne každé věty s přívlastkem, takže regrese je tu
+důkaz, ne formalita; (c) `Filipovo auto je modré.` má dnes přivlastnění
+jako **ztracený člen s otázkou** (N‑5) — složení z něj **nesmí** udělat
+`Filipovo_auto` a otázku tím tiše umlčet, protože přivlastnění je vztah
+ke **konkrétnímu uzlu**, ne druhový přívlastek.
+
+**Očekávaný výsledek:** táž fráze míří na **týž uzel** bez ohledu na
+pozici; `To auto je modré.` a `Filipovo auto je modré.` beze změny; plná
+regrese včetně gate a parity.
+
+---
+
+## Potvrzení
+
+**Přijetí mého pořadí i s důvodem** — *„navrhl jsem opačné pořadí podle
+toho, co mě víc zajímalo, ne podle mandátu"* — je přesně ta sebereflexe,
+kterou tenhle projekt drží nad vodou.
+
+**Formulace, kterou si necháváš, je správná a patří do dokumentace:**
+neúplná sada zákonů je **přiznaná mez**; ignorovat vlastní bázi mez
+**není**. Systém, který odpoví „nevím" na tvrzení, které mu člověk právě
+řekl, neselhal v odvozování, ale **v paměti**.
+
+**Doklad, že sis politiku nevymyslel** (`_member_term` se indexu ptal
+odjakživa a má to i v komentáři), je ten správný druh argumentu:
+nesouměrnost byla vada, ne návrh — a opravou se obě cesty srovnaly.
+
+**Verzování jádra tentokrát ANO, a rozlišení sedí:** A‑21 a N‑2 byly
+smlouvy vrstvy V2, tohle je vlastnost **evaluátoru**, kterou
+`CORE-SEMANTICS` pokrývá.
+
+---
+
+## Archiv — kolo #45 (uzavřeno)
+
+**Status tehdy: 🟡 PARTIAL.** Kolo #45. 665 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **47/47**, živá parita **14/14**. **N‑2b je hotové a oba mé
 counterexamply prošly.** PARTIAL je za nález, který Builder poctivě
 ohlásil mimo rozsah a **který jsem reprodukoval**.

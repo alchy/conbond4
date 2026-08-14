@@ -456,13 +456,17 @@ def _with_attribute() -> _Recorded:
 
 def test_an_attribute_makes_one_concept_not_two() -> None:
     """Po složení lemmatu zbydou DVĚ strany, takže věta spadne do TÉŽE
-    rodiny jako holá spona. Jedna otázka, jedna odpověď, obě třídy vět."""
-    found = relation_shape(
-        _predication(ATTRIBUTE_SENTENCE), ATTRIBUTE_SENTENCE
-    )
+    rodiny jako holá spona. Jedna otázka, jedna odpověď, obě třídy vět.
+
+    Od N‑2c skládá `generate`, ne tohle patro — sem už fráze přichází
+    složená. Test se proto ptá na PŘEČTENOU predikaci, ne na pole
+    konstrukce: kdyby se skládalo na dvou místech podle dvou předpisů,
+    rozešly by se."""
+    predication = _predication(ATTRIBUTE_SENTENCE)
+    assert str(predication) == "být(co:dopravní_prostředek, kdo:auto)"
+    found = relation_shape(predication, ATTRIBUTE_SENTENCE)
     assert found is not None
     assert found.shape == BARE_SHAPE
-    assert found.right_lemma == "dopravní_prostředek"
 
 
 def test_the_attribute_is_not_reported_as_a_lost_member() -> None:

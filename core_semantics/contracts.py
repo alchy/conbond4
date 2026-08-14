@@ -183,7 +183,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "do indexu a neodvodilo by se z něj nic (N‑2). Jmenná část "
             "s přívlastkem je JEDEN POJEM se složeným lemmatem, ne průnik: "
             "průnik tvrdí intersektivitu, kterou morfologie nerozliší od "
-            "lexikalizovaného sousloví (N‑2b)"
+            "lexikalizovaného sousloví (N‑2b). Skládá se v `generate`, tedy "
+            "JEDNOU PRO VŠECHNY POZICE — táž fráze musí mířit na týž uzel "
+            "bez ohledu na to, kde ve větě stojí; přivlastnění se NESKLÁDÁ, "
+            "protože je to vztah ke konkrétnímu uzlu, ne druh (N‑2c)"
         ),
         anchor="core_semantics.cascade:relation_tier",
         # Průchod je `.utter(`, ne `relation_tier`. Patro samo o sobě
@@ -200,6 +203,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_an_attribute_makes_one_concept_not_two",
             "test_the_composed_class_is_not_an_intersection",
             "test_the_attribute_is_not_reported_as_a_lost_member",
+            "test_the_same_phrase_points_at_the_same_node_in_any_position",
+            "test_a_possessive_attribute_is_not_composed",
         ),
     ),
     Clause(

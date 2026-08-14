@@ -274,3 +274,150 @@ def test_two_objects_on_two_levels_never_collide_or_vanish() -> None:
     assert dropped_tokens(TWO_OBJECTS, predication) == (), "nic se neztratilo"
     lemmas = {r.mention.lemma for r in predication.roles}
     assert {"Jan", "Petr", "penicilin"} <= lemmas
+
+
+# --------------------------------------------------------------------------
+# Složený nominál — N‑2c
+# --------------------------------------------------------------------------
+#
+# Protějšek složeného přísudku (G‑1a) na jmenné straně: „dopravní
+# prostředek" je JEDEN POJEM, ne dvě věci.
+#
+# Skládá se v `generate`, tedy JEDNOU PRO VŠECHNY POZICE. Předtím to
+# dělalo patro jádrových relací, takže se fráze složila ve jmenném
+# přísudku a nikde jinde — a táž fráze pak mířila na RŮZNÉ UZLY podle
+# toho, kde ve větě stála. Tichá nekonzistence identity je horší než
+# chybějící schopnost: nedá se o ní poznat, že nastala.
+
+
+def _copula(*attribute: Token) -> Reading:
+    """«<X> je (dopravní) stavba.»"""
+    return Reading(
+        tokens=(
+            tok(1, "Dálnice", "dálnice", "NOUN", 4, "nsubj", Case="Nom", Number="Sing"),
+            tok(2, "je", "být", "AUX", 4, "cop", Number="Sing", Polarity="Pos"),
+            *attribute,
+            tok(4, "stavba", "stavba", "NOUN", 0, "root", Case="Nom", Number="Sing"),
+            tok(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+ATTRIBUTE = tok(
+    3, "dopravní", "dopravní", "ADJ", 4, "amod", Case="Nom", Degree="Pos", Number="Sing"
+)
+
+#: Táž fráze v OBLIKVNÍ pozici — jiné místo ve větě, týž pojem.
+OBLIQUE = Reading(
+    tokens=(
+        tok(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
+        tok(2, "jel", "jet", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+        tok(3, "po", "po", "ADP", 5, "case", Case="Loc"),
+        tok(4, "dlouhé", "dlouhý", "ADJ", 5, "amod", Case="Loc", Degree="Pos", Number="Sing"),
+        tok(5, "dálnici", "dálnice", "NOUN", 2, "obl", Case="Loc", Number="Sing"),
+        tok(6, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+SUBJECT = Reading(
+    tokens=(
+        tok(1, "Dlouhá", "dlouhý", "ADJ", 2, "amod", Case="Nom", Degree="Pos", Number="Sing"),
+        tok(2, "dálnice", "dálnice", "NOUN", 3, "nsubj", Case="Nom", Number="Sing"),
+        tok(3, "vede", "vést", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+POSSESSIVE = Reading(
+    tokens=(
+        tok(1, "Filipovo", "Filipův", "ADJ", 2, "amod", Case="Nom", Poss="Yes"),
+        tok(2, "auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Number="Sing"),
+        tok(3, "je", "být", "AUX", 4, "cop", Number="Sing", Polarity="Pos"),
+        tok(4, "modré", "modrý", "ADJ", 0, "root", Case="Nom", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+
+def _read(reading: Reading) -> str:
+    verdict = cascade(reading)
+    assert verdict.decided is not None
+    return str(verdict.decided.predication)
+
+
+def test_an_attribute_composes_into_the_name_of_the_class() -> None:
+    assert _read(_copula(ATTRIBUTE)) == "být(co:dopravní_stavba, kdo:dálnice)"
+
+
+def test_without_the_attribute_the_name_is_the_bare_noun() -> None:
+    """Kontrola, že se neskládá pokaždé — jinak by test výš neměřil nic."""
+    assert _read(_copula()) == "být(co:stavba, kdo:dálnice)"
+
+
+def test_the_same_phrase_points_at_the_same_node_in_any_position() -> None:
+    """JÁDRO N‑2c. Kdyby se skládalo jen ve jmenném přísudku, mluvil by
+    člověk o téže dálnici a systém by měl dva různé uzly — a nepoznal by
+    to nikdo, protože obě věty by vypadaly přečteně."""
+    assert "dlouhý_dálnice" in _read(OBLIQUE)
+    assert "dlouhý_dálnice" in _read(SUBJECT)
+
+
+def test_lemmata_not_surface_forms() -> None:
+    """Proto to napříč pozicemi vůbec funguje: „dlouhá dálnice"
+    a „po dlouhé dálnici" mají různé TVARY a táž LEMMATA. Je to
+    identifikátor uzlu, ne text pro člověka."""
+    assert "dlouhé_dálnici" not in _read(OBLIQUE)
+
+
+def test_the_attribute_is_not_a_lost_member_once_composed() -> None:
+    """Do významu se dostal, jen ne vlastní rolí — hlásit ho jako ztrátu
+    by poslalo člověka pojmenovat roli něčemu, co roli mít nemá (N‑5)."""
+    verdict = cascade(_copula(ATTRIBUTE))
+    assert verdict.decided is not None
+    assert verdict.lost == ()
+    assert dropped_tokens(_copula(ATTRIBUTE), verdict.decided.predication) == ()
+
+
+def test_a_possessive_attribute_is_not_composed() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (c). „Filipovo auto" NENÍ druh auta — je to
+    vztah ke KONKRÉTNÍMU uzlu. Složit ho na `Filipův_auto` by z každého
+    majitele udělalo novou třídu a hlavně by to UMLČELO otázku, kterou na
+    přivlastnění systém právem klade."""
+    verdict = cascade(POSSESSIVE)
+    assert verdict.decided is not None
+    assert "Filipův" not in str(verdict.decided.predication)
+    assert verdict.lost == (("Filipovo", "nsubj>amod+Nom"),)
+
+
+def test_a_predicative_adjective_is_not_composed() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (a). „To auto je modré." — přísudkové
+    adjektivum není přívlastek, visí jako kořen, ne jako `amod`."""
+    predicative = Reading(
+        tokens=(
+            tok(1, "Auto", "auto", "NOUN", 3, "nsubj", Case="Nom", Number="Sing"),
+            tok(2, "je", "být", "AUX", 3, "cop", Number="Sing", Polarity="Pos"),
+            tok(3, "modré", "modrý", "ADJ", 0, "root", Case="Nom", Number="Sing"),
+            tok(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    assert _read(predicative) == "být(co:modrý, kdo:auto)"
+
+
+def test_an_attribute_on_a_proper_name_is_not_composed() -> None:
+    """Přívlastek na vlastním jméně by měnil identitu POJMENOVANÉHO uzlu,
+    a to je jiná operace než pojmenovat třídu. Skládá se jen `NOUN`."""
+    named = Reading(
+        tokens=(
+            tok(1, "starý", "starý", "ADJ", 2, "amod", Case="Nom", Degree="Pos", Number="Sing"),
+            tok(2, "Petr", "Petr", "PROPN", 3, "nsubj", Case="Nom", Number="Sing"),
+            tok(3, "spí", "spát", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+            tok(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    assert "starý_Petr" not in _read(named)

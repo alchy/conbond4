@@ -339,7 +339,12 @@ def test_dropped_token_is_reported_not_swallowed() -> None:
     text = "Filipovo auto je modré."
     reading = Reading(
         tokens=(
-            tok(1, "Filipovo", "Filipův", "ADJ", 2, "amod", Case="Nom"),
+            # `Poss="Yes"` tu dřív chybělo a nahrávka se tím rozešla s živou
+            # službou. Od N‑2c na tom poli záleží: přivlastnění se NESKLÁDÁ
+            # do jména třídy, protože „Filipovo auto" není druh auta. Bez
+            # příznaku by se složilo a otázka, kterou tenhle test hlídá,
+            # by tiše zmizela.
+            tok(1, "Filipovo", "Filipův", "ADJ", 2, "amod", Case="Nom", Poss="Yes"),
             tok(2, "auto", "auto", "NOUN", 4, "nsubj", Case="Nom", Number="Sing"),
             tok(3, "je", "být", "AUX", 4, "cop", Number="Sing"),
             tok(4, "modré", "modrý", "ADJ", 0, "root", Case="Nom", Number="Sing"),
