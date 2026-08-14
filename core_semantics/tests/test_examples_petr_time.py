@@ -16,6 +16,7 @@ from __future__ import annotations
 import pytest
 
 from core_semantics.ast import (
+    AttachError,
     Entity,
     Interval,
     Place,
@@ -166,16 +167,58 @@ def test_unmentioned_day_stays_unknown() -> None:
 # --------------------------------------------------------------------------
 
 
+def test_the_cycle_is_refused_at_the_door() -> None:
+    """B‑16. Hrana, která by uzavřela pořadí do kruhu, se NEZAPÍŠE.
+
+    Do téhle změny se zapsala bez námitky a rozbila se až PŘÍŠTÍ otázka —
+    výjimkou, která utekla ze `Session.utter` ven. To je nejhorší možná
+    chvíle: báze už je v rozbitém stavu a program nemá jak říct, co se
+    stalo (I‑1). Selhání zápisu je přitom TAH DIALOGU (§ 9).
+    """
+    kb = KnowledgeBase()
+    kb.attach(before_of(MONDAY, TUESDAY))
+    with pytest.raises(AttachError, match="do kruhu"):
+        kb.attach(before_of(TUESDAY, MONDAY))
+
+
+def test_the_refusal_names_the_statements_that_form_the_circle() -> None:
+    """„Tohle nejde" bez nich by po člověku chtělo, aby si bázi prošel
+    sám — a tah, na který se nedá odpovědět, je k ničemu."""
+    kb = KnowledgeBase()
+    first = kb.attach(before_of(MONDAY, TUESDAY))
+    with pytest.raises(AttachError) as exc:
+        kb.attach(before_of(TUESDAY, MONDAY))
+    assert first in str(exc.value)
+
+
+def test_the_base_stays_answerable_after_a_refusal() -> None:
+    """Odmítnutí není poškození: báze musí dál odpovídat, jinak by se
+    zákaz choval stejně špatně jako ta vada."""
+    kb = KnowledgeBase()
+    kb.attach(before_of(MONDAY, TUESDAY))
+    with pytest.raises(AttachError):
+        kb.attach(before_of(TUESDAY, MONDAY))
+    assert Engine(kb).ask(before_of(MONDAY, TUESDAY)).status is (
+        QueryStatus.PROVEN_TRUE
+    )
+
+
 def test_contradictory_ordering_refuses_to_answer() -> None:
     """`before(a,b)` i `before(b,a)` dají uzávěrem „všechno je před vším".
 
     Konzervativní default (H‑3): uzávěr cyklus detekuje a **netiše
     neodpoví**. Zapojení na `CONFLICT` s oběma důkazy je nový druh inference
     v jádře a čeká na rozhodnutí člověka.
+
+    **Od B‑16 je to DRUHÁ obrana, ne první.** Veřejné dveře cyklus
+    odmítnou; sem se dá dojít jen vnitřním zápisem, který používá
+    `add_disjoint` pro svou expanzi. Test proto jde `_attach`em — kdyby
+    šel `attach`em, netestoval by uzávěr, ale ten nový zákaz, a H‑3 by
+    přestalo být hlídané, aniž by si toho kdo všiml.
     """
     kb = KnowledgeBase()
-    kb.attach(before_of(MONDAY, TUESDAY))
-    kb.attach(before_of(TUESDAY, MONDAY))
+    kb._attach(before_of(MONDAY, TUESDAY))  # noqa: SLF001
+    kb._attach(before_of(TUESDAY, MONDAY))  # noqa: SLF001
     with pytest.raises(InconsistentOrder, match="odporuje"):
         Engine(kb).ask(before_of(MONDAY, TUESDAY))
 
@@ -184,8 +227,8 @@ def test_a_cycle_elsewhere_does_not_block_unrelated_questions() -> None:
     """Cyklus jinde na ose nemá blokovat nesouvisející otázku — jinak by
     jedna chyba v kalendáři znepoužitelnila celou osu."""
     kb = KnowledgeBase()
-    kb.attach(before_of(MONDAY, TUESDAY))
-    kb.attach(before_of(TUESDAY, MONDAY))
+    kb._attach(before_of(MONDAY, TUESDAY))  # noqa: SLF001
+    kb._attach(before_of(TUESDAY, MONDAY))  # noqa: SLF001
     kb.attach(before_of(Interval("leden"), Interval("únor")))
     result = Engine(kb).ask(before_of(Interval("leden"), Interval("únor")))
     assert result.status is QueryStatus.PROVEN_TRUE

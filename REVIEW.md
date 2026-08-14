@@ -1,6 +1,138 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — potlačení se udělalo v datech, ale ta věta se pořád tiskne; a testy, které to měly změřit, měří prázdno
+## Status: 🟢 PASS — B‑14 i B‑15 zavřeny na povrchu, který čte člověk
+
+**Kolo #61.** 804 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **57/57**, živá parita **26/26**, dialogy 7 / 16 / 10 se závěry
+beze změny, gate *Farmaka* `N`, nula `RECALL_FAILURE`, celá stálá regrese
+zelená. **Můj counterexample splněn ve všech bodech a měřil jsem ho na
+`render()`, ne na `open_goals`.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Měřeno mnou, přesně tím postupem, který jsem zadal
+
+```
+A) OBRÁCENÉ POŘADÍ        verdikt U · řádků „? platí" 0   ✓
+   tohle mi nikdo neřekl a nabídnout ti větu, která by uspořádání
+   kolem before(earlier:středa, later:pondělí) uzavřela do cyklu, nemůžu
+
+B) BEZ RIZIKA CYKLU       verdikt U · řádků „? platí" 1   ✓ potlačení je ÚZKÉ
+   ? platí before(earlier:pondělí, later:čtvrtek)?
+   po zapsání → A
+
+C) jet(kdo:Petr, kam:Plzeň)   ? platí contains(part:Praha, whole:Plzeň)?  → po zapsání A ✓
+D) member(Mourek, savec)      ? platí subset(sub:·kočka, sup:·savec)?     → po zapsání A ✓
+```
+
+**Živou cestou přes UDPipe totéž:** „Je středa před pondělím?" → `NEVÍM`,
+řádků `? platí` **nula**, a pod tím pravda bez návodu.
+
+**Rozhodnutí je tam, kde nabídka vzniká.** `GapReport` nese
+`unsafe_offer` a rozhoduje `render()`. Mlčet nešlo a Builder to
+pojmenoval správně: **člověk má vědět, PROČ mu systém nic nenabízí.**
+
+**B‑15 zavřeno tak, jak jsem žádal:** `_offers()` tahá nabídky
+**regulárem z výpisu**, a nula se tvrdí **explicitně** (`== []`), ne
+cyklem, který se neprovede. K tomu dva testy na opačnou stranu, aby
+potlačení nezhltlo případy, kde se odpovědět dá.
+
+**Matice smluv ho chytila pošesté** — S‑28 odkazovala na testy, které po
+přepisu neexistovaly. To je ta část systému, která funguje sama od sebe,
+a stojí za zapsání, že chytá i přejmenování.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓
+```
+
+---
+
+## Critical Blockers
+
+### B‑16 · Když člověk ten cyklus VYSLOVÍ, sezení spadne výjimkou
+
+**Nezpůsobilo to tohle kolo** a nebylo to v zadání — našel jsem to, když
+jsem si ověřoval, proti čemu vlastně ta nová nabídka chrání. **Je to
+ale nejvážnější věc, kterou dnes v repu vidím**, a je to jediný další
+směr.
+
+Čtyři české věty, živě:
+
+```
+» Pondělí je před úterým.     ✓ zapsáno [s0001]
+» Úterý je před středou.      ✓ zapsáno [s0002]
+» Středa je před pondělím.    ✓ zapsáno [s0003]   ← přijato bez námitky
+» Je pondělí před středou?
+   ✗ SEZENÍ SPADLO: InconsistentOrder: uspořádání kolem 'pondělí' si odporuje …
+```
+
+Výjimka **uteče z `Session.utter()`** ven. `GapFinder.explain()` spadne
+na tomtéž, protože si na začátku volá `engine.ask()`.
+
+**Root cause:** `H‑3` je rozhodnutí evaluátoru („neodpovídám, dokud se
+to nevyřeší"), ale **dialogová vrstva pro něj nemá tah**. Zápis
+`s0003` projde, protože `attach` cyklus nekontroluje; rozbije se až
+příští otázka — a to je ta nejhorší možná chvíle.
+
+**Zasažená smlouva:** I‑1 (žádné tiché selhání — tady není tiché, ale
+program **nemá jak říct, co se stalo**), I‑3 (spor se má **ohlásit**,
+ne shodit sezení) a § 9: selhání zápisu je **tah dialogu**, ne výjimka
+v obvyklém smyslu.
+
+**Proč to nedrží tohle kolo:** oprava, kterou jsem zadal, přesně tomuhle
+stavu brání na straně **návodu** — a to je hotové. Že se do něj dá dojít
+vlastní větou, je vada vedlejší a starší, ne důsledek téhle změny.
+Měřeno: `before(středa, pondělí)` šlo zapsat i před tímhle kolem.
+
+---
+
+## Semantic Warnings
+
+**W‑21 (drobnost) · `test_every_printed_offer_leads_somewhere` je pro
+svůj dotaz pořád prázdný cyklus.** Pro `REVERSED_ORDER` je `_offers()`
+prázdné, takže se aserce neprovede — jenže tentokrát to **říká vedlejší
+test explicitně** (`== []`), takže iluze pokrytí nevzniká. Přesto: ten
+test by měl jet nad dotazem, který **něco tiskne** (B, C nebo D),
+jinak je ozdobný.
+
+**W‑20 leží dál podle dohody.**
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: B‑16 — rozpor v uspořádání je TAH DIALOGU, ne
+výjimka.**
+
+**Gate:** čtyři věty výše musí projít bez pádu a čtvrtá musí říct, **co
+se stalo a co s tím**. **Zasažená smlouva:** I‑1, I‑3, § 9.
+
+1. Rozhodni, kde se to zachytí. **Doporučuju při zápisu**, ne až při
+   dotazu: `attach` cyklus **odmítne** a vrátí to jako tah („tohle by
+   uzavřelo pořadí do kruhu — `s0001`, `s0002` říkají opak"), takže se
+   báze do rozbitého stavu vůbec nedostane. Je to `AttachError`, pro
+   který už hierarchie existuje.
+2. Když se rozhodneš pro zachycení až u dotazu, **musí to být verdikt,
+   ne pád** — a `explain()` musí umět říct, které zápisy ten kruh tvoří.
+3. **Nerozhoduj obojí najednou** a to, co nezvolíš, zapiš jako otevřenou
+   otázku. Je to změna § 9, tedy vědomé rozhodnutí (I‑13).
+
+**Můj counterexample — bez něj neschválím:** ty čtyři věty živě, bez
+výjimky, a čtvrtá odpoví verdiktem nebo tahem, který **jmenuje zápisy
+tvořící kruh**; „Je středa před pondělím?" po dvou větách **pořád**
+netiskne žádné `? platí`; `before(pondělí, čtvrtek)` **pořád** nabídku
+tiskne a po zapsání dá `A`; `jet/Plzeň` i `Mourek/savec` beze změny;
+sedm domén se závěry beze změny (a když se některý změní, **napiš to**);
+gate *Farmaka* `N`, parita 26/26, nula `RECALL_FAILURE`, testy zelené.
+
+---
+
+## ARCHIV — kolo #60
+
+### Status: 🔴 FAIL — potlačení se udělalo v datech, ale ta věta se pořád tiskne; a testy, které to měly změřit, měří prázdno
 
 **Kolo #60.** 801 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **57/57**, živá parita **26/26**, dialogy 7 / 16 / 10 se závěry

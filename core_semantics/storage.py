@@ -24,6 +24,7 @@ from typing import Iterable, Iterator, Mapping
 import networkx as nx
 
 from .ast import (
+    P_BEFORE,
     Atom,
     AttachError,
     CycleDetected,
@@ -205,7 +206,47 @@ class KnowledgeBase:
                 f"se silnou negací; použij `add_disjoint(a, b)`. Na OTÁZKU "
                 f"„jsou oddělené?“ slouží `disjoint_of(a, b)`."
             )
+        self._refuse_ordering_cycle(formula)
         return self._attach(formula, provenance=provenance, derived_from=derived_from)
+
+    def _refuse_ordering_cycle(self, formula: Formula) -> None:
+        """Hrana, která by uzavřela uspořádání do kruhu, se ODMÍTÁ (B‑16).
+
+        **Chytá se to u ZÁPISU, ne u dotazu**, a je to vědomé rozhodnutí.
+        Do téhle změny šla věta „Středa je před pondělím." zapsat bez
+        námitky a rozbila se až PŘÍŠTÍ otázka — výjimkou, která utekla ze
+        `Session.utter` ven. To je nejhorší možná chvíle: báze už je
+        v rozbitém stavu, člověk netuší proč, a program nemá jak říct, co
+        se stalo (I‑1). Selhání zápisu je přitom TAH DIALOGU (§ 9), na
+        který jde odpovědět — třeba odvoláním jednoho z výroků.
+
+        Hláška proto JMENUJE VÝROKY, které kruh tvoří. „Tohle nejde" bez
+        nich by po člověku chtělo, aby si bázi prošel sám.
+
+        **Co se tím NEROZHODUJE.** Druhá varianta — nechat zápis projít
+        a odpovídat na dotaz `CONFLICT` s oběma důkazy — zůstává OTEVŘENÁ
+        (§ 9, I‑13). Tenhle guard ji nevylučuje; jen brání tomu, aby se do
+        toho stavu dalo dojít nechtěně. Rozhodnout obojí najednou by
+        znamenalo změnit § 9 mimochodem.
+        """
+        if not isinstance(formula, Atom) or formula.predicate != P_BEFORE:
+            return
+        if formula.is_negated:
+            return
+        earlier = formula.get_role("earlier")
+        later = formula.get_role("later")
+        if earlier is None or later is None:
+            return
+        proof = self.view().index.before_proof(later.target.id, earlier.target.id)
+        if proof is None:
+            return
+        raise AttachError(
+            f"{formula} by uzavřelo pořadí do kruhu — "
+            f"{', '.join(sorted(proof.leaves()))} říká opak. Z cyklu by "
+            f"tranzitivní uzávěr odvodil, že je všechno před vším "
+            f"(dodatek H‑3), takže se to nezapisuje; odvolej jeden "
+            f"z těch výroků, nebo tenhle nevyslovuj."
+        )
 
     def _attach(
         self,

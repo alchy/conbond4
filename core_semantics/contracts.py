@@ -273,6 +273,28 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="J-9",
+        boundary=KERNEL_LEARNING,
+        promise=(
+            "hrana, která by uzavřela uspořádání do KRUHU, se odmítá "
+            "U ZÁPISU a hláška JMENUJE výroky, které ten kruh tvoří. "
+            "Selhání zápisu je tah dialogu (§ 9); rozbít se až u příští "
+            "otázky, a výjimkou, která uteče ze sezení ven, je nejhorší "
+            "možná chvíle. Konzervativní default H‑3 v uzávěru ZŮSTÁVÁ "
+            "jako druhá obrana. Varianta „nechat zápis projít a odpovídat "
+            "CONFLICT se dvěma důkazy` zůstává OTEVŘENÁ (I‑13) — tenhle "
+            "guard ji nevylučuje (B‑16)"
+        ),
+        anchor="core_semantics.storage:KnowledgeBase._refuse_ordering_cycle",
+        entry="attach(",
+        enforced_by=(
+            "test_the_cycle_is_refused_at_the_door",
+            "test_the_refusal_names_the_statements_that_form_the_circle",
+            "test_the_base_stays_answerable_after_a_refusal",
+            "test_contradictory_ordering_refuses_to_answer",
+        ),
+    ),
+    Clause(
         id="J-2",
         boundary=KERNEL_LEARNING,
         promise=(

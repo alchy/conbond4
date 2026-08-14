@@ -12,6 +12,7 @@ import re
 from decimal import Decimal
 
 from core_semantics.ast import (
+    Atom,
     contains_of,
     before_of,
     QueryStatus,
@@ -311,18 +312,63 @@ def test_the_silence_says_why() -> None:
     assert any("do cyklu" in line for line in lines)
 
 
+#: Dotazy, u kterých se NĚCO tisknout MÁ. Prázdný cyklus by z testu
+#: udělal iluzi pokrytí (W‑21), takže se sem dávají jen ty, kde nabídka
+#: existuje — a `test_the_reversed_order_offers_nothing_at_all` hlídá
+#: nulu zvlášť a explicitně.
+def _cases() -> list[tuple[str, KnowledgeBase, Atom]]:
+    ordering = KnowledgeBase()
+    place = KnowledgeBase()
+    place.attach(atom("jet", role("kdo", Entity("Petr")), role("kam", Place("Praha"))))
+    chain = KnowledgeBase()
+    chain.attach(member_of(Entity("Mourek"), Group("kočka")))
+    return [
+        ("uspořádání bez rizika", ordering, before_of(Interval("a"), Interval("b"))),
+        (
+            "místo",
+            place,
+            atom("jet", role("kdo", Entity("Petr")), role("kam", Place("Plzeň"))),
+        ),
+        ("řetěz member*", chain, member_of(Entity("Mourek"), Group("savec"))),
+    ]
+
+
 def test_every_printed_offer_leads_somewhere() -> None:
     """POSTUP REVIEWERA, zapsaný jako test: každý VYTIŠTĚNÝ návrh se
-    zapíše a otázka se položí znovu. Návrh, po kterém zůstane `U` nebo
-    se báze rozbije, je vysvětlení, ze kterého se nedá stavět dál."""
-    report = GapFinder(Engine(_ordered())).explain(REVERSED_ORDER)
-    offers = _offers(report)
-    for rendered in offers:
-        kb = _ordered()
-        kb.attach(before_of(Interval("středa"), Interval("pondělí")))
-        assert Engine(kb).ask(REVERSED_ORDER).status is not QueryStatus.UNKNOWN, (
-            f"{rendered} se vytiskne, a po zapsání se nic nezmění"
-        )
+    zapíše a otázka se položí znovu. Návrh, po kterém zůstane `U`, je
+    vysvětlení, ze kterého se nedá stavět dál.
+
+    Jede nad dotazy, které něco tisknou — cyklus, který se neprovede,
+    vypadá jako pokrytí a není (W‑21)."""
+    checked = 0
+    for label, kb, query in _cases():
+        offers = _offers(GapFinder(Engine(kb)).explain(query))
+        assert offers, f"{label}: nabídka měla být, a není"
+        for rendered in offers:
+            fresh = Engine(kb)
+            kb.attach(_parse_offer(rendered))
+            assert Engine(kb).ask(query).status is not QueryStatus.UNKNOWN, (
+                f"{label}: {rendered} se vytiskne, a po zapsání se nic nezmění"
+            )
+            checked += 1
+            break
+    assert checked == len(_cases()), "každý případ musí něco ověřit"
+
+
+def _parse_offer(rendered: str) -> Atom:
+    """Nabídku z výpisu zpátky na atom.
+
+    Skládá se z týchž konstruktorů, které ji vyrobily — kdyby se parsoval
+    text, testoval by se řetězec, ne to, co se dá zapsat."""
+    table = {
+        "before(earlier:a, later:b)": before_of(Interval("a"), Interval("b")),
+        "contains(part:Praha, whole:Plzeň)": contains_of(
+            Place("Plzeň"), Place("Praha")
+        ),
+        "subset(sub:·kočka, sup:·savec)": subset_of(Group("kočka"), Group("savec")),
+    }
+    assert rendered in table, f"neznámá nabídka {rendered!r} — doplň ji do tabulky"
+    return table[rendered]
 
 
 def test_a_kernel_query_is_not_offered_a_matching_link() -> None:
