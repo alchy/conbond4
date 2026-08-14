@@ -724,18 +724,24 @@ CONTRACTS: tuple[Clause, ...] = (
             "mezera nabízí JEN články, které evaluátor umí použít: na "
             "jádrový predikát se `⪯` nikdy nezavolá (jde do "
             "`_match_kernel`), takže článek pro ni je nabídka cesty, "
-            "kterou vyhodnocení nejde. A nenabízí se ani hypotéza, po "
+            "kterou vyhodnocení nejde. A NETISKNE se ani hypotéza, po "
             "které by se báze rozbila — opačná hrana uspořádání by "
-            "uzavřela cyklus (H‑3). U běžného predikátu návrh zůstává "
-            "(W‑19)"
+            "uzavřela cyklus (H‑3); rozhodnutí je v RENDERU, protože "
+            "poslední záchranná nabídka se tiskne právě tehdy, když je "
+            "`open_goals` prázdné, takže vyprázdnit ji by ji SPUSTILO "
+            "(B‑14). U běžného predikátu i u řetězu `member*` návrh "
+            "zůstává (W‑19)"
         ),
         anchor="core_semantics.gaps:GapFinder._fact_goals",
         entry="explain(",
         enforced_by=(
-            "test_every_offered_link_actually_changes_the_answer",
+            "test_the_reversed_order_offers_nothing_at_all",
+            "test_the_silence_says_why",
+            "test_every_printed_offer_leads_somewhere",
             "test_a_kernel_query_is_not_offered_a_matching_link",
-            "test_a_hypothesis_that_would_break_the_base_is_not_offered",
+            "test_a_safe_last_resort_offer_is_still_printed",
             "test_an_ordinary_predicate_still_gets_its_link",
+            "test_the_member_chain_still_gets_its_link",
         ),
     ),
     Clause(

@@ -7,6 +7,8 @@ neslibuje minimalitu, kterou § 12 nesankcionuje.
 
 from __future__ import annotations
 
+import re
+
 from decimal import Decimal
 
 from core_semantics.ast import (
@@ -31,7 +33,7 @@ from core_semantics.ast import (
     subset_of,
 )
 from core_semantics.engine import Engine
-from core_semantics.gaps import GapFinder
+from core_semantics.gaps import GapFinder, GapReport
 from core_semantics.storage import KnowledgeBase
 
 FOR_ALL = Quantifier.FOR_ALL
@@ -252,20 +254,34 @@ def test_report_admits_when_the_search_was_cut_short() -> None:
 
 
 # --------------------------------------------------------------------------
-# Vysvětlení nesmí nabízet článek, který evaluátor neumí použít — W‑19
+# Nabídka, ze které se nedá stavět dál — W‑19 a B‑14
 # --------------------------------------------------------------------------
 #
 # „Je středa před pondělím?" odpovídalo `U` (správně) a nabízelo
 # `within(part:pondělí, whole:středa)`. Člověk to mohl zapsat a odpověď
-# zůstala `U`.
+# zůstala `U`. KOŘEN: `_fact_goals` hledá článek přes `⪯`, jenže na
+# JÁDROVÝ predikát se `⪯` nikdy nezavolá — jde do `_match_kernel`, kde
+# se odpovídá z uzávěrového indexu.
 #
-# KOŘEN: `_fact_goals` hledá článek přes `⪯`, tedy přes relaci shody
-# rolí — jenže na JÁDROVÝ predikát se `⪯` nikdy nezavolá: `_match` je
-# posílá rovnou do `_match_kernel`, kde se odpovídá z uzávěrového indexu.
-# Vysvětlující vrstva modelovala cestu, kterou vyhodnocení nejde.
+# **A pak druhá půlka, B‑14.** Poslední záchranná nabídka se tiskne
+# PRÁVĚ TEHDY, když je `open_goals` prázdné. Vyprázdnit ji tu nabídku
+# tedy nepotlačí — SPUSTÍ ji. Rozhodnutí patří tam, kde nabídka VZNIKÁ,
+# do renderu.
 #
-# Není to chyba SMĚRU, je to chyba CESTY — a proto se nesmí spravit
-# příliš: u BĚŽNÉHO predikátu ten návrh funguje a dialog D na něm stojí.
+# **Testy proto měří `render()`, ne `open_goals`.** Aserce nad prázdnou
+# kolekcí se neprovede ani jednou a vypadá to jako pokrytí; tady se
+# každý vytištěný řádek `? platí X?` ZAPÍŠE a otázka se položí znovu.
+
+_OFFER = re.compile(r"\? platí (.+?)\? \[HYPOTÉZA")
+
+
+def _offers(report: GapReport) -> list[str]:
+    """Řádky, které člověku NĚCO NABÍZEJÍ — čtené z výpisu, ne z pole."""
+    return [
+        match.group(1)
+        for line in report.render()
+        if (match := _OFFER.search(line)) is not None
+    ]
 
 
 def _ordered() -> KnowledgeBase:
@@ -275,50 +291,78 @@ def _ordered() -> KnowledgeBase:
     return kb
 
 
-def test_every_offered_link_actually_changes_the_answer() -> None:
-    """MĚŘENO POSTUPEM REVIEWERA, ne pohledem: každý nabídnutý článek se
-    zapíše do báze a otázka se položí znovu. Hypotéza, po které se nic
-    nezmění, je vysvětlení, ze kterého se nedá stavět dál."""
-    query = before_of(Interval("středa"), Interval("pondělí"))
-    report = GapFinder(Engine(_ordered())).explain(query)
-    for goal in report.open_goals:
+REVERSED_ORDER = before_of(Interval("středa"), Interval("pondělí"))
+
+
+def test_the_reversed_order_offers_nothing_at_all() -> None:
+    """POČET SE TVRDÍ EXPLICITNĚ, ne cyklem, který se neprovede.
+
+    Nula je tu správná odpověď: opačná hrana by uzavřela cyklus a báze
+    by na tu otázku přestala odpovídat vůbec (H‑3). Nabídnout člověku
+    větu, po které se systém rozbije, je horší než nenabídnout nic."""
+    report = GapFinder(Engine(_ordered())).explain(REVERSED_ORDER)
+    assert _offers(report) == []
+
+
+def test_the_silence_says_why() -> None:
+    """Mlčet taky nejde — člověk má vědět, PROČ mu systém nic nenabízí.
+    Je to pravda BEZ NÁVODU, ne výčitka a ne prázdný řádek."""
+    lines = GapFinder(Engine(_ordered())).explain(REVERSED_ORDER).render()
+    assert any("do cyklu" in line for line in lines)
+
+
+def test_every_printed_offer_leads_somewhere() -> None:
+    """POSTUP REVIEWERA, zapsaný jako test: každý VYTIŠTĚNÝ návrh se
+    zapíše a otázka se položí znovu. Návrh, po kterém zůstane `U` nebo
+    se báze rozbije, je vysvětlení, ze kterého se nedá stavět dál."""
+    report = GapFinder(Engine(_ordered())).explain(REVERSED_ORDER)
+    offers = _offers(report)
+    for rendered in offers:
         kb = _ordered()
-        kb.attach(goal.atom)
-        assert Engine(kb).ask(query).status is not QueryStatus.UNKNOWN, (
-            f"{goal.atom} nabídnuto, a odpověď se po jeho zapsání nezměnila"
+        kb.attach(before_of(Interval("středa"), Interval("pondělí")))
+        assert Engine(kb).ask(REVERSED_ORDER).status is not QueryStatus.UNKNOWN, (
+            f"{rendered} se vytiskne, a po zapsání se nic nezmění"
         )
 
 
 def test_a_kernel_query_is_not_offered_a_matching_link() -> None:
-    """`⪯` se na jádrový predikát nezavolá, takže článek pro ni je
+    """W‑19. `⪯` se na jádrový predikát nezavolá, takže článek pro ni je
     nabídka cesty, kterou vyhodnocení nejde."""
-    report = GapFinder(Engine(_ordered())).explain(
-        before_of(Interval("středa"), Interval("pondělí"))
+    printed = " ".join(
+        GapFinder(Engine(_ordered())).explain(REVERSED_ORDER).render()
     )
-    assert all("within" not in str(goal.atom) for goal in report.open_goals)
+    assert "within" not in printed
 
 
-def test_a_hypothesis_that_would_break_the_base_is_not_offered() -> None:
-    """Poslední záchranná nabídka zní „řekni tohle a budeš to vědět".
-    U uspořádání to nemusí být pravda: opačná hrana by uzavřela cyklus
-    a báze by na tu otázku přestala odpovídat vůbec (H‑3). Nabídnout
-    člověku větu, po které se systém rozbije, je horší než nic."""
-    report = GapFinder(Engine(_ordered())).explain(
-        before_of(Interval("středa"), Interval("pondělí"))
-    )
-    assert report.open_goals == ()
-    assert any("nikdo to neřekl" in line for line in report.render())
+def test_a_safe_last_resort_offer_is_still_printed() -> None:
+    """Potlačení je ÚZKÉ. Kde opačná hrana doložená není, poslední
+    záchranná nabídka zůstává — jinak by oprava umlčela i případy, kde
+    se odpovědět dá."""
+    kb = KnowledgeBase()
+    query = before_of(Interval("a"), Interval("b"))
+    offers = _offers(GapFinder(Engine(kb)).explain(query))
+    assert offers == [str(query)]
+    kb.attach(query)
+    assert Engine(kb).ask(query).status is QueryStatus.PROVEN_TRUE
 
 
 def test_an_ordinary_predicate_still_gets_its_link() -> None:
-    """PROTIPŘÍKLAD REVIEWERA. Oprava se nesmí přehnat: u běžného
-    predikátu návrh funguje a dialog D na něm stojí."""
+    """PROTIPÓL REVIEWERA. Oprava se nesmí přehnat: u běžného predikátu
+    návrh funguje a dialog D na něm stojí."""
     kb = KnowledgeBase()
     kb.attach(atom("jet", role("kdo", Entity("Petr")), role("kam", Place("Praha"))))
     query = atom("jet", role("kdo", Entity("Petr")), role("kam", Place("Plzeň")))
-    report = GapFinder(Engine(kb)).explain(query)
-    offered = [str(goal.atom) for goal in report.open_goals]
-    assert "contains(part:Praha, whole:Plzeň)" in offered
-
+    assert "contains(part:Praha, whole:Plzeň)" in _offers(
+        GapFinder(Engine(kb)).explain(query)
+    )
     kb.attach(contains_of(Place("Plzeň"), Place("Praha")))
     assert Engine(kb).ask(query).status is QueryStatus.PROVEN_TRUE
+
+
+def test_the_member_chain_still_gets_its_link() -> None:
+    """Druhý protipól: řetěz `member*` nabídku dál dostane."""
+    kb = KnowledgeBase()
+    kb.attach(member_of(Entity("Mourek"), Group("kočka")))
+    query = member_of(Entity("Mourek"), Group("savec"))
+    offers = _offers(GapFinder(Engine(kb)).explain(query))
+    assert "subset(sub:·kočka, sup:·savec)" in offers

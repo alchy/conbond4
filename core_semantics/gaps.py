@@ -102,6 +102,14 @@ class GapReport:
     open_goals: tuple[OpenGoal, ...]
     known: tuple[str, ...] = ()
     exhausted: bool = False
+    #: Nabídka, po které by se báze ROZBILA, se netiskne *(B‑14)*.
+    #:
+    #: Rozhodnutí patří sem, do RENDERU, a ne do `open_goals`: poslední
+    #: záchranná nabídka se tiskne PRÁVĚ TEHDY, když je `open_goals`
+    #: prázdné, takže vyprázdnit ji tu nabídku nepotlačí — SPUSTÍ ji.
+    #: Obě poloviny opravy by šly proti sobě a testy nad prázdnou kolekcí
+    #: by to nezachytily, protože by neprovedly ani jednu aserci.
+    unsafe_offer: bool = False
     #: Identity, které jsou ve sporu a kvůli tomu se hrana nepoužila (M‑1).
     #: Bez tohohle by odpověď spadla z `A` na `U` a nikdo by se nedozvěděl
     #: proč — a mezera, kterou nejde vysvětlit, je skoro tak špatná jako
@@ -118,6 +126,15 @@ class GapReport:
         )
         if self.open_goals:
             lines.extend(goal.render() for goal in self.open_goals)
+        elif self.unsafe_offer:
+            # PRAVDA BEZ NÁVODU. Nabídnout „řekni tohle a budeš to vědět"
+            # by tady byla léčka: opačná hrana uspořádání uzavře cyklus
+            # a báze na tu otázku přestane odpovídat vůbec (H‑3). Mlčet
+            # taky nejde — člověk má vědět, PROČ mu systém nic nenabízí.
+            lines.append(
+                f"tohle mi nikdo neřekl a nabídnout ti větu, která by "
+                f"uspořádání kolem {self.query} uzavřela do cyklu, nemůžu"
+            )
         else:
             # Ani tady se neříká „chybí vědět". Když se nenašel žádný
             # konkrétní podcíl, je poctivá odpověď „tohle mi nikdo neřekl
@@ -157,6 +174,7 @@ class GapFinder:
             open_goals=self._dedupe(goals),
             known=self._what_is_known(query, derivation),
             exhausted=self._exhausted,
+            unsafe_offer=self._contradicts_base(query, derivation),
             disputed=self._disputed_for(query, derivation),
         )
 

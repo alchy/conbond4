@@ -1,6 +1,144 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — `before` z české věty drží; a odkryl vadu ve vrstvě, která vysvětluje
+## Status: 🔴 FAIL — potlačení se udělalo v datech, ale ta věta se pořád tiskne; a testy, které to měly změřit, měří prázdno
+
+**Kolo #60.** 801 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **57/57**, živá parita **26/26**, dialogy 7 / 16 / 10 se závěry
+beze změny, gate *Farmaka* `N`, nula `RECALL_FAILURE`, celá stálá regrese
+zelená. **Blokuji přesto** — můj counterexample byl formulovaný na to,
+co uvidí člověk, a tam neprošel.
+
+**Architectural Health Score: 8,5 / 10**
+
+---
+
+## Co je na tomhle kole dobré, ať to nezapadne
+
+**Builderův vlastní nález je správný a je vážnější, než co jsem zadal.**
+Když si každou nabídku zapsal a znovu se zeptal — tedy mým postupem —
+zjistil, že poslední záchranná nabídka `before(středa, pondělí)` odpověď
+sice změní, ale **na `InconsistentOrder`**. Ověřil jsem si to sám:
+
+```
+zapisuji before(středa, pondělí) … zapsáno
+dotaz → InconsistentOrder: uspořádání kolem 'pondělí' si odporuje (H‑3)
+```
+
+**Nabídnout člověku větu, po které báze přestane odpovídat, je horší než
+nenabídnout nic.** Ta úvaha je přesná. Jen se nedotáhla tam, kam patří.
+
+**Varianta (1) mého zadání je hotová a funguje:** článek `⪯` se pro
+jádrový predikát už nenabízí. **Protipól drží** — `jet(kdo:Petr,
+kam:Plzeň)` pořád nabídne `contains(part:Praha, whole:Plzeň)` a po jeho
+zapsání dá `A`, ověřeno. **Řetěz `member*` taky drží**: „Mourek je savec?"
+nabídne `subset(sub:·kočka, sup:·savec)`, což je použitelné.
+
+---
+
+## Critical Blockers
+
+### B‑14 · Potlačení je v `open_goals`, ale ta věta se tiskne PRÁVĚ PROTO, že je `open_goals` prázdné
+
+**Změřeno živou cestou, ne z nahrávky:**
+
+```
+» Je středa před pondělím?
+   → NEVÍM
+     ? platí before(earlier:středa, later:pondělí)? [HYPOTÉZA — nikdo to neřekl]
+   hypotéz v transkriptu: 1
+```
+
+To je **přesně ta věta**, po které se báze rozbije. Člověk ji vidí, může
+ji říct, a systém ho k tomu vede.
+
+**Root cause, jedno místo:** `gaps.py:125`, `else` větev
+`GapReport.render()`:
+
+```python
+if self.open_goals:
+    lines.extend(goal.render() for goal in self.open_goals)
+else:
+    lines.append(f"? platí {self.query}? [HYPOTÉZA — nikdo to neřekl]")
+```
+
+Vyprázdnit `open_goals` tu nabídku **nepotlačí — spustí ji**. Obě
+poloviny opravy jdou proti sobě.
+
+**Není to úzce mířené potlačení, prostě tam není.** Změřil jsem i případ
+s PŘÍMOU opačnou hranou, kde by se mělo trefit nejspolehlivěji:
+
+```
+PŘÍMÁ opačná hrana before(po, st)      verdikt U · hypotéz 1
+TRANZITIVNÍ opačný směr (dialog)       verdikt U · hypotéz 1
+prázdná báze                           verdikt U · hypotéz 1
+```
+
+### B‑15 · Tři ze čtyř nových testů tvrdí něco o PRÁZDNÉ kolekci
+
+`report.open_goals` je pro tenhle dotaz `()`, takže:
+
+- `test_every_offered_link_actually_changes_the_answer` — cyklus přes
+  `open_goals` **neprovede ani jednu aserci**. To je test, který má
+  zapsat můj postup, a pro dotaz, který sám jmenuje, nezkontroluje nic.
+- `test_a_kernel_query_is_not_offered_a_matching_link` — `all(...)`
+  nad prázdnou n‑ticí je triviálně pravda.
+- `test_a_hypothesis_that_would_break_the_base_is_not_offered` — tvrdí
+  `open_goals == ()` **a k tomu přítomnost řádku „nikdo to neřekl"**,
+  což je právě ten řádek, který tu škodlivou nabídku nese. Test si jako
+  důkaz poctivosti bere text, na kterém je vada.
+
+**Zasažená smlouva:** I‑14 a uživatelovo pravidlo, že ptát se není vada,
+**pokud jde ze získané odpovědi stavět dál**.
+
+**Vzorec je týž, který Builder sám pojmenoval o kolo dřív u W‑16:**
+*„vypadá to jako pokrytí a není to pokrytí."* Tentokrát v jeho vlastním
+novém testu.
+
+---
+
+## Semantic Warnings
+
+**W‑20 leží dál podle dohody** — `[CHYBÍ: co znamená role před+Ins]`
+i `Gen` u podtřídy jsou týž tvar šumu, uklidí se najednou.
+
+**Drobnost, kterou Builder uklidil dobře:** „potřeboval jsem to přes
+žádné pravidlo tohle nevyrábí" byla věta poskládaná z nesmyslu; `via`
+pro „žádná cesta" je teď konstanta a renderuje se bez „přes".
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: rozhodnutí musí být tam, kde nabídka VZNIKÁ — tedy
+v renderu, ne v `open_goals`.**
+
+1. Poslední záchranná nabídka se **nesmí vytisknout**, když by zapsání
+   té věty bázi rozbilo. Nejmenší bezpečná varianta: `GapReport` nese
+   příznak „záchrannou nabídku netiskni" a `render()` místo ní řekne
+   pravdu bez návodu — *„tohle mi nikdo neřekl a nabídnout ti větu,
+   která by uspořádání uzavřela do cyklu, nemůžu."*
+2. **Testy musí měřit `render()`, ne `open_goals`.** Vytáhni z něj každý
+   řádek `? platí X?`, zapiš `X`, znovu se zeptej. Když je řádků nula,
+   test to musí **říct jako nulu**, ne projít cyklem, který se neprovede.
+3. Nesahat na běžné predikáty ani na řetěz `member*`. Obojí funguje,
+   změřeno.
+
+**Můj counterexample — a tentokrát ho napíšu tak, aby nešel splnit
+prázdnotou:** projedu `render()` u „Je středa před pondělím?" a
+**každý** řádek `? platí X?` zapíšu a znovu se zeptám; žádný nesmí
+nechat odpověď `U` **ani** shodit bázi na `InconsistentOrder`; počet
+takových řádků smí být nula, ale test to musí tvrdit explicitně.
+K tomu: `jet(kdo:Petr, kam:Plzeň)` pořád nabídne `contains(part:Praha,
+whole:Plzeň)` a po zapsání dá `A`; „Mourek je savec?" pořád nabídne
+`subset(sub:·kočka, sup:·savec)`; sedm domén se závěry beze změny
+(a když se některý změní, **napiš to**); gate *Farmaka* `N`, parita
+26/26, nula `RECALL_FAILURE`, testy zelené.
+
+---
+
+## ARCHIV — kolo #59
+
+### Status: 🟢 PASS — `before` z české věty drží; a odkryl vadu ve vrstvě, která vysvětluje
 
 **Kolo #59.** 794 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **56/56**, živá parita **26/26**, dialogy 7 domén / 16 zapsaných
