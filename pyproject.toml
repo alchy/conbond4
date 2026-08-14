@@ -1,0 +1,25 @@
+[project]
+name = "conbond4"
+version = "0.1.0.dev0"
+description = "Core Semantics 0.1 — typovaný, auditovatelný logický engine"
+requires-python = ">=3.11"
+dependencies = ["networkx>=3.0"]
+
+[project.optional-dependencies]
+# mypy není kosmetika: sorty z § 1 jsou vynucené za běhu jen v konstruktorech
+# atomů, statická kontrola je druhá polovina téže záruky.
+dev = ["pytest>=8.0", "mypy>=1.8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["core_semantics/tests"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["core_semantics"]
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "networkx.*"
+ignore_missing_imports = true
