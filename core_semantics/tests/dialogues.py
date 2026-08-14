@@ -28,6 +28,7 @@ from core_semantics.lexicon import (
     Lexicon,
     Operation,
     PatternStatus,
+    RoleMapping,
     Trigger,
     czech_seed,
 )
@@ -81,6 +82,10 @@ class Step:
     answers: str = ""
     asks: str = ""
     refuses: str = ""
+    #: Věc, která je na tomhle kroku VĚCNĚ ŠPATNĚ a ví se proč. Zapsaná
+    #: mez není totéž co selhání: krok projde, ale nepředstírá se, že je
+    #: v pořádku všechno.
+    limit: str = ""
     point: str = ""
 
 
@@ -92,10 +97,24 @@ class Dialogue:
     #: Tvary potvrzené člověkem pro tuhle doménu. Do `czech_seed()` nepatří
     #: — tam by z nich byl tichý default pro každého, kdo knihovnu použije.
     shapes: tuple[tuple[str, str, str, str, Operation], ...] = ()
+    #: Významy POVRCHOVÝCH ROLÍ, které člověk pro tuhle doménu potvrdil
+    #: (`v+Loc → kde`). Týž důvod jako u `shapes`: `v+Loc` je „v Praze"
+    #: i „v pondělí", takže do seedu nepatří — je to rozhodnutí, ne
+    #: vlastnost češtiny, a v záznamu domény má být vidět, že padlo.
+    roles: tuple[tuple[str, str], ...] = ()
     note: str = ""
 
     def lexicon(self) -> Lexicon:
         lexicon = czech_seed()
+        for surface, canonical in self.roles:
+            lexicon.add_role(
+                RoleMapping(
+                    surface=surface,
+                    canonical=canonical,
+                    learned_from=f"dialog {self.name}, potvrzeno člověkem",
+                    status=PatternStatus.CONFIRMED,
+                )
+            )
         for upos, number, case, deprel, operation in self.shapes:
             lexicon.add(
                 LearnedPattern(
@@ -136,7 +155,11 @@ PETROVICE = Dialogue(
     name="Petrovice",
     source="„Pes Roník bydlí ve vesničce Petrovice. Kočka Micka bydlí též "
     "ve vesničce Petrovice.“",
-    shapes=(PROPN_SUBJ,),
+    shapes=(PROPN_SUBJ, NOUN_SUBJ_SG),
+    # Rozhodnutí člověka, ne vlastnost češtiny: `v`+Loc je „v Praze"
+    # i „v pondělí". Do seedu proto nepatří — systém se na něj PTÁ
+    # (N‑3) a tohle je zapsaná odpověď pro tuhle doménu.
+    roles=(("v+Loc", "kde"),),
     steps=(
         Step(
             text="Roník bydlí v Petrovicích.",
@@ -147,19 +170,63 @@ PETROVICE = Dialogue(
                 w("Petrovicích", "Petrovice", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
                 w(".", ".", "PUNCT", 2, "punct"),
             ),
-            reads="bydlet(kdo:roník, v+Loc:Petrovice)",
-            asks="`v`+Loc je `kde` i `kdy`, takže role zůstane POVRCHOVÁ. "
-            "Ptá se proto nejdřív na kvantifikátor (povrchová role není "
-            "místní role, takže se kvantifikuje jako každá jiná) a věta "
-            "se nezakotví. Obojí má týž kořen: dokud se nerozhodne, co "
-            "`v`+Loc znamená, není z čeho určit ani sort filleru",
-            point="doména, kterou dnes česky NEPŘEČTEME celou, a je to vidět",
-            refuses="",
+            reads="bydlet(kde:Petrovice, kdo:∀roník)",
+            anchors=("Petrovicích → Petrovice (sort z role; místo)",),
+            writes="bydlet(kde:Petrovice, kdo:∀roník)",
+            point=(
+                "MÍSTNÍ URČENÍ SE ZAKOTVÍ, jakmile je rozhodnuté, co `v`+Loc "
+                "znamená. Sort filleru plyne z ROLE (§ 3.6), ne ze slova — "
+                "„Petrovice“ je `Place`, protože `kde` je prostorová role"
+            ),
+            limit=(
+                "„Roník“ je JMÉNO PSA, parser z něj udělá obecné jméno "
+                "s lemmatem „roník“. Táž třída jako „Postřižiny“: rozpoznat "
+                "vlastní jméno, které není v žádném rejstříku, je znalost "
+                "světa, ne morfologie. Doména na tom nestojí — mluví se "
+                "o TÉMŽ uzlu v obou větách, ať se jmenuje jakkoli"
+            ),
+        ),
+        Step(
+            text="Micka bydlí v Petrovicích.",
+            reading=sentence(
+                w("Micka", "Micka", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Petrovicích", "Petrovice", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            reads="bydlet(kde:Petrovice, kdo:·Micka)",
+            writes="bydlet(kde:Petrovice, kdo:Micka)",
+            point=(
+                "JEDNA ODPOVĚĎ ZAVŘELA CELOU TŘÍDU VĚT: `v`+Loc se "
+                "nepojmenovává znovu, tvar už význam má"
+            ),
+        ),
+        Step(
+            text="Bydlí Micka v Petrovicích?",
+            reading=sentence(
+                w("Bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Micka", "Micka", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Petrovicích", "Petrovice", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+                w("?", "?", "PUNCT", 1, "punct"),
+            ),
+            reads="bydlet(kde:Petrovice, kdo:·Micka)",
+            anchors=("Micka → Micka (kanonicky; týž uzel, o kterém už řeč byla)",),
+            answers="A",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Tohle je krok, kvůli "
+                "kterému dialog existuje: dvě zvířata na TÉMŽE místě a "
+                "odpověď doložená zapsaným výrokem"
+            ),
         ),
     ),
-    note="Petrovice ukazují MEZ: bez rozhodnutí `v`+Loc → `kde` se místní "
-    "určení nezakotví. Dialog je v sadě schválně — doména, která "
-    "strukturovaně funguje a česky ne, je informace, ne ostuda.",
+    note=(
+        "Petrovice byly dlouho MEZ: bez rozhodnutí `v`+Loc → `kde` se "
+        "místní určení nezakotvilo a dialog neprošel. Od N‑3 se systém "
+        "na význam tvaru PTÁ a odpověď je tah, takže mez zmizela — ne "
+        "tím, že by se význam uhodl, ale tím, že se na něj někdo zeptal."
+    ),
 )
 
 

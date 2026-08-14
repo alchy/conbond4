@@ -300,15 +300,44 @@ def test_learned_mapping_renames_an_unambiguous_surface_role() -> None:
     assert "kam" in roles
 
 
-def test_ambiguous_surface_role_is_reported_not_resolved() -> None:
+def test_an_unnamed_surface_role_is_asked_about_not_resolved() -> None:
     """`v+Loc` je „v Praze" i „v pondělí". Rozliší to jen význam nominálu,
-    a ten se nehádá — patro to zapíše do trace a jméno nechá povrchové."""
+    a ten se nehádá — jméno zůstane povrchové a systém se ZEPTÁ.
+
+    Od N‑3 v seedu `v+Loc` NENÍ. Dvě hypotézy tam situaci neřešily:
+    mapování zůstalo dvojznačné navždy, protože i po odpovědi člověka by
+    kandidáti byli pořád dva. Teď tvar nemá význam žádný, odpověď ho dá
+    a je jednoznačný."""
     tier = role_mapping_tier(czech_seed())
     renamed, why = tier(generate(TWO_CIRCUMSTANCES), TWO_CIRCUMSTANCES)
     assert why is not None and "v+Loc" in why
-    assert "kde" in why and "kdy" in why
     roles = [r.name for r in renamed[0].predication.roles]
     assert "v+Loc" in roles  # nepřejmenováno
+
+
+def test_two_candidates_are_reported_as_ambiguity_not_as_a_gap() -> None:
+    """Druhá půlka: kdyby někdo naučil DVA významy téhož tvaru, hláška to
+    musí říct jako dvojznačnost, ne jako mezeru — jsou to různé stavy
+    a člověk na ně odpovídá jinak."""
+    lexicon = czech_seed()
+    lexicon.teach_role("v+Loc", "kde", learned_from="test")
+    lexicon.teach_role("v+Loc", "kdy", learned_from="test")
+    _, why = role_mapping_tier(lexicon)(
+        generate(TWO_CIRCUMSTANCES), TWO_CIRCUMSTANCES
+    )
+    assert why is not None
+    assert "kde" in why and "kdy" in why
+
+
+def test_one_answer_names_the_shape_for_good() -> None:
+    """A ta odpověď zavře celou třídu vět, ne jednu větu."""
+    lexicon = czech_seed()
+    lexicon.teach_role("v+Loc", "kde", learned_from="test")
+    renamed, why = role_mapping_tier(lexicon)(
+        generate(TWO_CIRCUMSTANCES), TWO_CIRCUMSTANCES
+    )
+    roles = [r.name for r in renamed[0].predication.roles]
+    assert "kde" in roles and "v+Loc" not in roles
 
 
 def test_revoking_a_role_mapping_leaves_the_surface_name() -> None:

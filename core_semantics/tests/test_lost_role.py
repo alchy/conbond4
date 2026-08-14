@@ -14,7 +14,13 @@ naučit TVAR → přečíst větu ZNOVU.**
 
 from __future__ import annotations
 
-from core_semantics.cascade import cascade, lost_members, lost_shape
+from core_semantics.cascade import (
+    cascade,
+    lost_members,
+    lost_shape,
+    role_question,
+    surface_roles,
+)
 from core_semantics.lexicon import Mood, czech_seed
 from core_semantics.oracle import Reading, Token, Utterance
 from core_semantics.session import Session, names_role
@@ -202,3 +208,114 @@ def test_lost_role_transcript_prints() -> None:
         for line in result.lines:
             echo(f"   {line}")
     echo("=" * 72)
+
+
+# --------------------------------------------------------------------------
+# Povrchová role, kterou nikdo nepojmenoval — N‑3
+# --------------------------------------------------------------------------
+#
+# `v`+Loc je „v Praze" (místo) i „v pondělí" (čas). Do N‑3 byly v seedu
+# OBĚ hypotézy, takže patro hlásilo dvojznačnost — a to nešlo vyřešit
+# nikdy: i po odpovědi člověka by kandidáti zůstali dva. Věta se
+# nezakotvila, protože povrchová role neurčuje sort, a dialog Petrovice
+# neprošel.
+#
+# Oprava je stejná jako u ztraceného členu, jen o tvar výš: v seedu není
+# nic, systém se ZEPTÁ a odpověď tvar rozhodne. Doptání je tah dialogu,
+# ne prohra — a stejný tah `→@`, protože obojí je `RoleMapping`.
+
+LOC = "v+Loc"
+
+
+def locative(who: str, upos: str = "PROPN") -> Reading:
+    """«<X> bydlí v Petrovicích.»"""
+    return Reading(
+        tokens=(
+            tok(1, who, who, upos, 2, "nsubj", Case="Nom", Number="Sing"),
+            tok(2, "bydlí", "bydlet", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+            tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+            tok(4, "Petrovicích", "Petrovice", "PROPN", 2, "obl", Case="Loc", NameType="Geo", Number="Plur"),
+            tok(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+RONIK = "Roník bydlí v Petrovicích."
+MICKA = "Micka bydlí v Petrovicích."
+
+
+def locative_oracle() -> _Recorded:
+    return _Recorded({RONIK: locative("Roník"), MICKA: locative("Micka")})
+
+
+def test_a_surface_role_without_a_meaning_is_asked_about() -> None:
+    """Tvar bez významu je OTÁZKA, ne poznámka do stopy. Věta se stejně
+    nezakotví — povrchová role neurčuje sort — takže mlčet by znamenalo
+    nechat člověka hádat, co má doplnit."""
+    session = Session()
+    result = session.utter(RONIK, locative_oracle())
+    assert result.question is not None
+    assert LOC in result.question
+
+
+def test_the_seed_does_not_decide_it_for_anyone() -> None:
+    """Dvě hypotézy v seedu situaci NEŘEŠILY — mapování by zůstalo
+    dvojznačné navždy. A jedna by byla horší: tichý default pro každého,
+    kdo tu knihovnu použije."""
+    assert not czech_seed().role_candidates(LOC)
+
+
+def test_the_answer_completes_the_very_sentence_that_asked_about_the_role() -> None:
+    session = Session()
+    session.utter(RONIK, locative_oracle())
+    answer = session.play(names_role("Je to místo.", locative("Roník"), LOC, "kde"))
+    assert answer.predication is not None
+    assert answer.predication.role("kde") is not None
+    assert answer.predication.role(LOC) is None
+
+
+def test_the_place_gets_its_sort_from_the_role_not_from_the_word() -> None:
+    """§ 3.6: „Petrovice" je `Place`, protože `kde` je prostorová role —
+    ne proto, že by si o Petrovicích někdo něco myslel."""
+    session = Session()
+    session.utter(RONIK, locative_oracle())
+    answer = session.play(names_role("Je to místo.", locative("Roník"), LOC, "kde"))
+    assert any("místo" in line for line in answer.lines)
+
+
+def test_one_answer_closes_the_whole_class_of_shapes() -> None:
+    session = Session()
+    session.utter(RONIK, locative_oracle())
+    session.play(names_role("Je to místo.", locative("Roník"), LOC, "kde"))
+
+    again = session.utter(MICKA, locative_oracle())
+    assert again.predication is not None
+    assert again.predication.role("kde") is not None
+    # Ptát se dál MŮŽE — na kvantifikátor podmětu, což je jiná otázka.
+    # Test se proto ptá na TU SVOU: tvar `v+Loc` už význam má.
+    assert role_question(again.predication) is None
+
+
+def test_the_learned_meaning_of_a_shape_is_revocable() -> None:
+    session = Session()
+    session.utter(RONIK, locative_oracle())
+    session.play(names_role("Je to místo.", locative("Roník"), LOC, "kde"))
+    learned = [m for m in session.lexicon.all_roles() if m.surface == LOC]
+    assert learned and "tah" in learned[0].learned_from
+
+    session.lexicon.revoke_role(learned[0].key())
+    revoked = session.utter(MICKA, locative_oracle())
+    assert revoked.predication is not None
+    assert role_question(revoked.predication) is not None
+
+
+def test_a_canonical_role_is_not_asked_about() -> None:
+    """Kontrola, že se neptá na všechno: `kdo` a `co` jméno mají a ptát se
+    na ně by byl výslech, ve kterém by skutečná otázka zanikla. Jádrová
+    jména relací (`elem`, `sub`, …) jsou kanonická ze stejného důvodu,
+    jen ve slovníku jádra."""
+    verdict = cascade(locative("Micka"))
+    assert verdict.decided is not None
+    assert surface_roles(verdict.decided.predication) == (LOC,)
+    assert "kdo" not in (role_question(verdict.decided.predication) or "")

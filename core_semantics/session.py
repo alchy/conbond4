@@ -70,6 +70,7 @@ from .cascade import (
     quantifier_tier,
     relation_question,
     relation_tier,
+    role_question,
     role_mapping_tier,
 )
 from .engine import Engine
@@ -823,6 +824,10 @@ class Session:
             for part in (
                 open_roles_question(predication.open_roles()),
                 lost_question(turn.lost),
+                # Otázka na význam povrchové role (N‑3). Taky ze STOPY:
+                # v predikaci je vidět jen to, že role zůstala povrchová,
+                # ne že se na ni systém ptá.
+                role_question(predication),
                 # Otázka na to, co stavba tvrdí (N‑2). Čte se ze STOPY,
                 # protože v predikaci po sobě nerozhodnutá relace nic
                 # nenechá — čtení zůstane obyčejným vztahem a nedalo by

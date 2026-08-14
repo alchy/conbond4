@@ -1,8 +1,117 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — identita fráze je nezávislá na pozici
+## Status: 🟢 APPROVE — N‑2 je uzavřená celá
 
-**Kolo #47.** 679 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #48.** 685 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **47/47**, živá parita **16/16**. **N‑2d ověřeno mnou** — oba mé
+counterexamply prošly a Builder si sám našel vadu, kterou jsem nezadal
+a která by byla vážná.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Důkaz (měřeno mnou)
+
+**Counterexample (a) — odpověď se neztratila:**
+
+```
+» Jana je učitelka.     ✓ member(elem:·Jana, group:·učitelka)   [s0001]
+» Je Jana učitelka?     → A   doloženo: ['s0001']
+```
+
+**Counterexample (b) — slovní druh podmětu rozhoduje:**
+
+```
+» Mourek je kočka.      ✓ member(elem:·Mourek, group:·kočka)
+» Kočka je savec.       ◐ ptá se                    ← PROPN tam není
+```
+
+**Zápor, který si našel sám a který jsem nezadal:**
+
+```
+» Mourek není savec.    ✓ ¬member(elem:·Mourek, group:·savec)
+» Je Mourek savec?      → N   doloženo: ['s0001']    ← z DOLOŽENÉHO popření
+» Vrabec není savec.    ✓ disjoint(a:·vrabec, b:·savec)   ← disjoint zápor dál polyká
+```
+
+**Regrese celá** včetně G‑3 recallu a zákazu eliminace `OR`; gate
+*Farmaka* `N`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Nález kola: zápor je na `member` kolmý
+
+`_as_relation` **zahazoval zápor vždycky**, protože první relace, která
+tudy prošla, byl `disjoint` — a ten zápor sám nese. Na `member` a `subset`
+to neplatí.
+
+Kdyby to zůstalo, `Mourek není savec.` by se zapsalo jako
+`member(Mourek, savec)` — **přesný opak toho, co člověk řekl**. Builderovo
+zařazení je přesné: je to táž třída jako kdysi `Predication.negated`,
+které zahodilo přestavování dataclassy.
+
+**Nezadal jsem to a on to našel** — a to je ten rozdíl mezi „splnil
+zadání" a „rozumí, co dělá". Zvlášť cenné je, že to **pinnul z obou
+stran**: `member` zápor nese, `disjoint` ho dál polyká.
+
+---
+
+## Semantic Warnings
+
+**W‑24 · změna akceptačního dialogu — ověřeno, není oslabení.** *Jana
+a zmrzlina* má nově `member(elem:·Jana, group:·učitelka)` místo
+`být(...)`. Do téhle změny leželo v bázi **slabší tvrzení, než co člověk
+řekl**, a odpověď `A` držela jen proto, že se ptalo na tentýž reifikovaný
+vztah. Teď drží **přes jádrový uzávěr**. Krok `Je Jana učitelka?` → `A`
+zůstal **podmínkou**, ne prózou — ověřeno.
+
+---
+
+## Jeden další směr: **Petrovice — `v`+Loc**
+
+Builder nechal rozhodnutí na mně a nabídl přivlastnění a tři evidované
+meze zlaté sady.
+
+**Volím Petrovice.** Důvod je gate:
+
+- **Petrovice je celý akceptační dialog**, který dnes **neprojde** —
+  a jako jediná z otevřených položek je to **nesplněný akceptační
+  scénář**, ne chybějící schopnost nad rámec.
+- **Přivlastnění** Builder popsal správně podruhé: *odpověď nemá kam
+  vést*. Je to jiná vrstva, ne dokončení téhle.
+- **Zmrzlina** (`rády` jako `iobj`) a **Postřižiny** (název díla) jsou
+  meze **parseru**, ne kaskády — a Postřižiny jsou znalost světa, kterou
+  morfologie nedodá.
+
+**Problém:** `v`+Loc znamená jednou `kde` (*v Praze*) a jednou `kdy`
+(*v pondělí* — dnes `v`+Acc, takže to už rozliší). U *„v Petrovicích"* je
+to místo, ale rozhodnout se to musí, protože tvar sám nestačí.
+
+**Nejmenší bezpečná změna:** `v`+Loc **nedávat do seedu** — je to táž
+dvojznačnost jako holá spona. Nechat, ať se **zeptá**, a odpověď naučit
+jako tvar. Doptání je podle zadaného kritéria správné chování.
+
+**Counterexample, který musí projít:** `v`+Acc → `kdy` **se nesmí
+uvolnit** (kolo #38 to opravovalo) a `Petr jel v pondělí do Prahy.` musí
+dál číst `kdy:pondělí` **bez otázky**. Druhý: `Petr byl v pondělí
+v Praze.` — dvě určení, různé tvary — musí dál číst obě.
+
+**Očekávaný výsledek:** dialog *Petrovice* projde celý (věta se zeptá,
+odpověď ji dočte, otázka na obou psech dá doloženou odpověď); `v`+Acc beze
+změny; plná regrese včetně gate a parity.
+
+---
+
+## Archiv — kolo #47 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #47. 679 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **47/47**, živá parita **14/14**. **N‑2c ověřeno mnou** — všechny
 tři mé counterexamply prošly a nález o fixtuře je nejcennější kus kola.
 

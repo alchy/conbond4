@@ -53,6 +53,15 @@ ROLE_OBJECT = "co"
 #: učí dialogem jako odvolatelná data, ne zadrátovaným seznamem.
 ROLE_MANNER = "jak"
 
+#: Role, ze kterých se skládá jádrová relace navržená konstrukcí, podle
+#: operace: `(levá, pravá)`. Jména jsou jádrová (§ 5.1), takže se z nich
+#: dá postavit atom bez dalšího překladu.
+RELATION_ROLES: dict[Operation, tuple[str, str]] = {
+    Operation.MEMBER: ("elem", "group"),
+    Operation.SUBSET: ("sub", "sup"),
+    Operation.DISJOINT: ("a", "b"),
+}
+
 
 @dataclass(frozen=True, slots=True)
 class Mention:
@@ -847,13 +856,64 @@ def lexicon_tier(lexicon: Lexicon) -> Tier:
 # Kaskáda
 # --------------------------------------------------------------------------
 
+#: Role, které jméno NEPOTŘEBUJÍ, protože ho už mají. Jádro rolí je
+#: uzavřené (§ 12/1) a místo s časem mají vlastní slovník; všechno ostatní,
+#: co `_role_for` vrátí, je POVRCHOVÉ pojmenování tvaru (`v+Loc`,
+#: `nsubj:pass`) a co znamená, se musí NAUČIT.
+#:
+#: Je to členství v uzavřeném slovníku jádra, ne odhad z podoby řetězce.
+#: Poznávat povrchovou roli podle toho, že v ní je `+`, by byla heuristika
+#: nad textem — a ta by se rozešla, jakmile by někdo tvar přejmenoval.
+#: Jádrová jména rolí (`elem`, `sub`, `a`, …) jsou mezi nimi taky: jsou
+#: kanonická v témž smyslu, jen ve slovníku JÁDRA místo kaskády. Berou se
+#: z `RELATION_ROLES`, ne z druhého seznamu — dvě kopie by se rozešly.
+CANONICAL_ROLES: frozenset[str] = (
+    frozenset({ROLE_SUBJECT, ROLE_OBJECT, ROLE_MANNER})
+    | UNQUANTIFIED_ROLES
+    | {name for pair in RELATION_ROLES.values() for name in pair}
+)
+
+def surface_roles(predication: Predication) -> tuple[str, ...]:
+    """Role, které zůstaly POVRCHOVÉ — tvar bez významu."""
+    return tuple(
+        sorted({r.name for r in predication.roles if r.name not in CANONICAL_ROLES})
+    )
+
+
+def role_question(predication: Predication) -> str | None:
+    """Otázka na to, co povrchová role znamená — nebo `None`.
+
+    Počítá se z HOTOVÉ predikace, ne ze stopy, a je to podstatné: stopa
+    je log, takže by nesla i tvary, které pozdější patro mezitím
+    spotřebovalo. `Gen` v „Amoxicilin je druh penicilinu" povrchová role
+    JE, ale jádrová relace ji vezme jako stranu `subset` — ptát se na ni
+    by bylo doptání na něco, co už je rozhodnuté.
+    """
+    shapes = surface_roles(predication)
+    if not shapes:
+        return None
+    which = ", ".join(f"„{shape}“" for shape in shapes)
+    return (
+        f"Nevím, co znamená {which} — je to tvar, ne význam. Jak se ta "
+        f"role jmenuje (kde, kdy, kudy, odkud, …)?"
+    )
+
+
 def role_mapping_tier(lexicon: Lexicon) -> Tier:
     """Přejmenuje povrchovou roli na kanonickou podle NAUČENÉHO mapování.
 
     Přepisuje jen tam, kde je mapování **jednoznačné** a kde nové jméno
-    nekoliduje. Má‑li povrchový tvar víc kandidátů (`v+Loc` je `kde` i
-    `kdy`), patro to zapíše do trace a jméno nechá povrchové — vybrat tiše
-    by znamenalo uhádnout význam nominálu, což INV‑11 zakazuje.
+    nekoliduje. Má‑li povrchový tvar víc kandidátů, patro to zapíše do
+    trace a jméno nechá povrchové — vybrat tiše by znamenalo uhádnout
+    význam nominálu, což INV‑11 zakazuje.
+
+    **Nerozhodnutá povrchová role je OTÁZKA, ne poznámka** *(N‑3)*. Do
+    téhle změny se dvojznačnost jen ohlásila do stopy a věta skončila
+    nezakotvená: povrchová role neurčuje sort, takže se nedalo pokračovat
+    a člověk neměl co odpovědět. Ohlásit je lepší než mlčet, ale pořád je
+    to konstatování — systém, který ví, že mu chybí význam tvaru, se má
+    **zeptat**. Odpověď je tah `→@` a naučí TVAR, takže jedna odpověď
+    zavře celou třídu vět.
     """
 
     def tier(
@@ -879,6 +939,12 @@ def role_mapping_tier(lexicon: Lexicon) -> Tier:
                     taken.add(options[0].canonical)
                     roles.append(replace(role, name=options[0].canonical))
                     continue
+                if role.name not in CANONICAL_ROLES:
+                    # Tvar, který nikdo nepojmenoval. Mlčet by znamenalo
+                    # nechat větu nezakotvenou bez jediného vodítka, co
+                    # s tím — povrchová role neurčuje sort, takže se dál
+                    # nedá pokračovat ani se zeptat na kvantifikátor.
+                    notes.append(f"[CHYBÍ: co znamená role {role.name}]")
                 roles.append(role)
             renamed.append(
                 Candidate(
@@ -995,14 +1061,6 @@ def lost_role_tier(lexicon: Lexicon) -> Tier:
 #: Lemma spony. Konstrukce se pozná podle NÍ, ne podle seznamu sloves.
 COPULA_LEMMA = "být"
 
-#: Role, ze kterých se skládá jádrová relace navržená konstrukcí, podle
-#: operace: `(levá, pravá)`. Jména jsou jádrová (§ 5.1), takže se z nich
-#: dá postavit atom bez dalšího překladu.
-RELATION_ROLES: dict[Operation, tuple[str, str]] = {
-    Operation.MEMBER: ("elem", "group"),
-    Operation.SUBSET: ("sub", "sup"),
-    Operation.DISJOINT: ("a", "b"),
-}
 
 
 @dataclass(frozen=True, slots=True)

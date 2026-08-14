@@ -647,8 +647,11 @@ _ROLE_SEED: tuple[tuple[str, str], ...] = (
     ("z+Gen", "odkud"),
     ("ze+Gen", "odkud"),
     ("po+Loc", "kudy"),
-    ("v+Loc", "kde"),
-    ("v+Loc", "kdy"),
+    # `v+Loc` tu SCHVÁLNĚ NENÍ. „v Praze" je místo, „v pondělí" čas,
+    # a tvar je týž — je to táž dvojznačnost jako u holé spony. Dvě
+    # hypotézy v seedu situaci NEŘEŠILY: mapování zůstalo dvojznačné
+    # navždy, protože i po odpovědi člověka by kandidáti byli pořád dva.
+    # Bez nich se systém ZEPTÁ a odpověď tvar rozhodne (N‑3).
     # „v pondělí" je AKUZATIV, ne lokál — a na rozdíl od `v+Loc` je
     # jednoznačný, protože místo se předložkou `v` s akuzativem neurčuje.
     # Doplněno po prvním běhu proti živé službě: ručně psaná nahrávka

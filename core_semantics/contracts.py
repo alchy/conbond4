@@ -707,6 +707,27 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_one_answer_closes_the_whole_class",
         ),
     ),
+    Clause(
+        id="S-21",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "povrchová role bez naučeného významu je OTÁZKA, ne poznámka: "
+            "`v+Loc` je místo (v Praze) i čas (v pondělí) a rozliší to jen "
+            "člověk. "
+            "V seedu proto NENÍ ani jedna hypotéza — dvě by zůstaly "
+            "dvojznačné navždy a jedna by byla tichý default. Otázka se "
+            "počítá z HOTOVÉ predikace, ne ze stopy, aby se neptala na "
+            "tvary, které pozdější patro spotřebovalo (N‑3)"
+        ),
+        anchor="core_semantics.cascade:role_question",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_surface_role_without_a_meaning_is_asked_about",
+            "test_the_seed_does_not_decide_it_for_anyone",
+            "test_one_answer_closes_the_whole_class_of_shapes",
+            "test_the_learned_meaning_of_a_shape_is_revocable",
+        ),
+    ),
     # -- storage → cascade (zpětná hrana) ----------------------------------
     Clause(
         id="B-1",
