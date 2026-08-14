@@ -1,8 +1,114 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — druhý akceptační dialog prochází
+## Status: 🟢 APPROVE — všech pět akceptačních dialogů má verdikt
 
-**Kolo #49.** 697 testů zelených, `mypy --strict` čistý na 56 souborech,
+**Kolo #50.** 704 testů zelených, `mypy --strict` čistý na 56 souborech,
+doložky **49/49**, živá parita **16/16**. **N‑4 ověřeno mnou** a poprvé
+jsem změřil **stav všech pěti** akceptačních dialogů, ne jen toho, který
+se právě měnil.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Stav akceptace — měřeno z dat, ne z tvrzení
+
+| doména | kroků | zapisuje | verdikty | ptá se |
+|---|---|---|---|---|
+| Jana a zmrzlina | 3 | 1 | `A` | 0 |
+| Doprava | 2 | 1 | `A` | 0 |
+| **Farmaka** | 3 | 2 | `N` | 0 |
+| **Čas a prostor** | 5 | 3 | `A`, `U` | 0 |
+| **Petrovice** | 3 | 2 | `A` | 0 |
+
+**Všech pět má verdikt jako podmínku.** Builder poctivě napsal, že
+*Dopravu* naposledy neměřil a nebude tvrdit, že je hotová — změřil jsem
+ji: **2 kroky, zápis, verdikt `A`**. Prochází.
+
+*(Zbývající meze jsou zapsané u kroků, ne v próze: `Roník` jako obecné
+jméno — znalost světa, ne morfologie.)*
+
+---
+
+## Důkaz N‑4 (měřeno mnou)
+
+```
+» Petr byl v pondělí v Praze.   ◐ být(kdo:·Petr, kdy:pondělí, v+Loc:Praha)
+                                  ptá se ✓   zapsáno: None ✓
+```
+
+Před změnou to bylo `být(co:Praha, …)`, tedy **„Petr byl Prahou"**.
+
+**Moje counterexamply — v žádném z nich nevznikla povrchová role:**
+
+```
+Auto je dopravní prostředek.  → být(co:·dopravní_prostředek, …)   povrchové role: žádné ✓
+Jana je učitelka.             → member(elem:·Jana, group:·učitelka)             ✓
+Vrabec není savec.            → disjoint(a:·vrabec, b:·savec)                   ✓
+```
+
+**Regrese celá** včetně G‑3 recallu a zákazu eliminace `OR`; gate
+*Farmaka* `N`.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑26 · zrušení pole `limit` u D3 — ověřeno, je to správně.** Mez padla,
+takže ji Builder nenechal v datech, ale přepsal do `point` jako **záznam,
+co se opravilo**. *„Nechávat tam mez, která padla, by byla nepravda
+s razítkem testu"* — souhlas, a je to symetrické k tomu, co jsem
+vyžadoval opačně v kole #39: mez se nesmí vyrábět z implementace **ani
+udržovat po opravě**.
+
+---
+
+## Jeden další směr: **Zmrzlina — `rády` jako `iobj`**
+
+Zbývá jediná doména bez plného průchodu a je to jediná položka, která
+**blokuje akceptační scénář**.
+
+**Fakt (změřeno v kole #43):** `Děti mají rády zmrzlinu.` →
+`NEVÍM, jak to čtu`, `0 čtení`, s vysvětlením *„dva jádrové členy dostaly
+touž roli (`co`)"*. Parser dává `rády` jako `iobj`, generátor mapuje
+`obj` i `iobj` na `co`.
+
+**Kořenová příčina:** dvě různá `deprel` se mapují na **jedno** jméno
+role. Rozbor je rozlišuje — kaskáda to rozlišení zahodí.
+
+**Dotčená smlouva:** táž třída jako B‑9 (kolize dvou příslovečných
+určení), jen o patro blíž jádru.
+
+**Nejmenší bezpečná změna:** `iobj` **nemapovat na `co`**. Buď mu dát
+vlastní povrchové jméno (jako `Dat` u *podávat pacientům*), nebo — a to
+je konzistentnější s N‑3 — nechat kolizi **projít doptáním**: *„která
+z těch dvou je `co`?"*. Duplicita rolí je legitimní důvod k dotazu, ne
+k mlčení.
+
+**Counterexample, který musí projít:** (a) `Filip má auto.` a
+`Jan má alergii.` — obyčejný `obj` — musí dál číst `co` **bez otázky**;
+(b) `Lék se podává pacientům.` má dnes `Dat:arg` a musí zůstat; (c) gate
+*Farmaka*, *Petrovice*, *Čas a prostor* a parita 16/16 beze změny.
+
+**Očekávaný výsledek:** `Děti mají rády zmrzlinu.` se **přečte** (ať už
+s vlastní rolí, nebo po doptání); doména *Zmrzlina* projde celá; plná
+regrese.
+
+**Poznámka k rozsahu:** věcně je `rády` v téhle vazbě příslovce, ne
+předmět — parser se plete. Ale i tak se systém **nemá zastavit**; má se
+zeptat. To je přesně kritérium, které platí od zadání člověka.
+
+---
+
+## Archiv — kolo #49 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #49. 697 testů zelených, `mypy --strict` čistý na 56 souborech,
 doložky **48/48**, živá parita **16/16**. **N‑3 ověřeno mnou** — dialog
 *Petrovice* prochází celý a oba mé counterexamply drží.
 

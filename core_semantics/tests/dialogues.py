@@ -237,14 +237,19 @@ PETROVICE = Dialogue(
 ICE_CREAM = Dialogue(
     name="Jana a zmrzlina",
     source="„Jana je učitelka. Děti mají rády zmrzlinu.“",
+    # `iobj` je tvar bez významu (viz mez u druhého kroku) — a co znamená
+    # v TÉHLE doméně, je rozhodnutí člověka, ne vlastnost češtiny.
+    roles=(("iobj", "jak"),),
     shapes=(
         PROPN_SUBJ,
         NOUN_ROOT,
         NOUN_SUBJ_PL,
         NOUN_OBJ_SG,
-        # „rády" je přívlastkové příslovce v roli `jak` — podle § 6.12
-        # je i tohle SKUPINA, takže kvantifikátor potřebuje.
-        ("ADJ", "Plur", "", "advmod", Operation.SELF),
+        # „rády" je podle § 6.12 SKUPINA jako každá jiná, takže
+        # kvantifikátor potřebuje. Tvar říká `iobj`, ne `advmod`: tady se
+        # zapisuje, co dal PARSER, ne co by bylo mluvnicky správně —
+        # jinak by vzor nikdy nesedl a věta by se dál nedopočítala.
+        ("ADJ", "Plur", "", "iobj", Operation.SELF),
     ),
     steps=(
         Step(
@@ -276,15 +281,24 @@ ICE_CREAM = Dialogue(
                 w("zmrzlinu", "zmrzlina", "NOUN", 2, "obj", Case="Acc", Gender="Fem", Number="Sing"),
                 w(".", ".", "PUNCT", 2, "punct"),
             ),
-            refuses=(
-                "parser označí „rády“ jako `iobj`, tedy jako druhý PŘEDMĚT. "
-                "„rády“ i „zmrzlinu“ pak dostanou touž roli `co`, čtení "
-                "s duplicitní rolí se nesmí vyrobit a nezbyde ani jedno. "
-                "Systém to ŘEKNE: „dva jádrové členy dostaly touž roli (co)“."
-            ),
+            reads="mít(co:∃zmrzlina, jak:·rád, kdo:∀dítě)",
+            writes="mít(co:∃zmrzlina, jak:·rád, kdo:∀dítě)",
             point=(
-                "táž třída jako B‑9, jen o patro blíž jádru: tam kolidovala "
-                "dvě příslovečná určení, tady dva jádrové členy"
+                "VĚTA, KTERÁ SE DLOUHO NEPŘEČETLA VŮBEC. Parser označí "
+                "„rády“ jako `iobj`; kaskáda to slévala s `obj` na roli "
+                "`co`, takže dva členy dostaly touž roli, čtení "
+                "s duplicitou se nesmí vyrobit a nezbylo ani jedno. Rozbor "
+                "ta dvě místa ROZLIŠUJE — zahazovala to kaskáda, ne "
+                "čeština. Táž třída jako B‑9, jen o patro blíž jádru"
+            ),
+            limit=(
+                "`iobj` je tu VĚCNĚ CHYBNÝ ROZBOR: „rády“ je v téhle vazbě "
+                "příslovce, ne nepřímý předmět (skutečný nepřímý předmět "
+                "dá čeština jako `obl:arg`, tedy `Dat:arg` — „Petr dal "
+                "Pavlovi knihu“). Systém se tím ale nemá zastavit: tvar "
+                "dostane povrchové jméno, zeptá se, co znamená, a člověk "
+                "odpoví `jak`. Chybu parseru neopravíme, jen ji "
+                "nepřevezmeme jako významové rozhodnutí"
             ),
         ),
         Step(

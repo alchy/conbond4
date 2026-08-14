@@ -146,8 +146,17 @@ def test_golden_dialogues_print() -> None:
             if step.asks:
                 echo(f"   [PRÁVEM SE PTÁ] {step.asks}")
             written += 1 if result.statement_id else 0
-            answered += 1 if result.status is not None else 0
+            # ZÁVĚRY DOMÉN, ne „tahy, které mají nějaký status". Ten dřívější
+            # čítač počítal i NEPŘEČTENOU větu, protože ta se vrací se
+            # statusem `UNKNOWN` — takže když se „Děti mají rády zmrzlinu."
+            # konečně přečetla a ZAPSALA, číslo KLESLO. Metrika, která
+            # ohlásí pokrok jako propad, je horší než žádná: příště by se
+            # stejně nerozeznalo, že doména o odpověď opravdu přišla.
+            answered += 1 if step.answers else 0
     echo("\n" + "=" * 72)
-    echo(f"domén {len(DIALOGUES)} · zapsaných tahů {written} · s verdiktem {answered}")
+    echo(
+        f"domén {len(DIALOGUES)} · zapsaných tahů {written} · "
+        f"závěrů domén {answered}"
+    )
     echo("=" * 72)
     assert written and answered

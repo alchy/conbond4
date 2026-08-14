@@ -735,7 +735,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "PŘEDLOŽKA u sponového kořene vylučuje jmennou část: být "
             "v Praze není být Prahou. Není to pravidlo o významu — role "
             "zůstane POVRCHOVÁ a co znamená, se učí; jen se nepřevezme "
-            "jmenná část tam, kde ji stavba vylučuje (N‑4)"
+            "jmenná část tam, kde ji stavba vylučuje (N‑4). Ze stejného "
+            "důvodu se `iobj` neslévá s `obj`: rozbor ta dvě místa "
+            "rozlišuje a slít je znamenalo, že dva členy dostaly touž "
+            "roli a věta se nepřečetla vůbec (N‑5b)"
         ),
         anchor="core_semantics.cascade:generate",
         entry="cascade(",
@@ -743,6 +746,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_preposition_at_the_root_means_it_is_not_the_nominal_predicate",
             "test_a_nominal_predicate_without_a_preposition_is_untouched",
             "test_the_role_stays_surface_and_is_asked_about",
+            "test_an_indirect_object_does_not_collide_with_the_direct_one",
+            "test_a_plain_direct_object_is_untouched",
+            "test_a_real_indirect_object_keeps_its_own_shape",
         ),
     ),
     # -- storage → cascade (zpětná hrana) ----------------------------------

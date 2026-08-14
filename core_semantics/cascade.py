@@ -448,8 +448,21 @@ def _role_for(token: Token, reading: Reading) -> str | None:
 
     if base == "nsubj":
         return token.deprel if subtyped else ROLE_SUBJECT
-    if base in ("obj", "iobj"):
+    if base == "obj":
         return token.deprel if subtyped else ROLE_OBJECT
+    if base == "iobj":
+        # `iobj` NENÍ `obj` *(N‑5b)*. Slít je znamenalo, že „Děti mají rády
+        # zmrzlinu" dalo DVĚMA členům touž roli `co`, čtení s duplicitou
+        # se nesmí vyrobit a nezbylo ani jedno — věta se nepřečetla vůbec.
+        # Rozbor ta dvě místa rozlišuje; kaskáda to rozlišení zahazovala.
+        # Je to táž třída jako B‑9, jen o patro blíž jádru.
+        #
+        # Jméno je proto POVRCHOVÉ a co znamená, se učí. Nepředstírá se
+        # tím, že se ví, o co jde: v „Petr dal Pavlovi knihu" je skutečný
+        # nepřímý předmět `obl:arg` (`Dat:arg`), kdežto tenhle `iobj` je
+        # u „rády" chybný rozbor příslovce. Uhodnout jedno jméno pro obojí
+        # by byl dohad o významu — a od N‑3 na to existuje otázka.
+        return surface_role(token, reading)
     if base in ("amod", "advmod"):
         return ROLE_MANNER
     if base in CIRCUMSTANCE_DEPRELS:

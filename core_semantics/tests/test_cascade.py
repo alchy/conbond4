@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from core_semantics.cascade import (
     HARD_TIERS,
+    dropped_tokens,
     role_question,
     surface_roles,
     ROLE_OBJECT,
@@ -462,3 +463,82 @@ def test_the_answer_turns_the_shape_into_a_place() -> None:
     )
     assert verdict.decided is not None
     assert "kde" in [r.name for r in verdict.decided.predication.roles]
+
+
+# --------------------------------------------------------------------------
+# `iobj` není `obj` — N‑5b
+# --------------------------------------------------------------------------
+#
+# „Děti mají rády zmrzlinu." se dlouho nepřečetla VŮBEC: parser označí
+# „rády" jako `iobj`, kaskáda to slévala s `obj` na roli `co`, dva členy
+# tak dostaly touž roli, čtení s duplicitou se nesmí vyrobit a nezbylo
+# ani jedno.
+#
+# Rozbor ta dvě místa ROZLIŠUJE — zahazovala to kaskáda, ne čeština. Táž
+# třída jako B‑9, jen o patro blíž jádru.
+
+
+def _two_objects() -> Reading:
+    return _reading(
+        _token(1, "Děti", "dítě", "NOUN", 2, "nsubj", Case="Nom", Number="Plur"),
+        _token(2, "mají", "mít", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+        _token(3, "rády", "rád", "ADJ", 2, "iobj", Number="Plur", Variant="Short"),
+        _token(4, "zmrzlinu", "zmrzlina", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+    )
+
+
+def test_an_indirect_object_does_not_collide_with_the_direct_one() -> None:
+    """JÁDRO N‑5b. Dřív z téhle věty nezbylo ani jedno čtení."""
+    verdict = cascade(_two_objects())
+    assert verdict.decided is not None
+    roles = [r.name for r in verdict.decided.predication.roles]
+    assert sorted(roles) == ["co", "iobj", "kdo"]
+
+
+def test_nothing_from_the_sentence_is_dropped() -> None:
+    """Přečíst ji tak, že by „rády" vypadlo, by bylo horší než ji
+    nepřečíst — tichá ztráta se nepozná."""
+    reading = _two_objects()
+    verdict = cascade(reading)
+    assert verdict.decided is not None
+    assert verdict.lost == ()
+    assert dropped_tokens(reading, verdict.decided.predication) == ()
+
+
+def test_the_new_name_is_surface_so_the_system_asks_what_it_means() -> None:
+    """Nepředstírá se, že se ví, o co jde: `iobj` je tady CHYBNÝ ROZBOR
+    („rády" je příslovce), kdežto skutečný nepřímý předmět dá čeština
+    jako `obl:arg`. Uhodnout jedno jméno pro obojí by byl dohad
+    o významu — a od N‑3 na to existuje otázka."""
+    verdict = cascade(_two_objects())
+    assert verdict.decided is not None
+    assert surface_roles(verdict.decided.predication) == ("iobj",)
+    assert role_question(verdict.decided.predication) is not None
+
+
+def test_a_plain_direct_object_is_untouched() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (a). „Filip má auto." je obyčejný `obj`
+    a musí dál číst `co` bez otázky."""
+    plain = _reading(
+        _token(1, "Filip", "Filip", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
+        _token(2, "má", "mít", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+        _token(3, "auto", "auto", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+    )
+    verdict = cascade(plain)
+    assert verdict.decided is not None
+    assert [r.name for r in verdict.decided.predication.roles] == ["co", "kdo"]
+    assert surface_roles(verdict.decided.predication) == ()
+
+
+def test_a_real_indirect_object_keeps_its_own_shape() -> None:
+    """PROTIPŘÍKLAD REVIEWERA (b). Skutečný nepřímý předmět je v češtině
+    `obl:arg`, tedy `Dat:arg` — a ten se téhle změny nedotkl."""
+    dative = _reading(
+        _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
+        _token(2, "dal", "dát", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+        _token(3, "Pavlovi", "Pavel", "PROPN", 2, "obl:arg", Case="Dat", Number="Sing"),
+        _token(4, "knihu", "kniha", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+    )
+    verdict = cascade(dative)
+    assert verdict.decided is not None
+    assert "Dat:arg" in [r.name for r in verdict.decided.predication.roles]
