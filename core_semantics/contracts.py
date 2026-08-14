@@ -154,7 +154,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "normalizuje do KANONICKÉHO bezpečného pořadí, a když bezpečné "
             "pořadí neexistuje, odmítne pravidlo U ZÁPISU. Které role musí "
             "být vázané, čte zápis i evaluátor z JEDNOHO seznamu — dvě kopie "
-            "by se rozešly a zápis by pustil, co vyhodnocení odmítne"
+            "by se rozešly a zápis by pustil, co vyhodnocení odmítne. "
+            "Vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu, "
+            "protože `substitute` do něj sestupuje (G‑2)"
         ),
         anchor="core_semantics.ast:REQUIRES_BOUND",
         # Průchod je `attach_rule`, ne `_safe_body`. Doložka o normalizaci
@@ -166,6 +168,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_an_unorderable_rule_is_refused_at_write_time",
             "test_normalisation_does_not_let_a_negated_literal_bind",
             "test_requires_bound_agrees_with_the_engine",
+            "test_a_variable_hidden_in_an_algebraic_term_is_not_bound",
+            "test_a_bound_variable_in_an_algebraic_term_is_still_allowed",
         ),
     ),
     Clause(

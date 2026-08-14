@@ -1,8 +1,141 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 APPROVE — gate FARMAKA prochází
+## Status: 🟡 PARTIAL — A‑24 splněno, jeden zbytek téže třídy zůstal
 
-**Kolo #40.** 576 testů zelených, `mypy --strict` čistý na 53 souborech,
+**Kolo #41.** 612 testů zelených, `mypy --strict` čistý na 54 souborech,
+doložky **45/45**, jádro 0.1.8. **A‑24 je věcně splněné a ověřené** —
+ale reprodukcí jsem našel **zbytek téže vady**, který nová zábrana
+nepokrývá. Proto PARTIAL, ne APPROVE.
+
+**Architectural Health Score: 9 / 10**
+
+---
+
+## Co je splněno (ověřeno mnou, ne převzato)
+
+**Šest permutací, stejné `rule_id`:**
+
+```
+aos → N   listy=['R','s0001','s0002','s0006']      verdikt jednotný:       ✓
+aso → N   listy=['R','s0001','s0002','s0006']      normální tvar jednotný: ✓
+oas → N   …                                        důkazní strom jednotný: ✓
+osa → N   …
+sao → N   normální tvar:
+soa → N     R: ¬smí(co:m, kdo:p) <- alergie_na(…) AND obsahuje(…) AND subset(…)
+```
+
+*(Poznámka k vlastnímu měření: první pokus hlásil „normální tvar se liší
+6×" — dal jsem každé permutaci jiné `rule_id` a porovnával řetězce včetně
+něj. Chyba byla v sondě, ne v kódu.)*
+
+**Můj protipříklad prošel a nebyl obejit:**
+
+| test | výsledek |
+|---|---|
+| proměnná vázaná **jen** negovaným literálem | `UnsafeRule` ✓ |
+| totéž v jiném pořadí (aby měla normalizace co dělat) | `UnsafeRule` ✓ |
+| B‑2: negovaný literál váže hlavu | `UnsafeRule` ✓ |
+| negovaný literál **za** svým vazačem | přijato ✓ |
+
+**Gate Farmaka drží** — přeměřeno po změně: `Smí Jan dostat penicilin?`
+→ `N`. Stálá sada invariantů zelená.
+
+**Moje sonda B‑1 zastarala a je to důkaz, že A‑24 funguje.** Používala
+pravidlo `nekompat(a:X,b:Y) <- disjoint(X,Y)`, které **nikdy nebylo
+vyhodnotitelné** — dřív padalo u dotazu, teď padá u zápisu
+(`UnsafeRule: … jádrový predikát potřebuje vázané role`). Vlastní obsah
+B‑1 jsem ověřil jinak: řetěz `A⊆B⊆C⊆D` se dvěma expanzemi `disjoint`
+vedle sebe se přijme bez falešného `CycleDetected`.
+
+---
+
+## Critical Blockers
+
+### G‑2 · zápis a evaluátor se pořád rozcházejí — jen o jednu úroveň hlouběji
+
+Builder svou hranici **přiznal** (proměnná v kořeni filleru vs. uvnitř
+algebraického termu) a napsal, že zápis a evaluátor se v ní shodují.
+**Změřil jsem to a neshodují se:**
+
+```python
+attach_rule(id="alg", head=h(a:X),
+            body=(subset(a AND X, b),))          → PŘIJATO, uloženo v bázi
+
+ask(h(a:·a))  → UnsafeRule: „pravidlo 'alg': hlava zůstala neuzemněná
+                 po dosazení"        engine.py:278 _instantiate_head
+```
+
+**Fakt:** pravidlo projde zápisem a spadne u dotazu. **Logický závěr:** je
+to **přesně ta vada, kterou A‑24 odstraňovalo** — chyba přijde až
+u konkrétní otázky, případně o mnoho tahů později. Jen se přesunula
+z „pořadí literálů" na „proměnná uvnitř algebraického termu".
+
+**Dotčená smlouva:** J‑5 a § 5.4/10 slibují, že nebezpečné pravidlo
+skončí **u zápisu**. Tady neskončí.
+
+**Rozdíl proti Builderovu popisu:** on píše, že přísnější zápis by
+odmítal pravidla, která evaluátor spustí. Měření ukazuje opak — evaluátor
+je **přísnější** než zápis, ne volnější. Jeho hranice je popsaná správně
+v tom, *kde* leží, ale závěr o směru nesouhlasí.
+
+**Nejmenší bezpečná změna:** `_safe_body` ať při určování vázanosti
+prochází term **rekurzivně**, ne jen jeho kořen — proměnná uvnitř
+`GroupAnd`/`GroupOr`/`GroupDiff` se počítá jako nevázaná, dokud ji nesváže
+jiný literál. Když ji nikdo nesváže, `UnsafeRule` **při zápisu**.
+
+**Counterexample, který musí projít:** pravidlo, kde je proměnná
+v algebraickém termu **vázaná jiným literálem**
+(`h(a:X) <- member(X, g), subset(a AND X, b)`) se **nesmí** stát
+nepřijatelným — jinak by oprava odmítala pravidla, která evaluátor
+spustí, a to je táž rozešlost otočená.
+
+**Očekávaný výsledek:** `attach_rule` s nevázanou proměnnou v algebraickém
+termu skončí `UnsafeRule` **u zápisu**; vázaná varianta projde a odpoví;
+plná regrese beze změny; doložka J‑5 rozšířená o tenhle případ.
+
+---
+
+## Semantic Warnings
+
+**W‑18 · obrácení testu W‑5 je legitimní a ověřil jsem proč.** Původní
+`test_body_order_matters_and_fails_loudly` tvrdil „jiné pořadí, jiný
+výsledek". Požadavek za ním — **nikdy ne potichu** — platí dál a je
+splněný **silněji**: pořadí výsledek měnit přestalo. Náhrada je dvojice
+(týž verdikt i týž důkaz × neuspořádatelné tělo padá u zápisu), takže se
+neztratil ani doklad, že se ta klauzule dá vyhodnotit. Není to test
+přizpůsobený implementaci.
+
+---
+
+## Jeden další směr: G‑2
+
+**Ne A‑21.** Hard‑pruning je riziko, které jsem popsal v dodatku O, ale
+G‑2 je **dnešní rozpor mezi dvěma vrstvami** a patří do téhož místa, které
+se právě měnilo. Dokončit A‑24 celé je menší a bezpečnější krok než začít
+jinou vrstvu s otevřeným zbytkem za zády.
+
+A‑21 hned po něm.
+
+---
+
+## Potvrzení
+
+**`REQUIRES_BOUND` ověřený CHOVÁNÍM, ne čtením zdroje, je nejcennější kus
+tohohle kola** — a je to přesně ta doložka, která brání návratu A‑24
+v jiném hávu. Že `member` má vázanou jen `group`, protože prvky se
+vyjmenovat dají a z toho žijí výčtové otázky, je správné a nesymetrické
+z dobrého důvodu.
+
+**Že normalizace vybírá `min(ready, key=str)`, tedy kanonicky a ne jen
+bezpečně**, je podstatné: bez toho by šest permutací dalo tentýž verdikt,
+ale šest různých důkazů — a rozpadl by se § 7. Ověřeno, důkazní stromy
+jsou shodné.
+
+---
+
+## Archiv — kolo #40 (uzavřeno)
+
+**Status tehdy: 🟢 APPROVE.** Kolo #40. 576 testů zelených, `mypy --strict` čistý na 53 souborech,
 doložky 44/44. **G‑1 uzavřen: akceptační scénář *Farmaka* prochází česky
 celý, se správným verdiktem i správným důvodem.**
 

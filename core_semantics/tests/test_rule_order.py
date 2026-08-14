@@ -19,6 +19,14 @@ jsou dvě různé podmínky (B‑2). Normalizace smí přeuspořádat, nesmí
 prohlásit za bezpečné pravidlo, jehož proměnná je vázaná jen negovaným
 literálem — negovaný literál neváže nic, a kdyby ho normalizace posunula
 dopředu, kvantifikoval by přes celou otevřenou doménu.
+
+**Zbytek téže třídy** *(G‑2)*. První verze se ptala jen na kořen fillera,
+protože tak se ptá `_match_kernel`. Změřeno bylo něco jiného: `substitute`
+do algebraických termů **sestupuje**, takže `h(a:X) ← subset(a AND X, b)`
+zápisem prošlo a spadlo až u dotazu na neuzemněnou hlavu. Evaluátor je
+v tomhle místě přísnější než zápis, ne volnější. Vázanost se proto hledá
+rekurzivně — ale **algebraický term jako takový se nezakazuje**: rozhoduje
+vázanost, ne tvar.
 """
 
 from __future__ import annotations
@@ -55,6 +63,7 @@ from core_semantics.ast import (
     complete_of,
     contains_of,
     disjoint_of,
+    group_and,
     member_of,
     role,
     subset_of,
@@ -221,6 +230,98 @@ def test_a_refused_rule_is_not_in_the_base() -> None:
             body=(subset_of(x, y),),
         )
     assert kb.view().rules == ()
+
+
+# --------------------------------------------------------------------------
+# G‑2: vázanost se hledá i UVNITŘ algebraického termu
+# --------------------------------------------------------------------------
+#
+# Zbytek téže třídy, který první verze A‑24 nepokryla. `_evaluable` se
+# ptalo jen na kořen fillera, protože tak se ptá `_match_kernel`. Jenže
+# `substitute` do algebraických termů SESTUPUJE, takže evaluátor je tu
+# přísnější než zápis — přesně naopak, než jsem to popsal. Pravidlo
+# `h(a:X) ← subset(a AND X, b)` prošlo zápisem a spadlo až u dotazu na
+# „hlava zůstala neuzemněná po dosazení". Táž vada jako A‑24, jen
+# přesunutá z pořadí literálů na proměnnou uvnitř termu.
+
+
+def _algebraic_head(x: Variable) -> Atom:
+    return atom("h", role("a", x, SELF))
+
+
+def _algebraic_premise(x: Variable) -> Atom:
+    return subset_of(group_and(Group("a"), x), Group("b"))
+
+
+def _member_binding(x: Variable) -> Atom:
+    return atom(
+        P_MEMBER, role("elem", x, SELF), role("group", Group("g"), SELF)
+    )
+
+
+def _algebraic_base() -> KnowledgeBase:
+    kb = KnowledgeBase()
+    kb.attach(subset_of(Group("a"), Group("b")))
+    kb.attach(
+        atom(P_MEMBER, role("elem", Group("a"), SELF), role("group", Group("g"), SELF))
+    )
+    return kb
+
+
+def test_a_variable_hidden_in_an_algebraic_term_is_not_bound() -> None:
+    """`a AND X` s volným `X` není vázané o nic víc než holé `X`.
+    Odmítnout se to musí U ZÁPISU — dřív to prošlo a spadlo u dotazu."""
+    kb = _algebraic_base()
+    with pytest.raises(UnsafeRule, match="bezpečné pořadí"):
+        kb.attach_rule(
+            rule_id="alg",
+            head=_algebraic_head(Variable("X", expects=Sort.GROUP)),
+            body=(_algebraic_premise(Variable("X", expects=Sort.GROUP)),),
+        )
+    assert kb.view().rules == ()
+
+
+def test_the_algebraic_rule_used_to_pass_the_write_and_die_at_the_query() -> None:
+    """Doklad, že se opravila TA vada, a ne něco vedle: chyba, která dřív
+    přišla od `_instantiate_head` při dotazu, teď přijde od `attach_rule`.
+    Obě jsou `UnsafeRule`, takže kdyby se test ptal jen na typ, nepoznal
+    by rozdíl — ptá se proto na FÁZI."""
+    kb = _algebraic_base()
+    x = Variable("X", expects=Sort.GROUP)
+    with pytest.raises(UnsafeRule) as exc:
+        kb.attach_rule(rule_id="alg", head=_algebraic_head(x), body=(_algebraic_premise(x),))
+    assert "neuzemněná" not in str(exc.value)
+    assert "bezpečné pořadí" in str(exc.value)
+
+
+def test_a_bound_variable_in_an_algebraic_term_is_still_allowed() -> None:
+    """PROTIPŘÍKLAD REVIEWERA. Kdyby oprava zakázala algebraický term
+    v jádrovém literálu vůbec, odmítala by pravidla, která evaluátor
+    spustí — táž rozešlost, jen otočená. `member` naváže `X`, `subset`
+    přijde na řadu až po něm."""
+    x = Variable("X", expects=Sort.GROUP)
+    kb = _algebraic_base()
+    kb.attach_rule(
+        rule_id="ok",
+        head=_algebraic_head(x),
+        body=(_algebraic_premise(x), _member_binding(x)),
+    )
+    body = kb.view().rules[0].body
+    assert [a.predicate for a in body] == ["member", "subset"]
+    result = Engine(kb).ask(atom("h", role("a", Group("a"), SELF)))
+    assert result.status is QueryStatus.PROVEN_TRUE
+
+
+def test_the_bound_algebraic_rule_does_not_care_about_written_order() -> None:
+    """A‑24 platí i tady: vazač smí být v zápisu až druhý."""
+    x = Variable("X", expects=Sort.GROUP)
+    kb = _algebraic_base()
+    kb.attach_rule(
+        rule_id="ok",
+        head=_algebraic_head(x),
+        body=(_member_binding(x), _algebraic_premise(x)),
+    )
+    assert [a.predicate for a in kb.view().rules[0].body] == ["member", "subset"]
 
 
 # --------------------------------------------------------------------------

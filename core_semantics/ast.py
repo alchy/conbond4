@@ -760,25 +760,33 @@ def _evaluable(literal: Atom, bound: frozenset[str]) -> bool:
     Test `test_requires_bound_agrees_with_the_engine` měří, že tenhle
     předpis souhlasí s evaluátorem — ne čtením zdroje, ale chováním.
 
-    **Hranice, kterou to schválně nepřekračuje.** Podmínka se ptá na
-    proměnnou v KOŘENI fillera (`isinstance(r.target, Variable)`), přesně
-    jako `_match_kernel`. Proměnná schovaná uvnitř algebraického termu
-    (`subset(A AND X, b)`) se tu tedy nepočítá — protože se nepočítá ani
-    tam. Přísnější zápis by odmítal pravidla, která evaluátor spustí, a to
-    je stejná rozešlost jako A‑24, jen otočená. Jestli si algebraický
-    filler s volnou proměnnou zaslouží vlastní ošetření, je otázka na
-    evaluátor, ne na zápis.
+    **Vázanost se hledá REKURZIVNĚ, ne jen v kořeni fillera** *(G‑2)*.
+    První verze se ptala `isinstance(r.target, Variable)`, tedy jen na
+    kořen, protože tak se ptá `_match_kernel`. To bylo měřitelně špatně:
+    `subset(a AND X, b)` s volným `X` zápisem PROŠLO a spadlo až u dotazu
+    na „hlava zůstala neuzemněná po dosazení" — tedy přesně ta vada, kterou
+    A‑24 odstraňovalo, jen přesunutá z pořadí literálů na proměnnou uvnitř
+    algebraického termu.
+
+    Rozhodující je, že `substitute` do algebraických termů **sestupuje**.
+    Evaluátor je tedy v tomhle místě PŘÍSNĚJŠÍ než `_match_kernel`, ne
+    volnější: proměnnou uvnitř `A AND X` je potřeba navázat úplně stejně
+    jako proměnnou v kořeni, jinak zůstane hlava neuzemněná. `term_variables`
+    je táž funkce, ze které žije `Atom.variables`, takže se zápis ptá na
+    tutéž množinu proměnných jako uzemněnost hlavy.
+
+    Vázaná varianta se tím zakázat NESMÍ: `h(a:X) ← member(X, g),
+    subset(a AND X, b)` je v pořádku a musí projít — `member` naváže `X`
+    a `subset` přijde na řadu až po něm.
     """
     if literal.is_negated:
         return all(v.id in bound for v in literal.variables())
     required = REQUIRES_BOUND.get(literal.predicate, ())
     return all(
-        not (
-            r.name in required
-            and isinstance(r.target, Variable)
-            and r.target.id not in bound
-        )
+        v.id in bound
         for r in literal.canonical_roles()
+        if r.name in required
+        for v in term_variables(r.target)
     )
 
 
