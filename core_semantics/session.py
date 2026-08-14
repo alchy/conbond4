@@ -41,12 +41,14 @@ from .ast import (
 )
 from .engine import Engine
 from .epistemics import BoundResult, query_bound
+from .gaps import GapFinder
 from .presenter import DEFAULT_PROFILE, AuditReport, TemplateProfile, XAIPresenter
 from .storage import KnowledgeBase
 
 
 class TurnKind(Enum):
     ASSERT = "!"
+    READING = "«"
     DISJOINT = "!∦"
     REVOKE = "✗"
     QUESTION = "?"
@@ -73,6 +75,11 @@ class Turn:
     reason: str = ""
     variable: str = ""
     pair: tuple[GroupTerm, GroupTerm] | None = None
+    #: Vybrané čtení. Do žurnálu jde STRUKTURA, ne text — kdyby v žurnálu
+    #: ležely věty, `replay` by závisel na verzi parseru a přehratelnost
+    #: z § 10 by padla (a na té stojí měření učitelnosti).
+    predication: Predication | None = None
+    trace: tuple[str, ...] = ()
 
 
 def says(text: str, formula: Formula) -> Turn:
@@ -246,9 +253,17 @@ class Session:
 
     def _question(self, index: int, turn: Turn) -> TurnResult:
         assert turn.query is not None
-        result = self.engine().ask(turn.query)
+        engine = self.engine()
+        result = engine.ask(turn.query)
         report = self.presenter.render_audit_report(turn.query, result)
-        lines = list(self._render_answer(report))
+        # Na `U` se místo zopakované otázky vypíše ROZBOR mezery (§ 6.8).
+        # „Chybí vědět: <dotaz>" člověku neřekne, co má doplnit.
+        gap_lines = (
+            GapFinder(engine).explain(turn.query).render()
+            if result.status is QueryStatus.UNKNOWN
+            else ()
+        )
+        lines = list(self._render_answer(report, gap_lines=gap_lines))
         offered = self._offer_bridge(turn, result, lines)
         return TurnResult(
             index=index,
@@ -437,7 +452,9 @@ class Session:
         lines.append(f"    {turn.bridge}")
         return turn.bridge
 
-    def _render_answer(self, report: AuditReport) -> list[str]:
+    def _render_answer(
+        self, report: AuditReport, *, gap_lines: Sequence[str] = ()
+    ) -> list[str]:
         lines = [f"→ {report.verdict}"]
         if report.reason:
             lines.append("  protože:")
@@ -448,7 +465,7 @@ class Session:
             lines.extend(f"  {line.render()}" for line in positive)
             lines.append("  důkaz proti:")
             lines.extend(f"  {line.render()}" for line in negative)
-        for item in report.gap:
+        for item in gap_lines or report.gap:
             lines.append(f"  {item}")
         if report.cited:
             lines.append(f"[doloženo: {', '.join(report.cited)}]")

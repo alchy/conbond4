@@ -119,7 +119,16 @@ class Utterance:
 
 class ParseOracle(Protocol):
     """Smlouva orákula. `Session` ani kaskáda čtení nesmí vědět, jestli
-    za tím je HTTP služba, nahraný transkript nebo keš."""
+    za tím je HTTP služba, nahraný transkript nebo keš.
+
+    `provenance` je součást smlouvy, ne pohodlí implementace: kdo staví keš
+    nebo zlatý transkript, musí umět zjistit **před** voláním, z jakého
+    modelu rozbory pocházejí. Prázdný řetězec znamená „nevím" a je to
+    legitimní odpověď — jen se pod ním nesmí nic kešovat.
+    """
+
+    @property
+    def provenance(self) -> str: ...
 
     def parse(self, text: str) -> Utterance: ...
 
@@ -172,8 +181,22 @@ class RecordedOracle:
     padat podle toho, co je zrovna spuštěné.
     """
 
-    def __init__(self, recordings: Mapping[str, Utterance]) -> None:
+    def __init__(
+        self, recordings: Mapping[str, Utterance], *, provenance: str = ""
+    ) -> None:
         self._recordings = dict(recordings)
+        stamps = {
+            reading.provenance
+            for utterance in self._recordings.values()
+            for reading in utterance.readings
+        }
+        if len(stamps) > 1:
+            raise OracleError(
+                f"nahrané rozbory míchají dvě provenience {sorted(stamps)}; "
+                f"zlatý transkript musí fixovat JEDEN rozbor, jinak není čím "
+                f"poznat, kdy se model změnil"
+            )
+        self.provenance = stamps.pop() if stamps else provenance
 
     def parse(self, text: str) -> Utterance:
         try:
@@ -193,6 +216,16 @@ class CachingOracle:
 
     Kdyby klíč nesl jen text, upgrade modelu by se schoval za starý záznam
     a systém by odpovídal podle rozboru, který už nikdo nedokáže zopakovat.
+
+    Klíč zápisu i čtení pochází z **jednoho zdroje** — z provenience
+    vnitřního orákula. Když se lišily (zápis z rozboru, čtení z objektu),
+    keš míjela úspěchy a přitom trvale ukládala selhání pod zástupný klíč;
+    to je horší než žádná keš, protože se to nedá poznat z výstupu.
+
+    Dvě věci se nekešují nikdy: **neznámá provenience** (pod „nevím" by se
+    slily rozbory z různých modelů) a **promluva bez čtení** (prázdný
+    výsledek může být i důsledek přechodné poruchy, a trvale zapamatované
+    „neumím přečíst" by systém udrželo tvrdošíjně vedle).
     """
 
     def __init__(self, inner: ParseOracle) -> None:
@@ -201,22 +234,26 @@ class CachingOracle:
         self.hits = 0
         self.misses = 0
 
+    @property
+    def provenance(self) -> str:
+        return getattr(self._inner, "provenance", "") or ""
+
     def parse(self, text: str) -> Utterance:
-        for (provenance, cached_text), utterance in self._store.items():
-            if cached_text == text and provenance == self._provenance():
+        stamp = self.provenance
+        key = (stamp, text)
+        if stamp:
+            cached = self._store.get(key)
+            if cached is not None:
                 self.hits += 1
-                return utterance
+                return cached
         self.misses += 1
         utterance = self._inner.parse(text)
-        stamp = (
-            utterance.readings[0].provenance if utterance.readings else "?"
-        )
-        self._store[(stamp, text)] = utterance
+        if stamp and utterance.readings:
+            self._store[key] = utterance
         return utterance
 
-    def _provenance(self) -> str:
-        provenance = getattr(self._inner, "provenance", None)
-        return str(provenance) if provenance is not None else "?"
+    def stored(self) -> int:
+        return len(self._store)
 
 
 Transport = Callable[[str, bytes | None, float], bytes]

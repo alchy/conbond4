@@ -13,8 +13,14 @@ Implementace formálního jádra podle [docs/CORE-SEMANTICS-0.1.md](docs/CORE-SE
 | F0.4 | `core_semantics/epistemics.py` | hotovo — `K`/`U`, Kleeneho kombinace, `alt`, `DIFF`, `enum`/`count`, `bound` |
 | F0.4 | `core_semantics/presenter.py` | hotovo — `XAIPresenter`, šablony v profilu, export JSON/Markdown |
 | F0.6 | `core_semantics/session.py` | hotovo — strukturované tahy, žurnál, deterministický replay, `awaiting_rule_confirmation` |
+| F0.7 | termová algebra v `ast.py` / `engine.py` | hotovo — `AND` / `OR` / `DIFF` jako termy, § 5.2.1 |
+| F1.1 | `core_semantics/oracle.py` | hotovo — fasáda vnějšího orákula (§ 5.1), kandidátní čtení, keš s proveniencí |
+| F1.1 | `core_semantics/lexicon.py` | hotovo — program `LEX` (§ 3.7), uzavřené menu operací, vzory s proveniencí a statusem |
+| F1.2 | `core_semantics/cascade.py` | hotovo — V2 kaskáda čtení (§ 5.2): generátor, tvrdé filtry, konzistence s bází, naučené vzory, doptání |
+| F1.2 | V3 rozřešení zmínek | čeká — § 5.3; aktivace grafu (§ 4) neexistuje, takže jedno patro kaskády bude chybět |
+| F1.3 | zlaté transkripty | čeká — fixovaný rozbor, aby upgrade modelu nezpůsobil tichý drift |
 | F0.5 | `closed_context` (§ 12) | čeká — **potřebuje vlastní specifikaci dřív než kód**: lokální doména, UNA uvnitř kontextu, kardinality, enumerace modelů |
-| — | `GapFinder` | čeká — top-down SLD pro „Proč nevíš?" |
+| — | `core_semantics/gaps.py` | hotovo — `GapFinder` (§ 6.8): otevřené podcíle, chybějící článek řetězu, blokující literál pravidla |
 | — | doména AML | čeká — omezená podoba (prahy nad literály v bázi, řetězce pevné hloubky) |
 
 ## Akceptační domény
