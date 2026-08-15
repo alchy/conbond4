@@ -2003,3 +2003,105 @@ def test_the_split_shape_reaches_the_base() -> None:
     assert session.utter("Byl Petr v Praze?", _Recorded()).status is (
         QueryStatus.PROVEN_TRUE
     )
+
+
+# --------------------------------------------------------------------------
+# JEDNA PODMÍNKA, JEDNA ODPOVĚĎ *(W‑62)*
+# --------------------------------------------------------------------------
+
+
+def _lives_in_prague() -> Reading:
+    return Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
+            _token(2, "bydlí", "bydlet", "VERB", 0, "root", Number="Sing", Person="3", Polarity="Pos"),
+            _token(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+            _token(4, "Praze", "Praha", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_learned_role_name_is_not_asked_about_again() -> None:
+    """NAUČENÉ JMÉNO NENÍ TVAR *(W‑62)*. „proč" mezi kanonické role jádra
+    nepatří a patřit nemusí — okolnosti jsou povrchové (§ 12/1) — ale
+    NĚKDO HO UŽ POJMENOVAL. Systém se na `proč` ptal a přitom to jméno
+    sám dostal jako odpověď o krok dřív.
+
+    Rozhoduje značka `shaped`, ne podoba řetězce: hádat z toho, že jméno
+    obsahuje `+` nebo `/`, je heuristika nad textem a rozejde se, jakmile
+    někdo pojmenuje roli tak, že se to trefí."""
+    from core_semantics.cascade import Mention, RoleReading
+
+    naucena = Predication(
+        predicate="odjet",
+        roles=(
+            RoleReading("proč", Mention(lemma="pršet", form="pršelo", token_index=4, upos="VERB")),
+        ),
+    )
+    assert surface_roles(naucena) == ()
+    assert role_question(naucena) is None
+
+
+def test_a_shape_named_role_stops_the_write_wherever_it_is() -> None:
+    """JEDNA PODMÍNKA, JEDNA ODPOVĚĎ. Zábrana platila jen pro vedlejší
+    větu, ačkoli DŮVOD platí pro každou roli, jejíž jméno zůstalo tvarem:
+    „Petr bydlí v Praze." se zapsala jako `bydlet(kdo:Petr,
+    v+Loc/Geo:Praha)` a po odpovědi `→@` ZNOVU jako `bydlet(kde:Praha,
+    kdo:Petr)` — DVA VÝROKY o téže větě a ten první nikdo neodvolal."""
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session, names_role
+
+    veta = _lives_in_prague()
+
+    class _Recorded:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(text=text, readings=(veta,))
+
+    lexicon = czech_seed()
+    for case, deprel in (("Nom", "nsubj"), ("Loc", "obl")):
+        lexicon.add(
+            LearnedPattern(
+                trigger=Trigger(
+                    lemma="", upos="PROPN", number="Sing", case=case, deprel=deprel
+                ),
+                operation=Operation.SELF,
+                learned_from="test W‑62",
+                status=PatternStatus.CONFIRMED,
+            )
+        )
+    session = Session(lexicon=lexicon)
+    prvni = session.utter("Petr bydlí v Praze.", _Recorded())
+    assert prvni.statement_id is None, "role s tvarem místo jména zápis zastaví"
+    assert "NEZAPSÁNO" in "\n".join(prvni.lines), "a musí být vidět KTERÉ pravidlo"
+
+    session.play(names_role("Je to místo.", veta, "v+Loc/Geo", "kde"))
+    zapsane = [
+        str(s.formula)
+        for s in session.kb.active()
+        if str(s.formula).startswith("bydlet(")
+    ]
+    assert zapsane == ["bydlet(kde:Praha, kdo:Petr)"], (
+        "po odpovědi leží v bázi PRÁVĚ JEDEN výrok o té větě"
+    )
+
+
+def test_no_role_named_by_its_form_reaches_the_base() -> None:
+    """COUNTEREXAMPLE REVIEWERA JAKO VLASTNOST: na tutéž podmínku dává
+    systém tutéž odpověď. Prochází se CELÁ akceptační sada — kdyby se
+    kontrolovaly dvě věty, prošlo by pravidlo, které platí jen pro ně."""
+    from core_semantics.tests.dialogues import DIALOGUES
+    from core_semantics.tests.test_golden_dialogues import play
+
+    for dialogue in DIALOGUES:
+        done, _ = play(dialogue)
+        for step, result in done:
+            if result.statement_id is None or result.predication is None:
+                continue
+            assert surface_roles(result.predication) == (), (
+                f"{dialogue.name} / {step.text!r}: zapsáno s rolí, "
+                f"jejíž jméno je tvar — {result.predication}"
+            )

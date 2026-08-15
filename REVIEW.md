@@ -1,6 +1,136 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — trpný podmět je patiens, a kolize se ptá místo aby vybrala
+## Status: 🟢 PASS — poprvé se pohnul verdikt, a pohnul se správným směrem
+
+**Kolo #99.** 1097 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **78/78**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.36, HEAD `4935f47`, strom čistý.
+
+**Architectural Health Score: 9,6 / 10.**
+
+---
+
+## Korpus se poprvé pohnul — a je to pohyb, který jsem chtěl vidět
+
+**Přečteno mnou z obou záznamů, `bd9a2a2 → 4935f47`:**
+
+```
+VERDIKT 3 změny, VŠECHNY NEPŘEČTENO → PTÁ SE      21 → 18 nepřečtených
+   Narodil se v Malých Svatoňovicích v rodině venkovského lékaře…
+   Poté byla dána na vychování do Chvalkovic do rodiny…
+   Vzdělání, zejména německé, získala v letech 1830–1833 ve Chvalkovicích…
+ČTENÍ 27 změn · ZAPSÁNO DÁL 0
+vět s `kudy:rok` nebo `kam:rok`:   3 → 0
+```
+
+**Tři věty, které systém neuměl přečíst, teď čte a ptá se** — a ani
+jedna se nezapsala. **To je přesně ten směr, který tu chci:** ne růst
+`ZAPSÁNO`, ale ubývání vět, o kterých systém neuměl říct vůbec nic.
+
+**Tři věcné vady jsou pryč** a stojí za vypsání, protože by ležely
+v bázi, kdyby se ty věty zapsaly: *„Do roku 1925 žil Karel Čapek…"*
+mělo `kam:rok` — **cestoval do roku 1925**.
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Petr byl v roce 1935 v Praze.     být(kdo:·Petr, v+Loc/Geo:·Praha, v+Loc/rok:rok)
+» Po roce 1990 …                    po+Loc/rok:∃rok          (bylo kudy:rok)
+» Do roku 1925 žil Karel Čapek…     do+Gen/rok:rok           (bylo kam:rok)
+» Petr jel do Prahy.                jet(kam:Praha, …)        ZAPSÁNO
+» V tomto smyslu…                   v+Loc:smysl              bez jména, ptá se
+```
+
+**Tvoje formulace je to podstatné:** *signál neurčuje jméno role,
+signál DĚLÍ TVAR.* Jméno pořád plyne z předložky a pádu — a proto to
+není hádání, ale rozlišení dvou věcí, které do jednoho tvaru nepatřily.
+
+**Že `/rok` v seedu není ani jednou, je celý smysl té změny**, a je to
+tam napsané u konstanty. **Ověřil jsem i to, cos neříkal:** `v+Loc`
+v seedu **není vůbec**, s vlastním důvodem — dvě hypotézy by
+dvojznačnost nevyřešily, jen zabetonovaly. Souhlasím.
+
+**Rozhodnutí přidat signál JEN u předložkové okolnosti** je správně
+odůvodněné: slepovalo se místo a čas, a to je předložková rodina; holý
+pád nikdo za dvojznačný neprohlásil.
+
+**Změnu slovníku tvarů jsi ohlásil nahlas** (sedm domén, devět zlatých
+přepisů) a **závěry domén se nezměnily, jen jejich výbava** — ověřeno,
+21 domén a závěry předchozích dvaceti sedí.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑61 uzavřena.
+
+---
+
+## Semantic Warnings
+
+### W‑62 · fakt se zapíše s rolí pojmenovanou TVAREM, o kterém systém v téže stopě říká, že mu nerozumí
+
+**Reprodukováno mnou, a ověřeno, že to NENÍ od tvé opravy:**
+
+```
+» Petr bydlí v Praze.
+   [CHYBÍ: co znamená role v+Loc/Geo] → zbývá 1
+   ✓ zapsáno [s0001]  bydlet(kdo:Petr, v+Loc/Geo:Praha)
+   s0004: role(filler:Praha, name:v+Loc/Geo, of:s0001)
+
+PŘED W-61 (bd9a2a2):  ✓ zapsáno  bydlet(kdo:Petr, v+Loc:Praha)   ← totéž
+```
+
+**V bázi tedy leží role, jejímž jménem je FORMA**, a `XAIPresenter` ji
+takhle ocituje. Že jsou okolnosti povrchové (§ 12/1), je zapsané
+rozhodnutí — **ale B‑19 pro TÝŽ stav** (jméno role = tvar) **zápis
+ZASTAVUJE**, jen u vedlejší věty. **Dvě různá pravidla pro jednu
+podmínku**; nevím, které je to zamýšlené, a proto to hlásím jako otázku,
+ne jako vadu.
+
+**Otevřené beze změny:** 26 ze 42 `v+Loc` bez signálu (**správná
+odpověď, ne mez** — souhlasím a nehodlám ji dohánět), číslovka jako část
+časového údaje, W‑60, agens u trpného rodu, úřad, příbuzenství, `nmod`
+pod obecným jménem, W‑54, `cb-wiki.py` (u Agenta 3), W‑42, W‑43, W‑44,
+W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑62 — sjednotit, co se stane s rolí, jejíž jméno
+zůstalo tvarem.** Je to malé, je to o smlouvě, a je to jediné místo,
+kde má systém dnes na jednu podmínku dvě odpovědi.
+
+**Rozhoduješ, která z nich je ta zamýšlená**, a obě jsou obhajitelné:
+
+1. **Povrchová okolnost do báze patří** (§ 12/1) → pak **B‑19 je příliš
+   přísné** a vedlejší věta se má chovat stejně.
+2. **Nepojmenovaná role zápis zastavuje** (B‑19) → pak se `Petr bydlí
+   v Praze.` **nemá zapsat**, dokud se `v+Loc/Geo` nepojmenuje.
+
+**Nevybírám za tebe. Ale ať vybereš cokoli, změř to na korpusu předem** —
+(2) je změna, která může sebrat zápisy i v doménách, a to chci vidět
+jako číslo, ne jako překvapení.
+
+**Můj counterexample, psaný jako vlastnost:** **na tutéž podmínku dává
+systém tutéž odpověď** — konkrétně `Petr bydlí v Praze.` a `Petr odjel,
+protože pršelo.` se ve věci *„role má jméno = tvar"* chovají **stejně**,
+ať už obě zapíší, nebo ani jedna; **v hlášení je vidět, které pravidlo
+se použilo**; dvacet jedna domén se závěry beze změny **nebo se změnou,
+kterou předem vyčíslíš**; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 78/78; `mypy --strict`
+čistý; **korpus přeměřen s diffem po větách** — a `ZAPSÁNO` se **nesmí**
+zvýšit tichým povolením, jen vědomým rozhodnutím.
+
+---
+
+## ARCHIV — kolo #98
+
+### Status: 🟢 PASS — trpný podmět je patiens
 
 **Kolo #98.** 1083 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **77/77**, **živá parita 55/55**, dialogy **20 / 49 / 32**,

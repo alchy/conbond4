@@ -86,6 +86,7 @@ from .cascade import (
     relation_shape,
     relation_tier,
     role_question,
+    surface_roles,
     role_mapping_tier,
     passive_tier,
     passive_question,
@@ -1384,7 +1385,20 @@ class Session:
         # u ztraceného členu hlídá zábrana nad `turn.lost`; patro
         # `subordinate_tier` ji jen obešlo zezadu, když ze ztraceného
         # členu udělalo roli.
-        pending_role_name = any(
+        # JEDNA PODMÍNKA, JEDNA ODPOVĚĎ *(W‑62)*. Zábrana platila jen pro
+        # vedlejší větu, ačkoli DŮVOD platí pro každou roli, jejíž jméno
+        # zůstalo TVAREM: „Petr bydlí v Praze." se zapsala jako
+        # `bydlet(kdo:Petr, v+Loc/Geo:Praha)` a po odpovědi `→@` ZNOVU
+        # jako `bydlet(kde:Praha, kdo:Petr)` — v bázi ležely DVA VÝROKY
+        # o téže větě a ten první nikdo neodvolal. Změřeno, ne odhadnuto:
+        # reprodukováno na `bydlet` a `odjet` a v bázi zůstal i
+        # `role(filler:Praha, name:v+Loc/Geo, of:s0001)`, tedy role
+        # POJMENOVANÁ FORMOU, kterou `XAIPresenter` cituje.
+        #
+        # Že jsou okolnosti POVRCHOVÉ (§ 12/1), tím nepadá: povrchové je
+        # JMÉNO ROLE, ne to, že se smí zapsat bez jména. Naučené „proč"
+        # se zapisuje dál — tam už někdo odpověděl.
+        pending_role_name = bool(surface_roles(predication)) or any(
             role.awaiting == AWAITING_ROLE_NAME for role in predication.roles
         )
         routed = (
@@ -1398,6 +1412,22 @@ class Session:
         if routed is None:
             if grounded.formula is None and not question:
                 lines.append("  (zakotvení neproběhlo — do báze nejde nic)")
+            elif pending_role_name and predication.mood is Mood.ASSERTION:
+                # KTERÉ PRAVIDLO ZÁPIS ZASTAVILO, musí být VIDĚT *(W‑62)*.
+                # Bez toho vypadá nezapsaná věta stejně jako věta, která
+                # se nezakotvila — a to jsou dva úplně různé stavy.
+                nepojmenovane = surface_roles(predication) or tuple(
+                    role.name
+                    for role in predication.roles
+                    if role.awaiting == AWAITING_ROLE_NAME
+                )
+                lines.append(
+                    "  [NEZAPSÁNO: role "
+                    + ", ".join(f"„{jmeno}“" for jmeno in nepojmenovane)
+                    + " má za jméno TVAR. Zapsat teď a po odpovědi znovu "
+                    "by uložilo DVA výroky o téže větě a ten první by "
+                    "nikdo neodvolal (B‑19)]"
+                )
             return TurnResult(
                 index=index,
                 turn=turn,

@@ -137,6 +137,17 @@ class RoleReading:
     #: nesmí: u téhle se ptát nemá na co — odpověď systém zná a je to
     #: právě ta, která koliduje.
     collided: bool = False
+    #: Role, jejíž JMÉNO JE POŘÁD TVAR *(W‑62)*. Vlastní pole, protože
+    #: poznat to jinak nejde: „proč“ je NAUČENÉ jméno, tedy taky mimo
+    #: uzavřené jádro rolí (§ 12/1), a přesto se na ně ptát nemá — někdo
+    #: ho už pojmenoval. Rozdíl „jméno = tvar“ × „jméno naučené“ zná jen
+    #: ten, kdo roli vyrobil; kdo ji čte později, vidí jen řetězec.
+    #:
+    #: Táž lekce jako `collided` a B‑17: značka, na které někdo staví,
+    #: musí mít vlastní místo. Zkoušet to z podoby řetězce (obsahuje `+`,
+    #: obsahuje `/`) je heuristika nad textem a rozejde se, jakmile někdo
+    #: pojmenuje roli tak, že se to trefí.
+    shaped: bool = False
     #: Tvar, na který se čeká odpověď, dokud `quantifier` chybí.
     pending: StructuralSignature | None = None
     #: NA CO se čeká. Dvě otevřené role nemusí čekat na totéž: holé jméno
@@ -549,6 +560,16 @@ def _nominal(token: Token, reading: Reading, name: str) -> RoleReading:
     return RoleReading(
         name,
         _composed_mention(token, reading),
+        # JMÉNO JE POŘÁD TVAR, dokud ho nějaké patro nepřejmenuje *(W‑62)*.
+        # Značka vzniká TADY, protože tady je to jediné místo, kde se ví
+        # obojí — jméno i to, jestli je z uzavřeného jádra rolí.
+        #
+        # Ptá se `CANONICAL_ROLES`, ne `surface_role`: tvar okolnosti dá
+        # `surface_role` („v+Loc/Geo"), ale tvar podmětu a předmětu dává
+        # `_role_for` z DEPRELU („nsubj:pass"), a porovnávat jméno s jednou
+        # z těch dvou funkcí by druhou rodinu tiše minulo. Uzavřené jádro
+        # zná obě.
+        shaped=name not in CANONICAL_ROLES,
         # Díly víceslovného jména jsou POHLCENÉ, ne ztracené *(B‑21)*:
         # jsou v lemmatu uzlu. Hlásit je jako zahozené by byla nepravda
         # vedle vlastního čtení — táž třída jako W‑20.
@@ -1451,15 +1472,16 @@ def surface_roles(predication: Predication) -> tuple[str, ...]:
     i `v+Acc` → `kdy`), sem NEPATŘÍ *(W‑20)*. Ptát se na ni znamená ptát
     se na něco, co systém zná, a jediná odpověď, kterou by člověk mohl
     dát, je ta, která kolizi způsobila — otázka bez odběratele.
+
+    **Rozhoduje `shaped`, ne členství v uzavřeném jádru** *(W‑62)*.
+    Naučené jméno („proč" u vedlejší věty) mezi kanonické role jádra
+    nepatří a patřit nemusí — okolnosti jsou povrchové (§ 12/1) — ale
+    NĚKDO HO UŽ POJMENOVAL, takže se na ně ptát je nepravda o vlastním
+    stavu. Systém se na `proč` ptal a přitom to jméno sám dostal jako
+    odpověď o krok dřív.
     """
     return tuple(
-        sorted(
-            {
-                r.name
-                for r in predication.roles
-                if r.name not in CANONICAL_ROLES and not r.collided
-            }
-        )
+        sorted({r.name for r in predication.roles if r.shaped and not r.collided})
     )
 
 
@@ -1539,7 +1561,10 @@ def role_mapping_tier(lexicon: Lexicon) -> Tier:
                 if len(options) == 1 and options[0].canonical not in taken:
                     taken.discard(role.name)
                     taken.add(options[0].canonical)
-                    roles.append(replace(role, name=options[0].canonical))
+                    # PŘEJMENOVÁNA — jméno už není tvar *(W‑62)*.
+                    roles.append(
+                        replace(role, name=options[0].canonical, shaped=False)
+                    )
                     continue
                 if len(options) == 1:
                     # ZNÁMÁ role, jejíž kanonické jméno už někdo v téhle
@@ -1676,6 +1701,7 @@ def passive_tier() -> Tier:
                                     replace(
                                         r,
                                         name=ROLE_OBJECT,
+                                        shaped=False,
                                         source=f"trpný rod — podtyp `{PASSIVE_SUBJECT}`",
                                     )
                                     if r is passive
@@ -2496,6 +2522,7 @@ def as_relation(
         return replace(
             role,
             name=name,
+            shaped=False,
             quantifier=quantifier,
             pending=None,
             awaiting="",
@@ -2935,6 +2962,12 @@ def subordinate_tier(lexicon: Lexicon) -> Tier:
                         # okolnosti jsou povrchové (§ 12/1) — takže test
                         # na `CANONICAL_ROLES` by blokoval napořád.
                         awaiting=AWAITING_ROLE_NAME if name == shape else "",
+                        # TÁŽ PODMÍNKA, TÁŽ ZNAČKA *(W‑62)*. Roli tady
+                        # nevyrábí `_nominal`, takže se značka musí
+                        # nastavit i tady — a je to přesně to, co ji
+                        # dělá spolehlivou: kdo roli vyrobí, ten ví,
+                        # jestli jí dal jméno, nebo tvar.
+                        shaped=name == shape,
                     )
                 )
             out.append(

@@ -1058,7 +1058,17 @@ CONTRACTS: tuple[Clause, ...] = (
             "ne vnořená predikace — reifikovat, neřetězit, jádro "
             "neverzovat. Dokud role nemá jméno, VĚTA SE NEZAPISUJE: jinak "
             "ji odpověď `→@` zapíše podruhé a v bázi leží dva výroky "
-            "o téže větě, z nichž ten první nikdo neodvolá (W‑45, B‑19)"
+            "o téže větě, z nichž ten první nikdo neodvolá (W‑45, B‑19). "
+            "A PLATÍ TO PRO KAŽDOU ROLI, JEJÍŽ JMÉNO ZŮSTALO TVAREM, ne "
+            "jen pro vedlejší větu: „Petr bydlí v Praze.“ se zapisovala "
+            "jako `bydlet(kdo:Petr, v+Loc/Geo:Praha)` a po odpovědi ZNOVU "
+            "— v bázi ležely DVA výroky o téže větě a `role(filler:Praha, "
+            "name:v+Loc/Geo, of:s0001)`, tedy role POJMENOVANÁ FORMOU, "
+            "kterou `XAIPresenter` cituje. Jedna podmínka, jedna odpověď. "
+            "NAUČENÉ JMÉNO („proč“) TVAR NENÍ a zapisuje se dál — tam už "
+            "někdo odpověděl; rozhoduje značka `shaped` od toho, kdo roli "
+            "vyrobil, ne podoba řetězce. A v hlášení je VIDĚT, které "
+            "pravidlo zápis zastavilo (W‑62)"
         ),
         anchor="core_semantics.cascade:subordinate_clauses",
         entry=".utter(",
@@ -1071,6 +1081,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_second_level_of_nesting_falls_out_loud",
             "test_the_learned_conjunction_stops_asking_on_the_next_sentence",
             "test_a_sentence_with_an_unnamed_subordinate_role_is_not_written",
+            "test_a_learned_role_name_is_not_asked_about_again",
+            "test_a_shape_named_role_stops_the_write_wherever_it_is",
+            "test_no_role_named_by_its_form_reaches_the_base",
         ),
     ),
     Clause(

@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.36 · 15. 8. 2026
+**Verze jádra:** 0.1.37 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.37 | § 12/1 — JEDNA PODMÍNKA, JEDNA ODPOVĚĎ: role, jejíž jméno zůstalo TVAREM, zastaví zápis VŽDY, ne jen u vedlejší věty. „Petr bydlí v Praze.“ se zapisovala i s rolí `v+Loc/Geo` a po odpovědi `→@` znovu — dva výroky o téže větě. Naučené jméno („proč“) tvar není a zapisuje se dál; rozhoduje značka od toho, kdo roli vyrobil, ne podoba řetězce; § 13 T88 | 15. 8. 2026 |
 | 0.1.36 | § 12/1 — SIGNÁL Z ROZBORU DĚLÍ TVAR: `v+Loc` slepoval „v Praze“ (místo) a „v roce 1935“ (čas), takže jedno naučené mapování muselo být u jedné z nich špatně. Tvar se dělí podle `NameType=Geo` a letopočtu jako dítěte — obojí z parseru, ne ze seznamu slov. Signál NEURČUJE jméno role (to plyne z předložky a pádu) a signálovaný tvar NEDĚDÍ obecný, čímž mizí `digitalizovaný(kudy:rok)`. 26 ze 42 signál nemá a dál se ptají; § 13 T87 | 15. 8. 2026 |
 | 0.1.35 | § 12/1 — TRPNÝ PODMĚT JE PATIENS: role `co` plyne STRUKTURÁLNĚ z podtypu `nsubj:pass`, který stojí v rozboru, ne z naučeného vzoru. Byla to třetí nejčastější otázka „co znamená role X“ (19 z 250) a nikdy to nebyla otázka o významu. Když je `co` obsazené, patro se ZEPTÁ vlastní otázkou a ZASTAVÍ ZÁPIS (1 věta z 19); agens se rolí nestává; § 13 T86 | 15. 8. 2026 |
 | 0.1.34 | § 3.2 — přívlastek je jen HOLÝ genitiv (předložková fráze je okolnost) a táž podmínka platí i v konstrukci jádrové relace; § 3.2 — genitivní přívlastek se páruje PŘES TOKEN, ne přes lemma (zmínka ve čtení je složená), a je BUĎ přívlastek, NEBO role, ne obojí: u spony je jmenná část kořenem, takže její genitiv je jeho dítě. Výjimkou je genitiv, který si nárokuje ČEKAJÍCÍ jádrová relace. A pro‑drop bere jako zmínku NOSITELE LEMMATU PŘÍSUDKU, ne kořen — u spony byl kořenem jmenná část a týž token ležel ve čtení dvakrát pod dvěma jmény; § 13 T84 | 15. 8. 2026 |
@@ -1153,6 +1154,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T88 | jméno = tvar zastaví zápis všude | „Petr bydlí v Praze.“ se NEZAPÍŠE, dokud `v+Loc/Geo` nedostane jméno — stejně jako „Petr odjel, protože pršelo.“; po odpovědi `→@` leží v bázi PRÁVĚ JEDEN výrok o té větě; na `proč` se systém už neptá |
 | T87 | signál dělí tvar, nepojmenovává roli | „Petr byl v roce 1935 v Praze.“ dá `v+Loc/Geo` i `v+Loc/rok` v jedné větě (dřív by se srazily); „v tomto smyslu“ zůstane `v+Loc` bez jména; `po+Loc/rok` NEDĚDÍ `po+Loc → kudy`; v hlášení je vidět, který signál to byl |
 | T86 | trpný podmět je patiens | „Úmysly byly popsány.“ dá `popsaný(co:∀úmysl)` a zapíše se; „Byly úmysly popsány?“ dá `A`; „Kolekce se označuje mnohovesmír.“ se ZEPTÁ, která ze dvou stran je popisovaná, a NEZAPÍŠE; „Byl pohřben na Vyšehradě.“ se dál ptá na podmět |
 | T85 | přívlastek je jen HOLÝ genitiv | „Další synonyma vesmíru u starověkých filozofů“ dá přívlastek jen na „vesmír“; „Podle některých teorií je vesmír součástí systému.“ konstrukci `cop:součást+Gen` NEZTRATÍ kvůli předložkovému genitivu navíc |
