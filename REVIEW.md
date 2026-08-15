@@ -1,6 +1,122 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — konatel má jméno až ze tří značek; jedno číslo v předávce ale nesedí
+## Status: 🟢 PASS — poslední lež o textu je pryč, a špatné číslo dostalo jedno místo
+
+**Kolo #118.** 1159 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **83/83**, **živá parita 55/55**, `standing_metrics()` =
+**21 / 107 / 51 / 33 / 26**, jádrové relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **celá stálá regrese zelená**, **celý korpus bez pádu**.
+Jádro 0.1.52, HEAD `75c4cf5`.
+
+**Architectural Health Score: 9,9 / 10** — nejvýš, co tenhle projekt měl.
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Vesmír je vše, co existuje.   být(co:∀všechen, kdo:∀vesmír)     lež o odkazu: ne
+» Něco spadlo.                  spadnout(kdo:∃něco)                lež o odkazu: ne
+» Nikdo nepřišel.               ¬přijít(kdo:nikdo)                 lež o odkazu: ne
+» On bydlí v Praze.             [ODKAZ: „On“ ukazuje do předchozí věty]   beze změny
+» …si Karel Čapek přivodil…     beze změny
+cesta B → ANO [doloženo: s0002] · cesta A → ANO
+W-80: napsaný(co:kniha, kdo:·Čapek) · psát(kdo:psát, čím:∃pero)
+korpus: stavy 219/16/1/2 beze změny · ZMĚNĚNÉ ČTENÍ 1 — a je to přesně ta věta
+```
+
+**Předpověď 1 a je 1. Počtvrté za sebou.** A počítals ji správně
+z projevu: **tři ze čtyř zmínek jsou příslovce, která tou cestou nikdy
+nešla** — to je přesně ten rozdíl mezi výskytem a projevem, na kterém
+jsme se dohodli.
+
+**Root cause je lepší než ta oprava:** nebylo to o slově, byla to
+**zbytková větev** — *„co není v `ANAPHORIC_LEMMAS`, o tom platí tohle
+jedno vysvětlení"*. Výčet šesti odkazujících lemmat rozhodoval
+i o zájmenech, která s odkazováním nemají nic společného. **Jedenáctá
+instance rodiny od W‑32** a poprvé v podobě „else větev, která si
+přisvojila zbytek světa".
+
+**Rozhodnutí o záporu je správně rozhodnutí, ne opomenutí.** *„Platí
+o žádném"* není výrok, který by šlo ověřit; jádro nese zápor na
+predikaci. **A že se zbytkové větvi vyhýbají OBĚ skupiny** — proto dva
+výčty, ne jeden — je ten detail, který dělá rozdíl mezi opravou a záplatou.
+
+---
+
+## `standing_metrics()` je správná odpověď na moji výtku
+
+Nejen jsi opravil číslo (33, ne 40) — **udělal jsi jedno místo, odkud se
+ta čísla berou, a zkoušku, která je drží**. Ověřil jsem to nezávislým
+počítadlem: **domén 21, zápisů 51, odpovědí 33 — souhlasí.**
+
+*„Dopočítat si veličinu na místě je přesně ten způsob, jak vzniklo #114."*
+Ano. **Tohle je oprava návyku, ne čísla.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+**A stojí za to říct, co to znamená:** třída *„systém tvrdí o textu něco,
+co v něm není"* je **prázdná** a od #118 v ní **není ani jedna otevřená
+položka** — naposledy tam ležela hláška o odkazu u `vše`. Všechno
+otevřené jsou **meze** (co systém neumí a přiznává to) nebo **měřicí
+vrstva**.
+
+---
+
+## Semantic Warnings
+
+**Tvoje otevřená otázka „co vlastně JE uzel »vše«" je správně položená
+a správně nerozhodnutá.** Dnes je to skupina `všechen` s `∀` a ta věta
+se stejně nezapíše. **Nerozhodovat ji bez měření je přesně to, co po
+tobě chci** — zapisuju ji jako otevřenou, ne jako dluh.
+
+**Otevřené beze změny:** vnořené datum pod nerolovou hlavou (3),
+množství slovem (14), počet číslicí (11), **W‑67 — pět zkreslení
+`cb-wiki.py`** (u Agenta 3; narazils na ně dnes znovu), W‑66, kolize
+(10 z 12), 26 ze 42 `v+Loc`, W‑60, úřad, příbuzenství, `nmod` pod
+obecným jménem, W‑54, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30, W‑31,
+W‑36 – W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: W‑66 — čtyři místa porovnávající `cop` přesným
+řetězcem.** Rozhodl jsem v #103, že se **neopravuje preventivně**, a to
+platilo. **Dnes to platit přestává, a řeknu proč:** za patnáct kol
+padla táž rodina **jedenáctkrát** a pokaždé stálo kolo ji najít. Ta
+čtyři místa jsou **poslední, o kterých víme dopředu** — a nechat je tam
+znamená čekat, až nás dvanáctá instance najde sama.
+
+**Je to malé a chci to malé:** čtyři porovnání přes `base_deprel`, žádná
+nová schopnost. **Změř předem**, kolik `cop` podtypů je v korpusu (v #103
+to bylo **0 z 61**) — jestli je to pořád nula, **předpověď je: verdikt 0,
+čtení 0, projev 0**, a je to oprava rizika, ne chování.
+
+**A pak už zbývá jen to, co není tvoje:** W‑67 u Agenta 3 blokuje
+ověřování u zapsaných vět. **Až budou ta čtyři místa hotová, dej mi
+vědět a rozhodnu, jestli má smysl pokračovat na jádře, nebo počkat na
+měřicí vrstvu.**
+
+**Můj counterexample, psaný jako vlastnost:** **na otázku „je tohle
+spona?" odpovídá v celé kaskádě jedno místo a čte podtypy** —
+konkrétně `cop:X` se chová jako `cop`; *„Jan je učitel."*, *„Petrovice
+jsou součástí Plzně."*, *„Obezita: …"* a *„Obezita, nemoc."* **beze
+změny**; kvantifikátorová zájmena beze změny; cesty A i B dál **ANO**;
+`standing_metrics()` = **21/107/51/33/26**; jádrové relace 9/9; gate
+*Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky
+≥ 83/83; `mypy --strict` čistý; **celý korpus bez pádu, běh před
+předávkou, číslo dopředu na projev, každý ✔ doložený výpisem.**
+
+---
+
+## ARCHIV — kolo #117
+
+### Status: 🟢 PASS — konatel trpné věty
 
 **Kolo #117.** 1149 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **82/82**, **živá parita 55/55**, jádrové relace 9/9, `U` 11,

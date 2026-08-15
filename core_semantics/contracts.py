@@ -1454,6 +1454,34 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-19",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "NA OTÁZKU „JE TOHLE SPONA?“ ODPOVÍDÁ JEDNO MÍSTO *(W‑66)*. "
+            "Čtyři místa kaskády se ptala PŘESNÝM ŘETĚZCEM "
+            "(`deprel == \"cop\"`) — hledání přísudku, záměna `kdo`/`co`, "
+            "tvar úplnosti a stráž srážky. UD u spony podtypy připouští "
+            "a porovnání na shodu je na nich slepé: `cop:expl` propadne "
+            "a věta přijde o PŘÍSUDEK, tedy o to, čím vůbec je. "
+            "OPRAVUJE SE RIZIKO, NE DNEŠNÍ CHOVÁNÍ, a je to řečeno "
+            "nahlas: v korpusu je 61 spon a NULA podtypů (změřeno v #103 "
+            "i dnes), takže projev je 0 a doloží to jen zkouška. Důvod "
+            "je jinde — táž rodina (kategorie s variantami, porovnávaná "
+            "výčtem nebo shodou) padla od W‑32 jedenáctkrát a pokaždé "
+            "stálo kolo ji najít; tohle jsou POSLEDNÍ ČTYŘI MÍSTA, "
+            "o kterých se ví dopředu. PODTYP SE NEZAHAZUJE (N‑1): ptá se "
+            "„je to KANDIDÁT na sponu“, ne co ta spona znamená. `aux` "
+            "spona není a základ se bere celý, ne jako předpona"
+        ),
+        anchor="core_semantics.cascade:is_copula",
+        entry="generate(",
+        enforced_by=(
+            "test_a_subtyped_copula_is_still_a_copula",
+            "test_something_that_is_not_a_copula_is_not_mistaken_for_one",
+            "test_a_subtyped_copula_reads_the_same_sentence",
+        ),
+    ),
+    Clause(
         id="G-10",
         boundary=CASCADE_SESSION,
         promise=(

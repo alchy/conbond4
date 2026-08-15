@@ -620,7 +620,7 @@ def _predicate_head(reading: Reading) -> tuple[Token, Token] | None:
     root = reading.root()
     if root is None:
         return None
-    copulas = [t for t in reading.children(root.index) if t.deprel == "cop"]
+    copulas = [t for t in reading.children(root.index) if is_copula(t)]
     if copulas:
         return copulas[0], root
     return root, root
@@ -665,6 +665,27 @@ CIRCUMSTANCE_DEPRELS = ("obl", "nmod")
 #: významový. `expl` je zvratná částice („se" v „myje se") — patří ke
 #: slovesu, ne do role, a hlásit ji jako ztrátu by byl šum.
 NOT_A_LOST_MEMBER = ("expl", "cop", "aux", "punct", "case", "det")
+
+
+def is_copula(token: Token) -> bool:
+    """JE TOHLE SPONA? Jedno místo pro celou kaskádu *(W‑66)*.
+
+    Čtyři místa se na to ptala PŘESNÝM ŘETĚZCEM (`deprel == "cop"`), a to
+    je táž vada, kterou jádro od W‑47 zná: UD u spony podtypy připouští
+    a porovnání na shodu je na nich slepé — `cop:expl` by propadlo a
+    věta by přišla o přísudek, tedy o to, čím vůbec je.
+
+    **Neopravuje se to proto, že by dnes něco padalo.** V korpusu je 61
+    spon a NULA podtypů, změřeno v #103 i dnes; projev té opravy je 0.
+    Opravuje se RIZIKO: táž rodina (kategorie s variantami, porovnávaná
+    výčtem nebo shodou) padla od W‑32 jedenáctkrát a pokaždé stálo kolo
+    ji najít. Tohle jsou poslední čtyři místa, o kterých se ví DOPŘEDU.
+
+    **Podtyp se ani tady nezahazuje** (N‑1): tahle otázka je „je to
+    KANDIDÁT na sponu", ne „co ta spona znamená" — kdo potřebuje víc,
+    čte celý deprel dál sám.
+    """
+    return base_deprel(token.deprel) == "cop"
 
 
 def base_deprel(deprel: str) -> str:
@@ -977,7 +998,7 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
     nominals: list[Token] = []
     fixed: list[RoleReading] = []
     for token in members:
-        if token.deprel == "cop" or token.index in absorbed:
+        if is_copula(token) or token.index in absorbed:
             continue
         # Do ZÁMĚNY kdo/co jdou jen HOLÉ jádrové členy. Podtypovaný
         # (`nsubj:pass`) je sice vidět, ale permutovat ho by znamenalo
@@ -2623,7 +2644,7 @@ def completeness_shape(predication: Predication, reading: Reading) -> str | None
     if feats.get("Number") != "Plur" or feats.get("Case") != "Nom":
         return None
     children = [t for t in tokens if t.head == root.index]
-    if not any(t.deprel == "cop" and t.lemma == "být" for t in children):
+    if not any(is_copula(t) and t.lemma == "být" for t in children):
         return None
     if not any(
         t.deprel == "det" and dict(t.feats).get("PronType") == "Tot" for t in children
@@ -3749,7 +3770,7 @@ def why_nothing(reading: Reading) -> str:
         token
         for token in reading.children(anchor.index)
         if token.deprel not in NOMINAL_DEPRELS
-        and token.deprel != "cop"
+        and not is_copula(token)
         and _role_for(token, reading) is not None
     ]
     tvary = [surface_role(token, reading) for token in okolnosti]

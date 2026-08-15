@@ -3009,3 +3009,48 @@ def test_a_negative_pronoun_gets_no_quantifier() -> None:
     negace), ne na roli; kvantifikátor by z toho udělal výrok „platí
     o žádném", který nejde ověřit *(W‑81)*."""
     assert _quantifier_of(_pronoun_predicate("nic", "nic", "PRON", "Neg"), "co") is None
+
+
+def _copula_sentence(deprel: str) -> Reading:
+    """„Jan je učitel." — jediná proměnná je deprel spony."""
+    return Reading(
+        tokens=(
+            _token(1, "Jan", "Jan", "PROPN", 3, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "je", "být", "AUX", 3, deprel, Number="Sing", Polarity="Pos"),
+            _token(3, "učitel", "učitel", "NOUN", 0, "root", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_subtyped_copula_is_still_a_copula() -> None:
+    """JEDNO MÍSTO ODPOVÍDÁ NA OTÁZKU „JE TOHLE SPONA?" *(W‑66)*.
+
+    Čtyři místa kaskády se ptala PŘESNÝM ŘETĚZCEM, takže `cop:expl` by
+    propadlo a věta by přišla o přísudek — tedy o to, čím vůbec je.
+    V korpusu je 61 spon a NULA podtypů: opravuje se RIZIKO, ne dnešní
+    chování, a tahle zkouška je proto jediné místo, kde se podtyp
+    vůbec ukáže."""
+    from core_semantics.cascade import is_copula
+
+    assert is_copula(_copula_sentence("cop:expl").tokens[1])
+    assert is_copula(_copula_sentence("cop").tokens[1])
+
+
+def test_something_that_is_not_a_copula_is_not_mistaken_for_one() -> None:
+    """PROTIPŘÍKLAD: základ se bere celý, ne jako předpona. `copula`
+    ani `aux` spona nejsou a `base_deprel` je nesmí propustit."""
+    from core_semantics.cascade import is_copula
+
+    assert not is_copula(_copula_sentence("aux").tokens[1])
+    assert not is_copula(_copula_sentence("copula").tokens[1])
+
+
+def test_a_subtyped_copula_reads_the_same_sentence() -> None:
+    """CELOU CESTOU, VŠECHNA ČTYŘI MÍSTA NARÁZ: věta se sponou `cop:expl`
+    dá TOTÉŽ čtení jako se sponou `cop`. Kdyby kterékoli z těch míst
+    zůstalo na přesné shodě, rozejdou se."""
+    podtyp = generate(_copula_sentence("cop:expl"))[0].predication
+    holy = generate(_copula_sentence("cop"))[0].predication
+    assert str(podtyp) == str(holy)

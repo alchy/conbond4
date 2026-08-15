@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.52 · 15. 8. 2026
+**Verze jádra:** 0.1.53 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.53 | § 5.2 — NA OTÁZKU „JE TOHLE SPONA?“ ODPOVÍDÁ JEDNO MÍSTO: čtyři porovnání `cop` přesným řetězcem svedena do `is_copula`. Projev 0 (61 spon, 0 podtypů) — oprava RIZIKA, ne chování; § 13 T104 |
 | 0.1.52 | § 5.2 — KVANTIFIKÁTOROVÉ ZÁJMENO KVANTIFIKUJE, NEODKAZUJE: „vše“ dostávalo otázku „na koho odkazuje“, která o něm tvrdila nepravdu. `PronType` z rozboru: `Tot`→`∀`, `Ind`→`∃`, `Neg` je pojmenovaná mez; § 13 T103 |
 | 0.1.51 | § 5.2 — KONATEL TRPNÉ VĚTY DOSTANE JMÉNO: holý `Ins:arg` pod `Voice=Pass` je `kdo`. Rozhodují DVĚ značky naráz, protože instrumentál je taky NÁSTROJ; § 12, § 13 T102 |
 | 0.1.50 | § 5.2 — TÁŽ ROLE, AŤ JE PODMĚT VYSLOVENÝ, NEBO NE: pro‑drop u trpného rodu vyrábí `co`, ne `kdo`. Dvě jména pro touž roli rozpadala bázi na dvě poloviny a mezera tvrdila „nikdo to neřekl“ o výroku, který v ní ležel; § 13 T101
@@ -1248,6 +1249,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T104 | spona s podtypem je spona | „Jan je učitel.“ se sponou `cop:expl` dá TOTÉŽ čtení jako s `cop`; `aux` ani `copula` sponou nejsou |
 | T103 | kvantifikátorové zájmeno neodkazuje | „Vesmír je vše, co existuje.“ dá `co:∀všechen` a NEŘEKNE „odkazuje mimo text“; „Něco spadlo.“ dá `∃něco`; „Nikdo nepřišel.“ dá `¬přijít(kdo:nikdo)` bez kvantifikátoru a taky bez té věty; „On bydlí v Praze.“ se dál ptá na odkaz |
 | T102 | konatel trpné věty | „Kniha byla napsána Čapkem.“ dá `kdo:·Čapek`; „Kniha byla napsána perem.“ dál `čím`; „Je spojována s emancipačními snahami.“ se nemění; činný `Ins:arg` („stal se redaktorem“) se nemění |
 | T101 | trpný rod má jedno jméno role | „Byl pohřben na Vyšehradě.“ + `→=` zapíše `co:Karel_Čapek` a otázka „Byl Karel Čapek pohřben na Vyšehradě?“ dá `A`; činný pro‑drop dál dává `kdo` |
