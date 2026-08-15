@@ -746,6 +746,27 @@ CONTRACTS: tuple[Clause, ...] = (
         enforced_by=("test_i5_the_gap_is_an_offer_not_a_reproach",),
     ),
     Clause(
+        id="S-29",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "důkaz musí DOSÁHNOUT NA VĚTU, kterou člověk řekl: citace "
+            "odvozeného výroku (expanze `disjoint` na dvojici pravidel) se "
+            "rozvine na jeho PŮVOD — jeden hop přes `derived_from`, ne "
+            "rekurze. Nový důkaz se nevymýšlí, strom zůstává; mění se, co "
+            "se z něj renderuje. Tělo pravidla se ukáže CELÉ, protože "
+            "právě ono spojuje odpověď s tou větou (W‑24)"
+        ),
+        anchor="core_semantics.presenter:XAIPresenter._origins",
+        entry="render_audit_report(",
+        enforced_by=(
+            "test_the_answer_reaches_the_sentence_the_person_said",
+            "test_the_origin_is_cited_not_just_printed",
+            "test_the_expansion_is_one_hop_not_a_recursion",
+            "test_the_rule_body_is_not_truncated",
+            "test_a_fact_without_an_origin_is_unchanged",
+        ),
+    ),
+    Clause(
         id="S-28",
         boundary=SESSION_STORAGE,
         promise=(

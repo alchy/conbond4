@@ -57,6 +57,8 @@ CZECH_PROFILE: dict[str, Any] = {
     "node": {
         "fact": "řekls: {statement}",
         "rule": "pravidlo {ref}: {statement}",
+        #: Původ ODVOZENÉHO výroku — věta, ze které vznikl (W‑24).
+        "origin": "a to plyne z toho, že řekls: {statement}",
         "witness": "svědek: {ref}",
         "distribute": "shoda dotazu s faktem (distribuce rolí)",
         "constraint": "omezení {ref}",
@@ -160,14 +162,28 @@ class AuditReport:
     conflict: tuple[tuple[ReasonLine, ...], tuple[ReasonLine, ...]] | None
     gap: tuple[str, ...]
     cited: tuple[str, ...]
+    #: Věty, ze kterých citované ODVOZENÉ výroky vznikly (W‑24). Nese je
+    #: report, ne volající: kdyby si je počítal každý sám, rozešly by se
+    #: a `verify` by hlídalo jiný seznam, než se vypsal.
+    origins: tuple[str, ...] = ()
     #: Hranice kontextu, ve kterém závěr platí. Prázdné dokud neexistuje
     #: `closed_context` (§ 12) — až bude, výsledky z uzavřeného světa se
     #: sem musí přiznat a nesmí vystupovat jako nepodložené faktické důkazy.
     scope: tuple[str, ...] = ()
 
     def verify(self, proof: Proof | None) -> None:
-        """`cited` musí přesně odpovídat listům důkazu — ani víc, ani míň."""
-        expected = proof.leaves() if proof is not None else frozenset()
+        """`cited` musí přesně odpovídat listům důkazu — ani víc, ani míň.
+
+        **Plus jejich PŮVOD** *(W‑24)*. List, který je odvozený výrok
+        (expanze `disjoint` na dvojici pravidel), končil citaci na `p0001`
+        a člověk v odpovědi svoji větu nenašel. Původ se ale nedomýšlí:
+        je to `derived_from` z báze, jeden hop, a `origins` sem přijde
+        z TÉHOŽ výpočtu, který ho vypsal — dvě kopie by se rozešly a
+        report by pak citoval něco jiného, než ukázal.
+        """
+        expected = (
+            proof.leaves() if proof is not None else frozenset()
+        ) | frozenset(self.origins)
         if set(self.cited) != set(expected):
             raise MissingTemplate(
                 f"report cituje {sorted(self.cited)}, důkaz stojí na "
@@ -229,6 +245,8 @@ class XAIPresenter:
         elif proof is not None:
             reason = self._walk(proof, 0)
             cited = proof.leaves()
+        origins = self._origins(cited)
+        cited = cited | origins
 
         report = AuditReport(
             question=str(question),
@@ -238,6 +256,7 @@ class XAIPresenter:
             conflict=conflict,
             gap=tuple(result.gap.render()) if result.gap is not None else (),
             cited=tuple(sorted(cited)),
+            origins=tuple(sorted(origins)),
             scope=scope,
         )
         if result.conflict is None:
@@ -281,9 +300,62 @@ class XAIPresenter:
         statement = self._statement_text(proof)
         text = template.format(ref=proof.ref, statement=statement or proof.ref)
         lines = [ReasonLine(depth=depth, text=text, statement=statement)]
+        lines.extend(self._origin_lines(proof, depth))
         for premise in proof.premises:
             lines.extend(self._walk(premise, depth + 1))
         return tuple(lines)
+
+    def _origin_lines(self, proof: Proof, depth: int) -> list[ReasonLine]:
+        """Řádek s PŮVODEM odvozeného výroku — hned pod ním (W‑24).
+
+        Nevymýšlí se nový důkaz: strom zůstává, mění se jen to, co se
+        z něj renderuje. Bez toho končí odpověď na `pravidlo p0001` a
+        člověk svoji větu v odůvodnění nenajde (I‑14, § 8).
+        """
+        if proof.kind not in (ProofKind.FACT, ProofKind.RULE):
+            return []
+        try:
+            statement, active, _ = self.kb.inspect(proof.ref)
+        except KeyError:
+            return []
+        origin = statement.derived_from
+        if not origin or not active:
+            return []
+        try:
+            source, source_active, _ = self.kb.inspect(origin)
+        except KeyError:
+            return []
+        if not source_active:
+            return []
+        template = self.profile.node.get("origin")
+        if template is None:
+            return []
+        return [
+            ReasonLine(
+                depth=depth + 1,
+                text=template.format(ref=origin, statement=str(source.formula)),
+                statement=str(source.formula),
+            )
+        ]
+
+    def _origins(self, refs: frozenset[str]) -> frozenset[str]:
+        """Věty, ze kterých citované výroky VZNIKLY — jeden hop (W‑24).
+
+        Rekurze se schválně nedělá: `derived_from` je řetěz o jednom
+        článku (výrok → jeho expanze) a hlubší cesta by z citace udělala
+        výpis půlky báze. Když `derived_from` chybí, končí se tam, kde
+        se končilo dosud.
+        """
+        found: set[str] = set()
+        for ref in refs:
+            try:
+                statement, active, _ = self.kb.inspect(ref)
+            except KeyError:
+                continue
+            origin = statement.derived_from
+            if origin and active and origin not in refs:
+                found.add(origin)
+        return frozenset(found)
 
     def _statement_text(self, proof: Proof) -> str | None:
         """Text výroku se bere z BÁZE, ne ze šablony — šablona smí okolo
@@ -301,6 +373,12 @@ class XAIPresenter:
                 f"důkaz cituje odvolaný výrok {proof.ref!r}"
             )
         formula = statement.formula
-        return str(formula.head) + " <- …" if isinstance(formula, Rule) else str(
-            formula
-        )
+        if not isinstance(formula, Rule):
+            return str(formula)
+        # TĚLO SE UKÁŽE CELÉ *(W‑24)*. „<- …" po člověku chtělo, aby si
+        # domyslel, za jakých podmínek to pravidlo platí — a u expanze
+        # oddělenosti je právě tělo tím, co spojuje odpověď s jeho větou.
+        # Pravidla jsou v bezpečném fragmentu krátká (§ 5.4), takže se
+        # nic neusekává.
+        body = " ∧ ".join(str(literal) for literal in formula.body)
+        return f"{formula.head} <- {body}"

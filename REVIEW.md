@@ -1,6 +1,128 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — B‑16 zavřeno oběma dveřmi, které z češtiny vedou; jádro 0.1.12
+## Status: 🟢 PASS — osmá doména říká „ne" z vyloučení tříd; důkaz ale nedosáhne na větu, kterou člověk řekl
+
+**Kolo #64.** 820 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **58/58**, živá parita **29/29**, dialogy 8 / 19 / 12, gate
+*Farmaka* `N`, nula `RECALL_FAILURE`, celá stálá regrese zelená.
+**Sedm dosavadních domén má závěry beze změny; osmá je nová.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Měřeno mnou
+
+```
+» Vrabec není savec.   ✓ zapsáno [s0001] disjoint(vrabec, savec)
+                         [expanze na dvě pravidla: p0001, p0002]
+» Čimčara je vrabec.   ✓ zapsáno [s0002]
+» Je Čimčara savec?    → NE     [doloženo: p0001, s0002]
+» Je Čimčara pták?     → NEVÍM  ? platí subset(sub:·vrabec, sup:·pták)?
+» Kočka je savec.      ◐ ptá se: member / subset / disjoint?
+» Je to podmnožina.    ✓ naučeno konstrukce cop:NOUN=NOUN ~ subset [tah 6]
+                       ✓ zapsáno [s0003]
+```
+
+**„Je Čimčara pták?" → `U` je nejlepší krok té domény.** Oddělenost od
+savců o ptácích nerozhoduje, a kdyby tam padlo `N`, byla by to nevědomost
+vydávaná za znalost. Doména tím měří obojí: že `disjoint` **řekne ne**,
+i že **neřekne víc, než smí**.
+
+**Doptání je v doméně a je to táž stavba jako první krok, jen kladně** —
+`cop:NOUN=NOUN` je dvojznačná, systém se ptá a **do odpovědi nezapisuje
+nic**. To je přesně smyčka, kterou uživatel chce vidět.
+
+**Duplicita ve zlaté sadě, kterou chytil test a ne Builder,** stojí za
+zapsání: „Vrabec není savec." tam už byla jako `G2`, a
+`test_fixed_parse_is_actually_reused` odmítl 29 rozborů na 30 položek.
+Zlaté sady tloustnou přesně takhle — a tady to zachytil stroj.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓ · opačná ✓
+jádrové zapsané krokem: before, disjoint, member, subset  (4 z 9)
+```
+
+---
+
+## Kde jsem svou podmínku nesplněnou nechal, a proč
+
+Můj counterexample zněl: *„`N` s důkazem, který cituje **oba zápisy**
+(`member` i `disjoint`)."* **Doslova splněný není.** Změřeno:
+
+```
+listy důkazu: ['p0001', 's0002']
+cited:        ('p0001', 's0002')
+   - pravidlo p0001: ¬member(elem:x, group:·savec) <- …
+     - prvek podtřídy je prvkem nadtřídy
+       - řekls: member(elem:Čimčara, group:·vrabec)
+```
+
+`s0001` — věta, kterou člověk **řekl** — v důkazu **není**. Je tam
+`p0001`, což je pravidlo z její expanze. **Builder to popsal přesně**
+(„cituje p0001 … i s0002") a teprve jeho součet nazval „oba zápisy";
+nic nezakryl.
+
+**Neblokuju to a chci mít napsáno proč:** verdikt je správný, důkaz je
+sound a stopa **existuje v bázi** — `p0001.derived_from == s0001`. Je to
+vada **čitelnosti**, ne správnosti, a je mírnější než ta, kterou jsem
+v kole #59 pustil dál (tam vysvětlení nabízelo článek, který **nešel
+použít**). Blokovat teď a tehdy ne by znamenalo měřit dvěma metry.
+**Je to ale první položka dalšího směru.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑24 (nový) · citace se zastaví na odvozeném pravidle.** Člověk řekne
+*„Vrabec není savec."* a v odpovědi vidí `pravidlo p0001: ¬member(elem:x,
+group:·savec) <- …` — svoji větu tam nenajde, a ještě je useknutá
+mnohotečkou. **Provenience je přitom v bázi** (`derived_from`),
+prezentér ji jen nepoužije. Zasahuje I‑14 v jeho duchu (vysvětlení má
+být to, čemu člověk rozumí) a § 8.
+
+**W‑23 leží dál** (pořadí nabídek), **W‑20 taky** podle dohody.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: důkaz musí dosáhnout na větu, kterou člověk řekl.**
+
+**Gate:** „Je Čimčara savec?" → `NE` a v odůvodnění je vidět **„řekls:
+Vrabec není savec."**, ne jen `p0001`. **Root cause:** prezentér bere
+listy důkazu jako konečnou stanici; u derivačního cukru (`disjoint` →
+`p0001`/`p0002`) je konečná stanice **o hop dál** a `derived_from` ji
+zná. **Zasažená smlouva:** I‑14, § 8.
+
+1. Citace odvozeného výroku se **rozvine na jeho původ**. Původ je
+   jeden hop, ne rekurze do nekonečna — když `derived_from` chybí, končí
+   se tam, kde se končí dnes.
+2. **Nevymýšlet nový důkaz.** Strom zůstává, mění se to, **co se z něj
+   renderuje** — jinak by to bylo vysvětlení, které si přidává (I‑14).
+3. Useknuté `<- …` u pravidla dořeš při tom: buď se tělo ukáže celé,
+   nebo se místo pravidla ukáže rovnou původ.
+
+**Můj counterexample — bez něj neschválím:** v odůvodnění „Je Čimčara
+savec?" je řetězec, ze kterého člověk pozná **obě své věty**, a `s0001`
+je v `cited`; `disjoint → N` na úrovni formulí **beze změny**; gate
+*Farmaka* `N` a jeho doložka **beze změny**; osm domén se závěry beze
+změny (a když se některý změní, **napiš to**); parita 29/29, nula
+`RECALL_FAILURE`, testy zelené; „Pondělí je před pondělím." se pořád
+nezapíše a „Je středa před pondělím?" pořád netiskne žádné `? platí`.
+
+---
+
+## ARCHIV — kolo #63
+
+### Status: 🟢 PASS — B‑16 zavřeno oběma dveřmi, které z češtiny vedou; jádro 0.1.12
 
 **Kolo #63.** 814 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **58/58**, živá parita **26/26**, dialogy 7 / 16 / 10 se závěry
