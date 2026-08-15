@@ -1,6 +1,220 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — a moje podmínka byla nesplnitelná; Builder to změřil dřív, než ji zabudoval
+## Status: 🟢 PASS — rozbor třídy `role`; odpověď je „ani jedno" a je lepší než obě moje varianty
+
+**Kolo #77.** Do jádra **nesáhl** — `git status` hlásí jen `REVIEW.md`.
+966 testů zelených, `mypy --strict` čistý na 61 souborech, doložky
+**69/69**, živá parita **51/51**, dialogy 14 / 37 / 24, gate *Farmaka*
+`N`/`s0005`, nula `RECALL_FAILURE`, celá stálá regrese zelená. Jádro
+zůstává 0.1.20.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Ptal jsem se špatně a on to opravil
+
+Nabídl jsem dvojici *„jedna mezera, nebo čtyřicet doptání?"*. **Ani
+jedno**, a to je užitečnější odpověď, než kterou jsem čekal. Ověřeno
+reprodukcí (`nalezy/role_rozbor.py`):
+
+```
+POVRCHOVÝ TVAR BEZ JMÉNA        vět   výskytů
+   nmod+Gen                      19    25
+   amod+Gen                       8     9
+   flat+Nom                       8    12
+   amod+Acc                       7     8
+   …                          96 různých celých cest, 40 různých posledních hran
+
+RODINA KONSTRUKCE            vyskytuje se   SAMA ve větě
+   A · přívlastek                 40 vět         6
+   C · vnořená věta               15 vět         0
+   B · víceslovné jméno           11 vět         0
+   E · příslovečné určení          9 vět         0
+   D · koordinace                  9 vět         0
+```
+
+**Klíčové číslo:** rodina A je ve **všech čtyřiceti** větách, ale **sama
+odblokuje jen šest**. Zbytek nese vedle ní ještě jinou rodinu — 14 vět
+dvě, 15 vět tři, 5 vět čtyři.
+
+```
+KUMULATIVNÍ POKRYTÍ
+   A 6/40 · A+B 12 · A+B+C 15 · +D 17 · +E 25 · +F 31 · +G 36 · +Z 40
+```
+
+**Metrika „kolik vět uvolní tahle jedna oprava" je tady zavádějící**
+a on to pojmenoval dřív, než bych na to přišel sám: kdyby se vybíralo
+podle ní, vyšla by rodina A jako skoro bezcenná, přestože bez ní neprojde
+ani jedna věta. **Encyklopedická věta nese několik konstrukcí naráz,
+takže pořadí oprav se má řídit kumulativním pokrytím.** To je poznatek
+o metodě, ne o jedné třídě, a beru ho do stálého repertoáru.
+
+---
+
+## Je to vada, nebo normální provoz dialogu? — jeho argument beru
+
+**Vada.** Důvod má z čísel a je správný: kdyby to byl normální provoz,
+byly by ty otázky **různé**. Tady se ale **19 ze 40 vět ptá na týž tvar**
+(`nmod+Gen`, přívlastek v genitivu). **Ptát se na tutéž konstrukci
+devatenáctkrát není dialog, je to chybějící obecné pravidlo.**
+
+---
+
+## Chyba, kterou udělal a sám opravil
+
+První verze skriptu brala „poslední záznam" **abecedně**, sáhla na
+`2026-08-15.json` místo na `…-8b691b3.json` a počítala **35 vět místo
+40**. Řadí se teď podle času a v kódu je napsané proč.
+
+To je ten nejnebezpečnější druh chyby v měření: **čísla by pořád dávala
+smysl**, takže by si jí nikdo nevšiml. Že ji našel a zapsal důvod, ne
+jen opravil, je přesně ta péče, kterou tahle vrstva potřebuje.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑39 · `nmod+Gen` v 19 z 40 vět** — jedna konstrukce, polovina třídy.
+Doložená, nerozhodnutá.
+
+**W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: rodina A, a v ní `nmod+Gen` jako první.
+Tvůj návrh schvaluji, včetně metriky.**
+
+**Měřit se to bude tím, že tvar zmizí jako blokátor ze všech 40 vět** —
+ne počtem odblokovaných vět. Šest je správné číslo a nesmí se z něj dělat
+zklamání; kumulativní pokrytí je ten správný ukazatel a A je jeho základ.
+
+**Proč `nmod+Gen` a ne celá rodina naráz:** je v **19 větách**, tedy
+v polovině třídy, a je to **jedna produktivní konstrukce** (přívlastek
+v genitivu — *„datum narození"*, *„narození Boženy Němcové"*), ne
+lexikální náhoda. Rodina A jako celek je pět různých hran; začít vším
+znamená míchat pět rozhodnutí do jednoho kola.
+
+**A protože jsem si v kole #76 sám slíbil, že pravidla češtiny budu
+dávat jako hypotézy k měření, ne hotová:** neříkám ti, jakou roli
+`nmod+Gen` nese. Vím jen, že systém už má tah `→'` (`names_owner`) pro
+přivlastnění, a **hypotéza k ověření** je, jestli genitivní přívlastek
+padá celý do něj, nebo se dělí na víc významů. **Změř to na těch 19
+větách dřív, než něco zabuduješ.**
+
+**Můj counterexample — bez něj neschválím:** na těch 19 větách je
+zapsáno, **kolik různých významů** genitivní přívlastek nese a podle
+čeho se rozlišují; pokud vyjde víc než jeden, **systém se ptá** a
+nedosazuje; tvar `nmod+Gen` **zmizí jako blokátor** ze všech vět, kde
+byl; **žádná jiná třída nepřibere** větu, která do ní nepřišla o vrstvu
+níž; čtrnáct domén se závěry beze změny; jádrové relace 9/9; gate
+*Farmaka* `N`/`s0005`; parita ≥ 51/51; nula `RECALL_FAILURE`; testy
+zelené; korpus přeměřen nad **čistou revizí**.
+
+---
+
+## PŘIPRAVENÝ SMĚR (zadán člověkem, čeká ve frontě) — KOORDINACE JAKO ROZHODNUTÍ ČTENÍ
+
+Nejde o kolo, je to zadání do fronty. Vzniklo z návrhu člověka
+*„Přesné datum a místo narození expandovat na Přesné datum a Přesné
+místo narození"* a z rozboru, proč to tak přímočaře nejde.
+
+### Obecný problém
+
+Koordinovaný člen má **dvě čtení a rozhoduje o nich význam, ne tvar**:
+
+```
+Petr a Pavel četli knihu.      → každý zvlášť?   (rozdělitelné)
+Petr a Pavel jsou bratři.      → dohromady       (rozdělit ZTRATÍ vztah)
+Petr a Pavel zvedli klavír.    → dohromady?      (rozdělit TVRDÍ VÍC)
+Přesné datum a místo … není známo.  → každý zvlášť
+```
+
+Prošel jsem šest vět třídy B z korpusu: rozdělit jde u čtyř, u dvou je
+to sporné (*„obdrželi novomanželé … doživotní právo"* — to právo dostali
+jako pár). **Pravidlo to tedy není, je to nabídka.**
+
+### Architektonická příčina
+
+conBond4 čte **jednu predikaci na větu** a koordinaci vidí jen jako
+signál pro shodu. Pro „Petr a Pavel" jako **jednu věc** nemá term:
+sorty jsou `ENTITY · GROUP · RELATION · PLACE · TIME · VALUE · LABEL`
+a algebra (`GroupAnd`, `GroupOr`, `GroupDiff`) je nad **třídami**, ne
+nad množstvím jednotlivců. `group_and(Petr, Pavel)` je průnik, ne dvojice.
+
+### Tvar řešení — a je to tvar, který systém už zná
+
+**Rozdělení není předzpracování, je to tah dialogu.** Přesně jako
+kvantifikátor, konstrukce a antecedent.
+
+1. **Kaskáda označí koordinaci jako čekající** na `Predication`
+   (`pending_coordination`), ne ve stopě — lekce B‑17. Dokud se
+   neodpoví, **nezapisuje se nic**.
+2. **Nový tah `→&` se dvěma odpověďmi:**
+   - *„každý zvlášť"* → věta zapíše **několik výroků**, jeden na člen,
+     a **sdílené závislosti se distribuují** (`Přesné datum narození …`
+     + `Přesné místo narození …`) — to je přesně ten původní návrh,
+     ale jako **jedna** z možností, ne jako transformace vstupu;
+   - *„dohromady"* → **jeden** výrok o **skupinovém uzlu**, který vznikne
+     přes `attach`, plus `member(Petr, g)` a `member(Pavel, g)`.
+3. **Nic se tím neučí** — jako `→⊆1` a `!∀`. Rozdělitelnost je
+   vlastnost **věty**, ne tvaru: obě věty výš mají týž tvar.
+4. **Patro shody zůstává nedotčené.** Shoda rozhoduje, jestli věta
+   **projde**; koordinace rozhoduje, co věta **zapíše**. Dvě různé
+   otázky, a slít je znamená obejít W‑35 předzpracováním.
+
+**Jádro se nemění.** Žádný nový sort, žádný nový uzávěr, žádná verze
+sémantiky — skupinový uzel a `member` už existují a důkaz přes ně vede
+sám. Celá změna je v jazykové vrstvě a v `attach`.
+
+### Nejdřív měření, teprve pak stavba
+
+**Kolik vět v korpusu má koordinovaný člen v jádrové roli a u kolika
+z nich je rozdělení doopravdy platné?** První číslo se spočítá
+(`conj` pod `nsubj`/`obj`), druhé je **rozhodnutí** a musí ho udělat
+člověk na vzorku. Bez toho druhého čísla je to práce naslepo.
+
+### Counterexample pro schválení
+
+Doména, kde jsou **obě** čtení:
+
+- „Petr a Pavel četli knihu." → **zeptá se**; bez odpovědi **nezapíše
+  nic**; po `→& každý zvlášť` vzniknou **dva** výroky a otázka na Petra
+  odpoví `A` s citací **jen jeho** výroku.
+- „Petr a Pavel jsou bratři." → **zeptá se**; po `→& dohromady` vznikne
+  **jeden** výrok o skupině + dvě členství, a otázka *„Je Petr bratr?"*
+  **nesmí** dát `A` — kolektivní čtení se nedistribuuje. To je jádro
+  celé věci.
+- **Tvar se neučí:** druhá věta téhož tvaru se **zeptá znovu**.
+- **Shoda beze změny:** „Petr a Pavel četl knihu." padá **dřív**, než se
+  na koordinaci vůbec zeptá.
+- Čtrnáct domén se závěry beze změny; jádrové relace 9/9; gate *Farmaka*
+  `N`/`s0005`; parita ≥ 51/51; nula `RECALL_FAILURE`; testy zelené.
+
+### Kam to patří ve frontě
+
+**Po `role`.** `role` je 40 vět (17 % korpusu), koordinace 6 vět plus
+schopnost. Pořadí ale rozhoduje člověk — tohle je návrh, ne verdikt.
+
+---
+
+## ARCHIV — kolo #76
+
+### Status: 🟢 PASS — a moje podmínka byla nesplnitelná; Builder to změřil dřív, než ji zabudoval
 
 **Kolo #76.** 966 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **69/69**, živá parita **51/51**, dialogy 14 / 37 / 24 se závěry
