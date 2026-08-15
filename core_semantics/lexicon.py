@@ -691,6 +691,19 @@ _ROLE_SEED: tuple[tuple[str, str], ...] = (
     ("z+Gen", "odkud"),
     ("ze+Gen", "odkud"),
     ("po+Loc", "kudy"),
+    # SIGNÁL Z ROZBORU DĚLÁ VLASTNÍ TVAR a ten se NEDĚDÍ *(W‑61)*.
+    # Zeměpisné jméno u těchhle předložek znamená totéž co bez signálu —
+    # „do Prahy" i „do kina" je `kam` — takže se to tu říká zvlášť.
+    #
+    # ALE `/rok` SE TU NEOBJEVÍ ANI JEDNOU, A JE TO CELÝ SMYSL TÉHLE
+    # ZMĚNY. Dokud byl tvar jeden, platilo `po+Loc → kudy` i pro „Po roce
+    # 1990 byly nahrávky digitalizovány." a v korpusu z toho vyšlo
+    # `digitalizovaný(kudy:rok)` — cesta místo času. Dědit obecný tvar
+    # na signálovaný by tu vadu vrátilo; `po+Loc/rok` proto ŽÁDNÉ
+    # mapování nemá a systém se na něj ZEPTÁ.
+    ("do+Gen/Geo", "kam"),
+    ("z+Gen/Geo", "odkud"),
+    ("ze+Gen/Geo", "odkud"),
     # `v+Loc` tu SCHVÁLNĚ NENÍ. „v Praze" je místo, „v pondělí" čas,
     # a tvar je týž — je to táž dvojznačnost jako u holé spony. Dvě
     # hypotézy v seedu situaci NEŘEŠILY: mapování zůstalo dvojznačné
@@ -703,6 +716,7 @@ _ROLE_SEED: tuple[tuple[str, str], ...] = (
     # dvou určení, která ve skutečnosti neexistuje.
     ("v+Acc", "kdy"),
     ("na+Loc", "kde"),
+    ("na+Loc/Geo", "kde"),
     ("Ins", "čím"),
     ("s+Ins", "s kým"),
 )

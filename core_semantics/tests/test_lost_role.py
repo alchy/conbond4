@@ -238,7 +238,11 @@ def test_lost_role_transcript_prints() -> None:
 # nic, systém se ZEPTÁ a odpověď tvar rozhodne. Doptání je tah dialogu,
 # ne prohra — a stejný tah `→@`, protože obojí je `RoleMapping`.
 
-LOC = "v+Loc"
+#: Tvar NESE SIGNÁL Z ROZBORU *(W‑61)*: „Petrovicích" má `NameType=Geo`,
+#: takže tvar je `v+Loc/Geo`, ne `v+Loc`. Rozdělení je celý smysl té
+#: změny — `v+Loc` slepoval „v Praze" a „v roce 1935" do jednoho tvaru,
+#: takže jedno naučené mapování muselo být u jedné z nich špatně.
+LOC = "v+Loc/Geo"
 
 
 def locative(who: str, upos: str = "PROPN") -> Reading:

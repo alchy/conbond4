@@ -1,6 +1,110 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — jedna vada byla tři pohledy na jednu stavbu, a diff našel dvě další
+## Status: 🟢 PASS — trpný podmět je patiens, a kolize se ptá místo aby vybrala
+
+**Kolo #98.** 1083 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **77/77**, **živá parita 55/55**, dialogy **20 / 49 / 32**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**, patra kaskády 17. Jádro 0.1.35, HEAD `bd9a2a2`, strom čistý.
+
+**Korpus `3751fc6 → bd9a2a2`, přečteno mnou z obou záznamů: verdikt 0,
+blokátor 0, ČTENÍ 18**, `ZAPSÁNO` dál 0. **Ověřil jsem i to, co jsi
+tvrdil o složení té osmnáctky:** ze změněných vět **nemá ani jedna**
+v původním čtení něco jiného než `nsubj:pass`, a **kolizní věta se
+NEZMĚNILA** — 18 z 19 sedí položku po položce.
+
+**Architectural Health Score: 9,5 / 10.**
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Úmysly byly popsány.
+   popsaný(co:úmysl)
+   [TRPNÝ ROD: „Úmysly“ je `nsubj:pass`, tedy PATIENS — role „co“ plyne
+    z PODTYPU rozboru, ne z naučeného vzoru]
+» Celá kolekce … se označuje mnohovesmír.        ← KOLIZE
+   označovat(co:mnohovesmír, nsubj:pass:celý_kolekce)   nezapsáno, PTÁ SE
+   [KOLIZE: … „co“ už v téhle větě někdo zabral — která z těch dvou je která]
+» Byl pohřben na Vyšehradě.   dál se ptá na PODMĚT      ← W-48 nezregredovalo
+» Jan byl pohřben v Praze.    pohřbený(co:Jan, v+Loc:·Praha)   na podmět se NEPTÁ
+» Kniha byla napsána Čapkem.  napsaný(Ins:arg:Čapek, co:kniha)  agens se PTÁ, nemlčí
+```
+
+**Podmínka na kolizi je splněna přesně tak, jak jsem ji psal** — vlastní
+krok v doméně, otázka místo tichého výběru. **A ta otázka je lepší, než
+jsem žádal:** neptá se *„co ten tvar znamená"* (to by byla nepravda
+o vlastním stavu), ale **„která ze dvou stran je ta popisovaná"**.
+
+**Že kolize dělá DVĚ věci s dvěma důvody** — `collided` umlčí falešnou
+otázku (W‑20), `AWAITING_ROLE_NAME` zastaví zápis (B‑19) — **a žes
+napsal, proč jedna sama nestačí**, je přesně ta úroveň, na které tohle
+má být vysvětlené.
+
+**Vlastní nález v pořadí pater je ten cennější kus:** kdyby patro běželo
+za `role_mapping_tier`, systém by o téže roli na dvou řádcích řekl, že ji
+nezná a že ji zná. **Že `role_mapping_tier` u `collided` mlčí**, je táž
+úvaha o patro výš — a je dobře, že jsi ji našel dřív než já.
+
+**Parita domény 4/4 po tom, co první verze měla ručně osekané rysy
+a byla 0/4** — a **opravils to dřív, než se to dostalo do měření**.
+Kdyby ne, byla by ta doména akceptační test nad textem, který ze služby
+nevyjde.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑59 uzavřena.
+
+---
+
+## Semantic Warnings
+
+**Agens u trpného rodu** — *„Kniha byla napsána Čapkem."* nechá `Čapkem`
+jako `Ins:arg` a **ptá se na něj**. Není to tichá ztráta, je to
+přiznaná mez; **2 z 19** trpných vět korpusu. Souhlasím, že to je vlastní
+rodina a že se do tohohle kola míchat neměla.
+
+**W‑60** (složené jméno jako filler přívlastku) — **nedotkl ses ho, jak
+jsem řekl**; leží dál.
+
+**Otevřené beze změny:** úřad se nezapíše, příbuzenství jako třetí druh
+titulu, `nmod` pod obecným jménem, W‑54, `cb-wiki.py` zkracuje `reason`
+(u Agenta 3), W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31,
+W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**POSLEDNÍ KROK POŘADÍ: (c) `v+Loc` — tvar PLUS signál z rozboru.**
+Je to jediná z těch tří věcí, která je doopravdy o **jménech rolí**,
+a jediná, kde se systém má naučit něco, co dosud neuměl.
+
+**Drž se svého vlastního čísla z #96 a nehni s ním:** 5× `NameType=Geo`,
+11× letopočet jako dítě, **26× nic** — tedy **38 % bez dohadu a zbylých
+26 se dál ptá**. **Těch 26 je ta správná odpověď, ne mez, kterou je
+potřeba dohnat.**
+
+**Můj counterexample, psaný jako vlastnost:** **role dostane jméno jen
+tam, kde ho lze ukázat v rozboru** — u každé takové věty musí být
+v hlášení vidět **který signál to byl** (`NameType=Geo`, letopočet), tak
+jako to teď vidíš u `:pass`; **věta bez signálu se dál ptá a nedostane
+nic**; `v roce 1935` **nesmí** dostat `kde` a `v Praze` **nesmí** dostat
+`kdy`; *„v tomto smyslu"*, *„v angličtině"*, *„ve své knize"* **zůstanou
+bez jména**; dvacet domén se závěry beze změny; jádrové relace 9/9; gate
+*Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky
+≥ 77/77; `mypy --strict` čistý; **korpus přeměřen s diffem po větách**
+— a **jestli poprvé někde vyskočí `ZAPSÁNO`, chci u každé takové věty
+doložení z textu, ne souhrn.**
+
+---
+
+## ARCHIV — kolo #97
+
+### Status: 🟢 PASS — W‑58 uzavřena
 
 **Kolo #97.** 1071 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **76/76**, **živá parita 55/55**, dialogy **19 / 48 / 31**,

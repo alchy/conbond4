@@ -1297,6 +1297,43 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-15",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "SIGNÁL Z ROZBORU DĚLÍ TVAR, NEURČUJE JMÉNO ROLE *(W‑61)*. "
+            "`v+Loc` byl NEJČASTĚJŠÍ tvar bez významu (42 z 250) a "
+            "slepoval dvě různé věci — „v Praze“ je místo, „v roce 1935“ "
+            "čas — takže jedno naučené mapování muselo být u jedné z nich "
+            "špatně a nebylo poznat u které. Tvar se proto dělí podle "
+            "toho, co o filleru říká ROZBOR: `NameType=Geo` a LETOPOČET "
+            "jako dítě (`NumType=Card`, čtyři číslice). Ani jedno není "
+            "seznam slov — obojí dává parser. ŽE „v Praze“ je `kde` a "
+            "„do Prahy“ `kam`, PLYNE Z PŘEDLOŽKY A PÁDU, ne ze signálu; "
+            "signál dělá jen to menší. SORT FILLERU POUŽÍT NELZE, a je "
+            "to strukturální důvod: podle § 3.6 sort PLYNE Z ROLE, takže "
+            "odvodit roli ze sortu je KRUH. SIGNÁLOVANÝ TVAR NEDĚDÍ "
+            "OBECNÝ: seed má `po+Loc → kudy` a dokud byl tvar jeden, "
+            "vycházelo z „Po roce 1990 byly nahrávky digitalizovány.“ "
+            "`digitalizovaný(kudy:rok)`, tedy CESTA MÍSTO ČASU. Jen "
+            "u PŘEDLOŽKOVÉ okolnosti — holý pád do měřené rodiny "
+            "nepatří. A 26 ze 42 výskytů signál NEMÁ („v bytě“, "
+            "„v tomto smyslu“, „v angličtině“); ty se dál PTAJÍ a je to "
+            "SPRÁVNÁ ODPOVĚĎ, ne mez"
+        ),
+        anchor="core_semantics.cascade:role_signal",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_geographic_filler_splits_the_shape",
+            "test_a_year_under_the_filler_splits_the_shape",
+            "test_without_a_signal_the_shape_stays_bare",
+            "test_place_and_time_no_longer_collide_under_one_shape",
+            "test_the_signal_does_not_name_the_role",
+            "test_the_question_says_where_the_signal_came_from",
+            "test_a_year_does_not_inherit_the_bare_mapping",
+            "test_the_split_shape_reaches_the_base",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(

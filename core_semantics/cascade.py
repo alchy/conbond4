@@ -664,6 +664,54 @@ def _preposition_of(token: Token, reading: Reading) -> Token | None:
     return None
 
 
+#: Jak se v tvaru role píše SIGNÁL z rozboru *(W‑61)*. Lomítko, protože
+#: `+` už drží předložku s pádem a `:` podtyp — třetí oddělovač dělá
+#: z tvaru čitelnou trojici `předložka+pád/signál`.
+SIGNAL_MARK = "/"
+
+#: Rys, kterým UD samo odlišuje ZEMĚPISNÉ jméno. Není to seznam slov:
+#: `NameType=Geo` dává parser, takže se nemá kde rozejít s korpusem.
+GEO_SIGNAL = "Geo"
+
+#: Signál pro LETOPOČET. Taky z rozboru: čtyřciferné `NumType=Card` jako
+#: dítě („v roce **1935**", „v letech **1910** – 1911"). Lemma `rok` by
+#: byl seznam slov; číslo pod ním je stavba.
+YEAR_SIGNAL = "rok"
+
+
+def role_signal(token: Token, reading: Reading) -> str:
+    """Co o filleru říká ROZBOR — `Geo`, `rok`, nebo nic *(W‑61)*.
+
+    **Neurčuje jméno role a určovat ho nesmí.** Že „v Praze" je `kde`
+    a „do Prahy" `kam`, plyne z PŘEDLOŽKY A PÁDU, ne z toho, že je Praha
+    místo. Signál dělá něco jiného a menšího: ROZDĚLUJE TVAR, který
+    dosud slepoval dvě různé věci. `v+Loc` je „v Praze" i „v roce 1935",
+    takže jedno naučené mapování muselo být u jedné z nich špatně —
+    a nebylo poznat, u které.
+
+    **Sort filleru se použít nedá a je to strukturální důvod** *(§ 3.6)*:
+    sort PLYNE Z ROLE (`kde` → `Place`), takže odvodit roli ze sortu je
+    kruh. K dispozici je jen to, co stojí v rozboru.
+
+    **Změřeno, ne odhadnuto** (238 vět, kolo #96): ze 42 výskytů `v+Loc`
+    má 5 filler s `NameType=Geo`, 11 má za dítě letopočet a **26 nemá
+    ani jedno** — „v bytě", „v kostele", „v tomto smyslu", „v angličtině",
+    „ve své knize". Těch 26 se dál PTÁ a je to správná odpověď, ne mez:
+    rozhodnout je by šlo jen seznamem slov.
+    """
+    if token.feat("NameType") == GEO_SIGNAL:
+        return GEO_SIGNAL
+    for child in reading.children(token.index):
+        feats = dict(child.feats)
+        if (
+            feats.get("NumType") == "Card"
+            and child.lemma.isdigit()
+            and len(child.lemma) == 4
+        ):
+            return YEAR_SIGNAL
+    return ""
+
+
 def surface_role(token: Token, reading: Reading) -> str:
     """Povrchové pojmenování okolnosti z PŘEDLOŽKY A PÁDU (§ 12/1).
 
@@ -687,6 +735,20 @@ def surface_role(token: Token, reading: Reading) -> str:
     # údaj. Tu chybu jsem si vyrobil sám, než se podtyp začal brát v potaz.
     _, _, subtype = token.deprel.partition(":")
     suffix = f":{subtype}" if subtype else ""
+    # SIGNÁL Z ROZBORU JE SOUČÁST TVARU, ze stejného důvodu jako podtyp
+    # *(W‑61)*. `v+Loc` slepoval „v Praze" a „v roce 1935" do jednoho
+    # tvaru, takže jedno naučené mapování muselo být u jedné z nich
+    # špatně — a nebylo poznat u které. Rozdělený tvar to rozhoduje
+    # ZVLÁŠŤ a v jeho jménu je VIDĚT, čím: `v+Loc/Geo`, `v+Loc/rok`.
+    # JEN U PŘEDLOŽKOVÉ OKOLNOSTI, a je to hranice měření, ne pohodlí:
+    # rozdělovalo se to, co slepovalo MÍSTO A ČAS („v Praze" × „v roce
+    # 1935"), a ta rodina je předložková. Holý pád (`Gen`, `Ins`) do ní
+    # nepatří a přidat mu signál by znamenalo rozšířit pravidlo tam, kde
+    # se nic neměřilo — a rozštěpit tvar, o kterém nikdo neřekl, že je
+    # dvojznačný.
+    signal = role_signal(token, reading) if preposition else ""
+    if signal:
+        suffix += f"{SIGNAL_MARK}{signal}"
     if preposition and case:
         return f"{preposition}+{case}{suffix}"
     if preposition:
@@ -1414,9 +1476,28 @@ def role_question(predication: Predication) -> str | None:
     if not shapes:
         return None
     which = ", ".join(f"„{shape}“" for shape in shapes)
+    # ODKUD SIGNÁL JE, MUSÍ BÝT VIDĚT *(W‑61)*. Tvar `v+Loc/Geo` sám
+    # o sobě vypadá jako vymyšlená kategorie; věta pod ním říká, že to
+    # četl PARSER, ne interpret — a že za jinou odpovědí u „v roce 1935“
+    # není nedůslednost, ale JINÝ TVAR.
+    signaly = sorted(
+        {shape.split(SIGNAL_MARK, 1)[1] for shape in shapes if SIGNAL_MARK in shape}
+    )
+    odkud = ""
+    if signaly:
+        popis = {
+            GEO_SIGNAL: "`NameType=Geo` na filleru",
+            YEAR_SIGNAL: "letopočet jako dítě filleru",
+        }
+        odkud = (
+            " (to za lomítkem je SIGNÁL Z ROZBORU — "
+            + ", ".join(f"`{sig}` = {popis.get(sig, sig)}" for sig in signaly)
+            + " — takže „v Praze“ a „v roce 1935“ jsou DVA RŮZNÉ TVARY "
+            "a odpověď na jeden neplatí pro druhý)"
+        )
     return (
-        f"Nevím, co znamená {which} — je to tvar, ne význam. Jak se ta "
-        f"role jmenuje (kde, kdy, kudy, odkud, …)?"
+        f"Nevím, co znamená {which} — je to tvar, ne význam{odkud}. Jak se "
+        f"ta role jmenuje (kde, kdy, kudy, odkud, …)?"
     )
 
 

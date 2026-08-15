@@ -215,7 +215,7 @@ PETROVICE = Dialogue(
     # Rozhodnutí člověka, ne vlastnost češtiny: `v`+Loc je „v Praze"
     # i „v pondělí". Do seedu proto nepatří — systém se na něj PTÁ
     # (N‑3) a tohle je zapsaná odpověď pro tuhle doménu.
-    roles=(("v+Loc", "kde"),),
+    roles=(("v+Loc/Geo", "kde"),),
     steps=(
         Step(
             text="Roník bydlí v Petrovicích.",
@@ -499,7 +499,7 @@ TIME_AND_PLACE = Dialogue(
     shapes=(PROPN_SUBJ, ("NOUN", "Sing", "Loc", "obl", Operation.EXISTS)),
     # Táž odpověď jako u Petrovic, a je to TÝŽ tvar: jedna věta člověka
     # zavírá `v`+Loc pro obě domény.
-    roles=(("v+Loc", "kde"),),
+    roles=(("v+Loc/Geo", "kde"),),
     steps=(
         Step(
             text="Petr jel do Prahy.",
@@ -1091,7 +1091,7 @@ INCLUSION = Dialogue(
         ("NOUN", "Sing", "Gen", "obl", Operation.SELF),
         ("NOUN", "Sing", "Nom", "nsubj", Operation.EXISTS),
     ),
-    roles=(("v+Loc", "kde"), ("během+Gen", "kdy")),
+    roles=(("v+Loc/Geo", "kde"), ("během+Gen", "kdy")),
     steps=(
         Step(
             text="Petrovice jsou součástí Plzně.",
@@ -1490,7 +1490,7 @@ DISCOURSE = Dialogue(
         ("NOUN", "Sing", "Nom", "root", Operation.SELF),
         ("NOUN", "Sing", "Ins", "root", Operation.SELF),
     ),
-    roles=(("v+Loc", "kde"),),
+    roles=(("v+Loc/Geo", "kde"),),
     steps=(
         Step(
             text="Jan je učitel.",
@@ -1625,7 +1625,7 @@ PRODROP = Dialogue(
         ("NOUN", "Sing", "Nom", "root", Operation.SELF),
         ("NOUN", "Sing", "Ins", "root", Operation.SELF),
     ),
-    roles=(("v+Loc", "kde"),),
+    roles=(("v+Loc/Geo", "kde"),),
     steps=(
         Step(
             text="Jan je učitel.",
@@ -2060,7 +2060,7 @@ TITLED_NAME = Dialogue(
     ),
     # Rozhodnutí člověka, ne vlastnost češtiny — týž důvod jako u `v`+Loc
     # v Petrovicích: „nad hrobem“ je místo, „nad ránem“ je čas.
-    roles=(("nad+Ins", "kde"), ("v+Loc", "kde")),
+    roles=(("nad+Ins", "kde"), ("v+Loc/Geo", "kde")),
     steps=(
         Step(
             text="Nad hrobem promluvil básník Josef Hora.",
@@ -2184,7 +2184,7 @@ TITLE_CLAIM = Dialogue(
         ("NOUN", "Sing", "Ins", "obl", Operation.EXISTS),
         ("PROPN", "Plur", "Loc", "obl", Operation.SELF),
     ),
-    roles=(("nad+Ins", "kde"), ("v+Loc", "kde")),
+    roles=(("nad+Ins", "kde"), ("v+Loc/Geo", "kde")),
     steps=(
         Step(
             text="Nad hrobem promluvil básník Josef Hora.",
@@ -2367,7 +2367,7 @@ PASSIVE = Dialogue(
         ("NOUN", "Sing", "Nom", "obj", Operation.SELF),
         ("PROPN", "Sing", "Loc", "obl", Operation.SELF),
     ),
-    roles=(("na+Loc", "kde"),),
+    roles=(("na+Loc/Geo", "kde"),),
     steps=(
         Step(
             text="Úmysly byly popsány.",
@@ -2466,6 +2466,127 @@ PASSIVE = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 21 · Kde a kdy — týž tvar, dva různé signály z rozboru
+# --------------------------------------------------------------------------
+
+SIGNAL = Dialogue(
+    name="Kde a kdy",
+    source="„Petr byl v roce 1935 v Praze.“",
+    shapes=(PROPN_SUBJ, ("NOUN", "Sing", "Loc", "root", Operation.SELF),
+            ("PROPN", "Sing", "Loc", "obl", Operation.SELF),
+            ("PROPN", "Sing", "Loc", "root", Operation.SELF)),
+    roles=(("v+Loc/Geo", "kde"), ("v+Loc/rok", "kdy")),
+    steps=(
+        Step(
+            text="Petr byl v roce 1935 v Praze.",
+            reading=sentence(
+                w("Petr", "Petr", "PROPN", 4, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("roce", "rok", "NOUN", 0, "root", Animacy="Inan", Case="Loc", Gender="Masc", Number="Sing"),
+                w("1935", "1935", "NUM", 4, "nummod", NumForm="Digit", NumType="Card"),
+                w("v", "v", "ADP", 7, "case", AdpType="Prep", Case="Loc"),
+                w("Praze", "Praha", "PROPN", 4, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            reads="být(kde:Praha, kdo:·Petr, kdy:rok)",
+            asks="1935",
+            point=(
+                "MÍSTO A ČAS V JEDNÉ VĚTĚ POD TOUŽ PŘEDLOŽKOU. Dokud byl "
+                "tvar jeden (`v+Loc`), byla tahle věta NEČITELNÁ: dva "
+                "členy by dostaly totéž jméno role a čtení s duplicitou "
+                "se nesmí vyrobit. Rozdělil je SIGNÁL Z ROZBORU — "
+                "`NameType=Geo` na „Praze“ a letopočet pod „roce“ — ne "
+                "seznam slov"
+            ),
+            limit=(
+                "VĚTA SE NEZAPÍŠE, a není to kvůli rolím: „1935“ visí "
+                "jako `nummod` pod „roce“ a rolí se nestává, takže se "
+                "hlásí jako ztracený člen. Je to PŘEDCHOZÍ mez, kterou "
+                "tahle změna nezvětšila ani nezmenšila — číslovka jako "
+                "součást časového údaje je vlastní rodina"
+            ),
+        ),
+        Step(
+            text="Petr byl v Praze.",
+            reading=sentence(
+                w("Petr", "Petr", "PROPN", 4, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Praze", "Praha", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            reads="být(kde:Praha, kdo:·Petr)",
+            writes="být(kde:Praha, kdo:Petr)",
+            point=(
+                "TÝŽ SIGNÁL DOJDE AŽ DO BÁZE. Bez tohohle kroku by "
+                "doména ukazovala jen rozdělení tvaru a nikdo by "
+                "neověřil, že se z něj stane zapsaný fakt"
+            ),
+        ),
+        Step(
+            text="Byl Petr v Praze?",
+            reading=sentence(
+                w("Byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("Petr", "Petr", "PROPN", 4, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Praze", "Praha", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="být(kde:Praha, kdo:·Petr)",
+            answers="A",
+            point=(
+                "DOLOŽENO ZÁPISEM z předchozího kroku — a je to týž "
+                "tvar `v+Loc/Geo` ve větě i v dotazu, takže se trefí na "
+                "týž výrok"
+            ),
+        ),
+        Step(
+            text="Petr byl v tomto smyslu první.",
+            reading=sentence(
+                w("Petr", "Petr", "PROPN", 6, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("byl", "být", "AUX", 6, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("v", "v", "ADP", 5, "case", AdpType="Prep", Case="Loc"),
+                w("tomto", "tento", "DET", 5, "det", Case="Loc", Gender="Masc,Neut", Number="Sing", PronType="Dem"),
+                w("smyslu", "smysl", "NOUN", 6, "obl", Animacy="Inan", Case="Loc", Gender="Masc", Number="Sing"),
+                w("první", "první", "ADJ", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", NumType="Ord", Number="Sing"),
+                w(".", ".", "PUNCT", 6, "punct"),
+            ),
+            reads="být(co:první, kdo:·Petr, v+Loc:smysl)",
+            asks="v+Loc",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA: „v tomto smyslu“ "
+                "NEMÁ SIGNÁL, takže tvar zůstane holý `v+Loc` a systém "
+                "se dál PTÁ. Těch 26 vět z 42 je SPRÁVNÁ ODPOVĚĎ, ne mez, "
+                "kterou je potřeba dohnat — rozhodnout je z tvaru by šlo "
+                "jen seznamem slov"
+            ),
+            limit=(
+                "Krok je ZÁMĚRNĚ POSLEDNÍ: nechává otevřenou otázku po "
+                "významu tvaru a další věta by se četla jako odpověď"
+            ),
+        ),
+    ),
+    note=(
+        "Dvacátý první akceptační dialog. `v+Loc` byl NEJČASTĚJŠÍ tvar "
+        "bez významu (42 výskytů z 250) a slepoval dvě různé věci: "
+        "„v Praze“ je místo, „v roce 1935“ čas. Jedno naučené mapování "
+        "proto muselo být u jedné z nich špatně — a nebylo poznat u které. "
+        "SIGNÁL NEURČUJE JMÉNO ROLE a určovat ho nesmí: že „v Praze“ je "
+        "`kde` a „do Prahy“ `kam`, plyne z PŘEDLOŽKY A PÁDU. Signál dělá "
+        "něco menšího — ROZDĚLUJE TVAR, o kterém se pak rozhoduje zvlášť."
+    ),
+    limit=(
+        "CO SE TÍM NEŘEŠÍ: 26 ze 42 výskytů `v+Loc` nemá signál žádný "
+        "(„v bytě“, „v kostele“, „v tomto smyslu“, „v angličtině“, „ve "
+        "své knize“) a jsou mezi nimi místa i časy. Sort filleru použít "
+        "NEJDE — podle § 3.6 plyne sort Z ROLE, takže odvodit roli ze "
+        "sortu je kruh."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -2487,4 +2608,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     TITLED_NAME,
     TITLE_CLAIM,
     PASSIVE,
+    SIGNAL,
 )

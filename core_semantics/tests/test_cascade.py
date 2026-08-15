@@ -435,7 +435,8 @@ def _roles_of(reading: Reading) -> list[str]:
 def test_a_preposition_at_the_root_means_it_is_not_the_nominal_predicate() -> None:
     """JÁDRO N‑4. „Petr BYL Prahou" je nesmysl, který se tvářil jako čtení."""
     roles = _roles_of(_copula_with_preposition())
-    assert "v+Loc" in roles
+    # Tvar nese SIGNÁL Z ROZBORU *(W‑61)*: „Praze" má `NameType=Geo`.
+    assert "v+Loc/Geo" in roles
     assert "co" not in roles
 
 
@@ -445,7 +446,7 @@ def test_the_role_stays_surface_and_is_asked_about() -> None:
     jinde."""
     verdict = cascade(_copula_with_preposition())
     assert verdict.decided is not None
-    assert surface_roles(verdict.decided.predication) == ("v+Loc",)
+    assert surface_roles(verdict.decided.predication) == ("v+Loc/Geo",)
     assert role_question(verdict.decided.predication) is not None
 
 
@@ -461,7 +462,7 @@ def test_the_answer_turns_the_shape_into_a_place() -> None:
     """A po odpovědi je to `kde`, takže se fillér zakotví jako `Place`
     (§ 3.6) — sort z ROLE, ne ze slova."""
     lexicon = czech_seed()
-    lexicon.teach_role("v+Loc", "kde", learned_from="test")
+    lexicon.teach_role("v+Loc/Geo", "kde", learned_from="test")
     verdict = cascade(
         _copula_with_preposition(), tiers=(*HARD_TIERS, role_mapping_tier(lexicon))
     )
@@ -1832,3 +1833,173 @@ def test_a_passive_sentence_goes_all_the_way_into_the_base() -> None:
     assert session.utter("Byly úmysly popsány?", _Recorded()).status is (
         QueryStatus.PROVEN_TRUE
     ), "role z `:pass` musí dojít až do báze, jinak se na ni nedá odpovědět"
+
+
+# --------------------------------------------------------------------------
+# SIGNÁL Z ROZBORU dělí tvar, neurčuje jméno role *(W‑61)*
+# --------------------------------------------------------------------------
+
+
+def _in_place(filler: str, lemma: str, *, geo: bool, year: bool) -> Reading:
+    tokens = [
+        _token(1, "Petr", "Petr", "PROPN", 3, "nsubj", Case="Nom", Number="Sing"),
+        _token(2, "byl", "být", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+        _token(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+    ]
+    tokens[1] = _token(2, "byl", "být", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos")
+    feats = {"Case": "Loc", "Number": "Sing"}
+    if geo:
+        feats["NameType"] = "Geo"
+    tokens.append(_token(4, filler, lemma, "PROPN" if geo else "NOUN", 2, "obl", **feats))
+    if year:
+        tokens.append(_token(5, "1935", "1935", "NUM", 4, "nummod", NumForm="Digit", NumType="Card"))
+    tokens[2] = _token(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc")
+    return Reading(tokens=tuple(tokens), provenance="test")
+
+
+def test_a_geographic_filler_splits_the_shape() -> None:
+    """`NameType=Geo` dává PARSER, ne seznam slov — nemá se kde rozejít
+    s korpusem."""
+    from core_semantics.cascade import surface_role
+
+    reading = _in_place("Praze", "Praha", geo=True, year=False)
+    assert surface_role(reading.tokens[3], reading) == "v+Loc/Geo"
+
+
+def test_a_year_under_the_filler_splits_the_shape() -> None:
+    """Letopočet je STAVBA (`NumType=Card`, čtyři číslice jako dítě), ne
+    lemma `rok` — to by byl seznam slov."""
+    from core_semantics.cascade import surface_role
+
+    reading = _in_place("roce", "rok", geo=False, year=True)
+    assert surface_role(reading.tokens[3], reading) == "v+Loc/rok"
+
+
+def test_without_a_signal_the_shape_stays_bare() -> None:
+    """26 ze 42 výskytů `v+Loc` signál NEMÁ — „v bytě", „v tomto smyslu",
+    „v angličtině". **Je to správná odpověď, ne mez k dohnání**:
+    rozhodnout je z tvaru by šlo jen seznamem slov."""
+    from core_semantics.cascade import surface_role
+
+    reading = _in_place("smyslu", "smysl", geo=False, year=False)
+    assert surface_role(reading.tokens[3], reading) == "v+Loc"
+
+
+def test_place_and_time_no_longer_collide_under_one_shape() -> None:
+    """CO TO KOUPILO: „Petr byl v roce 1935 v Praze." má DVĚ okolnosti
+    s TOUŽ předložkou a pádem. Dokud byl tvar jeden, dostaly by totéž
+    jméno role — a čtení s duplicitou se nesmí vyrobit, takže věta byla
+    NEČITELNÁ."""
+    reading = Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Number="Sing"),
+            _token(2, "byl", "být", "AUX", 4, "cop", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+            _token(4, "roce", "rok", "NOUN", 0, "root", Case="Loc", Gender="Masc", Number="Sing"),
+            _token(5, "1935", "1935", "NUM", 4, "nummod", NumForm="Digit", NumType="Card"),
+            _token(6, "v", "v", "ADP", 7, "case", AdpType="Prep", Case="Loc"),
+            _token(7, "Praze", "Praha", "PROPN", 4, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+            _token(8, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance="test",
+    )
+    jmena = {r.name for r in generate(reading)[0].predication.roles}
+    assert "v+Loc/Geo" in jmena and "v+Loc/rok" in jmena
+
+
+def test_the_signal_does_not_name_the_role() -> None:
+    """SIGNÁL NEURČUJE JMÉNO a určovat ho nesmí: že „v Praze" je `kde`
+    a „do Prahy" `kam`, plyne z PŘEDLOŽKY A PÁDU, ne z toho, že je Praha
+    místo. Bez naučeného mapování zůstane tvar povrchový."""
+    reading = _in_place("Praze", "Praha", geo=True, year=False)
+    predication = generate(reading)[0].predication
+    assert "v+Loc/Geo" in surface_roles(predication)
+    assert "kde" not in {r.name for r in predication.roles}
+
+
+def test_the_question_says_where_the_signal_came_from() -> None:
+    """Tvar `v+Loc/Geo` sám o sobě vypadá jako vymyšlená kategorie. Věta
+    pod ním musí říct, že to četl PARSER — a že za jinou odpovědí
+    u „v roce 1935" není nedůslednost, ale JINÝ TVAR."""
+    reading = _in_place("roce", "rok", geo=False, year=True)
+    otazka = role_question(generate(reading)[0].predication)
+    assert otazka is not None
+    assert "SIGNÁL Z ROZBORU" in otazka and "letopočet" in otazka
+
+
+def test_a_year_does_not_inherit_the_bare_mapping() -> None:
+    """NEJDŮLEŽITĚJŠÍ PŮLKA. V seedu je `po+Loc → kudy` a dokud byl tvar
+    jeden, platilo to i pro „Po roce 1990 byly nahrávky digitalizovány."
+    — v korpusu z toho vyšlo `digitalizovaný(kudy:rok)`, tedy CESTA
+    MÍSTO ČASU. Signálovaný tvar obecný NEDĚDÍ, takže se systém zeptá."""
+    lexicon = czech_seed()
+    assert lexicon.role_candidates("po+Loc"), "seed „po+Loc → kudy“ tu být má"
+    assert not lexicon.role_candidates("po+Loc/rok"), (
+        "kdyby se dědilo, vrátila by se vada „kudy:rok“"
+    )
+
+
+def test_the_split_shape_reaches_the_base() -> None:
+    """CELOU CESTOU PŘES `.utter(` *(W‑61)*. Bez toho by doložka měla
+    vynucení jen nad `surface_role` a nikdo by neověřil, že se rozdělený
+    tvar dostane až tam, kde na něm stojí odpověď — a že týž tvar ve
+    větě i v dotazu míří na týž výrok."""
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session
+    from core_semantics.ast import QueryStatus
+    from core_semantics.lexicon import RoleMapping
+
+    veta = Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Number="Sing"),
+            _token(2, "byl", "být", "AUX", 4, "cop", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+            _token(4, "Praze", "Praha", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance="test",
+    )
+    otazka = Reading(
+        tokens=(
+            _token(1, "Byl", "být", "AUX", 4, "cop", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Number="Sing"),
+            _token(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+            _token(4, "Praze", "Praha", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+            _token(5, "?", "?", "PUNCT", 4, "punct"),
+        ),
+        provenance="test",
+    )
+
+    class _Recorded:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(
+                text=text, readings=(otazka if text.endswith("?") else veta,)
+            )
+
+    lexicon = czech_seed()
+    lexicon.add_role(
+        RoleMapping(
+            surface="v+Loc/Geo",
+            canonical="kde",
+            learned_from="test W‑61",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    for case, deprel in (("Nom", "nsubj"), ("Loc", "root")):
+        lexicon.add(
+            LearnedPattern(
+                trigger=Trigger(
+                    lemma="", upos="PROPN", number="Sing", case=case, deprel=deprel
+                ),
+                operation=Operation.SELF,
+                learned_from="test W‑61",
+                status=PatternStatus.CONFIRMED,
+            )
+        )
+    session = Session(lexicon=lexicon)
+    assert session.utter("Petr byl v Praze.", _Recorded()).statement_id is not None
+    assert session.utter("Byl Petr v Praze?", _Recorded()).status is (
+        QueryStatus.PROVEN_TRUE
+    )

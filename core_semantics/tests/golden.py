@@ -248,7 +248,7 @@ D3 = Golden(
         tok(6, "Praze", "Praha", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
         tok(7, ".", ".", "PUNCT", 6, "punct"),
     ),
-    predication="být(kdo:·Petr, kdy:pondělí, v+Loc:Praha)",
+    predication="být(kdo:·Petr, kdy:pondělí, v+Loc/Geo:Praha)",
     point=(
         "VĚTA, KTERÁ SADU OPRAVILA. Vedla se tu jako zásadní mez — „dvě "
         "určení téhož tvaru, rozlišit je nejde“ — a byl to artefakt ručně "
@@ -790,7 +790,7 @@ L3 = Golden(
     #: DVĚ OKOLNOSTI, ROZLIŠENÉ PÁDEM, ne předložkou: „v+Loc" je místo,
     #: „v+Acc" čas. Že je tu jedna pojmenovaná (`kdy`) a druhá ne, drží
     #: rozdíl mezi tvarem a významem viditelný i ve zlatém záznamu.
-    predication="být(kdo:∀koncert, kdy:pondělí, v+Loc:Petrovice)",
+    predication="být(kdo:∀koncert, kdy:pondělí, v+Loc/Geo:Petrovice)",
     asks="ptá se, co znamená role „v+Loc“ — tvar zná, význam ne",
 )
 
@@ -806,7 +806,7 @@ L4 = Golden(
         tok(6, "týdne", "týden", "NOUN", 4, "obl", Animacy="Inan", Case="Gen", Gender="Masc", Number="Sing"),
         tok(7, "?", "?", "PUNCT", 4, "punct"),
     ),
-    predication="být(během+Gen:týden, kdo:∀koncert, v+Loc:Plzeň)",
+    predication="být(během+Gen:týden, kdo:∀koncert, v+Loc/Geo:Plzeň)",
     asks="ptá se na obě okolnostní role — „v+Loc“ i „během+Gen“",
 )
 
@@ -973,7 +973,7 @@ O1 = Golden(
         tok(4, "Petrovicích", "Petrovice", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
         tok(5, ".", ".", "PUNCT", 2, "punct"),
     ),
-    predication="bydlet(kdo:on, v+Loc:Petrovice)",
+    predication="bydlet(kdo:on, v+Loc/Geo:Petrovice)",
     asks=(
         "zájmeno čeká na ODKAZ. Bez předchozí věty není koho nabídnout — "
         "a nabídnout uzel odjinud by znamenalo tvrdit, že text odkazuje "
@@ -991,7 +991,7 @@ O2 = Golden(
         tok(4, "Praze", "Praha", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
         tok(5, ".", ".", "PUNCT", 2, "punct"),
     ),
-    predication="bydlet(kdo:on, v+Loc:·Praha)",
+    predication="bydlet(kdo:on, v+Loc/Geo:·Praha)",
     asks="týž tvar, ženský rod — shoda je vodítko, kterým se kandidáti ZUŽUJÍ",
 )
 
@@ -1005,7 +1005,7 @@ O3 = Golden(
         tok(4, "Plzni", "Plzeň", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
         tok(5, "?", "?", "PUNCT", 1, "punct"),
     ),
-    predication="bydlet(kdo:·Jan, v+Loc:·Plzeň)",
+    predication="bydlet(kdo:·Jan, v+Loc/Geo:·Plzeň)",
     asks="„v+Loc“ je v prázdném lexikonu pořád jen tvar, ne význam",
 )
 
@@ -1030,7 +1030,7 @@ P1 = Golden(
         tok(4, "Petrovicích", "Petrovice", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
         tok(5, ".", ".", "PUNCT", 1, "punct"),
     ),
-    predication="narodit(kdo:narodit, v+Loc:Petrovice)",
+    predication="narodit(kdo:narodit, v+Loc/Geo:Petrovice)",
     asks=(
         "podmět věta NEVYSLOVILA a v prázdné bázi není koho nabídnout — "
         "systém to řekne a nic si nedomýšlí"
@@ -1047,7 +1047,7 @@ P2 = Golden(
         tok(4, "Praze", "Praha", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
         tok(5, ".", ".", "PUNCT", 1, "punct"),
     ),
-    predication="narodit(kdo:narodit, v+Loc:·Praha)",
+    predication="narodit(kdo:narodit, v+Loc/Geo:·Praha)",
     asks="týž tvar v ženském rodě — rys nese VÍC hodnot („Fem,Neut“)",
     point=(
         "parser dává u tohohle tvaru `Gender=Fem,Neut` a "
@@ -1070,7 +1070,7 @@ P3 = Golden(
     ),
     #: TÁŽ SLOVESNÁ STAVBA, ale podmět VYSLOVENÝ — patro pro‑drop se sem
     #: nesmí plést. Kdyby přidalo roli i tady, vznikl by druhý podmět.
-    predication="narodit(kdo:·Jan, v+Loc:·Plzeň)",
+    predication="narodit(kdo:·Jan, v+Loc/Geo:·Plzeň)",
     asks="„v+Loc“ je v prázdném lexikonu pořád jen tvar, ne význam",
 )
 
