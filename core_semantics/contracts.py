@@ -1137,6 +1137,35 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-12",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "JMÉNO POD TITULEM je TEN ČLOVĚK, ne jeho třída. „básník "
+            "Josef Hora“ má jméno jako `flat` pod obecným jménem — a "
+            "`flat` znamená JEDNU ZMÍNKU, takže zmínka je `Josef_Hora` "
+            "a „básník“ zůstává jen v `form`. NESKLÁDÁ SE: "
+            "`básník_Josef_Hora` by byla třída, která není ani básník, "
+            "ani Hora, přesně jako `město_Praha` (O‑11). S identitou se "
+            "přesouvá i KVANTIFIKÁTOR — `upos` zmínky je `PROPN` podle "
+            "JMÉNA, ne `NOUN` podle hlavy: jinak by z věty o jednom "
+            "člověku vyšlo `∀Josef_Hora`, tvrzení o všech, kdo se tak "
+            "jmenují, a vada by se jen přestěhovala. Pád, číslo a kotva "
+            "do rozboru zůstávají HLAVĚ: tu pozici ve větě drží ona. "
+            "PROTIPŘÍKLAD JE V ROZBORU, ne ve stráži: „Město Praha“ má "
+            "`nmod`, ne `flat`, takže se tím nemění a dál se ptá, jakou "
+            "roli „Praha“ hraje (W‑53)"
+        ),
+        anchor="core_semantics.cascade:titled_name_of",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_person_is_the_node_not_the_title",
+            "test_the_title_does_not_become_a_class",
+            "test_a_modifier_name_is_left_alone",
+            "test_the_title_is_absorbed_not_dropped",
+            "test_the_quantifier_moves_with_the_identity",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(

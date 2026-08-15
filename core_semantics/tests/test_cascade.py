@@ -35,6 +35,7 @@ from core_semantics.lexicon import (
     LearnedPattern,
     Mood,
     Operation,
+    PatternStatus,
     Trigger,
     czech_seed,
 )
@@ -1285,3 +1286,139 @@ def test_the_apposition_could_be_identity_but_is_not_guessed() -> None:
         and statement.formula.predicate == P_SAME_AS
         for statement in session.kb.active()
     ), "identita se z apozice NEDOSAZUJE"
+
+
+# --------------------------------------------------------------------------
+# Jméno pod titulem — W‑53
+# --------------------------------------------------------------------------
+#
+# „Nad hrobem promluvil básník Josef Hora." se četla jako
+# `promluvit(kdo:∀básník)` — O VŠECH BÁSNÍCÍCH. Jméno nespadlo jen tak:
+# spadlo a NA JEHO MÍSTĚ ZŮSTAL KVANTIFIKÁTOR, který tam nepatří. Táž
+# rodina jako W‑48 — fakt o někom jiném, než o kom věta mluví.
+
+
+def _titled(title: str, first: str, second: str, deprel: str = "flat") -> Reading:
+    return Reading(
+        tokens=(
+            _token(1, title, title, "NOUN", 4, "nsubj", Case="Nom", Number="Sing", Gender="Masc", Animacy="Anim"),
+            _token(2, first, first, "PROPN", 1, deprel, Case="Nom", Number="Sing", Gender="Masc"),
+            _token(3, second, second, "PROPN", 1, deprel, Case="Nom", Number="Sing", Gender="Masc"),
+            _token(4, "promluvil", "promluvit", "VERB", 0, "root", Number="Sing", Gender="Masc"),
+            _token(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_the_person_is_the_node_not_the_title() -> None:
+    """Hlavou je JMÉNO. Věta mluví o jednom člověku, ne o všech básnících."""
+    reading = _titled("básník", "Josef", "Hora")
+    subject = generate(reading)[0].predication.role(ROLE_SUBJECT)
+    assert subject is not None
+    assert subject.lemma == "Josef_Hora"
+
+
+def test_the_title_does_not_become_a_class() -> None:
+    """`básník_Josef_Hora` by byla třída, která není ani básník, ani
+    Hora — přesně jako `město_Praha`."""
+    reading = _titled("básník", "Josef", "Hora")
+    subject = generate(reading)[0].predication.role(ROLE_SUBJECT)
+    assert subject is not None
+    assert "básník" not in subject.lemma
+
+
+def test_a_modifier_name_is_left_alone() -> None:
+    """PROTIPŘÍKLAD, a rozbor ho rozlišuje sám: „Město **Praha**" má
+    jméno jako `nmod`, ne `flat`. `flat` znamená JEDNU ZMÍNKU (titul
+    a jméno míří na jednoho člověka), `nmod` je samostatný přívlastek —
+    takže „Město Praha" se tímhle nemění a nemusí se hlídat zvlášť."""
+    from core_semantics.cascade import titled_name_of
+
+    reading = _titled("město", "Praha", "Praha", deprel="nmod")
+    assert titled_name_of(reading.tokens[0], reading) == ()
+
+
+def test_the_title_is_absorbed_not_dropped() -> None:
+    """Titul se do lemmatu neskládá, ale ani nemizí: je v `form`, takže
+    je v přepisu vidět, o čí titul šlo, a nehlásí se jako ztracený."""
+    from core_semantics.cascade import dropped_tokens
+
+    reading = _titled("básník", "Josef", "Hora")
+    predication = generate(reading)[0].predication
+    assert dropped_tokens(reading, predication) == ()
+    subject = predication.role(ROLE_SUBJECT)
+    assert subject is not None
+    assert "básník" in subject.form
+
+
+def test_the_quantifier_moves_with_the_identity() -> None:
+    """DRUHÁ PŮLKA OPRAVY, a bez ní by ta první jen předstírala, že se
+    stalo dost: jméno by bylo v uzlu, ale kdyby ze zmínky zůstal `upos`
+    hlavy (`NOUN`), vyšlo by `∀Josef_Hora` — tvrzení o VŠECH, kdo se tak
+    jmenují. Vada by se z „všichni básníci" přesunula na „všichni Horové"
+    a nikdo by si toho nevšiml, protože uzel by se jmenoval správně.
+
+    Jde to celou cestou přes `.utter(`, ne přes `generate`: hlásí se tím
+    stav BÁZE, a to je jediné místo, kde je vidět, že se ta věta nezapsala
+    o všech.
+    """
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session
+    from core_semantics.ast import QueryStatus
+
+    veta = _titled("básník", "Josef", "Hora")
+    otazka = Reading(
+        tokens=(
+            _token(1, "Promluvil", "promluvit", "VERB", 0, "root", Number="Sing", Gender="Masc"),
+            _token(2, "básník", "básník", "NOUN", 1, "nsubj", Case="Nom", Number="Sing", Gender="Masc", Animacy="Anim"),
+            _token(3, "?", "?", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+
+    o_nem = Reading(
+        tokens=(
+            _token(1, "Promluvil", "promluvit", "VERB", 0, "root", Number="Sing", Gender="Masc"),
+            _token(2, "Josef", "Josef", "PROPN", 1, "nsubj", Case="Nom", Number="Sing", Gender="Masc", Animacy="Anim"),
+            _token(3, "Hora", "Hora", "PROPN", 2, "flat", Case="Nom", Number="Sing", Gender="Masc", Animacy="Anim"),
+            _token(4, "?", "?", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    nahrano = {
+        "Nad hrobem promluvil básník Josef Hora.": veta,
+        "Promluvil básník?": otazka,
+        "Promluvil Josef Hora?": o_nem,
+    }
+
+    class _Recorded:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(text=text, readings=(nahrano[text],))
+
+    # Tvar `PROPN/Sing/Nom/nsubj` je POTVRZENÝ ČLOVĚKEM, ne v seedu:
+    # bez něj by se systém právem ptal na kvantifikátor a věta by se
+    # nezapsala — a test by pak měřil to doptání, ne opravu.
+    lexicon = czech_seed()
+    lexicon.add(
+        LearnedPattern(
+            trigger=Trigger(
+                lemma="", upos="PROPN", number="Sing", case="Nom", deprel="nsubj"
+            ),
+            operation=Operation.SELF,
+            learned_from="test W‑53",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    session = Session(lexicon=lexicon)
+    session.utter("Nad hrobem promluvil básník Josef Hora.", _Recorded())
+    # Obě půlky v jednom testu ZÁMĚRNĚ: samotné `U` na druhé otázce by
+    # prošlo i tehdy, kdyby se věta nezapsala vůbec.
+    assert session.utter("Promluvil Josef Hora?", _Recorded()).status is (
+        QueryStatus.PROVEN_TRUE
+    ), "o tom člověku se to řeklo, takže se to o něm musí vědět"
+    assert session.utter("Promluvil básník?", _Recorded()).status is (
+        QueryStatus.UNKNOWN
+    ), "věta o jednom člověku nesmí doložit tvrzení o všech básnících"

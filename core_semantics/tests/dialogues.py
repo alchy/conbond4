@@ -2037,6 +2037,126 @@ FULL_NAME = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 18 · Básník Josef Hora — JMÉNO POD TITULEM a kvantifikátor, který po něm zbyl
+# --------------------------------------------------------------------------
+
+TITLED_NAME = Dialogue(
+    name="Básník Josef Hora",
+    source="„Nad hrobem promluvil básník Josef Hora. … Promluvil básník?“",
+    shapes=(
+        PROPN_SUBJ,
+        NOUN_SUBJ_SG,
+        ("NOUN", "Sing", "Ins", "obl", Operation.EXISTS),
+        ("PROPN", "Plur", "Loc", "obl", Operation.SELF),
+    ),
+    # Rozhodnutí člověka, ne vlastnost češtiny — týž důvod jako u `v`+Loc
+    # v Petrovicích: „nad hrobem“ je místo, „nad ránem“ je čas.
+    roles=(("nad+Ins", "kde"), ("v+Loc", "kde")),
+    steps=(
+        Step(
+            text="Nad hrobem promluvil básník Josef Hora.",
+            reading=sentence(
+                w("Nad", "nad", "ADP", 2, "case", AdpType="Prep", Case="Ins"),
+                w("hrobem", "hrob", "NOUN", 3, "obl", Animacy="Inan", Case="Ins", Gender="Masc", Number="Sing"),
+                w("promluvil", "promluvit", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("básník", "básník", "NOUN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("Josef", "Josef", "PROPN", 4, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("Hora", "Hora", "PROPN", 4, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="promluvit(kde:hrob, kdo:·Josef_Hora)",
+            anchors=("básník Josef Hora → Josef_Hora (založen)",),
+            writes="promluvit(kde:hrob, kdo:Josef_Hora)",
+            point=(
+                "ZMÍNKA JE ČLOVĚK, NE TITUL. Dokud jméno padalo, četla se "
+                "tahle věta jako `promluvit(kdo:∀básník)` — o VŠECH "
+                "BÁSNÍCÍCH. Jméno nespadlo jen tak: spadlo a NA JEHO MÍSTĚ "
+                "ZŮSTAL KVANTIFIKÁTOR, který tam nepatří. „básník“ přitom "
+                "nemizí — je v `form`, takže je v přepisu vidět, o čí "
+                "titul šlo"
+            ),
+        ),
+        Step(
+            text="Promluvil Josef Hora?",
+            reading=sentence(
+                w("Promluvil", "promluvit", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("Josef", "Josef", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("Hora", "Hora", "PROPN", 2, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
+            ),
+            reads="promluvit(kdo:·Josef_Hora)",
+            anchors=("Josef Hora → Josef_Hora (kanonicky; týž uzel, o kterém už řeč byla)",),
+            answers="A",
+            point=(
+                "TÝŽ UZEL bez titulu — a to je půlka opravy, kterou by "
+                "samotné složení lemmatu nedalo: kdyby ze zmínky zůstal "
+                "`upos` hlavy, byl by v bázi `∀Josef_Hora`, tvrzení o "
+                "VŠECH, kdo se tak jmenují, a tahle otázka by dala `U`"
+            ),
+        ),
+        Step(
+            text="Promluvil básník?",
+            reading=sentence(
+                w("Promluvil", "promluvit", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("básník", "básník", "NOUN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
+            ),
+            reads="promluvit(kdo:∀básník)",
+            answers="U",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA, a je to ta NEJDRAŽŠÍ "
+                "půlka celé vady: o VŠECH BÁSNÍCÍCH nikdo nic neřekl, "
+                "takže `U`. Dokud se jméno zahazovalo, dala tahle otázka "
+                "`A` — a vypadala by jako doložený fakt, doložený větou, "
+                "která mluvila o jednom člověku"
+            ),
+        ),
+        Step(
+            text="Město Praha leží v Čechách.",
+            reading=sentence(
+                w("Město", "město", "NOUN", 3, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+                w("Praha", "Praha", "PROPN", 1, "nmod", Case="Nom", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("leží", "ležet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("v", "v", "ADP", 5, "case", AdpType="Prep", Case="Loc"),
+                w("Čechách", "Čechy", "PROPN", 3, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="ležet(kde:Čechy, kdo:∀město)",
+            asks="Praha",
+            point=(
+                "PROTIPŘÍKLAD PŘÍMO V SADĚ, a rozbor ho rozlišuje sám: "
+                "„Praha“ visí pod „Město“ jako `nmod`, ne `flat`. `flat` "
+                "znamená JEDNU ZMÍNKU (titul a jméno míří na jednoho "
+                "člověka), `nmod` je samostatný přívlastek — takže tahle "
+                "věta se opravou NEMĚNÍ a dál se ptá, jakou roli „Praha“ "
+                "hraje. Kdyby se změnila, byla by to tichá vedlejší škoda"
+            ),
+            limit=(
+                "Krok je ZÁMĚRNĚ POSLEDNÍ: nechává otevřenou otázku po "
+                "roli a další věta by se četla jako odpověď na ni"
+            ),
+        ),
+    ),
+    note=(
+        "Osmnáctý akceptační dialog, a je o TŘECH VĚCECH NAJEDNOU, které "
+        "vypadají jako jedna. Že je jméno v uzlu, je jen první: druhá je, "
+        "že se titul NESKLÁDÁ (`básník_Josef_Hora` by byla třída, která "
+        "není ani básník, ani Hora, přesně jako `město_Praha`), a třetí, "
+        "že se s identitou musí přesunout i KVANTIFIKÁTOR. Samotné složení "
+        "lemmatu opravu jen předstírá: uzel by se jmenoval správně a věta "
+        "by pořád tvrdila něco o všech."
+    ),
+    limit=(
+        "CO SE TÍM NEŘEŠÍ: `nmod` pod obecným jménem — „Město Praha“. "
+        "Rozbor ho dává jinou hranou, takže se opravou nemění (poslední "
+        "krok), ale co ta hrana znamená, se tím nerozhodlo. Systém se dál "
+        "ptá a je to správně: „město Praha“ je apozice, kdežto „ulice "
+        "Karla Čapka“ je přívlastek o někom úplně jiném."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -2055,4 +2175,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     ATTRIBUTE,
     SUBORDINATE,
     FULL_NAME,
+    TITLED_NAME,
 )

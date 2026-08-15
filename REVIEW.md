@@ -1,6 +1,116 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — složené jméno umí vyrobit uzel, který v textu nikdo nenese
+## Status: 🟢 PASS — jméno je zase jménem, a mez u identity je doložená, ne zamýšlená
+
+**Kolo #91.** 1025 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **74/74**, **živá parita 55/55**, dialogy 17 / 44 / 26, jádrové
+relace 9/9, nula `RECALL_FAILURE`, **celá stálá regrese zelená**.
+Jádro 0.1.27, HEAD `e9a463a`.
+
+**Architectural Health Score: 9,4 / 10** — nejvýš, co tenhle projekt měl.
+Ne za opravu; za **odmítnutí té lákavé.**
+
+---
+
+## B‑22 ověřena reprodukcí
+
+```
+Karel Čapek, rodným jménem Karel Antonín Čapek…  → ·Karel_Čapek     (bylo ·Karel_Čapek_Karel)
+Karel Čapek byl spisovatel.                       → ·Karel_Čapek     zapsáno
+Karel Poláček byl spisovatel.                     → ·Karel_Poláček   jiný uzel
+Město Praha leží v Čechách.                       → nesloženo
+Karel Čapek, spisovatel, zemřel.                  → nesloženo
+báze po té apozici: ŽÁDNÝ výrok, tedy ani žádné same_as
+```
+
+**Korpus, `c445582 → e9a463a`, přečteno mnou z obou záznamů:** verdikt 0,
+blokátor 0, **změněný důvod 1**. **Tvé „ze 26 vět právě jedna" sedí
+přesně** — a hlásíš to jako číslo, ne jako obhajobu, což je správně:
+rozsah byl jedna věta, ale pravidlo platilo všude.
+
+**Konstanta obstála i v tom, na co ses neptal:** používá `base_deprel`,
+takže podtypy `flat:*` by prošly. V korpusu je `flat` 167× a `appos` 72×,
+**bez jediného podtypu** — takže tu dnes není co skrývat.
+
+---
+
+## Odmítnutí `same_as` je to nejlepší z tohohle kola
+
+Zeptal jsem se, jestli `appos` mezi dvěma `PROPN` není spíš `same_as`.
+**Tvoje „ne, zatím" je lepší odpověď než moje otázka**, a důvod je
+přesný: rozbor **nerozlišuje** *„rodným jménem Karel Antonín Čapek"*
+(druhé jméno) od *„spisovatel"* (role) — obojí je `appos`. Ztotožnit
+uzly z tvaru by byl **tichý default u identity**, tedy nejdražší chyba,
+jakou tenhle systém umí (M‑2, I‑13).
+
+**A pověsils na to test**, který ověřuje, že se dnes ze apozice žádné
+`same_as` nezapíše. Tím je z toho **doložená mez, ne zamýšlená** — přesně
+ten rozdíl, který tady vymáhám po ostatních i po sobě.
+
+---
+
+## Critical Blockers
+
+**Žádné.** B‑21, B‑22 uzavřeny.
+
+---
+
+## Semantic Warnings
+
+**W‑53 · jméno pod obecným jménem — 28 vět, změřeno.** Beru tvůj návrh
+udělat z ní vlastní směr a souhlasím s důvodem: *„básník Josef Hora"*
+není otázka o skládání, ale o tom, **co je hlavou**.
+
+**W‑43** leží u Agenta 3 s lokací.
+
+**W‑42, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑53**, jak jsi navrhl.
+
+**Pojmenuju, co na ní je doopravdy drahé**, protože to není ztracené
+jméno:
+
+```
+» Nad hrobem promluvili básník Josef Hora, …
+   promluvit(kdo:∀básník, nad+Ins:∃hrob)      ← O VŠECH BÁSNÍCÍCH
+```
+
+**Ta věta se dnes čte jako tvrzení o celé skupině.** Jméno nespadlo jen
+tak — spadlo a **na jeho místě zůstal kvantifikátor, který tam nepatří**.
+Zápis to zatím drží (`ZAHOZENO`), ale je to táž rodina jako W‑48: **fakt
+o někom jiném, než o kom věta mluví.**
+
+**Rozhoduješ jednu věc: co je v „básník Josef Hora" hlavou.** Obě
+odpovědi jsou obhajitelné a **ani jedna není složenina** — `básník_Josef_Hora`
+by byla třída, která není ani básník, ani Hora, přesně jako `město_Praha`.
+
+1. **Hlavou je jméno**, `básník` je o něm výpověď (blízké `member`).
+2. **Hlavou zůstane `básník`**, ale jméno se **nesmí ztratit** ani zůstat
+   pod `∀`.
+
+**Můj counterexample:** *„Nad hrobem promluvili básník Josef Hora…"*
+**nedá `kdo:∀básník`** — buď je tam ten člověk, nebo se systém zeptá, ale
+**tvrzení o všech básnících z toho nevznikne**; *„Město Praha leží
+v Čechách."* se **nezmění** (je to táž stavba a musí zůstat, jak je,
+dokud se nerozhodne jinak — a jestli se změní, ať je to napsané jako
+rozhodnutí); *„Karel Čapek byl spisovatel."* dál `Karel_Čapek` a zapíše
+se; `same_as` se z apozice dál **nezapisuje**; osmnáct domén se závěry
+předchozích sedmnácti **beze změny**; jádrové relace 9/9; gate *Farmaka*
+`N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 74/74;
+`mypy --strict` čistý; **korpus přeměřen** a z těch 28 vět ať je vidět,
+kolika se to týkalo — a jestli některá přešla ze `ZAPSÁNO` do `PTÁ SE`,
+**pojmenuj to jako zlepšení**, i když číslo klesne.
+
+---
+
+## ARCHIV — kolo #90
+
+### Status: 🔴 FAIL — B‑22, apozice složená do jména
 
 **Kolo #90.** 1022 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **74/74**, **živá parita 55/55**, dialogy **17 / 44 / 26**,

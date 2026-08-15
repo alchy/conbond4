@@ -402,7 +402,68 @@ def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
     )
 
 
+def titled_name_of(token: Token, reading: Reading) -> tuple[Token, ...]:
+    """Jméno osoby pod OBECNÝM jménem — „básník **Josef Hora**" *(W‑53)*.
+
+    **Rozbor to rozlišuje a je to celý klíč.** „básník Josef Hora" má
+    jméno jako `flat` pod obecným jménem, kdežto „Město **Praha**" má
+    `nmod`. `flat` znamená, že ty tokeny tvoří JEDNU ZMÍNKU — titul
+    a jméno odkazují na jednoho člověka — zatímco `nmod` je samostatný
+    přívlastek. „Město Praha" se tedy tímhle nemění, a nemusí se to
+    hlídat zvlášť.
+
+    **Hlavou je JMÉNO, ne titul.** „Nad hrobem promluvil básník Josef
+    Hora." mluví o JEDNOM člověku; dokud jméno padalo, četla se ta věta
+    jako `promluvit(kdo:∀básník)`, tedy o VŠECH BÁSNÍCÍCH. Jméno
+    nespadlo jen tak — spadlo a na jeho místě zůstal kvantifikátor,
+    který tam nepatří. Je to táž rodina jako W‑48: fakt o někom jiném,
+    než o kom věta mluví.
+
+    **A NENÍ TO SLOŽENINA.** `básník_Josef_Hora` by byla třída, která
+    není ani básník, ani Hora — přesně jako `město_Praha`.
+    """
+    # Titul je OBECNÉ jméno — `NOUN`. Na `PROPN` se ta stavba nevztahuje:
+    # tam už jde o víceslovné jméno („Karel Čapek") a to skládá
+    # `name_parts_of`. Zájmeno ani sloveso titul nést nemůže.
+    if token.upos == "NOUN":
+        jmena = tuple(
+            child
+            for child in reading.children(token.index)
+            if base_deprel(child.deprel) in NAME_CONTINUATION
+            and child.upos == "PROPN"
+        )
+        if jmena:
+            return tuple(sorted(jmena, key=lambda t: t.index))
+    return ()
+
+
 def _composed_mention(token: Token, reading: Reading) -> Mention:
+    titul = titled_name_of(token, reading)
+    if titul:
+        # HLAVOU JE JMÉNO. Titul se do lemmatu NESKLÁDÁ — byla by z něj
+        # třída, která není ani básník, ani Hora — ale ani nemizí: nese
+        # ho `form`, takže je v přepisu vidět, o čí titul šlo.
+        #
+        # KAŽDÝ DÍL ZMÍNKY MÁ SVŮJ DŮVOD, ODKUD SE BERE:
+        #   `token_index` … HLAVY. Je to kotva do rozboru; na hlavě visí
+        #       vztah ke slovesu, takže role a pád se počítají z ní.
+        #   `feats` … HLAVY. Pád a číslo přiděluje VĚTA té pozici, a tu
+        #       pozici drží hlava („s básníkem Josefem Horou" — Ins).
+        #   `upos` … JMÉNA. Tohle je ta druhá půlka opravy: `upos`
+        #       neříká, kde zmínka stojí, ale CO JE ZAČ, a rozhoduje se
+        #       podle něj kvantifikátor. S `NOUN` by z „básník Josef
+        #       Hora" vyšlo `∀Josef_Hora`, tedy tvrzení o VŠECH, kdo se
+        #       tak jmenují — jméno by sice bylo v uzlu, ale kvantifikátor
+        #       by na jeho místě zůstal ten původní, což je přesně ta
+        #       vada, ne její oprava.
+        #   `lemma` … JMÉNA. Identita uzlu.
+        return Mention(
+            lemma="_".join(p.lemma for p in titul),
+            form=" ".join([token.form, *(p.form for p in titul)]),
+            token_index=token.index,
+            upos=titul[0].upos,
+            feats=token.feats,
+        )
     jmeno = name_parts_of(token, reading)
     if jmeno:
         # VÍCESLOVNÉ JMÉNO. Díly stojí ZA hlavou, protože tak stojí
@@ -470,6 +531,7 @@ def _nominal(token: Token, reading: Reading, name: str) -> RoleReading:
         # vedle vlastního čtení — táž třída jako W‑20.
         absorbed=tuple(t.index for t in attributes_of(token, reading))
         + tuple(t.index for t in name_parts_of(token, reading))
+        + tuple(t.index for t in titled_name_of(token, reading))
         + ((possessive.index,) if possessive else ()),
         awaiting=AWAITING_REFERENCE if possessive else "",
     )
