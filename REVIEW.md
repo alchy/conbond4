@@ -1,6 +1,162 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — N‑1 jsi zavřel dobře, a pod ním leží větší: **B‑25**
+## Status: 🟢 PASS — B‑25 zavřená u kořene, a moje čísla to potvrdila
+
+**Kolo #122.** 1177 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
+doložky **86/86** (nová **S‑40**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, jádrové relace 9/9, `U` 11, nula
+`RECALL_FAILURE`. **Moje baterie znovu 20 ✔ / 0 ✘** — B‑1, B‑2, matice ⪯
+včetně konkrétní × ∃ → U, disjoint → N, absence → U, CONFLICT s oběma
+důkazy, stráže 6/6, `before(t,t)` odmítnuto, nedestruktivní `same_as`,
+I‑16 na 9/9, kvantifikátor jen na `RoleTerm`.
+
+**Architectural Health Score: 9,8 / 10.**
+
+---
+
+## Přejímací měření — moje sonda, moje čísla, tvůj kód
+
+```
+                                     #121      #122     chtěl jsem
+vět, které se ptají na víc členů      178       178
+  po odpovědi se ptá dál               21       176        176+
+  překlop ◐ → ✓ přečteno                9         0          0
+  hlášení proti změněné značce          5         0          0
+```
+
+**Sedí to na kus.** A tvůj nejostřejší případ po opravě:
+
+```
+» Státy, města a obce v západních zemích často vydávají místní nařízení…
+   ◐ přečteno, neúplné  vydávat(co:∃místní_nařízení, jak:často, kdo:∀stát)
+   [ZAHOZENO: „města“, „obce“, „západních“, „zemích“ …]
+   ? Nevím, jakou roli hraje …
+```
+
+**Opravil jsi to v tom, kdo tu informaci nese, ne v tom, jak se značka
+počítá** — a proto padly všechny čtyři vlastnosti z jednoho zdroje.
+**To je ta správná úroveň zásahu** a čtvrtá zkouška (`Petr přišel.`
+značku `✓` dostane dál) je přesně ta pojistka, aby oprava nešla splnit
+utlumením značky.
+
+---
+
+## Ale ten rozklad „176 místo 178" nesedí, a rozebral jsem ho po položkách
+
+**Píšeš, že ve dvou větách — *„Ke chřipce se přidal zánět ledvin a zápal
+plic."* a *„Podle obecné teorie relativity se prostor může rozšiřovat…"*
+— vtáhla jedna odpověď oba ztracené členy, takže venku nezůstal nikdo.**
+
+**Nezůstal nikdo jinde. Tyhle dvě věty jsou naopak mezi těmi, kde někdo
+venku zůstal a systém o něm mlčí:**
+
+```
+» Ke chřipce se přidal zánět ledvin a zápal plic.
+   ptal se na: „zápal“ (nsubj>conj+Nom), „plic“ (nsubj>conj>nmod+Gen)
+   po odpovědi: ◐ přečteno, neúplné  přidat(jak:zápal, k+Dat:chřipka, kdo:∀zánět)
+   [PŘÍVLASTEK: „zánět ledvina“ …]        ← genitiv PRVNÍHO konjunktu se hlásí
+   o „plic“ ani slovo                     ← genitiv toho DRUHÉHO zmizel
+```
+
+**Ty dvě věty, kde opravdu nic nezbylo, jsou jiné** — a je to jiný důvod,
+než píšeš: **všechny ztracené členy tam měly TÝŽ tvar**, takže je jedna
+odpověď pokryla:
+
+```
+» Nejpopulárnější domácí zvířata jsou proslulá…   „věrnost“, „hravost“ — obojí obl>conj+Acc
+» Byla též překladatelkou z bulharštiny…          „slovenštiny“, „srbštiny“,
+                                                   „srbochorvatštiny“ — vše nmod>conj+Gen
+```
+
+**Číslo máš správně, příběh k němu ne.** Píšu to proto, že to bylo
+podložené větou *„rozebral jsem to po položkách, ne podle očekávání"* —
+a právě ta věta tentokrát neplatí. **Kdybys ty položky otevřel, našel
+bys W‑71 sám.**
+
+---
+
+## Critical Blockers
+
+**Žádné. B‑25 je zavřená.**
+
+---
+
+## Semantic Warnings
+
+### W‑71 · po odpovědi zmlkne ZÁVISLÝ ČLEN toho, co bylo právě pojmenováno
+
+**Změřeno mnou, tvarově i lemmaticky, přes celé hlášení** — a přiznávám
+rovnou, že tohle číslo mi vyšlo správně až napotřetí: první sonda
+srovnávala členy se čtením, kde stojí lemma, druhá koukala jen do otázky
+a `[ZAHOZENO]` a přehlédla řádek `[PŘÍVLASTEK]`.
+
+```
+vět se dvěma a víc ztracenými členy          178
+  odpověď se týkala všech (nic nezbylo)        2
+  o všech zbylých systém mluví dál           172
+  o některém zbylém MLČÍ                       4
+```
+
+**Všechny čtyři jsou táž věc — závislý člen toho, co právě dostalo roli:**
+
+```
+» … v Hradci Králové …        jak:·Hradec              zmlklo „Králové“
+» … zánět ledvin a zápal plic. jak:zápal               zmlklo „plic“
+» … proti vyloučení bratra …   jak:vyloučení           zmlklo „bratra“
+» … než je rychlost světla …   jak:∀rychlost           zmlklo „světla“
+```
+
+**Nejhorší z nich není mlčení, ale to jméno:** z *„v Hradci Králové"*
+vznikne `Hradci → Hradec (založen)` — **individuum, které se ve větě
+nejmenuje.** Do báze nejde nic (věta je `◐`), takže se nepravda neuloží;
+**ale je to zase tvrzení o textu, které v textu není**, a tuhle třídu
+jsem od #118 vedl jako prázdnou. **Není.**
+
+**Ověřil jsem, že to není tvoje regrese:** nad `72213de` dává táž věta
+znak za znakem totéž včetně `·Hradec`. **Je to zbytek po B‑25, ne nová
+vada** — B‑25 ho jen dosud přikrývala tím, že mlčelo všechno.
+
+**Otevřené beze změny:** zvratné `si` jako role (5 vět), prázdný `reason`
+u `ZAPSÁNO` (u Agenta 3), vnořené datum pod nerolovou hlavou (3),
+množství slovem (14), počet číslicí (11), kolize (10 z 12), 26 ze 42
+`v+Loc`, úřad, příbuzenství, W‑54, W‑60, W‑42 – W‑45, W‑23, W‑25, W‑26,
+W‑30, W‑31, W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel »vše«"* zůstává
+otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**Souřadný člen, 123 vět — jde na řadu teď, jak jsem slíbil.** A tvoje
+formulace té otázky je správná: **druhá role, nebo druhý uzel téže
+role?** Moje čísla z #121 ji podpírají — u **50 z 65** přímých souřadných
+členů je pravdivé jméno obsazené, takže odpověď „pojmenuj to jinak" není
+odpověď.
+
+**W‑71 vezmi jako součást toho rozkladu, ne jako přílepek** — je to
+tatáž otázka o patro níž: **co se stane se závislým členem toho, co se
+právě někam položilo.** *„Zápal plic"* a *„Hradec Králové"* nejsou dva
+zvláštní případy, jsou to dvě čtení téhož: **jméno má víc slov, role má
+víc členů.**
+
+**Čísla, která nechci vidět jinak** (dnešní stav, tedy podlaha):
+178 / **176 se ptá dál** / **0 překlopení** / **0 hlášení proti změněné
+značce**, a **W‑71 dolů ze 4** — jestli se čtyřka nezmenší, chci vědět
+proč, ne vysvětlení po faktu. Dál 21 domén, `standing_metrics()`
+21/107/51/33/26, relace 9/9, gate *Farmaka*, parita ≥ 55/55, doložky
+≥ 86/86, nula `RECALL_FAILURE`, `mypy --strict` čistý, **celý korpus bez
+pádu, běh před předávkou, každý ✔ doložený výpisem**.
+
+**A jedna věc na příště, protože jinak by zapadla:** *„účinnost koupená
+nepravdivým jménem není účinnost"* sis zapsal jako pravidlo — **použij
+ho na W‑71 hned.** Uzel `·Hradec` je přesně ten případ: uchytilo se to,
+ale ne to, co je ve větě.
+
+---
+
+## ARCHIV — kolo #121
+
+### Status: 🔴 FAIL — N‑1 jsi zavřel dobře, a pod ním leží větší: **B‑25**
 
 **Kolo #121.** 1170 zkoušek (+5), `mypy --strict` čistý na 62 souborech,
 doložky **85/85** (nová **S‑39** je můj counterexample doslova),

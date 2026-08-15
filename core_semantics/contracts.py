@@ -1811,6 +1811,33 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-41",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "PO ODPOVĚDI NESMÍ ZMLKNOUT ZÁVISLÝ ČLEN TOHO, CO BYLO PRÁVĚ "
+            "POJMENOVÁNO *(W‑71)*. Patro genitivního přívlastku běželo "
+            "PŘED patrem ztracené role, takže role, která teprve vznikla "
+            "z odpovědi člověka, svůj přívlastek nikdy nedostala: "
+            "„zánět ledvin a **zápal plic**“ ohlásilo „zánět ledvina“ a "
+            "o „plic“ ani slovo. Je to táž vada jako B‑25, jen o patro "
+            "níž — mlčet o členu, který ve větě stojí, je stejné jako "
+            "ohlásit ho špatně. Pořadí je věcné a je to týž důvod, proč "
+            "`subordinate_tier` běží dřív, než se počítají ztracené "
+            "členy: CO PŘIDÁVÁ ROLI, MUSÍ PŘEDCHÁZET TOMU, CO ROLE "
+            "ZPRACOVÁVÁ. Změřeno stejnou sondou před i po: vět, kde po "
+            "odpovědi zůstal někdo venku a systém o něm MLČÍ, bylo 5 "
+            "(„Králové“, „plic“, „bratra“, „senátu“, „světla“) a je 0. "
+            "Přívlastek členu, který ve čtení JEŠTĚ NENÍ, se dál "
+            "nehlásí — visel by na něčem, o čem věta nemluví"
+        ),
+        anchor="core_semantics.session:Session.tiers",
+        entry=".play(",
+        enforced_by=(
+            "test_a_member_named_by_an_answer_gets_its_own_attribute",
+            "test_an_attribute_of_a_member_outside_the_reading_is_not_claimed",
+        ),
+    ),
+    Clause(
         id="S-40",
         boundary=SESSION_STORAGE,
         promise=(

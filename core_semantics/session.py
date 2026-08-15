@@ -836,9 +836,6 @@ class Session:
             # rozhodnutí, ale pro‑drop se pozná až podle toho, že podmět
             # v predikaci opravdu není.
             prodrop_tier(),
-            # Genitivní přívlastek jako čekající DRUHÝ VÝROK. Nic
-            # neblokuje: větě chybí přívlastek, ne predikát.
-            attribute_tier(),
             # Tvrzení titulu, taky jako čekající DRUHÝ VÝROK (W‑55). Hned
             # za přívlastkem, protože je to táž třída věci — něco, co ve
             # větě stojí vedle predikace — a taky nic neblokuje.
@@ -856,6 +853,18 @@ class Session:
             # jiná — jinak by odpověď zavřela jednu otázku a hned otevřela
             # druhou, na kterou by se systém zeptal až příště.
             lost_role_tier(self.lexicon),
+            # Genitivní přívlastek jako čekající DRUHÝ VÝROK. Nic
+            # neblokuje: větě chybí přívlastek, ne predikát.
+            #
+            # AŽ ZA ZTRACENOU ROLÍ *(W‑71)*. Dřív běžel PŘED ní, takže
+            # role, která teprve vznikla z odpovědi člověka, svůj
+            # přívlastek nikdy nedostala: „zánět ledvin a zápal plic“
+            # ohlásilo „zánět ledvina“ a o „plic“ mlčelo — a mlčení
+            # o členu, který ve větě stojí, je táž vada jako ohlásit ho
+            # špatně. Je to týž důvod, proč `subordinate_tier` běží
+            # dřív, než se počítají ztracené členy: co PŘIDÁVÁ ROLI,
+            # musí předcházet tomu, co role zpracovává.
+            attribute_tier(),
             # Kvantifikátor až po přejmenování rolí: patro se ptá lexikonu
             # na TVAR role, a ten se do poslední chvíle může změnit.
             quantifier_tier(self.lexicon),

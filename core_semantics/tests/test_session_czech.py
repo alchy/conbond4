@@ -331,3 +331,58 @@ def test_a_finished_sentence_still_gets_the_read_mark() -> None:
     session = Session(lexicon=golden.golden_lexicon())
     result = session.utter(text, oracle)
     assert any(line.startswith("✓ přečteno") for line in result.lines)
+
+
+def _coordinate_with_attribute() -> Reading:
+    """„Přidal se zánět ledvin a zápal plic." — souřadný podmět, který
+    má SVŮJ genitivní přívlastek. Přívlastek se smí ohlásit teprve
+    tehdy, až ten člen z odpovědi vznikne."""
+    return Reading(
+        tokens=(
+            _token(1, "Přidal", "přidat", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "se", "se", "PRON", 1, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes"),
+            _token(3, "zánět", "zánět", "NOUN", 1, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(4, "ledvin", "ledvina", "NOUN", 3, "nmod", Case="Gen", Gender="Fem", Number="Plur"),
+            _token(5, "a", "a", "CCONJ", 6, "cc"),
+            _token(6, "zápal", "zápal", "NOUN", 3, "conj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(7, "plic", "plíce", "NOUN", 6, "nmod", Case="Gen", Gender="Fem", Number="Plur"),
+            _token(8, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def test_a_member_named_by_an_answer_gets_its_own_attribute() -> None:
+    """PO ODPOVĚDI NESMÍ ZMLKNOUT ZÁVISLÝ ČLEN TOHO, CO BYLO PRÁVĚ
+    POJMENOVÁNO *(W‑71)*. Patro přívlastku běželo PŘED patrem ztracené
+    role, takže role, která teprve vznikla z odpovědi člověka, svůj
+    přívlastek nikdy nedostala: hlásilo se „zánět ledvina" a o „plic"
+    ani slovo. Mlčet o členu, který ve větě stojí, je táž vada jako
+    ohlásit ho špatně."""
+    from core_semantics.session import names_role
+    from core_semantics.tests import golden
+
+    text = "Přidal se zánět ledvin a zápal plic."
+    reading = _coordinate_with_attribute()
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    first = session.utter(text, oracle)
+    shape = next(sh for form, sh in first.turn.lost if form == "zápal")
+    result = session.play(names_role("Je to okolnost.", reading, shape, "jak"))
+    hlaseni = chr(10).join(result.lines)
+    assert "plíce" in hlaseni, "přívlastek nově pojmenovaného členu musí být vidět"
+    assert "ledvina" in hlaseni, "přívlastek původního členu nesmí zmizet"
+
+
+def test_an_attribute_of_a_member_outside_the_reading_is_not_claimed() -> None:
+    """PROTIPŘÍKLAD: dokud ten člen ve čtení NENÍ, jeho přívlastek se
+    nehlásí — visel by na něčem, o čem věta (zatím) nemluví."""
+    from core_semantics.tests import golden
+
+    text = "Přidal se zánět ledvin a zápal plic."
+    reading = _coordinate_with_attribute()
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    hlaseni = chr(10).join(session.utter(text, oracle).lines)
+    assert "ledvina" in hlaseni
+    assert "plíce" not in hlaseni

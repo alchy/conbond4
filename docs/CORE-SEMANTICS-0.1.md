@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.56 · 15. 8. 2026
+**Verze jádra:** 0.1.57 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.57 | § 5.2 — PO ODPOVĚDI NESMÍ ZMLKNOUT ZÁVISLÝ ČLEN TOHO, CO BYLO PRÁVĚ POJMENOVÁNO: patro přívlastku běželo před patrem ztracené role. Změřeno 5 → 0; § 12 (rozklad souřadného členu), § 13 T107 |
 | 0.1.56 | § 5.2 — CO O VĚTĚ PLATÍ, SE NEČTE Z TAHU, KTERÝ NA NI ODPOVÍDÁ: odpověď na jednu otázku rušila ostatní a značka `✓` vznikala z prázdné stopy. Změřeno: 178 vět se ptá dál (bylo 21), překlop ◐→✓ nula (bylo 9); § 13 T106 |
 | 0.1.55 | § 5.2 — ŽÁDNÝ TAH NEPOTVRDÍ UČENÍ, ANIŽ ŘEKNE, CO SE VE VĚTĚ ZMĚNILO: `→@` se přijímal s „✓ naučeno“ i tam, kde čtení zůstalo beze změny. Příčina je jediná a změřená — SRÁŽKA s obsazenou rolí; § 13 T105 |
 | 0.1.54 | § 12 — ODSTAVEC PŘEMĚŘEN (7 tahů / 3 bez tahu, bylo 7/6): tři překážky z #105 zavřené, dvacátá druhá doména se přesto NEPÍŠE. Nový nález: `si` zůstává rolí s uzlem „se“, takže věta neprojde zakotvením ani po odpovědi na všechno |
@@ -1047,6 +1048,37 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
 
+**SOUŘADNÝ ČLEN — DRUHÝ UZEL TÉŽE ROLE, NE DRUHÁ ROLE** *(rozklad
+kola #123, 16. 8. 2026)*. Je to největší jediná věc, která v korpusu
+zbývá, a otázka zněla: má souřadný člen dostat DRUHOU ROLI, nebo být
+DRUHÝM UZLEM téže role? **Rozklad rodiny nad 238 větami** (120 vět, 248
+zahozených souřadných členů):
+
+| co to je | kolik |
+|---|---|
+| konjunkt členu, který rolí NENÍ (visí hlouběji) | 160 |
+| konjunkt ROLE, TÝŽ PÁD — pravý druhý filler | **85** |
+| konjunkt role v JINÉM pádě (šum rozboru, souřadné věty) | 3 |
+
+**Rozhodnutí: druhý uzel téže role.** „Příklady zahrnují filodendrony
+a **lilie**." — obě jména jsou `co`, ne `co` a něco jiného. Pojmenovat
+druhý konjunkt jinou rolí je *účinnost koupená nepravdivým jménem*:
+odpověď se uchytí, ale tvrdí o té větě něco, co v ní není. Měřením
+doloženo z druhé strany: **u 50 z 65 přímých souřadných členů je
+PRAVDIVÉ jméno role obsazené**, takže „pojmenuj to jinak" není odpověď,
+je to obcházení.
+
+**Realizace: DRUHÁ PREDIKACE, ne druhý filler v jedné roli.** Jádro drží
+jeden term na roli a to se nemění — druhý uzel proto dostane vlastní
+výrok se sdíleným přísudkem: `zahrnovat(kdo:příklad, co:filodendron)`
+a `zahrnovat(kdo:příklad, co:lilie)`. Není to nová konstrukce: přesně
+tohle už dělá `coordination_tier` pro souřadný druhý PŘÍSUDEK (W‑72/73,
+T94, T96) — tady se sdílí predikát a liší se filler, tam naopak.
+
+> **Nestaví se to v témž kole jako rozklad.** Změní to čtení u 85 členů,
+> takže si to zaslouží vlastní předpověď na projev a vlastní kolo — ne
+> přílepek k opravě W‑71.
+
 **Konatel trpné věty — ROZLIŠITELNÝ JE, ALE NE INSTRUMENTÁLEM SAMÝM**
 *(W‑80, rozhodnuto 15. 8. 2026)*. Otázka zněla: je `Ins:arg` u trpného
 rodu konatel, nebo se to z rozboru poznat nedá? **Poznat se to dá, ale
@@ -1282,6 +1314,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T107 | přívlastek nově pojmenovaného členu | „Přidal se zánět ledvin a zápal plic.“ po `→@` na „zápal“ hlásí OBA přívlastky („zánět ledvina“, „zápal plíce“); dokud ten člen ve čtení není, jeho přívlastek se nehlásí |
 | T106 | odpověď nezruší ostatní otázky | „Petr a Jana viděli psa a kočku.“ se po `→@` na jeden člen ptá na zbylý, drží `◐`, `[ZAHOZENO: …]` přežije tah; „Petr přišel.“ dál dostane `✓ přečteno` |
 | T105 | odpověď, která nic neudělá, to řekne | `→@` „nsubj>conj+Nom → kdo“ v „Petr a Jana přišli.“ ohlásí, že roli `kdo` drží „Petr“, že „Jana“ zůstává mimo čtení a že mapování platí dál; `→@` na `jak` zabere a o nezměněném čtení MLČÍ |
 | T104 | spona s podtypem je spona | „Jan je učitel.“ se sponou `cop:expl` dá TOTÉŽ čtení jako s `cop`; `aux` ani `copula` sponou nejsou |
