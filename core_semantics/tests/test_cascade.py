@@ -2602,3 +2602,69 @@ def test_a_second_sentence_with_two_same_named_members_does_not_crash() -> None:
     )
     verdict = cascade(reading, tiers=(*HARD_TIERS, coordination_tier(czech_seed())))
     assert verdict.survivors, "věta se čte dál, jen druhá půlka nevznikne"
+
+
+def test_a_year_is_part_of_the_mention_not_a_lost_member() -> None:
+    """W‑74. „v roce **1986**" hlásilo 1986 jako ZTRACENÝ ČLEN — jenže
+    z té věty nevypadlo, patří ke „roku". A obě věty *„V roce 1986…"*
+    i *„V roce 1990…"* dávaly TÝŽ uzel `rok`, tedy jeden uzel pro
+    všechny roky. Obojí byla nepravda a obojí spravuje složení."""
+    from core_semantics.cascade import year_under
+
+    def _v_roce(rok: str) -> Reading:
+        return Reading(
+            tokens=(
+                _token(1, "V", "v", "ADP", 2, "case", AdpType="Prep", Case="Loc"),
+                _token(2, "roce", "rok", "NOUN", 4, "obl", Case="Loc", Gender="Masc", Number="Sing"),
+                _token(3, rok, rok, "NUM", 2, "nummod", NumForm="Digit", NumType="Card"),
+                _token(4, "pršelo", "pršet", "VERB", 0, "root", Gender="Neut", Number="Sing", Polarity="Pos"),
+                _token(5, ".", ".", "PUNCT", 4, "punct"),
+            ),
+            provenance="test",
+        )
+
+    reading = _v_roce("1986")
+    assert year_under(reading.tokens[1], reading) is reading.tokens[2]
+    role = generate(reading)[0].predication.role("v+Loc/rok")
+    assert role is not None and role.lemma == "rok_1986"
+    assert dropped_tokens(reading, generate(reading)[0].predication) == ()
+    # DVA RŮZNÉ ROKY NEJSOU TÝŽ UZEL.
+    jiny = generate(_v_roce("1990"))[0].predication.role("v+Loc/rok")
+    assert jiny is not None and jiny.lemma == "rok_1990"
+
+
+def test_a_count_is_not_a_year() -> None:
+    """PROTIPŘÍKLAD: „s **92** lidmi" je POČET, ne letopočet, a hlásí se
+    dál jako ztracený člen — dokud se o počtech nerozhodne zvlášť.
+    Rozlišuje to STAVBA (čtyřciferné `NumType=Card`), ne seznam časových
+    jmen; ten by byl druhý slovník vedle parserova."""
+    from core_semantics.cascade import year_under
+
+    reading = Reading(
+        tokens=(
+            _token(1, "s", "s", "ADP", 3, "case", AdpType="Prep", Case="Ins"),
+            _token(2, "92", "92", "NUM", 3, "nummod", NumForm="Digit", NumType="Card"),
+            _token(3, "lidmi", "člověk", "NOUN", 4, "obl", Case="Ins", Number="Plur"),
+            _token(4, "mluvil", "mluvit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance="test",
+    )
+    assert year_under(reading.tokens[2], reading) is None
+
+
+def test_the_year_is_recognised_in_one_place_only() -> None:
+    """`role_signal` se ptá `year_under`, nepíše si vlastní kopii — dvě
+    kopie téže podmínky se rozejdou a nikdo nepozná, která platí. Táž
+    úvaha jako u `is_bare_genitive` a `titled_name_of`."""
+    import inspect
+
+    from core_semantics.cascade import role_signal
+
+    kod = chr(10).join(
+        radek
+        for radek in inspect.getsource(role_signal).splitlines()
+        if not radek.lstrip().startswith("#")
+    )
+    assert "year_under(" in kod
+    assert "NumType" not in kod

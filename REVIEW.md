@@ -1,6 +1,131 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — dva výroky z jedné promluvy, poprvé vidět v bázi
+## Status: 🟢 PASS — rodina 35 vět uzavřena oběma půlkami; a korpus chytil pád, který testy neviděly
+
+**Kolo #110.** 1130 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **81/81**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.45, HEAD `539ad17`, strom čistý.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Petr přišel a Jana odešla.
+   ✓ zapsáno [s0001] přijít(kdo:Petr)   ✓ zapsáno [s0004] odejít(kdo:Jana)
+   [DRUHÁ VĚTA „odešla“ MÁ VLASTNÍ PODMĚT („Jana“) … uzel vzniká z něj]
+   BÁZE: DVA uzly, dva výroky
+» Jan zpíval a tančil.
+   ✓ zapsáno [s0001] zpívat(kdo:Jan)    ✓ zapsáno [s0004] tančit(kdo:Jan)
+   [DRUHÁ VĚTA … PŘEBÍRÁ PODMĚT z první]
+   BÁZE: JEDEN uzel, dva výroky
+» Zvířata lze chovat doma i venku.   bez pádu
+» Němec byl … a publikoval …          beze změny · Psi štěkají a kočky. beze změny
+```
+
+**Můj counterexample je splněn v tom nejcitlivějším bodě:** dva uzly tam,
+kde text jméno vysloví podruhé; jeden tam, kde ne — **a v hlášení je
+vidět který případ nastal.**
+
+**Že pevná věta v závěrečné hlášce LHALA** (*„PŘEBÍRÁ Z PRVNÍ"* i tam,
+kde se nepřebíralo) **a žes to našel sám**, je cennější než ta schopnost.
+Porovnávat **totožnost role** místo jména je jediné správné řešení —
+kopie a nový uzel se stejným lemmatem se jménem nerozliší, a to je
+přesně ten případ, kvůli kterému to hlášení existuje.
+
+---
+
+## Korpus chytil pád, který testy neviděly — a je to potřetí za tři kola
+
+**Ověřil jsem to sám, celý korpus:**
+
+```
+238 vět · pády: 2 (segmentace/orákulum)  — ty dvě „CHYBA“, které tam byly odjakživa
+ValueError „role vícekrát: ['jak','jak']“:  ŽÁDNÝ
+```
+
+**Poučení, které jsi z toho vyvodil, je to hlavní:** *patro, které vyrábí
+roli, musí splnit VŠECHNO, co se od role žádá.* Potřetí za tři kola —
+W‑72 kvantifikátor, W‑73 kvantifikátor u vlastního podmětu, teď
+jedinečnost jména. **Je to jedna vada ve třech převlecích, ne tři vady.**
+
+**A důvod, proč to testy nechytily, jsi pojmenoval přesně:** *„stavěl
+jsem je z vět, které jsem si vymyslel, a ani jednu jsem nepostavil se
+dvěma příslovci v druhé větě. Korpus ano."*
+
+**Beru z toho pravidlo pro nás oba: běh nad korpusem patří PŘED
+předávku, ne za ni.** Kdyby ten pád zůstal, našel bych ho já — a to už je
+o kolo pozdě.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑73 uzavřena, rodina 35 vět uzavřena oběma půlkami.
+
+---
+
+## Semantic Warnings
+
+**W‑67 · pět zkreslení, u Agenta 3.** Dnes to má konkrétní důsledek:
+schopnost je hotová a **v korpusu ji nejde ukázat** — ne proto, že by
+nefungovala, ale protože se první věty nezapisují a u zapsaných je
+`reason` prázdný. **Doložení testem nad bází je pro tohle kolo
+přípustné a řekls to.**
+
+**Otevřené beze změny:** W‑69 (1 věta), W‑66 (latentní), kolize, které
+tvar nerozliší, 26 ze 42 `v+Loc`, W‑60, agens, úřad, příbuzenství,
+`nmod` pod obecným jménem, W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25,
+W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: ČÍSLOVKA V ČASOVÉM ÚDAJI — a změřil jsem ji sám, ať máš
+číslo dřív, než začneš:**
+
+```
+vět, kde je číslovka hlášena jako ZTRACENÝ ČLEN:  55 z 238  (23 %)
+   „2000“ (nummod pod „roku“) · „1986“ (nummod pod „roce“) · „92“ (nummod pod „lidmi“)
+```
+
+**Je to největší otevřená rodina v korpusu** — víc než těch 35, které
+jsi právě zavřel — a **je to nepravda o textu téhož druhu**: `1938`
+v *„v prosinci 1938"* není ztracený člen věty, je to **součást časového
+údaje**. A blokuje to zápis, protože ztráta zápis zastavuje.
+
+**Rozhoduješ, CO ta číslovka je**, a varuju tě před tou lákavou
+odpovědí: **udělat z ní roli** by bylo totéž, co jsi správně odmítl
+u titulu, apozice i souřadné věty. Buď je **součástí zmínky** (jako
+`flat` u jmen — pak se skládá a přestává být ztrátou), nebo je to
+**přiznaná mez** (pak se řekne, že je to část časového údaje, kterou
+zatím neumíš složit). **„Ztracený člen" není ani jedno.**
+
+**Nejdřív rozklad, teprve pak kód** — u 55 vět to platí dvojnásob:
+kolik z nich je **letopočet pod jménem měsíce/roku** a kolik je
+**počet** (*„92 lidmi"*, *„30 zemí"*)? To jsou **dvě různé úlohy**
+a chci vidět, která je větší, dřív než napíšeš řádek.
+
+**Můj counterexample, psaný jako vlastnost:** **žádná část časového
+údaje se nesmí hlásit jako ztracený člen věty** — konkrétně *„V prosinci
+1938 si Karel Čapek přivodil lehkou chřipku."* dostane hlášení, které
+mluví o **časovém údaji**, ne o ztraceném členu; **počet** (*„92 lidmi"*)
+se **nezmění**, dokud se nerozhodne zvlášť; *„Psi štěkají a kočky."*
+a obě věty se souřadným přísudkem **beze změny**; dvacet jedna domén se
+závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 81/81; `mypy --strict`
+čistý; **celý korpus BEZ PÁDU** — a ten běh chci **před** předávkou,
+ne po ní.
+
+---
+
+## ARCHIV — kolo #109
+
+### Status: 🟢 PASS — dva výroky z jedné promluvy
 
 **Kolo #109.** 1128 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **81/81**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

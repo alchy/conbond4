@@ -479,6 +479,24 @@ def titled_name_of(token: Token, reading: Reading) -> tuple[Token, ...]:
 
 
 def _composed_mention(token: Token, reading: Reading) -> Mention:
+    rok = year_under(token, reading)
+    if rok is not None:
+        # LETOPOČET JE SOUČÁST ZMÍNKY *(W‑74)*. „v roce 1986" a „v roce
+        # 1990" dávaly OBĚ uzel `rok` — tedy jeden uzel pro všechny roky
+        # — a číslo se hlásilo jako ZTRACENÝ ČLEN. Obojí bylo nepravdivé:
+        # 1986 z té věty nevypadlo, patří ke „roku", a dva různé roky
+        # nejsou týž uzel.
+        #
+        # Skládá se, ne přidává jako role: je to táž volba jako
+        # u víceslovného jména (B‑21). „rok 1986" není hlava s členem,
+        # je to JEDNA ZMÍNKA jednoho období.
+        return Mention(
+            lemma=f"{token.lemma}_{rok.lemma}",
+            form=f"{token.form} {rok.form}",
+            token_index=token.index,
+            upos=token.upos,
+            feats=token.feats,
+        )
     titul = titled_name_of(token, reading)
     if titul:
         # HLAVOU JE JMÉNO. Titul se do lemmatu NESKLÁDÁ — byla by z něj
@@ -583,6 +601,7 @@ def _nominal(token: Token, reading: Reading, name: str) -> RoleReading:
         absorbed=tuple(t.index for t in attributes_of(token, reading))
         + tuple(t.index for t in name_parts_of(token, reading))
         + tuple(t.index for t in titled_name_of(token, reading))
+        + ((rok.index,) if (rok := year_under(token, reading)) else ())
         + ((possessive.index,) if possessive else ()),
         awaiting=AWAITING_REFERENCE if possessive else "",
     )
@@ -707,6 +726,29 @@ GEO_SIGNAL = "Geo"
 YEAR_SIGNAL = "rok"
 
 
+def year_under(token: Token, reading: Reading) -> Token | None:
+    """LETOPOČET pod jménem — „v roce **1986**" *(W‑74)*.
+
+    Jediné místo, kde se ten tvar poznává; `role_signal` se ptá sem, aby
+    se dvě kopie té podmínky nerozešly (táž úvaha jako `is_bare_genitive`).
+
+    **Čte se ze STAVBY, ne ze slovníku.** `nummod` s `NumType=Card`
+    a čtyřmi číslicemi. Seznam časových jmen („rok", „leden", „prosinec")
+    by byl druhý slovník vedle parserova a rozešel by se s ním; čtyřciferná
+    číslovka pod jménem je v češtině letopočet, ať to jméno zní jakkoli.
+    """
+    for child in reading.children(token.index):
+        feats = dict(child.feats)
+        if (
+            base_deprel(child.deprel) == "nummod"
+            and feats.get("NumType") == "Card"
+            and child.lemma.isdigit()
+            and len(child.lemma) == 4
+        ):
+            return child
+    return None
+
+
 def role_signal(token: Token, reading: Reading) -> str:
     """Co o filleru říká ROZBOR — `Geo`, `rok`, nebo nic *(W‑61)*.
 
@@ -729,14 +771,8 @@ def role_signal(token: Token, reading: Reading) -> str:
     """
     if token.feat("NameType") == GEO_SIGNAL:
         return GEO_SIGNAL
-    for child in reading.children(token.index):
-        feats = dict(child.feats)
-        if (
-            feats.get("NumType") == "Card"
-            and child.lemma.isdigit()
-            and len(child.lemma) == 4
-        ):
-            return YEAR_SIGNAL
+    if year_under(token, reading) is not None:
+        return YEAR_SIGNAL
     return ""
 
 

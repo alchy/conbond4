@@ -2490,8 +2490,8 @@ SIGNAL = Dialogue(
                 w("Praze", "Praha", "PROPN", 4, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
                 w(".", ".", "PUNCT", 4, "punct"),
             ),
-            reads="být(kde:Praha, kdo:·Petr, kdy:rok)",
-            asks="1935",
+            reads="být(kde:Praha, kdo:·Petr, kdy:rok_1935)",
+            writes="být(kde:Praha, kdo:Petr, kdy:rok_1935)",
             point=(
                 "MÍSTO A ČAS V JEDNÉ VĚTĚ POD TOUŽ PŘEDLOŽKOU. Dokud byl "
                 "tvar jeden (`v+Loc`), byla tahle věta NEČITELNÁ: dva "
@@ -2501,11 +2501,12 @@ SIGNAL = Dialogue(
                 "seznam slov"
             ),
             limit=(
-                "VĚTA SE NEZAPÍŠE, a není to kvůli rolím: „1935“ visí "
-                "jako `nummod` pod „roce“ a rolí se nestává, takže se "
-                "hlásí jako ztracený člen. Je to PŘEDCHOZÍ mez, kterou "
-                "tahle změna nezvětšila ani nezmenšila — číslovka jako "
-                "součást časového údaje je vlastní rodina"
+                "TA MEZ ZMIZELA V KOLE #111 *(W‑74)*: „1935“ se od té "
+                "chvíle SKLÁDÁ DO ZMÍNKY (`rok_1935`), takže z věty "
+                "nevypadá a věta se zapíše. Krok tu zůstává i s tímhle "
+                "záznamem, protože je na něm vidět, co ta oprava "
+                "koupila — a že to nebylo tím, že by se slevilo z toho, "
+                "co se hlásí jako ztráta"
             ),
         ),
         Step(

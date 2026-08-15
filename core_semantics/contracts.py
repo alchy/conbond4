@@ -1344,6 +1344,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_question_says_where_the_signal_came_from",
             "test_a_year_does_not_inherit_the_bare_mapping",
             "test_the_split_shape_reaches_the_base",
+            "test_a_year_is_part_of_the_mention_not_a_lost_member",
+            "test_a_count_is_not_a_year",
+            "test_the_year_is_recognised_in_one_place_only",
         ),
     ),
     Clause(
