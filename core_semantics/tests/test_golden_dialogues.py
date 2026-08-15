@@ -22,6 +22,8 @@ from core_semantics.session import (
     names_relation,
     names_relation_here,
 )
+from core_semantics.ast import Group
+from core_semantics.session import declares_complete, revokes
 from core_semantics.tests._console import echo
 from core_semantics.tests.dialogues import DIALOGUES, Dialogue, Step
 
@@ -63,6 +65,8 @@ def _is_turn(step: Step) -> bool:
         or step.answers_here is not None
         or step.answers_relation is not None
         or step.answers_relation_here is not None
+        or step.declares_complete != ""
+        or step.revokes_complete != ""
     )
 
 
@@ -76,6 +80,22 @@ def _answer(
     hlídala shodu dvou zápisů místo chování."""
     assert done, "tah bez předchozí věty nemá na co odpovídat"
     previous, result = done[-1]
+    if step.declares_complete:
+        # UZAVŘENÍ SVĚTA. Není to odpověď na otázku po tvaru — je to
+        # prohlášení mluvčího, takže se skládá ze skupiny, ne z toho, na
+        # co se systém ptal.
+        return session.play(declares_complete(step.text, Group(step.declares_complete)))
+    if step.revokes_complete:
+        # ODVOLÁNÍ. Hledá se KROK, který uzavření zapsal — ne poslední
+        # výrok v bázi: odvolat „ten poslední" by fungovalo jen náhodou
+        # a při přidání kroku by sada tiše odvolávala něco jiného.
+        target = next(
+            result.statement_id
+            for previous, result in done
+            if previous.declares_complete and result.statement_id
+        )
+        assert target is not None
+        return session.play(revokes(step.text, target, step.revokes_complete))
     if step.answers_relation_here is not None:
         # ODPOVĚĎ NA VĚTU (`→⊆1`), ne na tvar — týž tvar znamená v jedné
         # větě `contains` a v druhé `within`.

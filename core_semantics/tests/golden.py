@@ -811,6 +811,91 @@ L4 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# M · uzavření světa (jedenáctý akceptační dialog)
+# --------------------------------------------------------------------------
+#
+# Věta M5 je jediná v celé sadě, po které se z NEPŘÍTOMNOSTI stane „ne" —
+# a proto se z ní taky jako z jediné nesmí nic zapsat samo. Zlatá sada tu
+# fixuje ČTENÍ a otázku; co z toho čtení bude v jádře, rozhoduje člověk
+# tahem `!∀`, a to už sada dialogů, ne tahle.
+
+M1 = Golden(
+    dialogue="M",
+    text="Rex je pes.",
+    tokens=(
+        tok(1, "Rex", "Rex", "PROPN", 3, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", NameType="Oth", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "pes", "pes", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Rex, group:·pes)",
+    point="`PROPN` v podmětu činí relaci rozhodnutelnou — členství, ne podmnožina (N‑2d)",
+)
+
+M2 = Golden(
+    dialogue="M",
+    text="Alík je pes.",
+    tokens=(
+        tok(1, "Alík", "alík", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "pes", "pes", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    #: Parser lemmatizuje „Alík" malým písmenem. Sada to FIXUJE tak, jak
+    #: to skutečný parser dělá — opravovat to tady by znamenalo měřit
+    #: vlastní představu místo nasazeného modelu.
+    predication="member(elem:·alík, group:·pes)",
+)
+
+M3 = Golden(
+    dialogue="M",
+    text="Mourek je kocour.",
+    tokens=(
+        tok(1, "Mourek", "Mourek", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "kocour", "kocour", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Mourek, group:·kocour)",
+)
+
+M4 = Golden(
+    dialogue="M",
+    text="Je Mourek pes?",
+    tokens=(
+        tok(1, "Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "Mourek", "Mourek", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(3, "pes", "pes", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, "?", "?", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Mourek, group:·pes)",
+)
+
+M5 = Golden(
+    dialogue="M",
+    text="To jsou všichni psi.",
+    tokens=(
+        tok(1, "To", "ten", "DET", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing", PronType="Dem"),
+        tok(2, "jsou", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "všichni", "všechen", "DET", 4, "det", Animacy="Anim", Case="Nom", Gender="Masc", Number="Plur", PronType="Tot"),
+        tok(4, "psi", "pes", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Plur"),
+        tok(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    predication="být(co:∀pes, kdo:ten)",
+    asks=(
+        "navrhuje UZAVŘENÍ SVĚTA a čeká — jediná otázka v systému, která "
+        "upozorňuje na DŮSLEDEK, ne na neznalost"
+    ),
+    point=(
+        "shoda čísla tu NEPLATÍ: podmět „to“ je Sing, spona Plur, a věta "
+        "je přesto správně česky. Prezentační „to“ nezastupuje počitatelný "
+        "podmět, takže má tvrdý filtr úzkou výjimku — kdyby ji neměl, "
+        "zahodil by gramatickou větu"
+    ),
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
@@ -819,6 +904,7 @@ CORPUS: tuple[Golden, ...] = (
     J2, J3, J4,
     K2, K3, K4, K5,
     L1, L2, L3, L4,
+    M1, M2, M3, M4, M5,
 )
 
 

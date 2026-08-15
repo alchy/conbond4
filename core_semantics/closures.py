@@ -507,6 +507,29 @@ class ClosureIndex:
             {self.canonical(elem) for elem in self._members_of.get(group_id, ())}
         )
 
+    def enumeration_of(self, group_id: str) -> list[str]:
+        """Výroky, které do skupiny někoho POSTAVILY — výčet, nad kterým se
+        svět zavírá.
+
+        `complete(g)` sám o sobě neříká NIC o tom, kdo v `g` je; říká jen,
+        že už nikdo další. Závěr „Mourek pes není" proto stojí na DVOU
+        věcech: na prohlášení a na tom, koho výčet obsahuje. Důkaz, který
+        cituje jen prohlášení, se nedá zkontrolovat — čtenář nevidí, NAD
+        ČÍM se zavíralo, a přitom právě to rozhoduje. Je to jediné místo
+        v jádře, kde závěr plyne z ABSENCE (I‑21), takže se tu na doložení
+        šetřit nesmí.
+
+        Jde se přes `member_proof`, ne přes surový index: členství přes
+        podskupinu (`member(Rex, pudl)` a `subset(pudl, pes)`) je součást
+        výčtu stejně jako přímé, a jeho listy nesou i tu můstkovou hranu.
+        """
+        found: set[str] = set()
+        for elem in self.known_members(group_id):
+            proof = self.member_proof(elem, group_id)
+            if proof is not None:
+                found.update(proof.leaves())
+        return sorted(found)
+
     def nodes_named(self, name: str) -> list[str]:
         """Uzly, které to jméno DOLOŽENĚ nesou (`name(of, value)`).
 

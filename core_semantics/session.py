@@ -49,6 +49,7 @@ from .ast import (
     Term,
     Variable,
     atom,
+    complete_of,
     role,
     same_as_of,
 )
@@ -69,6 +70,8 @@ from .cascade import (
     open_roles_question,
     quantifier_tier,
     as_relation,
+    complete_question,
+    completeness_tier,
     relation_question,
     relation_shape,
     relation_tier,
@@ -210,6 +213,12 @@ class TurnKind(Enum):
     #: součástí týdne." mají TÝŽ tvar a různé relace, protože jedno je
     #: místo a druhé čas — a to čeština neříká.
     NAME_RELATION_HERE = "→⊆1"
+    #: POTVRZENÍ, že se skupina má prohlásit za UZAVŘENOU. Vlastní druh
+    #: tahu, a nikoli odpověď `→`: `complete(g)` je jediný výrok, který
+    #: mění, co znamená TICHO — od něj se z nepřítomnosti stane „ne".
+    #: Neučí se z něj NIC, ani tvar: uzavření světa není vlastnost jazyka,
+    #: ale epistemický stav mluvčího o jedné skupině v jednom okamžiku.
+    DECLARE_COMPLETE = "!∀"
     #: ODPOVĚĎ na otázku, KOHO označuje přivlastňovací přívlastek (N‑7).
     #: Vlastní druh tahu, protože zapisuje DVA výroky: větu a k ní vztah
     #: vlastnictví. Ani `→=`, ani `→@` to nejsou — první rozhoduje odkaz
@@ -338,6 +347,24 @@ def declares_disjoint(text: str, first: GroupTerm, second: GroupTerm) -> Turn:
     jeden atom, ale marker plus derivační expanze na dvě pravidla se
     silnou negací (§ 5.3)."""
     return Turn(TurnKind.DISJOINT, text, pair=(first, second))
+
+
+def declares_complete(text: str, group: GroupTerm) -> Turn:
+    """„To jsou všichni psi." — POTVRZENÍ uzavření světa nad skupinou.
+
+    Je to tah, ne věta, a je to tah vlastního druhu. Důvod je epistemický,
+    ne technický: `complete(g)` je jediný výrok v systému, který mění
+    význam TICHA. Do něj platí I‑21 („absence není negace") bez výjimky;
+    od něj se o každém, kdo ve výčtu není, odpovídá `N` místo `U`.
+
+    Proto se tím NIC NEUČÍ. Ostatní tahy učí tvar a jedna odpověď zavře
+    celou třídu vět; tady by to bylo věcně špatně — že mluvčí dopočítal
+    své psy, neopravňuje zavřít ani kočky, ani tytéž psy za měsíc.
+
+    A proto je to výrok jako každý jiný, tedy ODVOLATELNÝ (`✗`): je to
+    deklarace, ne trvalá vlastnost světa.
+    """
+    return Turn(TurnKind.DECLARE_COMPLETE, text, formula=complete_of(group))
 
 
 def names_relation(
@@ -589,6 +616,10 @@ class Session:
             # se člověk nejdřív doptal na kvantifikátor role `co`, a ta by
             # vzápětí přestala existovat.
             relation_tier(self.lexicon),
+            # Uzavření světa až ZA relací: patro jen navrhuje a nikdy nic
+            # nedosazuje, takže pořadí nemění čtení — mění jen to, v jakém
+            # pořadí se člověk ptá.
+            completeness_tier(),
             # Doplnění ztracené role PŘED kvantifikátorem: role, která
             # teprve vznikne, se musí stihnout zkvantifikovat jako každá
             # jiná — jinak by odpověď zavřela jednu otázku a hned otevřela
@@ -635,6 +666,7 @@ class Session:
             TurnKind.NAME_RELATION_HERE: self._name_relation_here,
             TurnKind.ANSWER_HERE: self._answer_here,
             TurnKind.NAME_OWNER: self._name_owner,
+            TurnKind.DECLARE_COMPLETE: self._declare_complete,
             TurnKind.REVOKE: self._revoke,
             TurnKind.QUESTION: self._question,
             TurnKind.BOUND: self._bound,
@@ -952,6 +984,10 @@ class Session:
                 # nenechá — čtení zůstane obyčejným vztahem a nedalo by
                 # se z něj poznat, že o něm systém pochybuje.
                 relation_question(predication),
+                # Otázka na UZAVŘENÍ SVĚTA. Stojí až za relací schválně:
+                # dokud se neví, co věta tvrdí, nemá smysl se ptát, jestli
+                # to má zavřít svět.
+                complete_question(predication),
                 grounded.question,
             )
             if part
@@ -980,9 +1016,16 @@ class Session:
         # by v bázi OBA výroky a ten první by nikdo neodvolal. Je to táž
         # vada jako u ztraceného členu, jen o jinou chybějící věc.
         pending_relation = predication.pending_relation != ""
+        # TÝŽ DŮVOD U NAVRŽENÉHO UZAVŘENÍ SVĚTA, jen naléhavější. Věta
+        # „To jsou všichni psi." by se bez téhle zábrany zapsala jako
+        # obyčejný vztah `být` o množině psů — tvrzení, které nikdo neřekl
+        # — a `complete(pes)`, tedy to, co člověk MYSLEL, by v bázi
+        # nebylo. Zapsat místo prohlášení jeho slupku je horší než
+        # nezapsat nic.
+        pending_complete = predication.pending_complete != ""
         routed = (
             None
-            if turn.lost or pending_relation
+            if turn.lost or pending_relation or pending_complete
             else self._route(index, turn, predication, grounded)
         )
         if routed is None:
@@ -1074,6 +1117,36 @@ class Session:
             statement_id=marker,
             derived=(left, right),
         )
+
+    def _declare_complete(self, index: int, turn: Turn) -> TurnResult:
+        """Zapíše `complete(g)` a POJMENUJE DŮSLEDEK.
+
+        Výpis říká, kolik členů výčet má, a je to schválně: uzavření nad
+        prázdným nebo nedopsaným výčtem je věcně jiná věc než uzavření nad
+        hotovým, a člověk to musí vidět v okamžiku, kdy to potvrzuje.
+        """
+        assert turn.formula is not None
+        sid = self.kb.attach(turn.formula, provenance=f"tah {index}")
+        group = self._role_target(turn.formula)
+        known = self.kb.view().known_members(group)
+        return TurnResult(
+            index=index,
+            turn=turn,
+            lines=(
+                f"✓ zapsáno [{sid}]  {turn.formula}",
+                f"[UZAVŘENO nad výčtem {len(known)} členů: "
+                f"{', '.join(known) if known else 'prázdný'} — "
+                f"o komkoli dalším je od teď odpověď NE, ne NEVÍM]",
+            ),
+            statement_id=sid,
+        )
+
+    @staticmethod
+    def _role_target(formula: Formula) -> str:
+        assert isinstance(formula, Atom)
+        role = formula.get_role("group")
+        assert role is not None
+        return role.target.id
 
     def _answer_here(self, index: int, turn: Turn) -> TurnResult:
         """`→∀1` — kvantifikátor pro TUHLE VĚTU. Nic se neučí.

@@ -949,6 +949,36 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-31",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "UZAVŘENÍ SVĚTA se z české věty jen NAVRHUJE, nikdy nedosadí — "
+            "ani při jednoznačném tvaru. `complete(g)` je jediný výrok, "
+            "který mění, co znamená TICHO: do něj platí I‑21 („absence "
+            "není negace“) bez výjimky, od něj se o každém mimo výčet "
+            "odpovídá `N` místo `U`. Tah `!∀` se proto NIC NEUČÍ — "
+            "uzavření není vlastnost jazyka, ale epistemický stav "
+            "mluvčího o jedné skupině v jednom okamžiku — a je "
+            "ODVOLATELNÝ. Popření cituje OBĚ půlky, prohlášení i VÝČET, "
+            "nad kterým se zavíralo; bez výčtu se závěr nedá zkontrolovat. "
+            "Žádné pravidlo `complete` nevyrobí (`PROTECTED_HEADS`)"
+        ),
+        anchor="core_semantics.cascade:completeness_tier",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_presentational_total_construction_proposes_a_closure",
+            "test_a_general_claim_about_all_dogs_closes_nothing",
+            "test_nothing_is_written_while_the_closure_is_only_proposed",
+            "test_the_closure_teaches_nothing_so_the_next_one_asks_again",
+            "test_before_the_declaration_the_answer_is_unknown",
+            "test_after_the_declaration_the_absence_becomes_a_denial",
+            "test_the_denial_cites_the_declaration_and_the_enumeration",
+            "test_revoking_the_declaration_returns_the_answer_to_unknown",
+            "test_a_member_of_the_closed_group_is_still_proven",
+            "test_a_closure_never_appears_without_someone_declaring_it",
+        ),
+    ),
+    Clause(
         id="S-30",
         boundary=SESSION_STORAGE,
         promise=(

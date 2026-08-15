@@ -103,6 +103,14 @@ class Step:
     #: JEDNU VĚTU. Tvar se tím neučí: „Praha je součástí Česka." a
     #: „Pondělí je součástí týdne." mají týž tvar a různé relace (N‑11).
     answers_relation_here: Operation | None = None
+    #: Jméno skupiny — krok je POTVRZENÍ uzavření světa (`!∀`). Vlastní
+    #: pole, a ne jedna z odpovědí: `complete(g)` se ničím neučí a je to
+    #: jediný výrok, který mění, co znamená TICHO.
+    declares_complete: str = ""
+    #: Důvod — krok ODVOLÁVÁ výrok zapsaný krokem `declares_complete`.
+    #: Uzavření světa je DEKLARACE, ne trvalá vlastnost, a sada to musí
+    #: umět projít celou cestou tam i zpět.
+    revokes_complete: str = ""
     #: Věc, která je na tomhle kroku VĚCNĚ ŠPATNĚ a ví se proč. Zapsaná
     #: mez není totéž co selhání: krok projde, ale nepředstírá se, že je
     #: v pořádku všechno.
@@ -1191,6 +1199,167 @@ INCLUSION = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 11 · Naši psi — UZAVŘENÍ SVĚTA, jediné místo, kde absence dá „ne"
+# --------------------------------------------------------------------------
+
+CLOSURE = Dialogue(
+    name="Naši psi",
+    source="„Rex je pes. Alík je pes. … To jsou všichni psi. … Je Mourek pes?“",
+    shapes=(
+        ("PROPN", "Sing", "Nom", "nsubj", Operation.SELF),
+        ("NOUN", "Sing", "Nom", "root", Operation.SELF),
+        ("NOUN", "Plur", "Nom", "root", Operation.SELF),
+    ),
+    steps=(
+        Step(
+            text="Rex je pes.",
+            reading=sentence(
+                w("Rex", "Rex", "PROPN", 3, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", NameType="Oth", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("pes", "pes", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Rex, group:·pes)",
+            writes="member(elem:Rex, group:·pes)",
+            point="výčet, nad kterým se bude zavírat — první z dvou členů",
+        ),
+        Step(
+            text="Alík je pes.",
+            reading=sentence(
+                w("Alík", "alík", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("pes", "pes", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·alík, group:·pes)",
+            writes="member(elem:alík, group:·pes)",
+            point="druhý člen. Uzavření je až tah — dva výroky samy o sobě nezavírají nic",
+        ),
+        Step(
+            text="Mourek je kocour.",
+            reading=sentence(
+                w("Mourek", "Mourek", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("kocour", "kocour", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Mourek, group:·kocour)",
+            writes="member(elem:Mourek, group:·kocour)",
+            point=(
+                "uzel MIMO výčet. Bez něj by se nebylo koho zeptat — a "
+                "otázka na uzel, o kterém nikdo nic neřekl, měří něco "
+                "jiného než uzavření"
+            ),
+        ),
+        Step(
+            text="Je Mourek pes?",
+            reading=sentence(
+                w("Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Mourek", "Mourek", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("pes", "pes", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Mourek, group:·pes)",
+            answers="U",
+            point=(
+                "OTEVŘENÝ SVĚT, PŘED prohlášením. Nikdo neřekl, že Mourek "
+                "pes není, a to, že v seznamu není, o něm zatím "
+                "NEROZHODUJE (I‑21). Tenhle krok je půlka měření: bez něj "
+                "by se nedalo poznat, jestli `N` o dva kroky dál způsobilo "
+                "prohlášení, nebo jestli tam bylo pořád"
+            ),
+        ),
+        Step(
+            text="To jsou všichni psi.",
+            reading=sentence(
+                w("To", "ten", "DET", 4, "nsubj", Case="Nom", Gender="Neut", Number="Sing", PronType="Dem"),
+                w("jsou", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("všichni", "všechen", "DET", 4, "det", Animacy="Anim", Case="Nom", Gender="Masc", Number="Plur", PronType="Tot"),
+                w("psi", "pes", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Plur"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            asks=(
+                "NEZAPÍŠE SE NIC a systém se ptá — a jako jediná otázka "
+                "v systému upozorňuje na DŮSLEDEK, ne na neznalost: od "
+                "prohlášení přestane na kohokoli mimo výčet odpovídat "
+                "„nevím“ a začne odpovídat „ne“"
+            ),
+            limit=(
+                "stopa se u téhle věty ptá i „na koho odkazuje To“ — "
+                "v prezentační vazbě „to“ NEODKAZUJE na nic, je to podmět "
+                "bez reference, takže je to otázka bez správné odpovědi "
+                "(táž třída jako W‑20). Doména na ni neodpovídá a projde; "
+                "zapsaná mez, ne v pořádku"
+            ),
+            point=(
+                "shoda čísla tu NEPLATÍ a je to fakt o češtině: „To je "
+                "pes.“ i „To jsou psi.“ jsou obojí správně, protože "
+                "střední „to“ v prezentační vazbě nezastupuje počitatelný "
+                "podmět. Filtr má úzkou výjimku, ne úlevu"
+            ),
+        ),
+        Step(
+            text="Ano, uzavři to.",
+            declares_complete="pes",
+            writes="complete(group:·pes)",
+            point=(
+                "TAH VLASTNÍHO DRUHU (`!∀`), a NIC SE JÍM NEUČÍ. Ostatní "
+                "tahy učí tvar a jedna odpověď zavře celou třídu vět; "
+                "tady by to bylo věcně špatně — že mluvčí dopočítal své "
+                "psy, neopravňuje zavřít ani kočky, ani tytéž psy za "
+                "měsíc. Uzavření světa není vlastnost jazyka, ale "
+                "epistemický stav mluvčího"
+            ),
+        ),
+        Step(
+            text="Je Mourek pes?",
+            reads="member(elem:·Mourek, group:·pes)",
+            answers="N",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Táž otázka jako "
+                "o tři kroky dřív dá teď `N` — a je to JEDINÉ místo "
+                "v jádře, kde závěr plyne z ABSENCE. Důkaz proto cituje "
+                "OBĚ půlky: prohlášení i VÝČET, nad kterým se zavíralo. "
+                "Bez výčtu se závěr nedá zkontrolovat — čtenář nevidí, že "
+                "dotazovaný v něm opravdu není"
+            ),
+        ),
+        Step(
+            text="Počkej, ještě nějací jsou.",
+            revokes_complete="výčet nebyl hotový",
+            point=(
+                "PROHLÁŠENÍ JE DEKLARACE, NE TRVALÁ VLASTNOST SVĚTA. "
+                "Uzavření se odvolává jako každý jiný výrok — a kdyby "
+                "nešlo, byl by to jediný nevratný krok v systému"
+            ),
+        ),
+        Step(
+            text="Je Mourek pes?",
+            reads="member(elem:·Mourek, group:·pes)",
+            answers="U",
+            point=(
+                "ZPÁTKY NA `U`, a to je druhá půlka závěru domény. Kdyby "
+                "tu zůstalo `N`, znamenalo by to, že se uzávěr někde "
+                "materializoval do pevného bodu — přesně to, co § 5.1 "
+                "zakazuje, a poznat by to nešlo jinak než tímhle krokem"
+            ),
+        ),
+    ),
+    note=(
+        "Jedenáctý akceptační dialog. `complete` bylo do dneška JEDINÝ "
+        "jádrový predikát, ke kterému čeština nevedla — měřilo se jen "
+        "z formulí, tedy táž třída jako `before` před #59, `disjoint` před "
+        "#64 a `same_as` před #66. Cena chyby je tu ale nejvyšší v celém "
+        "systému: špatně zapsané uzavření vyrobí `N` tam, kde má být `U`, "
+        "a to je nevědomost vydávaná za znalost. Proto se `complete` "
+        "nedosadí nikdy, ani při jednoznačném tvaru, a proto tahle doména "
+        "prochází celý kruh — otevřený svět, prohlášení, uzavřený svět, "
+        "odvolání, zase otevřený."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -1202,4 +1371,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     EXCLUSION,
     IDENTITY,
     INCLUSION,
+    CLOSURE,
 )

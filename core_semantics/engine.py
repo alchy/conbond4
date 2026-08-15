@@ -543,6 +543,14 @@ class Engine:
             if step is None:
                 continue
             premises: list[Proof] = [Proof(ProofKind.FACT, complete_sid)]
+            # VÝČET, nad kterým se zavíralo. Bez něj cituje důkaz jen
+            # prohlášení „to jsou všichni" a čtenář nemá jak ověřit tu
+            # druhou půlku — že dotazovaný ve výčtu opravdu není. U jediné
+            # výjimky z I‑21 je to ta podstatnější půlka.
+            premises.extend(
+                Proof(ProofKind.FACT, sid)
+                for sid in index.enumeration_of(complete_group)
+            )
             if step.leaves():
                 premises.append(step)
             yield binding, Proof(ProofKind.CLOSURE, "complete*", tuple(premises))

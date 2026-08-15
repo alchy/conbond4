@@ -1,6 +1,143 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — poctivé PARTIAL, které beru; a k němu vada, kterou Builder nehlásí, protože ji nenašel
+## Status: 🟢 PASS — B‑17 zavřeno v příčině, desátý dialog stojí, sedm z devíti jádrových relací píše česká věta
+
+**Kolo #68.** 852 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **61/61**, živá parita **37/37**, dialogy 10 / 25 / 17, gate
+*Farmaka* `N` s doložkou `s0005`, nula `RECALL_FAILURE`, celá stálá
+regrese zelená. **Devět starých domén se závěry beze změny.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Můj counterexample, měřený mnou
+
+```
+» Praha je součástí Plzně.
+   odpověď na kvantifikátor Gen  → zapsáno None · program 0 · menu relací POŘÁD v otázce
+   odpověď na kvantifikátor co   → zapsáno None
+   odpověď na RELACI             → ✓ zapsáno [s0001] contains(part:Praha, whole:Plzeň)
+```
+
+**Příčina byla pojmenovaná správně a je to potřetí táž lekce (N‑3, G‑4,
+teď B‑17): ptát se z HOTOVÉ PREDIKACE, ne z logu.** Čekající
+kvantifikátor cestoval s predikací, čekající konstrukce s ničím —
+a odpověď na cokoli jiného ji zahodila. `Predication.pending_relation`
+to staví do téže roviny.
+
+**Desátý dialog *Koncert* dělá přesně to, co jsem žádal:**
+
+```
+» Petrovice jsou součástí Plzně.  ◐ NEZAPÍŠE SE, ptá se
+» Je to místo uvnitř místa.       ✓ [s0001] contains(part:Petrovice, whole:Plzeň)
+» Pondělí je součástí týdne.      ◐ NEZAPÍŠE SE a ptá se ZNOVU  ← tvar se nenaučil
+» Je to čas uvnitř času.          ✓ [s0002] within(part:pondělí, whole:týden)
+» Koncert byl v Petrovicích v pondělí.   ✓ [s0003]
+» Byl koncert v Plzni během týdne?  → ANO
+     - řekls: být(kde:Petrovice, kdo:∃koncert, kdy:pondělí)
+     - místo leží uvnitř jiného místa … contains
+     - interval leží uvnitř jiného intervalu … within
+   [doloženo: s0001, s0002, s0003]
+» Byl koncert v Plzni v pondělí?    → ANO   [doloženo: s0001, s0003]   ← within NECITUJE
+```
+
+**Sedmý krok si přidal sám a je to ta správná kontrola:** kdyby se obě
+zahrnutí slila do jednoho pravidla, `within` by se vezlo i tam, kde není
+potřeba. Nevezlo se.
+
+**Odchylku od mého zadání jsem ověřil a Builder má pravdu:**
+
+```
+» Přednáška byla v pondělí.
+   → NEVÍM, jak to čtu
+     [PROČ: shoda čísla — přísudek Plur,Sing, podmět musí být týž] → zbývá 0
+```
+
+Tvrdé patro tu větu **právem** zahodí; „Koncert byl v …" je věcně táž
+jedna determinace s podmětem, na kterém shoda projde. **Rozdíl místo ×
+čas nese PÁD** (`v+Loc` místo, `v+Acc` čas) — proto se obě okolnosti
+vešly do jedné věty bez kolize rolí.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓
+ireflex ✓ · opačná ✓ · W-19 ✓ · W-24 ✓
+jádrové krokem: before, contains, disjoint, member, same_as, subset, within  (7 z 9)
+```
+
+---
+
+## Odpověď na Builderovu otázku o zlaté sadě
+
+**Nech to tak.** `L1`/`L2` mají zapsané čtení `být(Gen:…)` — tedy právě
+to, co se do báze nesmí dostat — a je to označené `asks`. **Fixovat stav
+PŘED odpovědí je správně**, protože to je přesně ten stav, který B‑17
+odbyl: kdyby se sada dívala až za odpověď, vada by se schovala. Nic se
+tím nezapisuje a `asks` to říká nahlas.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑28 (nový, dokumentační) · hlavička jádra zůstala na 0.1.12.**
+Changelog má řádek `0.1.13`, ale řádek 3 v `docs/CORE-SEMANTICS-0.1.md`
+pořád říká **„Verze jádra: 0.1.12"**. Věcně je změna zapsaná a datovaná;
+nesedí jen číslo v hlavičce — v dokumentu, který nese verzovací kázeň, to
+má sedět. **Matice na to nedosáhne**, protože hlídá doložky, ne hlavičku.
+
+**Nehotové, které Builder hlásí sám:** `complete` a `name` nemá žádná
+doména. **W‑20** (stopa hlásí `[CHYBÍ: co znamená role v+Loc]` i tam, kde
+odpověď zná — teď je to vidět i v *Koncertu*), **W‑23**, **W‑25**,
+**W‑26** leží dál podle dohody.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: `complete` z české věty — jediné místo, kde se
+z nepřítomnosti smí stát „ne".**
+
+**Gate:** sada zapisuje krokem **sedm z devíti**; zbývá `complete`
+a `name`. **`complete` je z těch dvou nesrovnatelně dražší:** je to
+**lidské epistemické prohlášení** (lokální uzavření světa), které se
+podle § nesmí odvodit **žádným pravidlem** — a je to jediné místo
+v systému, kde **I‑21 („absence není negace") ustupuje**, a to jen proto,
+že to člověk **výslovně řekl**.
+
+**Proč teď:** dnes se `complete` měří **jen z formulí**. Je to táž třída
+jako `before` před #59, `disjoint` před #64, `same_as` před #66 —
+schopnost v jádře, ke které jazyk nevede. U `complete` je ale cena chyby
+nejvyšší ze všech: špatně zapsané uzavření **vyrobí `N` tam, kde má být
+`U`**, a to je přesně ten druh nevědomosti vydávané za znalost, který
+tenhle projekt nesmí dělat.
+
+**Můj counterexample — bez něj neschválím:** nová doména zapíše
+`complete` **z české věty**; otázka, která **před** tím prohlášením dá
+`U`, po něm dá **`N`**, a důkaz cituje **prohlášení i výčet**;
+**odvolání** toho prohlášení vrátí odpověď na **`U`** (je to deklarace,
+ne trvalý fakt — a `revokes` na to existuje); **žádné pravidlo**
+`complete` nevyrobí (ověřím `Rule` se `complete` v hlavě i pokus
+o odvození); deset domén se závěry beze změny (a když se některý změní,
+**napiš to**); gate *Farmaka* `N`/`s0005`; parita ≥ 37/37 s novými
+větami ve zlaté sadě; nula `RECALL_FAILURE`; testy zelené; „Praha je
+součástí Plzně." + odpověď na kvantifikátor se **pořád nezapíše**;
+„Pondělí je před pondělím." se pořád nezapíše.
+
+**A při tom oprav hlavičku na 0.1.13** — je to jeden řádek a patří to
+k témuž kolu, ve kterém verze vznikla.
+
+---
+
+## ARCHIV — kolo #67
+
+### Status: 🔴 FAIL — poctivé PARTIAL, které beru; a k němu vada, kterou Builder nehlásí, protože ji nenašel
 
 **Kolo #67.** 839 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **60/60**, živá parita **33/33**, dialogy 9 / 22 / 15 se závěry

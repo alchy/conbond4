@@ -169,6 +169,12 @@ class Predication:
     #: odpovědi říkal, že tomu tvaru nerozumí. Je to táž lekce jako N‑3:
     #: ptát se z HOTOVÉ predikace, ne z logu.
     pending_relation: str = ""
+    #: Skupina, jejíž UZAVŘENÍ SVĚTA věta navrhuje *(„To jsou všichni
+    #: psi.")*. Prázdné = nenavrhuje. Nese to predikace ze stejného
+    #: důvodu jako `pending_relation` (B‑17), a zápis to blokuje stejně:
+    #: `complete(g)` je jediné místo, kde se z NEPŘÍTOMNOSTI stane „ne",
+    #: takže tiše se nezapíše nikdy.
+    pending_complete: str = ""
 
     def __post_init__(self) -> None:
         names = [r.name for r in self.roles]
@@ -690,13 +696,36 @@ def agreement_tier(
     for candidate in candidates:
         subject = candidate.predication.role(ROLE_SUBJECT)
         number = subject.feat("Number") if subject is not None else None
-        if number is None or number == verb_number:
+        if number is None or number == verb_number or _presentational(subject):
             survivors.append(candidate)
     if len(survivors) == len(candidates):
         return candidates, None
     return tuple(survivors), (
         f"[PROČ: shoda čísla — přísudek {verb_number}, "
         f"podmět musí být týž]"
+    )
+
+
+def _presentational(subject: "Mention | None") -> bool:
+    """Ukazovací „to" v prezentační vazbě — „**To** jsou psi."
+
+    ÚZKÁ VÝJIMKA ZE SHODY, a je to fakt o češtině, ne úleva testu. Střední
+    „to" v téhle vazbě nezastupuje počitatelný podmět, takže se s
+    přísudkem v čísle neshoduje: „To je pes." i „To jsou psi." jsou obojí
+    správně, a filtr, který druhou zahodí, zahodí gramatickou větu.
+
+    Ohraničení je záměrně tvrdé — lemma `ten`, `PronType=Dem`, střední
+    rod, jednotné číslo. Kdyby se pustilo cokoli šiřšího, přestal by
+    filtr chytat motivační případ, kvůli kterému vznikl („Obsahuje citron
+    vitamíny?"), a to je horší než neumět jednu vazbu.
+    """
+    if subject is None:
+        return False
+    return (
+        subject.lemma == "ten"
+        and subject.feat("PronType") == "Dem"
+        and subject.feat("Gender") == "Neut"
+        and subject.feat("Number") == "Sing"
     )
 
 
@@ -1334,6 +1363,113 @@ def relation_tier(lexicon: Lexicon) -> Tier:
         return tuple(decided), "; ".join(notes) if notes else None
 
     return tier
+
+
+#: Otázka, kterou se uzavření světa POTVRZUJE. Není to menu jako
+#: u relace — je jen jedna možnost a jde o to, jestli ji člověk MYSLÍ VÁŽNĚ.
+COMPLETE_QUESTION_MARK = "→!∀"
+
+
+def completeness_shape(predication: Predication, reading: Reading) -> str | None:
+    """Skupina, jejíž úplnost věta NAVRHUJE — nebo `None`.
+
+    Tvar je „**to** + spona + **všechen** + jméno v množném čísle": „To
+    jsou všichni psi." Nese ho gramatika, ne slovník — `PronType=Tot` na
+    determinátoru je totalizace a demonstrativum v podmětu ukazuje na
+    dosavadní výčet, ne na nový prvek.
+
+    **Vrací se skupina, ne rovnou `complete(g)`.** Rozdíl je celý smysl
+    téhle funkce: co ten tvar znamená v jádře, rozhoduje ČLOVĚK tahem, ne
+    interpret. `complete(g)` je LIDSKÉ EPISTEMICKÉ PROHLÁŠENÍ — jediné
+    místo, kde I‑21 („absence není negace") ustupuje — a ustupuje jen
+    proto, že to někdo výslovně řekl.
+    """
+    if predication.negated:
+        return None
+    tokens = reading.tokens
+    root = next((t for t in tokens if t.head == 0), None)
+    if root is None or root.upos != "NOUN":
+        return None
+    feats = dict(root.feats)
+    if feats.get("Number") != "Plur" or feats.get("Case") != "Nom":
+        return None
+    children = [t for t in tokens if t.head == root.index]
+    if not any(t.deprel == "cop" and t.lemma == "být" for t in children):
+        return None
+    if not any(
+        t.deprel == "det" and dict(t.feats).get("PronType") == "Tot" for t in children
+    ):
+        return None
+    # Demonstrativum v podmětu. Bez něj je „Všichni psi štěkají." obecné
+    # tvrzení O psech, ne prohlášení o tom, KTEŘÍ psi jsou — a uzavřít
+    # svět na základě věty, která o výčtu vůbec nemluví, by bylo přesně
+    # to, co dělat nesmí.
+    if not any(
+        t.deprel == "nsubj" and dict(t.feats).get("PronType") == "Dem"
+        for t in children
+    ):
+        return None
+    return root.lemma
+
+
+def completeness_tier() -> Tier:
+    """UZAVŘENÍ SVĚTA z české věty — a vždycky jen jako NÁVRH.
+
+    **Tohle patro se nikdy nic nenaučí, a je to schválně.** Ostatní tahy
+    učí TVAR: jedna odpověď na „Kočka je savec." zavře celou třídu vět,
+    protože „jak se čte tahle stavba" je vlastnost jazyka. Uzavření světa
+    ale vlastnost jazyka není — je to epistemický stav MLUVČÍHO v jednom
+    okamžiku o jedné skupině. Že dnes někdo dopočítal své psy, neopravňuje
+    zavřít příště kočky, ani tytéž psy za měsíc.
+
+    Cena chyby je tu navíc nejvyšší v celém systému: špatně zapsané
+    uzavření vyrobí `N` tam, kde má být `U` — nevědomost vydávaná za
+    znalost, tedy právě to, co tenhle projekt dělat nesmí. Proto se
+    `complete` nedosadí NIKDY, ani při jednoznačném tvaru.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        decided: list[Candidate] = []
+        for candidate in candidates:
+            predication = candidate.predication
+            group = completeness_shape(predication, reading)
+            if group is None:
+                decided.append(candidate)
+                continue
+            notes.append(
+                f"[UZAVŘENÍ SVĚTA: navrženo pro „{group}“ — "
+                f"{COMPLETE_QUESTION_MARK}, nikdy tiše]"
+            )
+            decided.append(
+                Candidate(
+                    replace(predication, pending_complete=group),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(decided), "; ".join(notes) if notes else None
+
+    return tier
+
+
+def complete_question(predication: Predication) -> str | None:
+    """Otázka na uzavření světa — jediná otázka systému, která člověka
+    upozorňuje na DŮSLEDEK, ne na neznalost.
+
+    U ostatních otázek systém neví a ptá se. Tady ví přesně, co se stane,
+    a ptá se, jestli to člověk chce: od téhle chvíle přestane na kohokoli
+    mimo výčet odpovídat „nevím" a začne odpovídat „ne".
+    """
+    group = predication.pending_complete
+    if not group:
+        return None
+    return (
+        f"Mám „{group}“ prohlásit za UZAVŘENOU skupinu? Znamená to, že "
+        f"o každém, kdo v dosavadním výčtu není, budu nadále odpovídat NE, "
+        f"ne NEVÍM — a je to jediné místo, kde z nepřítomnosti dělám závěr."
+    )
 
 
 def _propose_relation(
