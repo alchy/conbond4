@@ -1089,7 +1089,18 @@ CONTRACTS: tuple[Clause, ...] = (
             "a opačný směr, takže naučit ho jako tvar by znamenalo "
             "přečíst druhou větu naruby; druhá věta se ptá znovu. "
             "Pět měřených významů se liší PRÁVĚ jménem role, takže menu "
-            "není nový druh rozhodnutí (W‑39)"
+            "není nový druh rozhodnutí (W‑39). PÁRUJE SE PŘES TOKEN, NE "
+            "PŘES LEMMA: zmínka ve čtení je SLOŽENÁ („první_předseda“ "
+            "proti `předseda` v rozboru), takže shoda lemmat přívlastek "
+            "přehlédne — posedmé táž rodina (W‑32, W‑47, W‑48, B‑18, "
+            "B‑22, W‑53). BUĎ PŘÍVLASTEK, NEBO ROLE, NE OBOJÍ: u SPONY "
+            "je jmenná část KOŘENEM, takže její genitiv je jeho DÍTĚ a "
+            "rolí se stane, ačkoli u slovesné věty je vnukem a nestane; "
+            "stavba se liší, zacházení se lišit nesmí. VÝJIMKA JE JEDNA "
+            "a je čitelná ze STAVU, ne ze stromu: genitiv, který si "
+            "nárokuje ČEKAJÍCÍ JÁDROVÁ RELACE („Petrovice jsou součástí "
+            "Plzně.“), přívlastek NENÍ — je to jedna její strana a bez "
+            "něj by odpověď `→⊆` neměla s čím pracovat (W‑58)"
         ),
         anchor="core_semantics.cascade:genitive_attributes",
         entry=".utter(",
@@ -1099,6 +1110,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_second_statement_needs_the_answer",
             "test_the_same_form_can_take_a_different_role",
             "test_nothing_is_learned_so_the_next_sentence_asks_again",
+            "test_a_composed_head_keeps_its_genitive_attribute",
+            "test_a_genitive_is_either_an_attribute_or_a_role",
+            "test_a_pending_kernel_relation_keeps_its_genitive",
+            "test_no_mention_is_in_the_reading_twice",
         ),
     ),
     Clause(

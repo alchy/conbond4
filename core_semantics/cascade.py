@@ -1870,7 +1870,18 @@ def prodrop_tier() -> Tier:
                     f"zatím neumím]"
                 )
             return candidates, None
-        feats = dict(root.feats)
+        # ZMÍNKOU JE NOSITEL LEMMATU PŘÍSUDKU, NE KOŘEN *(W‑58)*.
+        # U slovesné věty je to totéž. U SPONY ale kořenem je JMENNÁ
+        # ČÁST („byl prvním **předsedou**“) a ta už ve čtení leží jako
+        # role `co` — dosadit ji ještě jako `kdo` znamená mít TÝŽ TOKEN
+        # VE ČTENÍ DVAKRÁT POD DVĚMA JMÉNY, jednou složeně
+        # (`první_předseda`) a jednou holý (`předseda`). Shodu, která je
+        # tu vodítkem, nese u spony `cop` („byl“ — Masc Sing), takže
+        # správná zmínka je právě on. `_predicate_head` to rozlišení už
+        # dělá; patro se ho jen neptalo.
+        hlavy = _predicate_head(reading)
+        nositel = hlavy[0] if hlavy else root
+        feats = dict(nositel.feats)
         if "Gender" not in feats and "Number" not in feats:
             # Přísudek, který o podmětu nic neříká, nedává ani vodítko.
             # Nabízet bez něj kohokoli by bylo hádání.
@@ -1883,11 +1894,11 @@ def prodrop_tier() -> Tier:
             gap = RoleReading(
                 ROLE_SUBJECT,
                 Mention(
-                    lemma=root.lemma,
-                    form=root.form,
-                    token_index=root.index,
-                    upos=root.upos,
-                    feats=root.feats,
+                    lemma=nositel.lemma,
+                    form=nositel.form,
+                    token_index=nositel.index,
+                    upos=nositel.upos,
+                    feats=nositel.feats,
                 ),
                 awaiting=AWAITING_REFERENCE,
                 dropped=True,
@@ -1910,7 +1921,7 @@ def prodrop_tier() -> Tier:
                 )
             )
         return marked and tuple(marked) or candidates, (
-            f"[BEZ PODMĚTU: „{root.form}“ ho nevyslovil — čeká se na "
+            f"[BEZ PODMĚTU: „{nositel.form}“ ho nevyslovil — čeká se na "
             f"rozhodnutí, o kom to platí]"
         )
 
@@ -2518,7 +2529,31 @@ def genitive_attributes(
     otázka na JMÉNO ROLE; a protože „přínos Němcové" a „popis Němcové"
     mají identický rozbor, rozhodnout ji musí člověk.
     """
-    ve_cteni = {role.mention.lemma for role in predication.roles}
+    # PÁRUJE SE PŘES TOKEN, NE PŘES LEMMA *(W‑58)*. Zmínka ve čtení je
+    # SLOŽENÁ: „prvním předsedou odboru“ má v rozboru hlavu `předseda`,
+    # ale ve čtení leží `první_předseda`, takže shoda lemmat selže a
+    # přívlastek se přehlédne. Je to POSEDMÉ táž rodina (W‑32, W‑47,
+    # W‑48, B‑18, B‑22, W‑53): kategorie porovnaná přesnou shodou tam,
+    # kde hodnotu skládá jiná vrstva. Index tokenu je kotva, kterou
+    # skládání nemění — a přesně proto si ji W‑53 nechala na hlavě.
+    #
+    # A vrací se LEMMA ZMÍNKY, ne lemma tokenu: přívlastek má viset na
+    # tom uzlu, o kterém věta mluví, tedy na `první_předseda`.
+    ve_cteni = {
+        role.mention.token_index: role.mention.lemma
+        for role in predication.roles
+    }
+    # GENITIV, KTERÝ SI UŽ NÁROKUJE JÁDROVÁ RELACE, PŘÍVLASTEK NENÍ
+    # *(W‑58)*. „Petrovice jsou součástí **Plzně**." a „byl prvním
+    # předsedou **odboru**." mají STAVBU IDENTICKOU — u spony je jmenná
+    # část kořenem a genitiv jejím dítětem. Rozlišit je ze stromu nejde;
+    # rozlišuje je STAV, který o kus výš nastavilo patro jádrové relace:
+    # u první věty čeká odpověď `→⊆` a ten genitiv je JEDNA JEJÍ STRANA.
+    # Vzít mu ho znamená, že odpověď nemá s čím pracovat.
+    root = reading.root()
+    narokovany = (
+        root.index if predication.pending_relation and root is not None else None
+    )
     najdene: list[tuple[str, str, int]] = []
     for token in reading.tokens:
         if token.deprel != "nmod" or dict(token.feats).get("Case") != "Gen":
@@ -2526,9 +2561,9 @@ def genitive_attributes(
         head = _token_at(token.head, reading)
         if head is None or head.upos not in ("NOUN", "PROPN"):
             continue
-        if head.lemma not in ve_cteni:
+        if head.index not in ve_cteni or head.index == narokovany:
             continue
-        najdene.append((head.lemma, token.lemma, token.index))
+        najdene.append((ve_cteni[head.index], token.lemma, token.index))
     return tuple(najdene)
 
 
@@ -2814,9 +2849,26 @@ def attribute_tier() -> Tier:
                 + ", ".join(f"„{h} {g}“" for h, g, _ in found)
                 + " — vztah vedle věty, čeká se na jméno role]"
             )
+            # BUĎ PŘÍVLASTEK, NEBO ROLE — NE OBOJÍ *(W‑58)*. U slovesné
+            # věty je genitiv VNUK kořene („chov **zvířat** je náročný“)
+            # a rolí se nestane sám od sebe. U SPONY je ale jmenná část
+            # KOŘENEM, takže její genitiv je jeho DÍTĚ — a stane se rolí
+            # predikace, ačkoli je to týž vztah dvou jmen uvnitř fráze.
+            # Stavba se liší, zacházení se lišit nesmí: věta by jinak
+            # o jednom členu tvrdila dvě věci najednou a na tu roli by se
+            # ptala „co znamená“, ačkoli právě řekla, že je to přívlastek.
+            prislovecne = {token_index for _, _, token_index in found}
             oznacene.append(
                 Candidate(
-                    replace(candidate.predication, pending_attribute=found),
+                    replace(
+                        candidate.predication,
+                        roles=tuple(
+                            role
+                            for role in candidate.predication.roles
+                            if role.mention.token_index not in prislovecne
+                        ),
+                        pending_attribute=found,
+                    ),
                     origin=candidate.origin,
                 )
             )

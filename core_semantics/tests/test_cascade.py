@@ -17,6 +17,8 @@ from core_semantics.cascade import (
     ROLE_OBJECT,
     ROLE_SUBJECT,
     agreement_tier,
+    attribute_tier,
+    prodrop_tier,
     feature_values,
     base_consistency_tier,
     cascade,
@@ -1482,17 +1484,21 @@ def test_an_ambiguous_number_still_counts_as_singular() -> None:
 # a aby se dalo poznat, kdy přestane platit.
 
 
-def test_a_composed_head_hides_its_genitive_attribute() -> None:
-    """PŘEHLÉDNUTÝ PŘÍVLASTEK — 13 z 22 výskytů tvaru `Gen` v korpusu.
+def test_a_composed_head_keeps_its_genitive_attribute() -> None:
+    """PŘEHLÉDNUTÝ PŘÍVLASTEK — bylo to 13 z 22 výskytů tvaru `Gen`.
 
-    `genitive_attributes` páruje hlavu SHODOU LEMMAT, jenže zmínka ve
+    `genitive_attributes` pároval hlavu SHODOU LEMMAT, jenže zmínka ve
     čtení je SLOŽENÁ: „prvním předsedou **odboru**" má v rozboru hlavu
-    `předseda`, ale ve čtení leží `první_předseda`. Shoda selže a genitiv
-    skončí jako ROLE PREDIKACE, na kterou se systém ptá „co znamená".
+    `předseda`, ale ve čtení leží `první_předseda`. Shoda selhala a
+    genitiv skončil jako ROLE PREDIKACE, na kterou se systém ptal „co
+    znamená".
 
-    **Je to posedmé táž rodina** (W‑32, W‑47, W‑48, B‑18, B‑22, W‑53):
+    **Bylo to posedmé táž rodina** (W‑32, W‑47, W‑48, B‑18, B‑22, W‑53):
     kategorie porovnaná přesnou shodou tam, kde hodnotu skládá někdo
     jiný. Stabilní identita je `token_index`, ne lemma.
+
+    A přívlastek visí na LEMMATU ZMÍNKY (`první_předseda`), ne na lemmatu
+    tokenu: má být o tom uzlu, o kterém věta mluví.
     """
     from core_semantics.cascade import genitive_attributes
 
@@ -1508,11 +1514,95 @@ def test_a_composed_head_hides_its_genitive_attribute() -> None:
     )
     predication = generate(reading)[0].predication
     assert "první_předseda" in {r.mention.lemma for r in predication.roles}
-    assert genitive_attributes(reading, predication) == (), (
-        "MEZ: přívlastek se neuvidí, protože hlava se ve čtení jmenuje jinak"
+    assert genitive_attributes(reading, predication) == (
+        ("první_předseda", "odbor", 4),
     )
-    assert "Gen" in surface_roles(predication), (
-        "a důsledek té meze: genitiv se ptá jako role predikace"
+
+
+def test_no_mention_is_in_the_reading_twice() -> None:
+    """COUNTEREXAMPLE REVIEWERA JAKO VLASTNOST *(W‑58)*: žádná zmínka
+    nesmí být ve čtení DVAKRÁT POD DVĚMA JMÉNY.
+
+    „byl prvním předsedou odboru" dávalo `co:první_předseda` (složená
+    zmínka) i `kdo:předseda` (holé lemma) — TÝŽ TOKEN, dvě jména, dvě
+    různá lemmata. Příčina: pro‑drop bral jako zmínku KOŘEN, jenže
+    u spony je kořenem JMENNÁ ČÁST, která už ve čtení leží.
+
+    Porovnává se `token_index`, ne lemma: lemma se skládá jinde, takže
+    dvě jména téhož tokenu by se lišila a shoda by je neodhalila.
+    """
+    reading = Reading(
+        tokens=(
+            _token(1, "Byl", "být", "AUX", 3, "cop", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "prvním", "první", "ADJ", 3, "amod", Case="Ins", Gender="Masc", Number="Sing"),
+            _token(3, "předsedou", "předseda", "NOUN", 0, "root", Animacy="Anim", Case="Ins", Gender="Masc", Number="Sing"),
+            _token(4, "odboru", "odbor", "NOUN", 3, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    verdict = cascade(
+        reading, tiers=(*HARD_TIERS, prodrop_tier(), attribute_tier())
+    )
+    for candidate in verdict.survivors:
+        indexy = [r.mention.token_index for r in candidate.predication.roles]
+        assert len(indexy) == len(set(indexy)), (
+            f"týž token pod dvěma jmény: {candidate.predication}"
+        )
+
+
+def test_a_genitive_is_either_an_attribute_or_a_role() -> None:
+    """Druhá půlka téhož *(W‑58)*. U SLOVESNÉ věty je genitiv VNUK kořene
+    („chov **zvířat** je náročný") a rolí se nestane. U SPONY je jmenná
+    část kořenem, takže její genitiv je jeho DÍTĚ a rolí se stane —
+    ačkoli je to týž vztah dvou jmen uvnitř fráze. Stavba se liší,
+    zacházení se lišit nesmí."""
+    reading = Reading(
+        tokens=(
+            _token(1, "Byl", "být", "AUX", 3, "cop", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "prvním", "první", "ADJ", 3, "amod", Case="Ins", Gender="Masc", Number="Sing"),
+            _token(3, "předsedou", "předseda", "NOUN", 0, "root", Animacy="Anim", Case="Ins", Gender="Masc", Number="Sing"),
+            _token(4, "odboru", "odbor", "NOUN", 3, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    verdict = cascade(reading, tiers=(*HARD_TIERS, attribute_tier()))
+    predication = verdict.survivors[0].predication
+    assert predication.pending_attribute == (("první_předseda", "odbor", 4),)
+    assert 4 not in {r.mention.token_index for r in predication.roles}
+    assert "Gen" not in surface_roles(predication)
+
+
+def test_a_pending_kernel_relation_keeps_its_genitive() -> None:
+    """PROTIPŘÍKLAD, bez kterého by ta oprava rozbila `contains`.
+
+    „Petrovice jsou součástí **Plzně**." má stavbu IDENTICKOU s „byl
+    prvním předsedou **odboru**" — u spony je jmenná část kořenem
+    a genitiv jejím dítětem. Rozlišit je ze STROMU nejde; rozlišuje je
+    STAV, který nastavilo patro jádrové relace: tady čeká odpověď `→⊆`
+    a ten genitiv je JEDNA JEJÍ STRANA. Vzít mu ho znamená, že odpověď
+    nemá s čím pracovat."""
+    from core_semantics.cascade import genitive_attributes
+    from dataclasses import replace as _replace
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Petrovice", "Petrovice", "PROPN", 3, "nsubj", Case="Nom", Number="Plur"),
+            _token(2, "jsou", "být", "AUX", 3, "cop", Number="Plur", Polarity="Pos"),
+            _token(3, "součástí", "součást", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+            _token(4, "Plzně", "Plzeň", "PROPN", 3, "nmod", Case="Gen", Gender="Fem", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = generate(reading)[0].predication
+    assert genitive_attributes(reading, predication), (
+        "bez čekající relace je to normální přívlastek"
+    )
+    ceka = _replace(predication, pending_relation="cop:součást+Gen")
+    assert genitive_attributes(reading, ceka) == (), (
+        "s čekající relací si ten genitiv nárokuje ona"
     )
 
 

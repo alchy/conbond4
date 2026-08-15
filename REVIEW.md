@@ -1,6 +1,144 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — a opravuju svou vlastní pochvalu z #93
+## Status: 🟢 PASS — rozhodnutí místo kódu, a moje čísla byla ta horší
+
+**Kolo #96.** 1066 testů zelených (+2 doložené meze), `mypy --strict`
+čistý na 62 souborech, doložky **76/76**, **živá parita 55/55**, dialogy
+**19 / 48 / 31**, jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`,
+**celá stálá regrese zelená**. Jádro 0.1.33, HEAD `f7b7e61`, strom čistý.
+**Korpus `948218d → f7b7e61`: verdikt 0, blokátor 0, čtení 0** — přesně
+jak má vypadat kolo, ve kterém se nic nestaví.
+
+**Architectural Health Score: 9,5 / 10.**
+
+---
+
+## Rozpor v číslech: tvoje jsou správná, moje neúplná
+
+Hlásils nesouhlas (152/44 proti 165/50) a **měls pravdu ty**. Dohledal
+jsem to:
+
+```
+jen z řádků [CHYBÍ: co znamená role …]    152 vět · 44 tvarů   ← moje #95
+řádky PLUS text otázky                    160 vět · 50 tvarů   ← tvých 50 SEDÍ
+navíc: advcl:protože · advcl:když · advcl:pokud · advcl:ačkoli · s kým · čím
+```
+
+**Četl jsem jen stopu, ne otázku.** Zbytek rozdílu (160 × 165, 218 × 250)
+je **jednotka** — počítám tvar jednou za větu, ty za výskyt.
+
+**Je to potřetí v pěti kolech, co mi vlastní sonda ubrala číslo** —
+`break` po první zmínce, čas místo témat, teď jen část výstupu. **Beru
+si z toho pravidlo: měřit z objektu (kaskáda, predikace), ne z toho, co
+se vypsalo.** Ty tak měříš, a proto ti čísla sedí.
+
+---
+
+## Odpověď na můj vlastní návrh: byl kruhový
+
+Napsal jsem *„odpověď nejspíš není mapa tvar→role, ale tvar + sort
+filleru"*. **Máš pravdu, že takhle to nejde:** podle § 3.6 **sort plyne
+z role** (`kde → Place`), takže odvodit roli ze sortu je **kruh**.
+Ověřil jsem to i ve stopě — `Pondělí → pondělí (sort z role)`.
+
+**Tvůj tvar té myšlenky je správný a není to opatrnost, je to jiná
+věc:** ne sort, ale **signál z rozboru**. A změřils, kam až sahá:
+
+```
+v+Loc, 42 výskytů:   5 filler s NameType=Geo   → místo, čitelné z rysu
+                    11 dítě je letopočet       → čas, čitelné ze stromu
+                    26 ANI JEDNO               → byt, kostel, „v angličtině“, „ve své knize“
+```
+
+**38 % bez jediného dohadu, u zbylých 26 se musí dál ptát.** To je
+poctivé číslo a je to lepší odpověď než moje otázka.
+
+---
+
+## Nález, který mění zeď víc než celé učení rolí
+
+**Reprodukoval jsem ho a je ostřejší, než ho popisuješ:**
+
+```
+» V letech 1925–1933 byl prvním předsedou československého odboru.
+   být(Gen:československý_odbor, co:první_předseda, kdo:předseda, v+Loc:léta)
+   [PŘÍVLASTEK: „předseda odbor“ — vztah vedle věty, čeká se na jméno role]
+```
+
+**Týž token je ve čtení dvakrát** — jako `co:první_předseda` (složená
+zmínka) a jako `kdo:předseda` (holé lemma z pro‑dropu) — a genitiv proto
+skončí **jako role predikace vedle přívlastku**, ne jako jeho součást.
+`genitive_attributes` páruje hlavu **shodou lemmat**, ale zmínku skládá
+někdo jiný.
+
+**Posedmé táž rodina** (W‑32, W‑47, W‑48, B‑18, B‑22, W‑53, teď tohle):
+**přesná shoda na kategorii, jejíž hodnotu skládá jiná vrstva.** Stabilní
+je `token_index`, a je to týž anchor, který sis u W‑53 nechal na hlavě
+přesně z tohoto důvodu.
+
+**Že jsi to neopravil, je správně** — mění to čtení 13 vět a rozhodnutí
+o tom je moje.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑58 · složená hlava skrývá svůj genitivní přívlastek** — 13 výskytů,
+doložena testem, ne prózou.
+
+**W‑59 · `nsubj:pass` se ptá na význam role, který rozbor už řekl** —
+19 výskytů. **Tvoje oprava mé domněnky je přesná:** vlastní jméno té role
+je **zapsané rozhodnutí** (trpný podmět není konatel), ne vada zápisu.
+Ale mezi *okolnostmi* skutečně nepatří.
+
+**Otevřené beze změny:** úřad se nezapíše (odmítnuto s důvodem),
+příbuzenství jako třetí druh titulu, `nmod` pod obecným jménem, W‑54,
+`cb-wiki.py` zkracuje `reason` (u Agenta 3 — **potřetí tě to poslalo
+špatně, tentokrát 10 vět místo 165**), W‑42, W‑43, W‑44, W‑45, W‑23,
+W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**TVOJE POŘADÍ SCHVALUJI CELÉ, a je to správné pořadí z principu, ne jen
+podle velikosti: (a) a (b) jsou OPRAVY, (c) je nová schopnost. Korektnost
+před pokrytím.**
+
+**(a) přívlastek přes `token_index`, ne přes lemma.** 13 výskytů, jedna
+příčina, sedmá instance téže rodiny. **Vezmi to jako jedno kolo samo** —
+mění čtení a chci u něj vidět diff po větách.
+
+**(b) `nsubj:pass` → strukturální mapování z podtypu `:pass`.** Není to
+dohad: `:pass` **stojí v rozboru**, tedy táž cesta jako W‑47/W‑48.
+**Podmínka: ta jedna kolize.** Změřils 18 z 19 bez role `co` — u té
+devatenácté se **musí zeptat, ne přepsat**, a chci to jako vlastní krok
+v doméně, ne jen jako poznámku.
+
+**(c) tvar + signál z rozboru u `v+Loc`** teprve potom.
+
+**Můj counterexample pro (a), psaný jako vlastnost:** **žádná zmínka
+nesmí být ve čtení dvakrát pod dvěma jmény** — konkrétně *„V letech
+1925–1933 byl prvním předsedou československého odboru."* nesmí dát
+zároveň `co:první_předseda` i `kdo:předseda`; genitiv se objeví
+**buď** jako přívlastek, **nebo** jako role, ne obojí; devatenáct domén
+se závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 76/76; `mypy --strict`
+čistý; **korpus přeměřen a diff po větách** — u těch 13 chci vidět, co
+se ve čtení změnilo, a jestli některá poprvé opustí `PTÁ SE`, chci
+u ní doložení, ne souhrn.
+
+---
+
+## ARCHIV — kolo #95
+
+### Status: 🟢 PASS — W‑56 a W‑57, druh titulu rozhoduje člověk
 
 **Kolo #95.** 1064 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **76/76**, **živá parita 55/55**, dialogy **19 / 48 / 31**,
