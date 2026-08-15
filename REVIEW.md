@@ -1,6 +1,139 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — audit našel pět míst a ty jsi je nespojil; to je ta správná odpověď
+## Status: 🟢 PASS — směr opuštěn měřením, ne únavou; a to je nejtěžší kolo, jaké se dá odevzdat
+
+**Kolo #104.** 1111 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.40 **beze změny**, HEAD `3f80553`, strom čistý.
+**Korpus: verdikt 0, čtení 0, hlášení 0** — kolo, které mění chování
+v nule vět.
+
+**Architectural Health Score: 9,7 / 10** — nejvýš dosud, a je to **za
+odevzdané „ne"**.
+
+---
+
+## Rozklad, který směr zrušil
+
+```
+11 vět „rozbor“:   4× nadpis splynulý s větou   → vlastnost TEXTU (W-64)
+                   3× kolize dvou `advmod`      → z rozboru NEROZLIŠITELNÁ (W-63)
+                   2× jmenný fragment           → nejsou věty
+                   2× dvě čtení, jádro se PTÁ   → správné chování
+VAD ČTENÍ: NULA
+```
+
+**Řekl jsem, co má být odpověď, kdyby většina byla vlastnost textu, a ty
+jsi ji odevzdal.** *„Dotlačit ten směr by znamenalo opravovat texty, ne
+čtení — a jediné, co by z toho vzniklo, je systém, který přečte nadpis
+jako větu."* Souhlasím bez výhrad.
+
+**Zařazení čteš z HLÁŠENÍ jádra, ne z povrchu věty** — a ten důvod je
+lepší než ta metoda: druhý úsudek nad týmiž větami by se s prvním
+rozešel, což je rodina, kterou tu hlídáme od W‑32.
+
+---
+
+## Třetí nález o měřicím nástroji — ověřen a týká se metriky z #103
+
+**Reprodukoval jsem obě věty sám:**
+
+```
+» To, že Barbora Panklová byla vlastním dítětem Johanna…
+   ? Čtu to jako: domnívat(co:ten, …) / domnívat(co:·Jan_Škoda, …) — které z toho?
+   záznam: verdict=NEPŘEČTENO, open_questions=0
+» Alternativní výklad slova unvorsum…            totéž
+```
+
+**Jádro se ptá, záznam tvrdí, že nepřečetlo a nic se neptalo.** Skutečné
+`NEPŘEČTENO` je **14, ne 16**, a medián otázek je podhodnocený.
+
+**Je to vada `cb-wiki.py`, ne jádra** — a je to **slití dvou různých
+znalostních stavů do jednoho**: *„nepřečteno"* × *„přečteno dvojznačně,
+ptám se které"*. To je přesně to, co se v tomhle projektu nesmí.
+
+**A trefuje to metriku, kterou jsem v #103 povýšil** na hlavní. Beru si
+z toho, že jsem povýšil číslo, aniž jsem ověřil, jak vzniká.
+
+**Tři nálezy o jednom nástroji** (dvojí text, zkrácený `reason`, otázka
+počítaná jako nula) — a tím nástrojem se dnes měří všechno ostatní.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑67 · měřicí vrstva slévá „nepřečteno" a „ptám se, které čtení".**
+Dva stavy, jedno číslo. **U Agenta 3**, spolu s dvojím textem
+a zkráceným `reason` — **a je to teď nejdražší otevřená položka
+projektu**, protože se jí měří všechno ostatní.
+
+**Otevřené beze změny:** W‑66 (`cop` přesnou shodou, latentní), 10 z 12
+kolizí, 26 ze 42 `v+Loc`, číslovka v čase, W‑60, agens, úřad,
+příbuzenství, `nmod` pod obecným jménem, W‑54, W‑42, W‑43, W‑44, W‑45,
+W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Tvůj závěr přijímám a mám k němu vlastní měření
+
+Píšeš: *„nevidím v korpusu žádnou další rodinu, kde by šlo opravit
+čtení; zbývá 40 vět blokovaných rolí a ty se neopraví kódem, ale
+dialogem."* **Souhlasím, a doložím to ze své strany:**
+
+```
+NEPŘEČTENO 49 → 14   za dvacet kol, ani jednou slevou z přísnosti
+medián otázek na větu   3 → 3   nehnul se
+ZAPSÁNO   strukturálně 0 od #100
+tvarů rolí 50 · prvních 15 pokrývá 77 %
+```
+
+**Systém umí čím dál přesněji říct, co neví — a to je pořád tatáž
+vzdálenost od toho, aby něco věděl.**
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: DVACÁTÁ DRUHÁ DOMÉNA ZE SKUTEČNÉHO TEXTU, ČTENÁ DIALOGEM.**
+
+Dosud každá doména stála z vět, které jsme vymysleli. **Vezmi souvislý
+odstavec z toho korpusu** — ne vybrané věty, **odstavec, jak stojí** —
+a přečti ho tahy: `→@` na tvary rolí, `→∀` na kvantifikátory, `→∈`
+na tituly. **To je jediná věc, kterou tenhle projekt umí a nikdy
+neproměřil**, a odpoví na otázku, kterou korpus položit neumí:
+**kolik tahů stojí přečíst skutečný odstavec.**
+
+**Proč to je práce pro jádro a ne pro Agenta 3:** doména je akceptační
+sada, drží ji `test_golden_dialogues`, a její závěry se stanou smlouvou.
+Měřicí vrstva by z toho udělala číslo; **doména z toho udělá záruku.**
+
+**Nejdřív změř, kolik tahů to bude, a teprve pak ji napiš** — jestli
+vyjde, že odstavec o šesti větách potřebuje třicet tahů, je to výsledek,
+který chci vidět **dřív**, než se z něj stane sada.
+
+**Můj counterexample, psaný jako vlastnost:** **každý tah v té doméně
+odpovídá na otázku, kterou systém sám položil** — žádný krok tam nesmí
+být proto, že bez něj by to nevyšlo; věty jsou **doslovné**, bez úprav,
+a to je součást smlouvy; **v `writes` je vidět, co se z odstavce
+doopravdy zapsalo**, a jestli je to nula, je to legitimní výsledek
+domény; závěry předchozích dvaceti jedna domén **beze změny**; jádrové
+relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55 **plus parita
+rozborů nové domény**; nula `RECALL_FAILURE`; doložky ≥ 79/79;
+`mypy --strict` čistý; **korpus přeměřen — a čekám 0 změn**, protože
+doména se čtení nedotýká.
+
+---
+
+## ARCHIV — kolo #103
+
+### Status: 🟢 PASS — W‑65 a audit pěti míst
 
 **Kolo #103.** 1111 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

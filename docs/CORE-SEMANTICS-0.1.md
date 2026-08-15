@@ -1139,6 +1139,35 @@ nadpis jako větu.
 > VRSTVY, ne jádra — ale zkresluje právě tu metriku, která má `ZAPSÁNO`
 > nahradit.
 
+**KOLIK TAHŮ STOJÍ SKUTEČNÝ ODSTAVEC — ZMĚŘENO, DOMÉNA SE NEPÍŠE**
+*(kolo #105, 15. 8. 2026)*. Čtyři DOSLOVNÉ věty z korpusu, v pořadí,
+v jednom sezení. **Výsledek není číslo, je to `NE`:**
+
+| co | kolik |
+|---|---|
+| tahů, které mají odpověď (`→@`, `→∀`, `→=`) | 7 |
+| otázek BEZ TAHU | 6 |
+| vět zapsaných | 0 |
+
+**Tři důvody, a sčítají se:**
+
+1. **Některé otázky tah nemají.** „1938" visí jako `nummod` uvnitř
+   časového údaje; „musel"/„ulehnout" jsou SOUŘADNÝ DRUHÝ PŘÍSUDEK.
+   Pojmenovat je rolí by znamenalo tvrdit, že jsou členy té věty.
+2. **Jedna otázka odmítá vlastní odpověď.** U „si" se systém ptá *„Na
+   koho odkazuje? Řekni to prosím jménem"*, ale role `komu` čeká na
+   **kvantifikátor** — `decides_reference` proto odpoví *„role na odkaz
+   nečeká"*. Otázka a stav se rozešly.
+3. **Odstavec se nerozběhne sám.** Poslední věta nemá vyslovený podmět
+   a v souvislém sezení pro něj není kandidát: předchozí věty se
+   nezapsaly (visí na nepojmenovaných rolích), takže v kontextu textu
+   nic neleží.
+
+> **Proto se dvacátá druhá doména nepíše.** Každý krok v ní má být
+> odpovědí na otázku, kterou systém sám položil. Kroky, které by tam
+> byly „aby to vyšlo", by z akceptační sady udělaly zkoušku napsanou
+> podle výsledku — a to je přesně to, čemu má ta sada bránit.
+
 ## 13 · Akceptační sada
 
 T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
