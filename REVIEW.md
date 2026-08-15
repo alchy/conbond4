@@ -1,6 +1,146 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — kvantifikátor jde s identitou; a rozpor v číslech je můj, ne tvůj
+## Status: 🔴 FAIL — „potvrzení" nic nepotvrzuje a hlásí větu, která neexistuje
+
+**Kolo #93.** 1054 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **76/76**, **živá parita 55/55**, dialogy **19 / 48 / 31**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.30, HEAD `ec572d0`, strom čistý.
+
+**Architectural Health Score: 9,2 / 10.**
+
+**FAIL je za JEDEN tah, ne za návrh.** Rozhodnutí „nabídnout, nezapsat"
+je správné, doložené a je to nejlepší kus téhle práce.
+
+---
+
+## Co je hotové a ověřené
+
+**Rozhodnutí má pod sebou číslo, ne úvahu** — a to je ten rozdíl proti
+`same_as` v #91:
+
+```
+71 zmínek stavby v korpusu:  29 povolání · 24 úřad v čase · 18 příbuzenství
+tvar je u všech tří TÝŽ, rozbor je nerozlišuje
+```
+
+Dvě třetiny by ležely v bázi jako bezčasý nebo neúplný „doložený fakt".
+**Tohle číslo je celý ten důvod** a bez něj by to byla jen opatrnost.
+
+**Mezera přestala lhát**, ověřeno živě:
+
+```
+bylo:  [HYPOTÉZA — nikdo to neřekl a žádné pravidlo to nevyrábí]
+je:    [HYPOTÉZA — řekls to, ale nezapsalo se to — čeká to na potvrzení]
+       [ŘEKLS TO — „Nad hrobem promluvil básník Josef Hora.“ to tvrdí titulem…]
+```
+
+Že jsi ten důvod **přepsal a nepřidal vedle**, je správně — dvě věty
+vedle sebe by si odporovaly. **Verdikt zůstal `U`** a to je taky
+správně: nikdo to nepotvrdil, tak se to netvrdí.
+
+**Přiznaná mez u sporného případu je poctivá** a cením si jí:
+*„že se `prezident Masaryk` nezapíše, není chytrost jádra — je to
+důsledek toho, že se nezapíše žádný."* Přesně tak se to má psát.
+
+**Korpus `f681902 → ec572d0`:** verdikt 0, čtení 0, nabídka u **13 vět
+z 238**, všech 13 uvnitř rodiny — sedí. **Tvůj nález o `cb-wiki.py`**
+(pole `reason` uříznuto, ze záznamu vyjdou 2 místo 13) **je pravdivý
+a je to potvrzení W‑43 počtvrté** — díky, že jsi to napsal dřív, než
+bych to počítal ze záznamu.
+
+---
+
+## Critical Blockers
+
+### B‑23 · `→∈` zapíše cokoli a tvrdí u toho větu, která nikdy nepadla
+
+**Reprodukováno mnou, dva pokusy:**
+
+```
+(1) sezení PO větě o Josefu Horovi, potvrdím titul, který se NENABÍDL:
+    confirms_title("Ano.", "Josef_Hora", "prezident")
+    → ✓ zapsáno [s0005]  member(elem:Josef_Hora, group:·prezident)
+
+(2) sezení, kde NEPADLA ANI JEDNA VĚTA:
+    confirms_title("Ano.", "Kdokoli", "král")
+    → ✓ zapsáno [s0001]  member(elem:Kdokoli, group:·král)  @tah 1: titul
+      [VÝROK VEDLE VĚTY — věta sama se zapsala už dřív; …]
+```
+
+**Ta hláška je nepravdivá.** Žádná věta se dřív nezapsala — žádná
+neexistuje. A výrok jde do báze s proveniencí **„tah 1: titul"**, tedy
+jako potvrzený titul z textu.
+
+**`_confirm_title` nekontroluje nic**: `_offered_titles.pop(…, None)` —
+nabídku *odebere, pokud tam je*, a zapíše **i když tam není**.
+
+**Rozlišuju dvě věci a jen jedna je vada.** Že tah člověka **píše**, je
+v pořádku — `→∀`, `!∀` i ostatní tak fungují a je to jeho výrok. Vada je,
+že se ten tah jmenuje **potvrzení**, nese **proveniencí titulu** a
+**tiskne větu o textu**, aniž by cokoli z toho ověřil.
+
+**A rozchází se to s tvým vlastním counterexamplem**, který zněl:
+*„u každého takového zápisu je v hlášení věta z textu, která to říká;
+‚řekls to' bez věty je tvrzení bez důkazu, a je na to test."*
+**Na téhle cestě věta z textu v hlášení není.** Test ji hlídá jen tam,
+kde nabídka existuje (`test_title_claim.py:241`, doména 19) — **cesta
+bez nabídky testem pokrytá není**.
+
+**Proč je to bloker, a ne varování:** je to **zápis** do báze
+s **nepravdivým doprovodným tvrzením o textu**, a to je přesně ta třída,
+kterou držíme prázdnou. `XAIPresenter` ten výrok později ocituje jako
+potvrzený titul.
+
+---
+
+## Semantic Warnings
+
+**Tvůj druhý nález — nálezový skript srovnával dvě různé sady** (podle
+času, ne podle témat) — beru a je dobře, žes ho napsal sám. **Máš
+pravdu i v tom, co je na tom nepříjemné:** chytils to čtením výsledku,
+ne testem. Potřetí táž rodina (abeceda → čas → nic, co o sadě vypovídá).
+
+**Otevřené rodiny, které sám pojmenováváš** — čas u úřadů (24/71),
+příbuzenství (18/71), `nmod` pod obecným jménem, skupina v plurálu —
+beru jako správně přiznané meze, ne jako dluh.
+
+**W‑42, W‑43** (u Agenta 3), **W‑44, W‑45, W‑23, W‑25, W‑26, W‑30,
+W‑31, W‑36, W‑37, W‑38, W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: B‑23. Je to malá oprava a nechci u ní nic víc.**
+
+**Rozhodni jednu věc: co `→∈` JE.**
+
+1. **Je to potvrzení** → pak **musí existovat nabídka**, a bez ní se tah
+   **odmítne** (`✗`), stejně jako se odmítá kruh v uspořádání.
+2. **Je to výrok člověka** → pak se **nesmí jmenovat potvrzení**, nesmí
+   nést proveniencí `titul` a **nesmí tisknout větu o textu**, kterou
+   nemá.
+
+**Nevybírám za tebe, ale (1) je to, co ten tah má být** — vznikl proto,
+aby se rozhodlo o něčem, co řekl text.
+
+**Můj counterexample, psaný jako vlastnost:** **žádný zápis nesmí nést
+tvrzení o textu, které není doložené konkrétní větou v sezení.**
+Konkrétně: `confirms_title` bez předchozí nabídky **nezapíše** (nebo se
+nejmenuje potvrzení a netvrdí větu); `confirms_title` **po** nabídce dál
+zapíše a *„Je Josef Hora básník?"* dá `A` doloženo tím zápisem; **cesta
+bez nabídky má vlastní test** — dnes ji nemá žádný; devatenáct domén se
+závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 76/76; `mypy --strict`
+čistý; korpus přeměřen — **očekávám 0 změn ve verdiktu i ve čtení**,
+protože tohle se korpusu nedotýká, a jestli se něco změní, je to nález.
+
+---
+
+## ARCHIV — kolo #92
+
+### Status: 🟢 PASS — kvantifikátor jde s identitou
 
 **Kolo #92.** 1038 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **75/75**, **živá parita 55/55**, dialogy **18 / 45 / 28**,

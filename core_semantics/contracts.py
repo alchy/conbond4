@@ -1193,7 +1193,15 @@ CONTRACTS: tuple[Clause, ...] = (
             "přes vykreslení. Nic se tím NEUČÍ: „prezident Masaryk“ "
             "v další větě znamená totéž a zeptá se znovu. Stráže se "
             "neopisují — ptá se `titled_name_of`, takže `nmod` („Město "
-            "Praha“) ani plurál („bratří Čapků“) tudy nejdou (W‑55)"
+            "Praha“) ani plurál („bratří Čapků“) tudy nejdou (W‑55). "
+            "A `→∈` JE POTVRZENÍ, takže BEZ NABÍDKY SE ODMÍTNE: bez věty "
+            "by šel do báze výrok s proveniencí titulu a s hláškou „věta "
+            "sama se zapsala už dřív“, ačkoli žádná taková věta "
+            "neexistuje — a `XAIPresenter` by ho pak citoval jako "
+            "potvrzený titul z textu. ŽÁDNÝ ZÁPIS NESMÍ NÉST TVRZENÍ "
+            "O TEXTU, KTERÉ NENÍ DOLOŽENÉ KONKRÉTNÍ VĚTOU V SEZENÍ; "
+            "u potvrzeného titulu je proto ta věta PŘÍMO V HLÁŠENÍ. "
+            "Odmítnutý tah nabídku NESPOTŘEBUJE (B‑23)"
         ),
         anchor="core_semantics.cascade:title_claims",
         entry=".utter(",
@@ -1208,6 +1216,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_question_nobody_touched_still_says_nobody_said_it",
             "test_confirming_writes_the_claim_and_closes_the_offer",
             "test_the_breakdown_has_its_own_reason_for_this",
+            "test_a_confirmation_without_any_sentence_is_refused",
+            "test_a_confirmation_of_a_title_nobody_said_is_refused",
+            "test_the_refusal_does_not_eat_the_offer",
+            "test_every_written_title_cites_a_sentence_that_was_really_said",
         ),
     ),
     Clause(

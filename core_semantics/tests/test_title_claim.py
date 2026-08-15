@@ -269,3 +269,69 @@ def test_the_breakdown_has_its_own_reason_for_this() -> None:
         "není to vada: v bázi to NENÍ, takže paměť neselhala — čeká to na "
         "rozhodnutí, které nikdo neudělal"
     )
+
+
+# --------------------------------------------------------------------------
+# `→∈` je POTVRZENÍ — a potvrdit jde jen to, co někdo řekl *(B‑23)*
+# --------------------------------------------------------------------------
+
+
+def test_a_confirmation_without_any_sentence_is_refused() -> None:
+    """CESTA BEZ NABÍDKY, kterou dřív nehlídalo nic. Tah šel do prázdného
+    sezení a zapsal `member(Kdokoli, král)` s proveniencí titulu a
+    s hláškou „věta sama se zapsala už dřív“ — jenže žádná věta
+    neexistovala. **Zápis s nepravdivým tvrzením o textu je horší než
+    žádný zápis**: `XAIPresenter` ho pak cituje jako potvrzený titul."""
+    session = Session()
+    result = session.play(confirms_title("Ano.", "Kdokoli", "král"))
+    assert result.error is not None
+    assert result.statement_id is None
+    assert not [
+        s for s in session.kb.active() if str(s.formula).startswith("member(elem:Kdokoli")
+    ]
+
+
+def test_a_confirmation_of_a_title_nobody_said_is_refused() -> None:
+    """OSTŘEJŠÍ PŘÍPAD než prázdné sezení: věta padla, uzel existuje,
+    nabídka existuje — jen na JINÝ titul. Kdyby stačilo, že se o tom
+    člověku mluvilo, dala by se pod jménem POTVRZENÍ zapsat libovolná
+    třída."""
+    session = _session()
+    session.utter(POET_TEXT, _Recorded())
+    result = session.play(confirms_title("Ano.", "Josef_Hora", "prezident"))
+    assert result.error is not None
+    assert result.statement_id is None
+    assert "member(elem:Josef_Hora, group:·prezident)" not in [
+        str(s.formula) for s in session.kb.active()
+    ]
+
+
+def test_the_refusal_does_not_eat_the_offer() -> None:
+    """Odmítnutý tah nesmí nabídku spotřebovat. Dřív ji `pop` odebíral
+    vždycky — a odmítnutí, které po sobě uklidí cizí stav, je horší než
+    zápis: příště by potvrzení té SPRÁVNÉ dvojice spadlo taky a nikdo by
+    nevěděl proč."""
+    session = _session()
+    session.utter(POET_TEXT, _Recorded())
+    session.play(confirms_title("Ano.", "Josef_Hora", "prezident"))
+    assert session.play(
+        confirms_title("Ano.", "Josef_Hora", "básník")
+    ).statement_id is not None
+
+
+def test_every_written_title_cites_a_sentence_that_was_really_said() -> None:
+    """COUNTEREXAMPLE JAKO VLASTNOST, ne jako řetězec: **žádný zápis
+    nesmí nést tvrzení o textu, které není doložené konkrétní větou
+    v sezení.** Věta z hlášení se proto hledá v ŽURNÁLU — kdyby se jen
+    kontrolovalo, že hláška nějakou větu obsahuje, prošel by i vymyšlený
+    text."""
+    session = _session()
+    session.utter(POET_TEXT, _Recorded())
+    result = session.play(confirms_title("Ano.", "Josef_Hora", "básník"))
+    assert result.statement_id is not None
+    hlaseni = "\n".join(result.lines)
+    receno = [turn.text for turn in session.journal]
+    assert any(veta in hlaseni for veta in receno), (
+        "hlášení cituje větu, kterou v tomhle sezení nikdo neřekl"
+    )
+    assert POET_TEXT in hlaseni

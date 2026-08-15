@@ -1455,24 +1455,62 @@ class Session:
     def _confirm_title(self, index: int, turn: Turn) -> TurnResult:
         """`→∈` — člověk potvrdil, co tvrdí TITUL *(W‑55)*.
 
+        **BEZ NABÍDKY SE TAH ODMÍTNE** *(B‑23)*. `→∈` je POTVRZENÍ, a
+        potvrdit jde jen to, co někdo řekl: tah vznikl proto, aby se
+        rozhodlo o něčem, co stálo v TEXTU. Bez té věty by šel do báze
+        výrok s proveniencí „titul“ a s hláškou „věta sama se zapsala už
+        dřív“ — jenže žádná taková věta by neexistovala. **Zápis
+        s nepravdivým tvrzením o textu je horší než žádný zápis**, a
+        `XAIPresenter` by ho později citoval jako potvrzený titul z věty.
+
+        Odmítnout, a ne zapsat potichu bez hlášky: kdyby se tah jen
+        „očistil“, zůstal by v systému způsob, jak dostat do báze cokoli
+        pod jménem POTVRZENÍ. Že tah člověka píše, je v pořádku — `→∀`
+        i `!∀` to dělají. Vada byla, že se ten zápis TVÁŘIL jako čtení
+        textu.
+
         **Věta se tímhle tahem NEZAPISUJE ZNOVU.** Zapsala se sama, když
         se dočetla; tenhle tah přidává výrok, který v ní stál vedle
         predikace. Táž úvaha jako u `→@1`.
         """
         assert turn.subject is not None
+        klic = (turn.subject.id, turn.node_id)
+        veta = self._offered_titles.get(klic)
+        if veta is None:
+            duvod = (
+                f"potvrdit „{turn.node_id} {turn.subject.id.replace('_', ' ')}“ "
+                f"nejde: žádná věta v tomhle sezení to netvrdí"
+            )
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(
+                    f"✗ nezapsáno: {duvod}",
+                    "[`→∈` je POTVRZENÍ, ne tvrzení. Kdyby zapsalo i bez "
+                    "věty, ležel by v bázi výrok s proveniencí titulu a "
+                    "s hláškou o textu, který nikdo neřekl. Jestli to "
+                    "tvrdit chceš, řekni to větou]",
+                ),
+                error=duvod,
+            )
         formula = member_of(Entity(turn.subject.id), Group(turn.node_id))
-        sid = self.kb.attach(formula, provenance=f"tah {index}: titul")
+        sid = self.kb.attach(formula, provenance=f"tah {index}: titul z věty")
         # ROZHODNUTO — nabídka se z paměti bere pryč. Kdyby tam zůstala,
         # hlásil by systém u zapsaného faktu „čeká to na tvé rozhodnutí“
         # a člověk by nevěděl, jestli se to zapsalo.
-        self._offered_titles.pop((turn.subject.id, turn.node_id), None)
+        del self._offered_titles[klic]
         return TurnResult(
             index=index,
             turn=turn,
             lines=(
                 f"✓ zapsáno [{sid}]  {formula}",
-                "[VÝROK VEDLE VĚTY — věta sama se zapsala už dřív; tvar "
-                "se tím NEUČÍ, další věta s titulem se zeptá znovu]",
+                # VĚTA Z TEXTU JE V HLÁŠENÍ, ne jen odkaz na to, že nějaká
+                # byla. „Řekls to“ bez toho, co se řeklo, je tvrzení bez
+                # důkazu — a tady je to navíc jediné, co ten zápis
+                # opravňuje.
+                f"[VÝROK VEDLE VĚTY — tvrdí to „{veta}“; věta sama se "
+                f"zapsala už dřív. Tvar se tím NEUČÍ, další věta "
+                f"s titulem se zeptá znovu]",
             ),
             statement_id=sid,
         )
