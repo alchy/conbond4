@@ -1777,13 +1777,69 @@ def passive_tier() -> Tier:
     ne odhadnuto: v korpusu je to 1 věta z 19, zbylých 18 `co` volné má.
     """
 
+    def _agent(role: RoleReading, reading: Reading) -> bool:
+        """Je to KONATEL trpné věty? *(W‑80)*
+
+        Rozbor to říká DVĚMA značkami naráz a ani jedna sama nestačí:
+        `obl:arg` (valenční doplnění, ne volná okolnost) a HOLÝ
+        instrumentál bez předložky. „Kniha byla napsána **Čapkem**" má
+        obojí; „napsána **perem**" má prostý `obl` (nástroj, `čím`)
+        a „spojována **s** emancipačními snahami" má předložku.
+        """
+        token = _token_at(role.mention.token_index, reading)
+        return (
+            role.name == "Ins:arg"
+            and token is not None
+            and _preposition_of(token, reading) is None
+        )
+
     def tier(
         candidates: tuple[Candidate, ...], reading: Reading
     ) -> tuple[tuple[Candidate, ...], str | None]:
         notes: list[str] = []
         out: list[Candidate] = []
+        root = reading.root()
+        trpny = root is not None and dict(root.feats).get("Voice") == "Pass"
         for candidate in candidates:
             roles = candidate.predication.roles
+            # KONATEL TRPNÉ VĚTY *(W‑80)*. Patiens měl jméno od W‑59,
+            # konatel ne — „Kniha byla napsána Čapkem." dávala
+            # `Ins:arg:Čapek`, tedy tvar místo jména, a věta se kvůli
+            # tomu nezapsala (W‑62). Trpný rod je přitom to jediné, co
+            # tu značku dělá čitelnou: `Ins:arg` pod ČINNÝM slovesem je
+            # valenční doplnění („stal se redaktorem", „zabývá se
+            # zkoumáním"), ne konatel — v korpusu 10 výskytů, ani jeden
+            # trpný.
+            if trpny and ROLE_SUBJECT not in {r.name for r in roles}:
+                konatele = [r for r in roles if _agent(r, reading)]
+                if konatele:
+                    notes.append(
+                        "[KONATEL: "
+                        + ", ".join(f"„{r.mention.form}“" for r in konatele)
+                        + f" je holý `Ins:arg` pod TRPNÝM přísudkem, tedy "
+                        f"„{ROLE_SUBJECT}“ — plyne to z rozboru, ne "
+                        f"z naučeného vzoru]"
+                    )
+                    roles = tuple(
+                        sorted(
+                            (
+                                replace(
+                                    r,
+                                    name=ROLE_SUBJECT,
+                                    shaped=False,
+                                    source="konatel trpné věty — holý `Ins:arg`",
+                                )
+                                if r in konatele
+                                else r
+                                for r in roles
+                            ),
+                            key=lambda r: r.name,
+                        )
+                    )
+                    candidate = Candidate(
+                        replace(candidate.predication, roles=roles),
+                        origin=candidate.origin,
+                    )
             passive = next((r for r in roles if r.name == PASSIVE_SUBJECT), None)
             if passive is None:
                 out.append(candidate)

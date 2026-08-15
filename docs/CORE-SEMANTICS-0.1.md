@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.50 · 15. 8. 2026
+**Verze jádra:** 0.1.51 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.51 | § 5.2 — KONATEL TRPNÉ VĚTY DOSTANE JMÉNO: holý `Ins:arg` pod `Voice=Pass` je `kdo`. Rozhodují DVĚ značky naráz, protože instrumentál je taky NÁSTROJ; § 12, § 13 T102 |
 | 0.1.50 | § 5.2 — TÁŽ ROLE, AŤ JE PODMĚT VYSLOVENÝ, NEBO NE: pro‑drop u trpného rodu vyrábí `co`, ne `kdo`. Dvě jména pro touž roli rozpadala bázi na dvě poloviny a mezera tvrdila „nikdo to neřekl“ o výroku, který v ní ležel; § 13 T101
 | 0.1.49 | § 5.2 — VLASTNÍ JMÉNO JE KONKRÉTNÍ, AŤ STOJÍ KDEKOLI: `·` dostávalo jen jako `nsubj`, u `nsubj:pass` a `Ins:arg` se systém ptal znovu, takže „Byl Karel Čapek pohřben na Vyšehradě?“ nedostalo odpověď, ačkoli fakt v bázi ležel. Je to vlastnost JMÉNA, ne role; obecné jméno se dál ptá; § 13 T100
 | 0.1.48 | § 3.2 — DATUM VNOŘENÉ POD JINÝM JMÉNEM se skládá taky („dne 25. prosince 1938“ → `den_25._prosinec_1938`), ale JEN takový `nmod`, který sám nese datové části — rozlišuje se podle toho, CO pod hlavou visí, ne jak se jmenuje. A pravidlo je O ŘADOVÉ ČÍSLOVCE, ne jen o datu: „1. místo“ → `1._místo`, což slovem systém dělal vždycky; § 13 T99
@@ -1041,6 +1042,34 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
 
+**Konatel trpné věty — ROZLIŠITELNÝ JE, ALE NE INSTRUMENTÁLEM SAMÝM**
+*(W‑80, rozhodnuto 15. 8. 2026)*. Otázka zněla: je `Ins:arg` u trpného
+rodu konatel, nebo se to z rozboru poznat nedá? **Poznat se to dá, ale
+až ze TŘÍ značek naráz** — a to je celý obsah rozhodnutí, protože každá
+sama vede k jinému, doložitelně špatnému čtení:
+
+| značka | co sama nestačí |
+|---|---|
+| instrumentál (`Case=Ins`) | „psal **perem**“ je NÁSTROJ, ne konatel |
+| `Voice=Pass` na přísudku | „napsána **perem**“ je stejně trpná |
+| `obl:arg` (valenční doplnění) | v korpusu 10× a **ani jednou** u trpného rodu — „stal se **redaktorem**“, „zabývá se **zkoumáním**“ |
+
+K nim přistupuje čtvrtá podmínka, kterou vynutil korpus: konatel je
+**HOLÝ** instrumentál. „Je spojována **s** emancipačními snahami.“ má
+`obl:arg`, instrumentál i `Voice=Pass`, a konatel to není — dělá to
+předložka.
+
+**Změřeno předem a na projev:** 22 trpných vět v korpusu, z toho 4
+s instrumentálem pod přísudkem, a **projev 0** — ani jedna z těch čtyř
+není holý `Ins:arg` (dvě mají předložku, dvě prostý `obl`). Pravidlo se
+proto v korpusu nemá kde ukázat a je doloženo **jen zkouškami**; to se
+říká rovnou, aby se z nuly nedalo číst „nic se nezměnilo“.
+
+**Co se tím napravilo.** Patiens dostal jméno v W‑59, konatel ne — „Kniha
+byla napsána Čapkem.“ dávala `napsaný(Ins:arg:·Čapek, co:kniha)`, tedy
+TVAR místo jména, a věta se kvůli povrchové roli podle B‑19 nezapsala.
+Rodina trpného rodu je tím uzavřená z obou stran jedné věty.
+
 **Partitivní relace v jádře — ODLOŽENA, A JE ZAPSANÁ SPOUŠŤ** *(W‑39,
 rozhodnuto 15. 8. 2026)*. Genitivní přívlastek nese pět měřením
 doložených významů a jeden z nich je „část z celku" („polovina domu").
@@ -1218,6 +1247,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T102 | konatel trpné věty | „Kniha byla napsána Čapkem.“ dá `kdo:·Čapek`; „Kniha byla napsána perem.“ dál `čím`; „Je spojována s emancipačními snahami.“ se nemění; činný `Ins:arg` („stal se redaktorem“) se nemění |
 | T101 | trpný rod má jedno jméno role | „Byl pohřben na Vyšehradě.“ + `→=` zapíše `co:Karel_Čapek` a otázka „Byl Karel Čapek pohřben na Vyšehradě?“ dá `A`; činný pro‑drop dál dává `kdo` |
 | T100 | vlastní jméno je konkrétní všude | „Byl Karel Čapek pohřben?“ i „Byla kniha napsána Karlem Čapkem?“ dají `·Karel_Čapek` bez doptání; „Byla kniha napsána?“ se dál ptá |
 | T99 | vnořené datum a řadová číslovka obecně | „Zemřel dne 25. prosince 1938.“ nehlásí „25.“ ani „1938“; „ulice Karla Čapka“ a „Město Praha“ se nemění; „Obsadil 1. místo.“ dá `1._místo` — ZÁMĚR, ne vedlejší účinek |

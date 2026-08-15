@@ -1295,8 +1295,17 @@ CONTRACTS: tuple[Clause, ...] = (
             "(`AWAITING_ROLE_NAME`, B‑19 — jinak by se věta zapsala "
             "s povrchovým jménem a po rozhodnutí podruhé); ptá se "
             "VLASTNÍ otázkou, která se ptá KTERÁ ZE DVOU STRAN, ne co "
-            "ten tvar znamená. AGENS se rolí NESTÁVÁ — „Auto bylo "
-            "koupeno Filipem.“ je vlastní rodina (W‑59). TÁŽ ROLE, AŤ JE "
+            "ten tvar znamená. KONATEL DOSTANE JMÉNO *(W‑80)*: HOLÝ "
+            "`Ins:arg` pod TRPNÝM přísudkem je „kdo“ — „Kniha byla "
+            "napsána Čapkem.“ dávala `Ins:arg:Čapek`, tedy TVAR místo "
+            "jména. Poznávají to DVĚ ZNAČKY NARÁZ a ani jedna sama "
+            "nestačí: instrumentál je taky NÁSTROJ („napsána perem“ je "
+            "stejně trpná), takže rozhoduje `obl:arg` proti `obl` "
+            "(valenční doplnění proti volné okolnosti) A NEPŘÍTOMNOST "
+            "PŘEDLOŽKY („spojována **s** emancipačními snahami“ má "
+            "obojí ostatní). Bez `Voice=Pass` se nepřejmenuje nic: holý "
+            "`Ins:arg` je v korpusu 10× a ANI JEDNOU u trpného rodu "
+            "(„stal se redaktorem“, „zabývá se zkoumáním“). TÁŽ ROLE, AŤ JE "
             "PODMĚT VYSLOVENÝ, NEBO NE *(W‑79)*: pro‑drop u trpného rodu "
             "vyrábí taky `co`, protože trpný podmět je PATIENS bez ohledu "
             "na to, jestli ho text zopakoval. Dvě jména pro touž roli "
@@ -1318,6 +1327,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_passive_sentence_goes_all_the_way_into_the_base",
             "test_a_passive_has_one_role_name_spoken_or_not",
             "test_an_active_prodrop_still_gets_a_subject",
+            "test_the_agent_of_a_passive_gets_a_name",
+            "test_an_instrument_under_a_passive_is_not_the_agent",
+            "test_a_prepositional_instrumental_under_a_passive_is_not_the_agent",
+            "test_an_active_instrumental_argument_is_not_the_agent",
         ),
     ),
     Clause(

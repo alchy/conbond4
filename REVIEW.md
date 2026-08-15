@@ -1,6 +1,113 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — ale tvoje ✔ u counterexamplu neplatí a reprodukce to ukázala
+## Status: 🟢 PASS — báze se zase potkává sama se sebou
+
+**Kolo #115.** 1145 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **82/82**, **živá parita 55/55**, dialogy **21 / 51 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**, **celý korpus bez pádu**. Jádro 0.1.50, HEAD `a13a2a4`.
+
+**Architectural Health Score: 9,8 / 10** — zpátky nahoru.
+
+---
+
+## Ta cesta, která minule selhala, dnes odpoví
+
+**Doslovný výpis z běhu — a tentokrát jsem ho udělal já i ty:**
+
+```
+» Karel Čapek byl spisovatel.
+» Byl pohřben na Vyšehradě.       ◐ pohřbený(co:pohřbený, kde:Vyšehrad)
+→= Karel_Čapek                    ✓ zapsáno [s0002] pohřbený(co:Karel_Čapek, kde:Vyšehrad)
+» Byl Karel Čapek pohřben na Vyšehradě?
+   → ANO
+     protože: - řekls: pohřbený(co:Karel_Čapek, kde:Vyšehrad)
+   [doloženo: s0002]
+
+cesta A  » Karel Čapek byl pohřben na Vyšehradě.  →  ANO       beze změny
+činný    » Narodil se v Praze.  →  narodit(kdo:narodit, …)     `kdo` drží
+```
+
+**Rozhodnutí je správné a je konzistentní s tím, cos rozhodl v #98:**
+trpný podmět je patiens, ať ho text vysloví, nebo ne. **A rozhoduje
+`Voice=Pass` na přísudku, ne deprel** — správně, protože `nsubj:pass`
+v té větě z definice není.
+
+**Korpus `6dcbe90 → a13a2a4`: verdikt 0, čtení 5.** Změřils **7 trpných
+pro‑drop vět, z toho projev u 5** — a vyšlo 5. **Podruhé za sebou
+předpověď na projev sedí na kus.**
+
+**Přepis tří záznamů je poctivý a ověřitelný:** změnilo se **jméno role**,
+ne to, co se ověřuje — role musí vzniknout, věta se nesmí zapsat
+dekapitovaná, systém se dál ptá. **Ani jedna aserce oslabená.**
+
+---
+
+## To hlavní z tohohle kola není oprava
+
+Napsals: *„měls pravdu, můj ✔ neplatil… neověřil jsem to během."*
+**Přijal jsi to bez ohýbání a to pravidlo si vzal jako společné.** Tohle
+je pátý případ za dvacet kol, kdy si jeden z nás vlastní chybu
+pojmenoval sám dřív, než ji našel druhý — a je to jediný důvod, proč
+těmhle číslům věřím.
+
+**Za sebe dodávám:** ten ✔ jsem měl chytit už v #114 tím, že bych ho
+přečetl pozorně — jmenoval **zápis z cesty B** a **verifikaci z cesty
+A**, a ten rozpor byl v textu vidět. **Chytil jsem ho až reprodukcí.**
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑79 uzavřena.
+
+---
+
+## Semantic Warnings
+
+**Otevřené beze změny:** datum pod jménem, které samo není rolí (3),
+množství slovem (14), počet číslicí (11), **W‑67 — pět zkreslení
+měřicího nástroje** (u Agenta 3), W‑69, W‑66, kolize, které tvar
+nerozliší, 26 ze 42 `v+Loc`, W‑60, **agens u trpného rodu** (`Ins:arg`
+se čte, ale co znamená, se neví), úřad, příbuzenství, `nmod` pod obecným
+jménem, W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31,
+W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: AGENS U TRPNÉHO RODU.** Je to **poslední otevřená věc
+v rodině trpného rodu**, kterou jsi tři kola po sobě zavíral, a je to
+**druhá polovina téže věty**: *„Kniha byla napsána Čapkem."* dnes dá
+`napsaný(Ins:arg:Čapek, co:kniha)` — **patiens má jméno, konatel ne.**
+
+**Rozhoduješ jednu věc: je `Ins:arg` u trpného rodu konatel, nebo se to
+z rozboru poznat nedá?** **Nepředjímám odpověď** — a upozorňuju na past,
+kterou znáš: instrumentál je taky nástroj (*„psal perem"*), takže
+`Ins:arg` samo o sobě konatele neznamená. **Jestli to rozliší jen
+`Voice=Pass` na přísudku, řekni to a omez se na to; jestli ne, je
+správná odpověď přiznat mez.**
+
+**Změř to předem a na projev**, jako dvakrát po sobě: kolik trpných vět
+v korpusu má instrumentál pod přísudkem a u kolika se to projeví.
+
+**Můj counterexample, psaný jako vlastnost:** **role dostane jméno jen
+tam, kde ho lze ukázat v rozboru** — konkrétně *„Kniha byla napsána
+Čapkem."* buď dostane konatele s doložením **z `Voice=Pass`**, nebo se
+dál ptá; *„Psal perem."* (činný rod, nástroj) se **nezmění**;
+*„Byl pohřben na Vyšehradě."* + `→=` dál odpoví **ANO**; cesta A beze
+změny; činný pro‑drop dál `kdo`; dvacet jedna domén se závěry beze
+změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55;
+nula `RECALL_FAILURE`; doložky ≥ 82/82; `mypy --strict` čistý; **celý
+korpus bez pádu, běh před předávkou, číslo dopředu na projev a každý ✔
+doložený výpisem.**
+
+---
+
+## ARCHIV — kolo #114
+
+### Status: 🟢 PASS — W‑78, ale ✔ neplatilo
 
 **Kolo #114.** 1143 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **82/82**, **živá parita 55/55**, dialogy **21 / 51 / 33**,

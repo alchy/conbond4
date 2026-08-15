@@ -9,6 +9,8 @@ Rozbory jsou nahrané ručně, ne z běžící služby — hermetičnost je zám
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from core_semantics.cascade import (
     HARD_TIERS,
     dropped_tokens,
@@ -28,6 +30,7 @@ from core_semantics.cascade import (
     RoleReading,
     lexicon_tier,
     negation_tier,
+    passive_tier,
     quantifier_tier,
     role_mapping_tier,
     surface_role,
@@ -2874,6 +2877,72 @@ def test_a_passive_has_one_role_name_spoken_or_not() -> None:
         if r.mention.upos != "PROPN" or r.name == ROLE_OBJECT
     }
     assert jmena == {ROLE_OBJECT}, "jedno jméno, ať text podmět zopakuje nebo ne"
+
+
+def _trpna_veta(instrumental: str, deprel: str, *, predlozka: str | None = None) -> Reading:
+    """„Kniha byla napsána <X>." — jediná proměnná je značka u X."""
+    tokens = [
+        _token(1, "Kniha", "kniha", "NOUN", 3, "nsubj:pass", Case="Nom", Gender="Fem", Number="Sing"),
+        _token(2, "byla", "být", "AUX", 3, "aux:pass", Number="Sing", Voice="Act"),
+        _token(3, "napsána", "napsaný", "VERB", 0, "root", Gender="Fem", Number="Sing", Polarity="Pos", Voice="Pass"),
+        _token(5, instrumental, instrumental.lower(), "NOUN", 3, deprel, Case="Ins", Gender="Masc", Number="Sing"),
+        _token(6, ".", ".", "PUNCT", 3, "punct"),
+    ]
+    if predlozka is not None:
+        tokens.insert(3, _token(4, predlozka, predlozka, "ADP", 5, "case", AdpType="Prep", Case="Ins"))
+    return Reading(tokens=tuple(tokens), provenance="test")
+
+
+def _trpny_rozbor(reading: Reading) -> Predication:
+    return cascade(
+        reading, tiers=(*HARD_TIERS, passive_tier())
+    ).survivors[0].predication
+
+
+def test_the_agent_of_a_passive_gets_a_name() -> None:
+    """KONATEL *(W‑80)*: holý `Ins:arg` pod TRPNÝM přísudkem je „kdo".
+
+    Patiens dostal jméno v W‑59, konatel do dneška ne — „Kniha byla
+    napsána Čapkem." dávala `Ins:arg:Čapek`, tedy TVAR místo jména,
+    a věta se kvůli povrchové roli nezapsala."""
+    predication = _trpny_rozbor(_trpna_veta("Čapkem", "obl:arg"))
+    konatel = next(r for r in predication.roles if r.name == ROLE_SUBJECT)
+    assert konatel.mention.lemma == "čapkem"
+    assert not konatel.shaped
+    assert konatel.source == "konatel trpné věty — holý `Ins:arg`"
+    assert predication.role(ROLE_OBJECT) is not None
+
+
+def test_an_instrument_under_a_passive_is_not_the_agent() -> None:
+    """PROTIPŘÍKLAD, KTERÝ JE CELÁ PAST: „napsána PEREM" je taky trpná.
+
+    Instrumentál sám o sobě konatele neznamená; rozliší to `obl` proti
+    `obl:arg` — volná okolnost proti valenčnímu doplnění."""
+    predication = _trpny_rozbor(_trpna_veta("perem", "obl"))
+    assert predication.role(ROLE_SUBJECT) is None
+
+
+def test_a_prepositional_instrumental_under_a_passive_is_not_the_agent() -> None:
+    """PROTIPŘÍKLAD Z KORPUSU: „Je spojována S emancipačními snahami."
+
+    Má `obl:arg` i instrumentál, ale předložku — konatel je HOLÝ."""
+    predication = _trpny_rozbor(_trpna_veta("snahami", "obl:arg", predlozka="s"))
+    assert predication.role(ROLE_SUBJECT) is None
+
+
+def test_an_active_instrumental_argument_is_not_the_agent() -> None:
+    """PROTIPŘÍKLAD ZMĚŘENÝ NA KORPUSU: holý `Ins:arg` je v deseti větách
+    a ANI JEDNA není trpná („stal se redaktorem", „zabývá se zkoumáním").
+    Bez `Voice=Pass` na přísudku se nepřejmenovává nic."""
+    reading = _trpna_veta("redaktorem", "obl:arg")
+    cinne = tuple(
+        replace(t, feats=tuple((k, v) for k, v in t.feats if k != "Voice"))
+        if t.deprel == "root"
+        else t
+        for t in reading.tokens
+    )
+    predication = _trpny_rozbor(Reading(tokens=cinne, provenance="test"))
+    assert predication.role(ROLE_SUBJECT) is None
 
 
 def test_an_active_prodrop_still_gets_a_subject() -> None:
