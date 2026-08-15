@@ -1,6 +1,126 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozbor rodiny C vyvrátil MŮJ DŮVOD pro pořadí; opravuji ho
+## Status: 🟢 PASS — `advcl` stojí; a moje „pět vět" bylo zase číslo bez ověření
+
+**Kolo #82.** 989 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **71/71**, živá parita **53/53**, dialogy 15 / 41 / 24 beze změny,
+gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá regrese
+zelená. **Jádro zůstává 0.1.20.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Měřeno mnou
+
+```
+» Petr odjel, protože pršelo.   ◐ odjet(advcl:protože:∃pršet, kdo:·Petr)
+                                  ? Nevím, co znamená „advcl:protože“ …
+» Petr odjel, když pršelo.      ◐ odjet(advcl:když:∃pršet, kdo:·Petr)   ← jiná spojka, ptá se znovu
+```
+
+**Práh `DepthExceeded` je 1**, ověřeno ve zdrojáku (`max_depth: int = 1`).
+Bod „vnoření do druhé úrovně" byl tedy splnitelný **jen jako hlasitý
+pád** — a tak je udělaný. Že si ten práh změřil **před** stavbou, přesně
+jak jsem žádal, je ta správná posloupnost.
+
+**Seed mapování nenese** — ověřeno mnou ve zdrojáku `czech_seed()`:
+`advcl` ani `protože` tam nejsou. Jméno role se tedy **učí z dialogu**,
+nedodává se tiše. To byla moje hlavní obava a je vyvrácená.
+
+**Matice ho chytila a bylo to správně:** první verze doložky měla všechny
+vynucující testy nad **vnitřní** funkcí, takže sloupec `použití`
+nedržel. Přesně kvůli tomu ten sloupec je.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## „Rodina C klesne o pět vět" — moje číslo, moje chyba, počtvrté
+
+Klesla o **jednu** (15 → 14); `advcl` jako blokátor 5 → 3.
+
+**Předpokládal jsem, že všech pět `advcl` je pod přísudkem.** Měření
+říká dvě ano, tři ne — a ty tři nebere **stráž, kterou jsem sám
+rozhodl** („`advcl` pod jménem patří k `acl`"). Napsal jsem tedy
+podmínku, která je **v rozporu s mým vlastním rozhodnutím o dvě věty
+dřív**.
+
+Je to **počtvrté za osm kol** a pravidlo, které jsem si dal („ověř
+mechanismus, než napíšeš podmínku"), zjevně nestačí — protože tohle
+nebyl mechanismus, ale **číslo**. Rozšiřuji ho: **číslo v counterexamplu
+buď změřím, nebo napíšu jako odhad a označím ho tak.**
+
+**Druhý důvod je znovu nález z #77** a ten je v pořádku: i odblokovaná
+věta zůstává v `role`, protože nese další rodiny.
+
+**Třetí důvod hlásí jako nejistotu, a to je správně:** u těch tří
+neověřil, jestli je `advcl` v tom čtení, které měření použilo — první
+čtení z parseru ho nemá vůbec. Netvrdí tedy, že stráž je správná; říká,
+že to neví.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑46 · tři věty s `advcl`, které stráž nebere** — nejisté, jestli
+právem. Nejbližší otevřená otázka.
+
+**W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37,
+W‑38, W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**Na tvé dvě otázky:**
+
+**Doména na `advcl` — ANO, ale AŽ PO rozboru těch tří.** Tvoje výhrada
+je principiálně správná, jen ji obrátím: doména **nerozhoduje o češtině**,
+ona **zapisuje odpověď člověka** — přesně jako `shapes` v každé jiné
+doméně, a seed ji nenese (ověřeno). Rozhodnutí zůstává v dialogu.
+**Pořadí ale obracím:** kdyby se stráž po rozboru ukázala jako příliš
+úzká, doména by pinovala hranici, která se vzápětí mění — a akceptační
+sada, která brání něco, co se má opravit, je vada, kterou jsem už jednou
+blokoval (W‑15).
+
+**JEDINÝ DALŠÍ SMĚR: rozbor těch TŘÍ vět s `advcl`, které stráž nebere.**
+
+Je levný, odpovídá na otázku, kterou sis sám položil, a rozhoduje
+o tom, co má doména pinovat.
+
+**Co má zodpovědět:** u každé ze tří — **pod čím ten `advcl` visí**
+(jméno, přídavné jméno, něco jiného); **je `advcl` v tom čtení, které
+měření použilo**, nebo ho tam parser nedal vůbec; a **je stráž správně
+ohraničená, nebo příliš úzká** — tedy patří ty věty k `acl`, jak jsem
+rozhodl, nebo je to jiný případ.
+
+**Můj counterexample — a čísla v něm jsou ODHADY, ne měření, což tímto
+označuji:** tabulka tří vět s tím, pod čím `advcl` visí a jestli je ve
+čtení; explicitní odpověď „stráž je správně / je úzká" **s důvodem
+z jmenovek rozboru**; **žádná oprava se neudělá dřív**; patnáct domén
+se závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 53/53; nula `RECALL_FAILURE`; testy zelené; jádro **zůstává
+0.1.20**.
+
+**Po tom rozboru:** doména na `advcl`, a teprve pak rederivace pořadí
+`acl` (7) proti rodině B (11) — z čísel, ne z mých vět.
+
+---
+
+## ARCHIV — kolo #81
+
+### Status: 🟢 PASS — rozbor rodiny C vyvrátil MŮJ DŮVOD pro pořadí; opravuji ho
 
 **Kolo #81.** Do jádra **nesáhl** — 979 testů zelených, `mypy --strict`
 čistý na 61 souborech, doložky **70/70**, živá parita **53/53**, dialogy
