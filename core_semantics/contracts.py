@@ -1056,7 +1056,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "jméno role: co znamená, je naučené a odvolatelné tvrzení "
             "v lexikonu, ne seznam schovaný v interpretu. Fillerem je DĚJ, "
             "ne vnořená predikace — reifikovat, neřetězit, jádro "
-            "neverzovat (W‑45)"
+            "neverzovat. Dokud role nemá jméno, VĚTA SE NEZAPISUJE: jinak "
+            "ji odpověď `→@` zapíše podruhé a v bázi leží dva výroky "
+            "o téže větě, z nichž ten první nikdo neodvolá (W‑45, B‑19)"
         ),
         anchor="core_semantics.cascade:subordinate_clauses",
         entry=".utter(",
@@ -1068,6 +1070,7 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_other_embedded_relations_are_untouched",
             "test_the_second_level_of_nesting_falls_out_loud",
             "test_the_learned_conjunction_stops_asking_on_the_next_sentence",
+            "test_a_sentence_with_an_unnamed_subordinate_role_is_not_written",
         ),
     ),
     Clause(

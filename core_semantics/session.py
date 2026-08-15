@@ -55,6 +55,7 @@ from .ast import (
 )
 from .cascade import (
     AWAITING_REFERENCE,
+    AWAITING_ROLE_NAME,
     HARD_TIERS,
     QUANTIFIER_OF,
     Candidate,
@@ -1114,9 +1115,22 @@ class Session:
         # nebylo. Zapsat místo prohlášení jeho slupku je horší než
         # nezapsat nic.
         pending_complete = predication.pending_complete != ""
+        # TÝŽ DŮVOD U ROLE, KTERÁ ČEKÁ NA JÁDROVÉ JMÉNO *(B‑19)*. Věta
+        # s povrchovou rolí z vedlejší věty by se zapsala teď a po
+        # odpovědi `→@` ZNOVU — v bázi by ležely dva výroky o téže větě
+        # a ten první by nikdo neodvolal. Je to táž vada, kterou
+        # u ztraceného členu hlídá zábrana nad `turn.lost`; patro
+        # `subordinate_tier` ji jen obešlo zezadu, když ze ztraceného
+        # členu udělalo roli.
+        pending_role_name = any(
+            role.awaiting == AWAITING_ROLE_NAME for role in predication.roles
+        )
         routed = (
             None
-            if turn.lost or pending_relation or pending_complete
+            if turn.lost
+            or pending_relation
+            or pending_complete
+            or pending_role_name
             else self._route(index, turn, predication, grounded)
         )
         if routed is None:

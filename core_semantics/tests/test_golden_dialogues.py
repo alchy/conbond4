@@ -27,6 +27,7 @@ from core_semantics.session import (
     declares_complete,
     decides_reference,
     names_attribute,
+    names_role,
     revokes,
 )
 from core_semantics.tests._console import echo
@@ -71,6 +72,7 @@ def _is_turn(step: Step) -> bool:
         or step.answers_relation is not None
         or step.answers_relation_here is not None
         or step.decides_reference is not None
+        or step.names_role is not None
         or step.names_attribute is not None
         or step.declares_complete != ""
         or step.revokes_complete != ""
@@ -87,6 +89,14 @@ def _answer(
     hlídala shodu dvou zápisů místo chování."""
     assert done, "tah bez předchozí věty nemá na co odpovídat"
     previous, result = done[-1]
+    if step.names_role is not None:
+        # POJMENOVÁNÍ ZTRACENÉ ROLE. Čte se z předchozího kroku, protože
+        # rozbor té věty nese tvar, na který se systém ptal.
+        shape, role_name = step.names_role
+        assert previous.reading is not None
+        return session.play(
+            names_role(step.text, previous.reading, shape, role_name)
+        )
     if step.names_attribute is not None:
         # PŘÍVLASTEK. Skládá se z hlavy a genitivu, ne z toho, na co se
         # systém ptal — otázka nabízí jména rolí, ale kterou dvojici

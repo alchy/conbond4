@@ -116,6 +116,11 @@ class Step:
     #: přívlastku (`→@1`) a zapíše DRUHÝ VÝROK vedle věty. Vlastní pole:
     #: není to role predikace, a nic se tím neučí.
     names_attribute: tuple[str, str, str] | None = None
+    #: `(tvar, jméno role)` — krok POJMENUJE ztracenou roli (`→@`). Na
+    #: rozdíl od `→@1` se tím TVAR UČÍ: u vedlejší věty je odpověď
+    #: v rozboru (spojka jako `mark`), takže druhá věta s touž spojkou
+    #: se už neptá.
+    names_role: tuple[str, str] | None = None
     #: Důvod — krok ODVOLÁVÁ výrok zapsaný krokem `declares_complete`.
     #: Uzavření světa je DEKLARACE, ne trvalá vlastnost, a sada to musí
     #: umět projít celou cestou tam i zpět.

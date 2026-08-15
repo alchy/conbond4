@@ -1324,6 +1324,10 @@ def role_mapping_tier(lexicon: Lexicon) -> Tier:
 #: Na co otevřená role čeká.
 AWAITING_QUANTIFIER = "kvantifikátor"
 AWAITING_REFERENCE = "odkaz"
+#: Role, která na sebe má JÁDROVÉ JMÉNO, ale zatím ho nemá *(B‑19)*.
+#: Dokud ho nedostane, věta se NEZAPISUJE: jinak by ji odpověď zapsala
+#: podruhé a v bázi by ležely dva výroky o téže větě.
+AWAITING_ROLE_NAME = "jméno role"
 
 #: Zmínky, které se v roli stanou uzlem nebo skupinou, a potřebují proto
 #: kvantifikátor. **Přívlastek je mezi nimi**: „modrý" je podle § 6.12
@@ -2482,6 +2486,19 @@ def subordinate_tier(lexicon: Lexicon) -> Tier:
                         ),
                         quantifier=Quantifier.EXISTS,
                         source=f"vedlejší věta se spojkou „{spojka}“",
+                        # Dokud role nemá JÁDROVÉ jméno, věta se nesmí
+                        # zapsat *(B‑19)*. Než tohle patro vzniklo, byla
+                        # vedlejší věta ZTRACENÝ ČLEN a zápis blokovala;
+                        # patro z ní udělalo roli, ale tu zábranu jí
+                        # nedalo — a odpověď `→@` pak větu zapsala
+                        # PODRUHÉ, jednou s povrchovým jménem a podruhé
+                        # s jádrovým. Ten první výrok by nikdo neodvolal.
+                        # Čeká se jen tehdy, když jméno role zůstalo
+                        # POVRCHOVÝM TVAREM. Naučené jméno („proč") mezi
+                        # kanonické role jádra nepatří a patřit nemusí —
+                        # okolnosti jsou povrchové (§ 12/1) — takže test
+                        # na `CANONICAL_ROLES` by blokoval napořád.
+                        awaiting=AWAITING_ROLE_NAME if name == shape else "",
                     )
                 )
             out.append(

@@ -1,6 +1,118 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — oprava je správná, ale posílá s sebou NEPRAVDIVOU VĚTU o textu
+## Status: 🟢 PASS — nepravdivý výrok je pryč a nahradilo ho přesné „řečeno, neumím"
+
+**Kolo #86.** 1000 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **72/72**, parita **53/53**, dialogy 15 / 41 / 24, jádrové relace
+9/9, nula `RECALL_FAILURE`, **celá stálá regrese zelená** (B‑1, B‑2,
+dialog B, disjoint→N, CONFLICT se dvěma důkazy, stráže 6/6,
+nedestruktivní `same_as`, M‑1, G‑3, zákaz OR, I‑16, ∀→∃ U/N,
+ireflexivita, opačná hrana, W‑19, W‑24, `complete`). Jádro 0.1.22,
+HEAD `afdc895`.
+
+**Architectural Health Score: 9,2 / 10** — poprvé nad 9,0. Ne za opravu
+samotnou, ale za to, **jak byla vybrána**: dostals dvě legitimní cesty
+a vybral tu, která místo mlčení říká pravdu o vlastní mezi.
+
+---
+
+## Ověřeno reprodukcí — všech šest vět counterexamplu
+
+```
+Je jasné, že Jan přišel.        [PODMĚT JE CELÁ VĚTA: „přišel“ … zatím neumím]
+                                „bez podmětu“ NE · nabídka antecedentu NE
+Je známo, že gestapo…           totéž, s „plánovalo“
+Byl pohřben v Praze.            [BEZ PODMĚTU: „pohřben“ ho nevyslovil]  · ptá se dál
+Jan byl pohřben v Praze.        neptá se                                · beze změny
+Bylo chladno.                   neptá se                                · beze změny
+Narodil se v Praze.             [BEZ PODMĚTU: „Narodil“ ho nevyslovil]  · beze změny
+```
+
+**Tvé číslo 17 → 12 jsem přeměřil sám a sedí přesně**: ze 60 vět
+s neslovesným kořenem je 12 bez podmětu a **5 s podmětem větným**.
+
+**Ověřil jsem i to, na co ses neptal — jestli se tou změnou neotevřela
+díra zpátky k W‑48.** Prošel jsem **všech osm** vět korpusu s `csubj`
+(pět s neslovesným kořenem, tři se slovesným, které ležely od #72):
+**ani jedna se nezapsala, ani jedna netvrdí „BEZ PODMĚTU"**. Kdyby
+poznámka zápis pustila, byl by to fakt o nikom podruhé, jen jinými
+dveřmi — není.
+
+**Konstanta je pojmenovaná a důvod stojí v kódu u ní**, ne v commitu, a
+test to vyžaduje čtením souboru. To je správný tvar pro věc, která se
+opakuje počtvrté.
+
+---
+
+## Critical Blockers
+
+**Žádné.** B‑18 uzavřena.
+
+---
+
+## Semantic Warnings
+
+**W‑50 · zápis drží DVĚ zdi, ale spojku mezi nimi nedrží test.**
+Poznámka o větném podmětu je **nezávazná** — patro vrací kandidáty beze
+změny. Že se ta věta přesto nezapíše, obstarává **jiná zeď**:
+`[ZAHOZENO]`, protože pro vedlejší větu zatím role není. Ověřeno
+u všech šesti vět, kde poznámka padne — všech šest má i `ZAHOZENO`.
+
+**Ty dvě věci jsou dnes spřažené věcně** („neumím ji dosadit" je právě
+to, co `ZAHOZENO` zaznamenává), **ale nedrží je nic než ta shoda
+okolností**. Až někdo vedlejší větě roli dá, aniž z ní udělá podmět,
+věta se zapíše bez podmětu a nic to neřekne. **Není to bloker — nic
+špatného se dnes nezapíše — ale je to přesně ta konstrukce, kterou tenhle
+projekt jinde dělá výslovnou.**
+
+**W‑43 potvrzena potřetí, a tentokrát MÁM PŘÍČINU, ne jen příznak.**
+Tvoje hlášení „diff ukázal dvě z pěti" jsem ověřil a je pravdivé;
+příčina je v měřicí vrstvě a je doslova změřitelná:
+
+```
+reason: 212 z 238 vět má délku PŘESNĚ 160 znaků
+        209 z 238 končí uprostřed slova
+příčina: cb_utils/diagnose.py — [:160] na čtyřech místech (ř. 105, 111, 130, 131)
+```
+
+**Záznam tedy mlčky ořezává důvod**, takže se na něm nedá hledat
+podřetězec ani počítat výskyt. Předávám Agentovi 3 i s tou lokací.
+
+**Že jsi to ohlásil sám a odmítl tvrdit číslo, které neumíš změřit, je
+přesně ten postup, který tu chci** — autoritativní je přímé měření na
+jádře, a to jsi udělal.
+
+**W‑42, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: doména na `advcl` s `limit`em o `advcl:pred`**, jak
+je schváleno od #84. Průzkumná práce na téhle třídě je hotová a další
+kolo už má být o tom, co systém **umí**, ne co netvrdí.
+
+**W‑50 vyřeš uvnitř téhle domény, ne zvlášť** — jedním testem, který
+říká, že věta s větným podmětem se **nezapíše**, dokud ta vedlejší věta
+nemá roli. Je to jeden `assert`, ne nová vrstva: dnes to platí,
+zítra to má být doloženo.
+
+**Můj counterexample pro doménu** — a čísla jsou tentokrát **podmínky,
+ne odhad**: doména má **vlastní `limit`**, který výslovně říká, že
+`advcl:pred` je doplněk a do okolnostní role nepatří; každý krok, který
+píše, má v `writes` **doložený tvar**; žádný krok nezavádí jádrový
+predikát pravidlem (I‑16); dialogů je **16**, závěry předchozích
+patnácti **beze změny**; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 53/53; nula `RECALL_FAILURE`; doložky ≥ 72/72; `mypy --strict`
+čistý; a **korpus přeměřen nad čistou revizí** — s tím, že po opravě
+`reason` v měřicí vrstvě bude diff konečně čitelný.
+
+---
+
+## ARCHIV — kolo #85
+
+### Status: 🔴 FAIL — nepravdivý výrok o textu (B‑18)
 
 **Kolo #85.** 996 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **72/72** (nová S‑37), parita **53/53**, dialogy 15 / 41 / 24,

@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.22 · 15. 8. 2026
+**Verze jádra:** 0.1.23 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.23 | § 9 — ROLE BEZ JÁDROVÉHO JMÉNA ZASTAVÍ ZÁPIS: patro pro vedlejší větu udělalo ze ztraceného členu ROLI, ale zábranu zápisu mu nedalo, takže odpověď `→@` zapsala větu PODRUHÉ — jednou s povrchovým jménem role, podruhé s naučeným, a ten první výrok by nikdo neodvolal; § 13 T73 | 15. 8. 2026 |
 | 0.1.22 | § 5.2 — PODMĚT VYJÁDŘENÝ CELOU VĚTOU (`csubj`) je VYSLOVENÝ podmět: tvrdit o „Je jasné, že Jan přišel.“, že podmět nemá, je nepravdivý výrok o textu, a systém na jeho základě zval člověka dosadit podmět tam, kde jeden stojí. Mlčet by bylo taky nepřesné, takže se řekne PŘESNĚ TO — rozdíl mezi „neřečeno“ a „řečeno, neumím“; § 13 T72 | 15. 8. 2026 |
 | 0.1.21 | § 5.2 — PŘÍSUDEK SE POZNÁ ZE STRUKTURY, ne ze slovního druhu: trpná věta má kořen `ADJ` a pomocné sloveso pod ním jako `aux:pass`, takže výčet `(VERB, AUX)` na ni byl slepý a zapisovala se BEZ PODMĚTU — jako fakt o nikom. Potřetí táž třída jako 0.1.18 (rysy řetězcem) a W‑47 (deprel řetězcem); § 13 T71 | 15. 8. 2026 |
 | 0.1.20 | § 5.2 — u KOORDINOVANÉHO PODMĚTU je řídícím členem CELÁ KOORDINACE: koordinace, která SČÍTÁ a jejíž přísudek stojí ZA podmětem, žádá MNOŽNÉ číslo. Pravidlo zúžilo MĚŘENÍ — disjunkce („či“) a přísudek před podmětem mají jednotné číslo právem. Pravidlo je kladné — „Petr a Pavel četl knihu.“ padá dál. ROD SE U KOORDINACE NEOVĚŘUJE a je to PŘIZNANÁ MEZ: čeština ho řeší pravidly (muž + žena → mužský životný), ne průnikem; § 13 T70 | 15. 8. 2026 |
@@ -1080,6 +1081,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T73 | role bez jádrového jména zastaví zápis | „Petr odjel, protože pršelo.“ se NEZAPÍŠE, dokud se `advcl:protože` nepojmenuje; po `→@` je věta v bázi PRÁVĚ JEDNOU, s naučeným jménem role |
 | T72 | podmět vyjádřený celou větou | „Je jasné, že Jan přišel.“ NETVRDÍ, že podmět nemá, a nenabízí antecedent; řekne, že podmětem je celá věta vedlejší a že ji zatím dosadit neumí; „Byl pohřben v Praze.“ se dál ptá; „Bylo chladno.“ se dál neptá |
 | T71 | trpný rod se pozná ze struktury | „Byl pohřben v Praze.“ se NEZAPÍŠE a zeptá se na podmět; „Jan byl pohřben v Praze.“ (má `nsubj:pass`) se na podmět neptá; činný pro‑drop beze změny; jméno bez pomocného slovesa přísudek není |
 | T70 | koordinovaný podmět | „Petr a Pavel četli knihu.“ se přečte, „Petr a Pavel četl knihu.“ padne a řekne proč; koordinace se pozná z hrany `conj`, ne ze spojky; rod se u koordinace NEOVĚŘUJE a je to zapsaná mez; kvantifikovaný podmět se s koordinací neplete |

@@ -1063,3 +1063,60 @@ def test_the_learned_conjunction_stops_asking_on_the_next_sentence() -> None:
     assert druhy.predication is not None
     assert "proč:∃sněžit" in str(druhy.predication)
     assert "advcl:" not in str(druhy.predication)
+
+
+def test_a_sentence_with_an_unnamed_subordinate_role_is_not_written() -> None:
+    """B‑19. Než vzniklo patro `subordinate_tier`, byla vedlejší věta
+    ZTRACENÝM ČLENEM a zápis blokovala. Patro z ní udělalo ROLI, ale tu
+    zábranu jí zapomnělo dát — a odpověď `→@` pak větu zapsala PODRUHÉ,
+    jednou s povrchovým jménem role a podruhé s naučeným. V bázi by
+    ležely dva výroky o téže větě a ten první by nikdo neodvolal.
+
+    Je to táž vada, kterou u ztraceného členu hlídá zábrana nad
+    `turn.lost`; patro ji jen obešlo zezadu."""
+    from core_semantics.lexicon import (
+        LearnedPattern,
+        Operation,
+        PatternStatus,
+        Trigger,
+        czech_seed,
+    )
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session, names_role
+
+    reading = _subordinate("protože")
+
+    class _Rec:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(text=text, readings=(reading,))
+
+    lexicon = czech_seed()
+    lexicon.add(
+        LearnedPattern(
+            trigger=Trigger(
+                lemma="", upos="PROPN", number="Sing", case="Nom", deprel="nsubj"
+            ),
+            operation=Operation.SELF,
+            learned_from="test",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    session = Session(lexicon=lexicon)
+    prvni = session.utter("Petr odjel, protože pršelo.", _Rec())
+    assert prvni.statement_id is None, (
+        "dokud role nemá jméno, věta se nezapisuje — jinak ji odpověď "
+        "zapíše podruhé"
+    )
+    odpoved = session.play(
+        names_role("Je to důvod.", reading, "advcl:protože", "proč")
+    )
+    assert odpoved.statement_id is not None
+    napsane = [
+        statement
+        for statement in session.kb.active()
+        if getattr(statement.formula, "predicate", "") == "odjet"
+    ]
+    assert len(napsane) == 1, f"věta smí být v bázi JEDNOU, je {len(napsane)}×"
+    assert "proč:∃pršet" in str(napsane[0].formula)
