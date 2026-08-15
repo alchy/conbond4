@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.26 · 15. 8. 2026
+**Verze jádra:** 0.1.27 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.27 | § 3.2 — do jména se skládá JEN `flat`: `appos` je JINÁ ZMÍNKA téže věci, a když se skládala, vznikl uzel `Karel_Čapek_Karel` — jméno, které v textu nikdo nenese. Identita se z apozice NEDOSAZUJE („Karel Čapek, spisovatel“ je role, ne druhé jméno); § 13 T77 | 15. 8. 2026 |
 | 0.1.26 | § 3.2 — VÍCESLOVNÉ JMÉNO je JEDEN UZEL: „Karel Čapek“ se skládá do lemmatu, ne zahazuje. Dřív se věta zapsala o uzlu `Karel` — nebyla to ztráta členu, byl to ZÁPIS O JINÉM UZLU, a „Karel Čapek“ s „Karlem Poláčkem“ tiše splývali. K tomu hlídka výchozího lexikonu sedí na `run`, ne na `replay`, a hláška jde do přepisu; § 13 T76 | 15. 8. 2026 |
 | 0.1.25 | § 10 — ŽURNÁL NESE OTISK VÝCHOZÍHO LEXIKONU: determinismus platí od 0.1.24 jen podmíněně (týž žurnál a týž výchozí stav), ale který to byl, žurnál neříkal. Otisk se razí na PRVNÍ tah a při neshodě se přehrání NEZASTAVÍ — lexikon se legitimně rozrůstá — ale ŘEKNE SE to; tiché přehrání je zakázané; § 13 T75 | 15. 8. 2026 |
 | 0.1.24 | § 10 — ŽURNÁL NEREPRODUKUJE SEZENÍ SÁM: tahy, které RE-ČTOU (`→@`), nesou text a čtou ho lexikonem, který v tu chvíli platí, ale potvrzené tvary domény v žurnálu nikdy nebyly. `Session.replay` proto bere LEXIKON jako pojmenovaný parametr a stará smlouva „lexikon není parametr“ se přepisuje — předpověděla si to sama; § 13 T74 | 15. 8. 2026 |
@@ -1084,6 +1085,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T77 | apozice není díl jména | „Karel Čapek, rodným jménem Karel Antonín Čapek…“ dá uzel `Karel_Čapek`, ne `Karel_Čapek_Karel`; „Karel Čapek, spisovatel, zemřel.“ nezapíše `same_as`; `flat` dál skládá, `Město Praha` dál ne |
 | T76 | víceslovné jméno je jeden uzel | „Karel Čapek byl spisovatel.“ zapíše `member(elem:Karel_Čapek, …)`; táž otázka dá `A`, ale „Byl Karel Poláček spisovatel?“ dá `U` — dva Karlové nesplynou; díly jména se hlásí jako POHLCENÉ, ne zahozené; `flat` pod obecným jménem se nebere |
 | T75 | žurnál nese otisk výchozího lexikonu | přehrání se SHODNÝM lexikonem dá 8 = 8 a mlčí; přehrání s JINÝM projde, ale ohlásí „[JINÝ LEXIKON: … determinismus platí jen pro týž výchozí stav]“; otisk leží na prvním tahu žurnálu, ne v sezení |
 | T74 | žurnál se přehraje s výchozím lexikonem | dialog Petr/`→@` proč/Jan dá po `Session.replay(žurnál, lexicon=…)` TOUŽ bázi výrok po výroku (8 = 8) i tytéž odpovědi; bez lexikonu 4 a Petrova věta chybí — takže test měří právě tuhle vadu |

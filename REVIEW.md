@@ -1,6 +1,152 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — otisk drží, ale slyšet ho jde jen jednou cestou ze dvou
+## Status: 🔴 FAIL — složené jméno umí vyrobit uzel, který v textu nikdo nenese
+
+**Kolo #90.** 1022 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **74/74**, **živá parita 55/55**, dialogy **17 / 44 / 26**,
+jádrové relace 9/9, nula `RECALL_FAILURE`, **celá stálá regrese zelená**.
+Jádro 0.1.26, HEAD `c445582`.
+
+**Architectural Health Score: 9,2 / 10.**
+
+**FAIL je za jednu větu z tvého vlastního korpusu**, ne za směr. Volba
+`flat` místo `acl` podle kumulativního pokrytí byla správná a odkryla
+přesně to, cos říkal — tichý zápis o jiném uzlu je horší než ztracený
+člen.
+
+---
+
+## Co je hotové a ověřené
+
+**W‑52, obě půlky, změřeno mnou:**
+
+```
+run()  BEZ lexikonu        4 výroky · shoda False · hláška V PŘEPISU  ← dřív mlčelo
+run()  se SPRÁVNÝM         8 výroků · shoda True  · nehlásí nic
+replay bez lexikonu        4 výroky · shoda False · hláška V PŘEPISU
+```
+
+**Hlídka na `run` je správné místo** a tvůj důvod je přesný: *zeď, kterou
+jde obejít o patro níž, není zeď.* A **nezakázat `run`** je taky správně
+— schovat cestu znamená řešit hlášením problém, který je o kontrole.
+
+**B‑21 v jádru funguje** a ověřil jsem i tu půlku, která je dražší:
+
+```
+Karel Čapek byl spisovatel.   → member(elem:·Karel_Čapek, …)      zapsáno
+Karel Poláček byl spisovatel. → member(elem:·Karel_Poláček, …)    JINÝ UZEL
+Město Praha leží v Čechách.   → „Praha“ ZAHOZENA, nesloženo        stráž drží
+Karel Čapek, spisovatel, …    → „spisovatel“ nesloženo             stráž drží
+```
+
+**Korpusová čísla sedí na kus přesně** — přečetl jsem oba záznamy sám:
+**verdikt 0, blokátor 0, změněný důvod 13**, verdikty
+`PTÁ SE 215 / NEPŘEČTENO 21 / CHYBA 2`.
+
+---
+
+## Critical Blockers
+
+### B‑22 · `appos` se skládá do jména, i když je to DRUHÁ ZMÍNKA
+
+**Nalezeno v tvém vlastním korpusu, ne vymyšleno:**
+
+```
+» Karel Čapek, rodným jménem Karel Antonín Čapek( 9. ledna 1890 …
+   Karel   PROPN nsubj  head=23        Karel   PROPN appos  head=1
+   Čapek   PROPN flat   head=1         Antonín PROPN flat   head=6
+                                       Čapek   PROPN flat   head=6
+   ◐ member(elem:·Karel_Čapek_Karel, group:·český_spisovatel)
+   [ZAHOZENO: … „Antonín“ (flat pod „Karel“), „Čapek“ (flat pod „Karel“) …]
+```
+
+**`Karel_Čapek_Karel` není jméno nikoho.** Skládání vzalo hlavu, její
+`flat` díl **a k tomu `appos`, což je DRUHÁ ZMÍNKA téhož člověka pod
+jiným jménem** — a její vlastní díly nechalo spadnout. Vznikl uzel,
+který v textu nikdo nenese.
+
+**Je to táž rodina jako B‑21, jen z druhé strany.** Tam se dva lidé
+tiše slili v jednoho; tady se jeden člověk rozdělí na uzel, který se
+s jeho vlastním jménem nepotká — *„Byl Karel Čapek spisovatel?"* na
+`Karel_Čapek_Karel` nesedne.
+
+**A je to NOVÉ tímhle kolem**: před B‑21 se nic neskládalo.
+
+**Stráž je úzká na slovní druh, ale ne na vztah.** `PROPN` odchytí
+*„město Praha"*, jenže `appos` mezi dvěma `PROPN` je **jiná zmínka, ne
+další díl jména** — a přesně tohle jsi u `advcl:pred` sám rozhodl
+opačně a správně: *rozhoduje vztah, ne značka členu.*
+
+**Dnes se ta věta nezapíše** (drží ji `ZAHOZENO`), takže do báze nic
+špatného nejde. **Do blokerů to jde proto, že to pravidlo vyrobí ten
+uzel všude, kde zbytek věty projde** — a to je otázka času, ne náhody.
+
+---
+
+## Semantic Warnings
+
+### W‑53 · jméno pod obecným jménem zůstává ztracené — a je to většina
+
+**Změřeno mnou na témž korpusu**, rozdělené podle slovního druhu hlavy:
+
+```
+zahozený člen s hranou flat, celkem 54 vět
+   hlava PROPN     26
+   hlava NENÍ PROPN 28   ← „bratr Josef Čapek“, „básník Josef Hora“,
+                            „Matka Božena Čapková“, „prezident Masaryk“
+```
+
+**To není „město Praha".** *„Nad hrobem promluvili básník Josef Hora…"*
+se dnes čte jako `promluvit(kdo:∀básník, …)` — **o všech básnících** —
+a jméno spadne. Stráž tam drží správně (složit `básník_Josef_Hora` by
+bylo horší), ale **výsledek je, že u čtvrtiny korpusu jméno člověka
+do čtení nevstoupí vůbec.**
+
+Není to bloker a **není to od tohohle kola** — hlásím to jako změřenou
+hranici, ne jako vadu. Tvé číslo 19 → 12 a moje 54 měří dvě různé
+otázky; tvoje sedí na `flat` pod `PROPN`, moje na všechny.
+
+**W‑43** leží u Agenta 3 s lokací.
+
+**W‑42, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: B‑22.**
+
+**Nepředepisuju ti, že `appos` do skládání nepatří** — může být UD čtení,
+kde díl jména přijde právě takhle. **Nepřípustné je jen to, co dnes
+vzniká: uzel, jehož jméno v textu nikdo nenese.** Rozhodni a důvod zapiš.
+
+**Jedna obecná věc k tomu**, protože je to potřetí týž tvar: `flat` je
+**pokračování jména**, `appos` je **jiná zmínka**. Rozhoduje **vztah**,
+ne slovní druh členu — přesně jak jsi to rozhodl u `advcl:pred`.
+Ať je i tohle **pojmenovaná konstanta s důvodem u ní**, jako
+`PREDICATE_AUXILIARIES` a `SUBJECT_DEPRELS`.
+
+**A jestli `appos` mezi dvěma `PROPN` znamená „týž člověk pod jiným
+jménem", pak to není složenina — je to `same_as`**, a to jádro umí. To
+je rozhodnutí, ne úkol; zvaž ho a napiš, proč ano nebo ne.
+
+**Můj counterexample:** *„Karel Čapek, rodným jménem Karel Antonín
+Čapek…"* **nevyrobí uzel `Karel_Čapek_Karel`** — buď `Karel_Čapek`
+a druhá zmínka zvlášť, nebo `same_as`, ale **nic, co v textu nestojí**;
+*„Karel Čapek byl spisovatel."* dál `Karel_Čapek` a zapíše se;
+*„Karel Poláček"* dál jiný uzel; *„Město Praha"* a *„Karel Čapek,
+spisovatel"* dál nesloží; sedmnáct domén se závěry beze změny; jádrové
+relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 74/74; `mypy --strict` čistý; a **korpus
+přeměřen** — z těch 26 vět, kde je hlava `PROPN`, ať je vidět, kolika
+se to týkalo.
+
+---
+
+## ARCHIV — kolo #89
+
+### Status: 🟢 PASS — otisk lexikonu drží
 
 **Kolo #89.** 1011 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **73/73**, **živá parita 55/55** (přeměřena mnou proti záznamům),

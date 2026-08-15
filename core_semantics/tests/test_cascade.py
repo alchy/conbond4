@@ -1200,3 +1200,88 @@ def test_a_flat_under_a_common_noun_is_not_a_name() -> None:
         provenance="test",
     )
     assert name_parts_of(seznam.tokens[0], seznam) == ()
+
+
+def test_an_apposition_is_not_a_name_part() -> None:
+    """B‑22. „Karel Čapek, rodným jménem Karel Antonín Čapek…" vyrobilo
+    uzel `Karel_Čapek_Karel` — JMÉNO, KTERÉ V TEXTU NIKDO NENESE. Je to
+    táž rodina jako B‑21, jen z druhé strany: tam se dva lidé slili
+    v jednoho, tady se jeden rozdělil na uzel, se kterým se jeho vlastní
+    jméno nepotká."""
+    from core_semantics.cascade import name_parts_of
+
+    apozice = Reading(
+        tokens=(
+            _token(1, "Karel", "Karel", "PROPN", 6, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, "Čapek", "Čapek", "PROPN", 1, "flat", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(3, "Karel", "Karel", "PROPN", 1, "appos", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(4, "Antonín", "Antonín", "PROPN", 3, "flat", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(5, "Čapek", "Čapek", "PROPN", 3, "flat", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(6, "spisovatel", "spisovatel", "NOUN", 0, "root", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(7, ".", ".", "PUNCT", 6, "punct"),
+        ),
+        provenance="test",
+    )
+    parts = name_parts_of(apozice.tokens[0], apozice)
+    assert [t.form for t in parts] == ["Čapek"], "apozice není díl jména"
+
+    predication = generate(apozice)[0].predication
+    subject = predication.role(ROLE_SUBJECT)
+    assert subject is not None
+    assert subject.lemma == "Karel_Čapek"
+
+
+def test_the_name_continuation_is_a_named_constant() -> None:
+    """POTŘETÍ TÝŽ TVAR ROZHODNUTÍ, takže pojmenovaná konstanta s důvodem
+    U NÍ — jako `PREDICATE_AUXILIARIES` a `SUBJECT_DEPRELS`. Rozhoduje
+    VZTAH (`flat` je pokračování jména, `appos` jiná zmínka), ne slovní
+    druh členu."""
+    from pathlib import Path
+
+    from core_semantics.cascade import NAME_CONTINUATION, name_parts_of
+
+    assert set(NAME_CONTINUATION) == {"flat"}
+    zdroj = Path(name_parts_of.__globals__["__file__"]).read_text(encoding="utf-8")
+    misto = zdroj.index("NAME_CONTINUATION = ")
+    okoli = zdroj[max(0, misto - 1600) : misto]
+    assert "B‑22" in okoli
+    assert "same_as" in okoli, "proč z toho není same_as, má být zapsané"
+
+
+def test_the_apposition_could_be_identity_but_is_not_guessed() -> None:
+    """PROČ Z TOHO NENÍ `same_as`. Nabízí se — „Karel Čapek" a „Karel
+    Antonín Čapek" je týž člověk a jádro `same_as` umí. Jenže `appos`
+    mezi dvěma `PROPN` neznamená vždy totéž („Karel Čapek, spisovatel"
+    je role), a rozbor ty případy nerozlišuje. Ztotožnit uzly z tvaru by
+    byl TICHÝ DEFAULT U IDENTITY, tedy nejdražší chyba tohohle systému
+    (M‑2, I‑13)."""
+    from core_semantics.ast import Atom, P_SAME_AS
+    from core_semantics.lexicon import czech_seed
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session
+
+    apozice = Reading(
+        tokens=(
+            _token(1, "Karel", "Karel", "PROPN", 4, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, "Čapek", "Čapek", "PROPN", 1, "flat", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(3, "spisovatel", "spisovatel", "NOUN", 1, "appos", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(4, "zemřel", "zemřít", "VERB", 0, "root", Number="Sing", Gender="Masc"),
+            _token(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance="test",
+    )
+    text = "Karel Čapek, spisovatel, zemřel."
+
+    class _Rec:
+        provenance = "test"
+
+        def parse(self, _: str) -> Utterance:
+            return Utterance(text=text, readings=(apozice,))
+
+    session = Session(lexicon=czech_seed())
+    session.utter(text, _Rec())
+    assert not any(
+        isinstance(statement.formula, Atom)
+        and statement.formula.predicate == P_SAME_AS
+        for statement in session.kb.active()
+    ), "identita se z apozice NEDOSAZUJE"

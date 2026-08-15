@@ -1114,11 +1114,21 @@ CONTRACTS: tuple[Clause, ...] = (
             "fakt o Karlovi. Díly se skládají do LEMMATU v pořadí podle "
             "POZICE v textu a hlásí se jako POHLCENÉ, ne zahozené. Stráž "
             "je úzká: `flat` pod OBECNÝM jménem není jméno, ale seznam "
-            "(B‑21)"
+            "Skládá se JEN `flat`: `appos` je JINÁ ZMÍNKA téže "
+            "věci, ne další díl jména, a když se skládala, vznikl uzel "
+            "`Karel_Čapek_Karel` — jméno, které v textu NIKDO NENESE. "
+            "Rozhoduje VZTAH, ne slovní druh členu. Identita se z apozice "
+            "NEDOSAZUJE: „Karel Čapek, spisovatel“ je role, ne druhé "
+            "jméno, a ztotožnit uzly z tvaru by byl tichý default "
+            "u identity (M‑2, I‑13) — až se `same_as` z apozice zapisovat "
+            "bude, musí se navrhnout a zeptat (B‑21, B‑22)"
         ),
         anchor="core_semantics.cascade:name_parts_of",
         entry="generate(",
         enforced_by=(
+            "test_an_apposition_is_not_a_name_part",
+            "test_the_name_continuation_is_a_named_constant",
+            "test_the_apposition_could_be_identity_but_is_not_guessed",
             "test_a_multiword_name_is_one_node",
             "test_two_people_sharing_a_first_name_do_not_merge",
             "test_the_name_parts_are_absorbed_not_dropped",

@@ -343,6 +343,31 @@ def attributes_of(token: Token, reading: Reading) -> tuple[Token, ...]:
     )
 
 
+#: Hrany, které jsou POKRAČOVÁNÍM TÉHOŽ JMÉNA *(B‑22)*. Pojmenovaná
+#: konstanta s důvodem u ní, jako `PREDICATE_AUXILIARIES` a
+#: `SUBJECT_DEPRELS` — je to potřetí týž tvar rozhodnutí.
+#:
+#: **`flat` ano, `appos` NE, a rozhoduje VZTAH, ne slovní druh členu.**
+#: `flat` je druhý díl jednoho jména („Karel **Čapek**"); `appos` je JINÁ
+#: ZMÍNKA téže věci („Karel Čapek, **rodným jménem Karel Antonín
+#: Čapek**"). Když se skládal i `appos`, vznikl uzel `Karel_Čapek_Karel`
+#: — jméno, které v textu NIKDO NENESE, a otázka „Byl Karel Čapek
+#: spisovatel?" na něj nesedla. Je to táž rodina jako B‑21, jen z druhé
+#: strany: tam se dva lidé slili v jednoho, tady se jeden rozdělil na
+#: uzel, se kterým se jeho vlastní jméno nepotká.
+#:
+#: **Proč z toho není rovnou `same_as`.** Nabízí se: „Karel Čapek" a
+#: „Karel Antonín Čapek" je týž člověk a jádro `same_as` umí. Jenže
+#: `appos` mezi dvěma `PROPN` neznamená VŽDY totéž — „Karel Čapek,
+#: spisovatel" je role, ne druhé jméno — a rozbor ty dva případy
+#: nerozlišuje. Ztotožnit uzly z tvaru by byl TICHÝ DEFAULT U IDENTITY,
+#: tedy nejdražší chyba, jakou tenhle systém dělá (M‑2, I‑13): uzly se
+#: tiše slijí a nepozná to žádný test, ke kterému jazyk nevede. Až se
+#: `same_as` z apozice zapisovat bude, musí se NAVRHNOUT A ZEPTAT, ne
+#: dosadit — a to je vlastní tah, ne tahle konstanta.
+NAME_CONTINUATION = ("flat",)
+
+
 def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
     """Další díly VÍCESLOVNÉHO JMÉNA — `flat` *(B‑21)*.
 
@@ -354,9 +379,9 @@ def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
     v jeden, a nepoznalo by se to: obojí by vypadalo jako doložený fakt
     o Karlovi.
 
-    Skládá se `flat` i `appos` pod vlastním jménem — obojí jsou části
-    téhož pojmenování. Vylučuje se všechno ostatní: `flat` pod obecným
-    jménem není jméno, ale seznam, a to je jiná operace.
+    Skládá se JEN `flat` pod vlastním jménem, ne `appos` — viz
+    `NAME_CONTINUATION`. Vylučuje se i `flat` pod obecným jménem: to není
+    jméno, ale seznam, a to je jiná operace.
 
     Pořadí se drží podle POZICE v textu, ne podle pořadí hran: „Josef
     Hora" a „Hora Josef" nejsou totéž a identifikátor uzlu se tím řídit
@@ -369,7 +394,7 @@ def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
             (
                 child
                 for child in reading.children(token.index)
-                if base_deprel(child.deprel) in ("flat", "appos")
+                if base_deprel(child.deprel) in NAME_CONTINUATION
                 and child.upos == "PROPN"
             ),
             key=lambda t: t.index,
