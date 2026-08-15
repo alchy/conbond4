@@ -1617,6 +1617,18 @@ def relation_tier(lexicon: Lexicon) -> Tier:
 ANAPHORIC_LEMMAS = ("on", "jeho", "její", "jejich")
 
 
+#: Závislosti, kterými čeština PODMĚT VYSLOVUJE. Pojmenovaná konstanta,
+#: ne literál v podmínce, a je to POČTVRTÉ táž lekce *(B‑18)*: W‑32
+#: porovnávala rysy řetězcem, W‑47 deprel řetězcem, W‑48 `upos` výčtem,
+#: a tohle byl výčet podmětových závislostí, který znal `nsubj`, ale ne
+#: `csubj`.
+#:
+#: `csubj` je podmět vyjádřený CELOU VĚTOU — „**Je jasné**, že Jan
+#: přišel." Rozhodnutí, jestli se z něj dá udělat fillér, je jiná otázka;
+#: tohle je jen o tom, co v textu STOJÍ, a stát tam vedlejší věta jako
+#: podmět může.
+SUBJECT_DEPRELS = ("nsubj", "csubj")
+
 #: Pomocná slovesa, která z kořene dělají PŘÍSUDEK, i když jeho slovní
 #: druh je jiný. `aux:pass` je trpný rod („byl pohřben"), `cop` jmenný
 #: přísudek („je učitel"), `aux` složený čas.
@@ -1675,10 +1687,25 @@ def prodrop_tier() -> Tier:
         # podmět — „Karel Čapek byl pohřben…" ho má. Kdyby se sem
         # nezapočítal, patro by u KAŽDÉ trpné věty tvrdilo, že podmět
         # chybí, a ptalo se na antecedent někoho, kdo ve větě stojí.
-        if any(
-            t.head == root.index and base_deprel(t.deprel) == "nsubj"
+        vyslovene = [
+            t
             for t in reading.tokens
-        ):
+            if t.head == root.index and base_deprel(t.deprel) in SUBJECT_DEPRELS
+        ]
+        if vyslovene:
+            # ROZDÍL MEZI „NEŘEČENO" A „ŘEČENO, NEUMÍM" *(B‑18)*. Věta
+            # s podmětem vyjádřeným celou vedlejší větou podmět MÁ; tvrdit
+            # o ní, že ho nevyslovila, je nepravdivý výrok o textu — a na
+            # jeho základě by systém zval člověka, aby dosadil podmět tam,
+            # kde jeden stojí. Mlčet by ale bylo taky nepřesné: dosadit
+            # větu za fillér zatím neumíme. Řekne se tedy PŘESNĚ TO.
+            vetny = [t for t in vyslovene if base_deprel(t.deprel) == "csubj"]
+            if vetny:
+                return candidates, (
+                    f"[PODMĚT JE CELÁ VĚTA: „{vetny[0].form}“ — věta ho "
+                    f"vyslovila, ale dosadit vedlejší větu za podmět "
+                    f"zatím neumím]"
+                )
             return candidates, None
         feats = dict(root.feats)
         if "Gender" not in feats and "Number" not in feats:

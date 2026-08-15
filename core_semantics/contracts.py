@@ -1110,8 +1110,14 @@ CONTRACTS: tuple[Clause, ...] = (
             "táž třída jako W‑32 (rysy řetězcem) a W‑47 (deprel řetězcem): "
             "kategorie, která má variantu. Když `nsubj:pass` JE, podmět "
             "vynechaný NENÍ a patro se neptá — nesmí se to rozejít se "
-            "survey W‑47. Jméno bez pomocného slovesa přísudek není "
-            "(W‑48)"
+            "survey W‑47. Jméno bez pomocného slovesa přísudek není. "
+            "PODMĚT VYJÁDŘENÝ CELOU VĚTOU (`csubj`) je VYSLOVENÝ podmět: "
+            "tvrdit o takové větě, že podmět nemá, je nepravdivý výrok "
+            "o textu, a na jeho základě by systém zval člověka, aby "
+            "dosadil podmět tam, kde jeden stojí. Mlčet by ale bylo taky "
+            "nepřesné — dosadit větu za fillér zatím neumíme — takže se "
+            "řekne PŘESNĚ TO. Rozdíl mezi „neřečeno“ a „řečeno, neumím“ "
+            "drží projekt i jinde (W‑48, B‑18)"
         ),
         anchor="core_semantics.cascade:_is_predicate",
         entry=".utter(",
@@ -1120,6 +1126,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_passive_with_a_subject_is_not_treated_as_pro_drop",
             "test_the_predicate_is_recognised_from_structure_not_from_upos",
             "test_a_nominal_root_without_an_auxiliary_is_not_a_predicate",
+            "test_a_clausal_subject_is_not_reported_as_missing",
+            "test_it_says_what_it_cannot_do_instead_of_staying_silent",
+            "test_the_subject_deprels_are_a_named_constant",
+            "test_a_genuinely_subjectless_sentence_still_asks",
         ),
     ),
     Clause(

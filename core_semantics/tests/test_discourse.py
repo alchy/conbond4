@@ -583,3 +583,90 @@ def test_a_nominal_root_without_an_auxiliary_is_not_a_predicate() -> None:
         provenance=STAMP,
     )
     assert not _is_predicate(holy.tokens[0], holy)
+
+
+# --------------------------------------------------------------------------
+# Podmět vyjádřený celou větou — B‑18
+# --------------------------------------------------------------------------
+#
+# „Je jasné, že Jan přišel." podmět MÁ: je jím celá věta vedlejší, kterou
+# rozbor označil `csubj`. Systém o ní přesto tvrdil, že podmět
+# nevyslovila, a na základě toho nepravdivého výroku NABÍZEL ANTECEDENT —
+# zval člověka, aby dosadil podmět tam, kde už jeden stojí.
+#
+# Mlčet by ale bylo taky nepřesné: dosadit větu za fillér zatím neumíme.
+# Rozdíl mezi „NEŘEČENO" a „ŘEČENO, NEUMÍM" je přesně ten, který tenhle
+# projekt drží jinde (`NEZAKOTVENO` × `bez čtení`).
+
+CLAUSAL_SUBJECT = Reading(
+    tokens=(
+        w(1, "Je", "být", "AUX", 2, "cop", Number="Sing", Polarity="Pos"),
+        w(2, "jasné", "jasný", "ADJ", 0, "root", Gender="Neut", Number="Sing"),
+        w(3, "že", "že", "SCONJ", 5, "mark"),
+        w(4, "Jan", "Jan", "PROPN", 5, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+        w(5, "přišel", "přijít", "VERB", 2, "csubj", Gender="Masc", Number="Sing"),
+        w(6, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+CLAUSAL_SUBJECT_TEXT = "Je jasné, že Jan přišel."
+
+
+def test_a_clausal_subject_is_not_reported_as_missing() -> None:
+    """NEPRAVDIVÝ VÝROK O TEXTU. Ta věta podmět MÁ — je jím celá věta
+    vedlejší. Tvrdit o ní, že ho nevyslovila, a pak nabízet antecedent
+    znamená zvát člověka, aby dosadil podmět tam, kde jeden stojí."""
+    session = Session(lexicon=lexicon())
+    session.utter(TEACHER_TEXT, _passive_oracle())
+    result = session.utter(
+        CLAUSAL_SUBJECT_TEXT,
+        _Recorded({CLAUSAL_SUBJECT_TEXT: CLAUSAL_SUBJECT, TEACHER_TEXT: TEACHER}),
+    )
+    stopa = " ".join(result.lines)
+    assert "BEZ PODMĚTU" not in stopa
+    assert "nemá podmět" not in (result.question or "")
+
+
+def test_it_says_what_it_cannot_do_instead_of_staying_silent() -> None:
+    """Mlčet by bylo taky nepřesné: podmět tam JE, jen ho neumíme dosadit.
+    Rozdíl mezi „neřečeno" a „řečeno, neumím" tenhle projekt drží jinde
+    a má ho držet i tady."""
+    session = Session(lexicon=lexicon())
+    result = session.utter(
+        CLAUSAL_SUBJECT_TEXT,
+        _Recorded({CLAUSAL_SUBJECT_TEXT: CLAUSAL_SUBJECT}),
+    )
+    stopa = " ".join(result.lines)
+    assert "PODMĚT JE CELÁ VĚTA" in stopa
+    assert "zatím neumím" in stopa
+
+
+def test_the_subject_deprels_are_a_named_constant() -> None:
+    """POČTVRTÉ TÁŽ TŘÍDA: W‑32 rysy řetězcem, W‑47 deprel řetězcem,
+    W‑48 `upos` výčtem, B‑18 výčet podmětových závislostí. Seznam je proto
+    POJMENOVANÁ KONSTANTA se zapsaným důvodem, ne literál v podmínce."""
+    import inspect
+
+    from core_semantics.cascade import SUBJECT_DEPRELS, prodrop_tier
+
+    assert set(SUBJECT_DEPRELS) == {"nsubj", "csubj"}
+    assert "SUBJECT_DEPRELS" in inspect.getsource(prodrop_tier)
+    # Důvod má být v kódu U TÉ KONSTANTY, ne jen v commitu. Čte se
+    # soubor, ne `inspect.getsource(modul)`: `core_semantics.cascade` je
+    # kvůli reexportu FUNKCE, ne modul, a vrátilo by to zdroj funkce.
+    from pathlib import Path
+
+    zdroj = Path(prodrop_tier.__globals__["__file__"]).read_text(encoding="utf-8")
+    misto = zdroj.index("SUBJECT_DEPRELS = ")
+    assert "B‑18" in zdroj[max(0, misto - 900) : misto]
+
+
+def test_a_genuinely_subjectless_sentence_still_asks() -> None:
+    """Stráž se nesmí rozšířit tak, že přestane ptát tam, kde podmět
+    doopravdy chybí — to by z opravy udělalo díru."""
+    session = Session(lexicon=lexicon())
+    session.utter(TEACHER_TEXT, _passive_oracle())
+    result = session.utter(PASSIVE_NO_SUBJECT_TEXT, _passive_oracle())
+    assert "BEZ PODMĚTU" in " ".join(result.lines)
+    assert result.statement_id is None

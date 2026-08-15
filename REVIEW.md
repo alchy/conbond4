@@ -1,6 +1,154 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — survey hotov, nula změn chování; a našel při tom fakt o nikom
+## Status: 🔴 FAIL — oprava je správná, ale posílá s sebou NEPRAVDIVOU VĚTU o textu
+
+**Kolo #85.** 996 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **72/72** (nová S‑37), parita **53/53**, dialogy 15 / 41 / 24,
+jádrové relace 9/9, nula `RECALL_FAILURE`, **celá stálá regrese zelená**
+(B‑1, B‑2, dialog B, disjoint→N, CONFLICT se dvěma důkazy, stráže 6/6,
+nedestruktivní `same_as`, M‑1, G‑3, zákaz OR, I‑16, ∀→∃ U/N,
+ireflexivita, opačná hrana, W‑19, W‑24, `complete`). Jádro 0.1.21,
+HEAD `94e92a6`.
+
+**Architectural Health Score: 9,0 / 10** — architektura se tímhle kolem
+**zlepšila**; FAIL je za jeden konkrétní výrok, ne za návrh.
+
+---
+
+## Co je hotové a hotové dobře
+
+**W‑48 je opravená a ověřil jsem to na minimálních párech**, ne z hlášení:
+
+```
+Byl pohřben v Praze.        zapsáno=ne   ptá se na PODMĚT: ANO   ← fakt o nikom je pryč
+Jan byl pohřben v Praze.    má nsubj:pass, na podmět se NEPTÁ    ← survey W-47 drží
+Narodil se v Praze.         činný pro-drop beze změny
+Jan je učitel.              ZAPSÁNO, neptá se
+Je učitel.                  zapsáno=ne, ptá se na podmět         ← spona bez podmětu, nově
+```
+
+**Tvar řešení je ten, který jsem předepsal**: `_is_predicate` čte, **co
+v rozboru je** — kořen je přísudek, když je `VERB`/`AUX`, **nebo když
+pod ním visí `aux`/`cop`** (přes `base_deprel`, takže se to se survey
+W‑47 nerozejde; je na to vlastní test, což je správně).
+
+**Stráž `Gender`/`Number` se ukázala cennější, než jsi psal.** Odchytí
+neosobní větu: *„Bylo chladno."* má kořen `ADV` bez rodu a čísla, takže
+se **na podmět neptá** — a to je správně, protože tam žádný podmět
+není. Ověřeno. To není náhoda, to je ta stráž.
+
+**Tvé přiznání k diffu beru a je poctivé.** ZAPSÁNO je v tomhle korpusu
+nula, takže přechod ZE ZAPSÁNO nemohl nastat; ručním diffem důvodů jsi
+to doložil jinak. Přeměřil jsem tvá strukturní čísla sám a **sedí přesně**:
+**60** vět s neslovesným kořenem a pomocným slovesem, **17** z nich bez
+podmětu.
+
+---
+
+## Critical Blockers
+
+### B‑18 · systém TVRDÍ „věta nemá podmět" o větě, která podmět VYSLOVILA
+
+**Reprodukováno mnou, doslovný výstup:**
+
+```
+» Je jasné, že Jan přišel.
+   kořen jasné/ADJ Neut/Sing   děti = [Je/cop, přišel/csubj, ./punct]
+   ? … Věta nemá podmět — „jasné“ ho nevyslovil. …
+```
+
+**Ta věta podmět má.** Je jím celá věta vedlejší — rozbor ji označil
+`csubj`. Systém o textu tvrdí něco, co v textu není, a pak na základě
+toho nepravdivého tvrzení **nabízí antecedent** — tedy zve člověka, aby
+dosadil podmět tam, kde už jeden stojí. To je horší než mlčet.
+
+**Je to NOVÉ tímhle kolem.** Před #85 měl `jasné` slovní druh `ADJ`,
+patro se hned vrátilo a nic netvrdilo. Tvoje rozšíření o `cop` ho
+dovnitř pustilo — správně — jen se s ním nesla i tahle věta.
+
+**Změřeno na témž korpusu, ne odhadnuto:**
+
+```
+neslovesný kořen + pomocné sloveso                      60
+   z toho BEZ nsubj → nově se ptá na podmět             17
+      z toho MÁ csubj → tvrzení je NEPRAVDIVÉ            5   (29 % z těch 17)
+slovesný kořen + csubj bez nsubj (leží od #72, zakryté)  3
+```
+
+Například: *„Je známo, že gestapo plánovalo jeho zatčení."*,
+*„Pozoruhodné je, že existuje druhopis…"*, *„Je možné si představit
+oddělené časoprostory…"*
+
+**Je to POČTVRTÉ táž třída, a na témž místě jako potřetí.** W‑32 rysy
+řetězcem, W‑47 deprel řetězcem, W‑48 `upos` výčtem — a teď **výčet
+podmětových deprelů**, který zná `nsubj`, ale ne `csubj`. Rozhodnutí
+„podmět vyslovený pod jinou značkou je pořád vyslovený" jsi u `nsubj:pass`
+udělal správně; jen ses s ním nedostal o jednu značku dál.
+
+---
+
+## Semantic Warnings
+
+**W‑49 · podmět jako věta je zatím zakrytý jinou zdí.** Všech pět těch
+vět je dnes `PTÁ SE` z jiného důvodu, takže do báze nic špatného nejde.
+Ale až ta zeď padne, nepravdivé tvrzení zůstane — **oprav to teď, dokud
+je vidět.**
+
+**W‑43 potvrzena tvým vlastním měřením** a předám ji Agentovi 3: dokud
+záznam nese jen verdikt a text důvodu, kolo jako tohle nejde změřit jinak
+než ručním diffem. Máš pravdu, že to je vada MĚŘENÍ, ne jádra.
+
+**Tvůj neověřený závěr o Vyšehradu beru jako neověřený** — a je správné,
+žes ho tak označil. Plyne z konstrukce, ne z běhu; nepočítám ho za
+doložený.
+
+**W‑42, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: B‑18. Doména na `advcl` počká** — mít v jádře
+nepravdivý výrok o textu je dražší než nemít doménu.
+
+**Nepředepisuju ti, že `csubj` MÁ platit za podmět** — to je rozhodnutí
+a obě odpovědi jsou obhajitelné. Nepřípustné je jen to **tvrzení**.
+Máš dvě cesty a chci, aby sis vybral vědomě a důvod zapsal:
+
+1. **`csubj` je vyslovený podmět** → patro se vrátí a mlčí, stejně jako
+   u `nsubj`.
+2. **Podmět je vyslovený, ale jádro ho zatím neumí použít** → řekne
+   přesně tohle. Ne „věta nemá podmět", ale „podmětem je celá věta
+   vedlejší a tu zatím za podmět dosadit neumím". **Rozdíl mezi
+   „neřečeno" a „řečeno, neumím" je přesně ten rozdíl, který tenhle
+   projekt jinde drží** (`NEZAKOTVENO` × bez čtení).
+
+**A protože je to počtvrté táž třída, chci k tomu jednu obecnou věc:**
+seznam deprelů, které pro tohle patro **znamenají vyslovený podmět**,
+ať je pojmenovaná konstanta se zapsaným důvodem — jako `PREDICATE_AUXILIARIES`,
+kterou jsi právě udělal správně. Ne literál v podmínce.
+
+**MŮJ COUNTEREXAMPLE — čísla mám změřená, ta platí:**
+*„Je jasné, že Jan přišel."* **nesmí tvrdit „věta nemá podmět"**;
+*„Je známo, že gestapo plánovalo jeho zatčení."* totéž; *„Byl pohřben
+v Praze."* se dál ptá na podmět a nezapíše se; *„Jan byl pohřben
+v Praze."* se dál neptá; *„Bylo chladno."* se dál neptá; činný pro‑drop
+z #72 beze změny; **z 60 vět s neslovesným kořenem se počet těch, kde
+se ptáme na podmět, sníží ze 17 na 12** — a těch 5 dostane **jiný**
+výrok, ne žádný; patnáct domén se závěry beze změny; jádrové relace 9/9;
+gate *Farmaka* `N`/`s0005`; parita ≥ 53/53; nula `RECALL_FAILURE`; testy
+zelené, `mypy --strict` čistý; doložky ≥ 72/72; korpus přeměřen nad
+čistou revizí a **v diffu je vidět těch 5 vět se změněným důvodem**.
+
+**Ty 3 věty se slovesným kořenem a `csubj` (leží od #72) vyřeš týmž
+rozhodnutím** — je to táž otázka, jen ji dosud nikdo neviděl.
+
+---
+
+## ARCHIV — kolo #84
+
+### Status: 🟢 PASS — survey hotov, nula změn chování
 
 **Kolo #84.** 989 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **71/71**, živá parita **53/53**, dialogy 15 / 41 / 24, gate
