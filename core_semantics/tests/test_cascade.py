@@ -2370,7 +2370,7 @@ def test_the_second_sentence_is_named_in_the_trace() -> None:
     from core_semantics.cascade import coordination_tier
 
     sdileny = chr(10).join(
-        cascade(_two_clauses(), tiers=(*HARD_TIERS, coordination_tier())).trace
+        cascade(_two_clauses(), tiers=(*HARD_TIERS, coordination_tier(czech_seed()))).trace
     )
     assert "číst ji zatím neumím" not in sdileny
 
@@ -2385,7 +2385,7 @@ def test_the_second_sentence_borrows_the_subject_from_the_first() -> None:
     člověka (M‑2)."""
     from core_semantics.cascade import coordination_tier
 
-    verdict = cascade(_two_clauses(), tiers=(*HARD_TIERS, coordination_tier()))
+    verdict = cascade(_two_clauses(), tiers=(*HARD_TIERS, coordination_tier(czech_seed())))
     first = verdict.survivors[0].predication
     assert first.second is not None
     assert first.second.predicate == "muset"
@@ -2394,10 +2394,14 @@ def test_the_second_sentence_borrows_the_subject_from_the_first() -> None:
     assert podmet is first.role(ROLE_SUBJECT), "táž zmínka, ne druhá kopie"
 
 
-def test_a_second_sentence_with_its_own_subject_is_left_alone() -> None:
-    """HRANICE MĚŘENÍ, ne pohodlí: 18 vět podmět sdílí a 17 má vlastní.
-    U vlastního by se řešily DVĚ věci naráz — druhá predikace A o kom
-    je — a smíchané kolo se neměří."""
+def test_a_second_sentence_with_its_own_subject_keeps_it() -> None:
+    """PODMĚT VYSLOVENÝ PODRUHÉ *(W‑73)*. „Stav se zlepšil, ale lékař
+    váhal." — druhá věta si nic nepůjčuje, řekla si o kom je sama.
+
+    **Uzel se ZAKLÁDÁ, nekopíruje**, a proto to musí být v hlášení vidět:
+    u sdíleného podmětu se přenáší TÁŽ zmínka, tady vzniká DRUHÁ — a dva
+    uzly pro jednoho člověka jsou nejdražší chyba, jakou tenhle systém
+    umí (M‑2)."""
     from core_semantics.cascade import coordination_tier
 
     reading = Reading(
@@ -2411,8 +2415,15 @@ def test_a_second_sentence_with_its_own_subject_is_left_alone() -> None:
         ),
         provenance="test",
     )
-    verdict = cascade(reading, tiers=(*HARD_TIERS, coordination_tier()))
-    assert verdict.survivors[0].predication.second is None
+    verdict = cascade(reading, tiers=(*HARD_TIERS, coordination_tier(czech_seed())))
+    druha = verdict.survivors[0].predication.second
+    assert druha is not None and druha.predicate == "váhat"
+    podmet = druha.role(ROLE_SUBJECT)
+    assert podmet is not None and podmet.lemma == "lékař", (
+        "podmět je VYSLOVENÝ, ne převzatý z první věty"
+    )
+    stopa = chr(10).join(verdict.trace)
+    assert "VLASTNÍ PODMĚT" in stopa and "NEPŘEBÍRÁ" in stopa
 
 
 def test_a_written_sentence_always_names_its_unread_half() -> None:
@@ -2508,4 +2519,59 @@ def test_one_utterance_can_write_two_statements() -> None:
     ]
     assert zapsane == ["zpívat(kdo:Jan)", "tančit(kdo:Jan)"], (
         "dva výroky z JEDNÉ promluvy, oba o TÉMŽE uzlu"
+    )
+
+
+def test_a_spoken_second_subject_makes_its_own_node() -> None:
+    """W‑73 a COUNTEREXAMPLE REVIEWERA: žádný uzel nevznikne dvakrát pro
+    totéž jméno v jedné promluvě — ale dvě RŮZNÁ jména dají dva uzly.
+
+    „Petr přišel a Jana odešla." zapíše dva výroky o DVOU uzlech, kdežto
+    „Jan zpíval a tančil." o JEDNOM. Rozdíl je vidět i v hlášení, a to je
+    ta půlka, na které záleží: u sdíleného podmětu se přenáší TÁŽ zmínka,
+    u vysloveného vzniká NOVÝ uzel — a to je místo, kde se dva uzly pro
+    jednoho člověka vyrábějí nejsnáz (M‑2)."""
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session
+
+    veta = Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "přišel", "přijít", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "a", "a", "CCONJ", 5, "cc"),
+            _token(4, "Jana", "Jana", "PROPN", 5, "nsubj", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(5, "odešla", "odejít", "VERB", 2, "conj", Gender="Fem", Number="Sing", Polarity="Pos"),
+            _token(6, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+
+    class _Recorded:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(text=text, readings=(veta,))
+
+    lexicon = czech_seed()
+    lexicon.add(
+        LearnedPattern(
+            trigger=Trigger(
+                lemma="", upos="PROPN", number="Sing", case="Nom", deprel="nsubj"
+            ),
+            operation=Operation.SELF,
+            learned_from="test W‑73",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    session = Session(lexicon=lexicon)
+    result = session.utter("Petr přišel a Jana odešla.", _Recorded())
+    zapsane = [
+        str(s.formula)
+        for s in session.kb.active()
+        if not str(s.formula).startswith(("member(", "role("))
+    ]
+    assert zapsane == ["přijít(kdo:Petr)", "odejít(kdo:Jana)"]
+    hlaseni = chr(10).join(result.lines)
+    assert "VLASTNÍ PODMĚT" in hlaseni and "VYSLOVENÝ podruhé" in hlaseni, (
+        "že uzel VZNIKÁ a nepřebírá se, musí být vidět"
     )

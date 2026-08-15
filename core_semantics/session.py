@@ -813,7 +813,7 @@ class Session:
             # (`UnquantifiedRole`), takže druhá věta se dřív NEZAKOTVILA
             # a zápis z ní nikdy nevznikl. Chytilo se to až tím, že
             # reviewer chtěl VIDĚT dva výroky z jedné promluvy.
-            coordination_tier(),
+            coordination_tier(self.lexicon),
             # KONZISTENCE S BÁZÍ JE AŽ TADY, a je to VĚDOMÁ ODCHYLKA od
             # pořadí v § 5.2 („…→ konzistence s bází → naučené vzory…").
             #
@@ -1495,12 +1495,26 @@ class Session:
         sid = self.kb.attach(
             grounded.formula, provenance=f"tah {index}: druhá věta"
         )
+        # ODKUD MÁ PODMĚT, MUSÍ SEDĚT S TÍM, CO SE STALO *(W‑73)*.
+        # Pevná věta „přebírá z první" lhala u druhé věty s VLASTNÍM
+        # podmětem — a je to zrovna ten případ, kde vzniká NOVÝ UZEL,
+        # tedy místo, kde se dva uzly pro jednoho člověka vyrábějí
+        # nejsnáz (M‑2). Porovnává se TOTOŽNOST ROLE, ne jméno: kopie
+        # a nový uzel se stejným lemmatem by se jménem nerozlišily.
+        prvni = predication.reading(ROLE_SUBJECT)
+        druhy = druha.reading(ROLE_SUBJECT)
+        prevzat = druhy is not None and druhy is prvni
         podmet = druha.role(ROLE_SUBJECT)
+        odkud = (
+            "PŘEBÍRÁ Z PRVNÍ, text ho podruhé nevyslovil"
+            if prevzat
+            else "je VYSLOVENÝ podruhé, takže uzel vzniká z něj a "
+            "nepřebírá se z první"
+        )
         return (
             f"✓ zapsáno [{sid}]  {grounded.formula}",
             f"[DRUHÁ VĚTA téže promluvy — podmět "
-            f"„{podmet.form if podmet else '?'}“ PŘEBÍRÁ Z PRVNÍ, text ho "
-            f"podruhé nevyslovil]",
+            f"„{podmet.form if podmet else '?'}“ {odkud}]",
         )
 
     def _route(

@@ -1,6 +1,136 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — jediná zapsaná věta korpusu přestala hlásit, že půlku textu nevzala
+## Status: 🟢 PASS — dva výroky z jedné promluvy, poprvé vidět v bázi
+
+**Kolo #109.** 1128 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **81/81**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**, patra kaskády 18. Jádro 0.1.44, HEAD `39cd9a8`, strom čistý.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## W‑72 nebyla otázka, byla to vada — a to je nejcennější kus kola
+
+Napsal jsem, že druhý zápis **jsem nikde neviděl** a že netvrdím, že
+nefunguje. **Nefungoval.** Patro souřadnosti běželo **před**
+kvantifikátorem, takže si druhá věta půjčovala roli bez kvantifikátoru,
+a ta se do jádra nedostane. **Druhý zápis nevznikl nikdy.**
+
+**A tvoje vlastní diagnóza je lepší než ta oprava:** *„můj test to
+neodhalil, protože ověřoval PATRO, ne BÁZI — to je ta lekce, ne to
+pořadí."*
+
+**Ověřeno mnou:**
+
+```
+» Jan zpíval a tančil.
+   ✓ zapsáno [s0001]  zpívat(kdo:Jan)
+   ✓ zapsáno [s0004]  tančit(kdo:Jan)        @tah 1: druhá věta
+   [DRUHÁ VĚTA téže promluvy — podmět „Jan“ PŘEBÍRÁ Z PRVNÍ]
+   BÁZE: dva výroky, JEDEN uzel Jan
+» Petr přišel a odešel.     přijít(kdo:Petr) + odejít(kdo:Petr)
+```
+
+**Tohle je poprvé, co z jedné promluvy leží v bázi dva výroky** — a oba
+o témž uzlu, ne o dvou stejnojmenných.
+
+---
+
+## B‑24 uzavřena
+
+```
+» Němec byl český vlastenec a publikoval pod pseudonymem…
+   [DRUHÁ VĚTA: „publikoval“ — souřadný druhý přísudek BEZ PODMĚTU, o který
+    by se dala opřít, ne člen téhle věty; číst ji zatím neumím]
+   ✓ zapsáno [s0001]  member(elem:Němec, group:·český_vlastenec)
+```
+
+**Podmínka „není přečtená" místo „má vlastní podmět" je správná** a bere
+se z **přeživšího čtení** — kdo druhou větu vzal, ví jen kandidát. Žádné
+dvě protichůdné hlášky nevznikají a text říká **proč**.
+
+**A přijal jsi to místo, kde jsi se mnou nesouhlasil**, s přesnou
+formulací rozdílu: u nezapsané věty kosmetika, u zapsané I‑1.
+
+**Regrese ověřeny:** *„Jeho stav se zlepšil, ale musel ulehnout."* dál
+nezapisuje (druhá věta má roli s tvarem místo jména → B‑19, ohlášeno);
+*„Psi štěkají a kočky."* beze změny.
+
+---
+
+## Critical Blockers
+
+**Žádné.** B‑24 i W‑72 uzavřeny.
+
+---
+
+## Semantic Warnings
+
+### W‑67 · PÁTÉ zkreslení jednoho nástroje, a tohle je to nejhorší
+
+**Ověřil jsem tvůj nález sám v záznamu:**
+
+```
+ZAPSANÝCH vět v záznamu: 1
+   reason: ''          ← PRÁZDNÝ ŘETĚZEC
+   reading: ✓ přečteno  member(elem:·Němec, group:·český_vlastenec)
+```
+
+**U zapsaných vět se `reason` neplní vůbec a stopa se neukládá.**
+Znamená to, že **z korpusového záznamu nelze o zapsané větě ověřit nic
+kromě samotné formule** — a tedy že **kdyby se tichý částečný zápis
+vrátil, záznam by mlčel**. Přesně to jsem v #108 chytil ručním
+porovnáním dvou revizí, ne diffem; teď vím proč.
+
+**Čekal jsem `hlášení 1` a dostal `0`. Není to tím, že by se oprava
+neprojevila** — je to tím, že ji ten nástroj neumí ukázat. **Beru zpět
+svou podmínku z #108**: to číslo nešlo splnit.
+
+**Pět zkreslení jednoho nástroje** (dvojí text, zkrácený `reason`,
+otázka jako nula, 17 místo 35, prázdný `reason` u zapsaných).
+**U Agenta 3 už s pokynem** — a souhlasím s tvým závěrem: **bez toho se
+další kola u zapsaných vět neověří.**
+
+**Otevřené beze změny:** druhá predikace s vlastním podmětem (17),
+jádrová relace bez `kdo` (dnes aspoň ohlášeno), W‑69, číslovka v čase,
+W‑66, 10 z 12 kolizí, 26 ze 42 `v+Loc`, W‑60, agens, úřad, příbuzenství,
+`nmod` pod obecným jménem, W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25,
+W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: DRUHÁ PREDIKACE S VLASTNÍM PODMĚTEM — druhá půlka těch
+35 vět (17).** Teď na ni je čas: první půlka drží, dva zápisy jsou
+doložené **v bázi**, a zbývá jediná otázka, kterou jsem ti v #107
+schválně odložil — **o kom ta druhá věta je, když to text řekne znovu.**
+
+**Pozor na jednu věc, kterou jsi sám otevřel:** u sdíleného podmětu se
+uzel **kopíruje**. U vlastního podmětu se **zakládá nový** — a to je
+místo, kde se dva uzly pro jednoho člověka vyrábějí nejsnáz (M‑2).
+**Chci to v hlášení vidět:** že jde o **nový** uzel, ne o převzatý.
+
+**Můj counterexample, psaný jako vlastnost:** **žádný uzel nevznikne
+dvakrát pro totéž jméno v jedné promluvě** — konkrétně věta typu
+*„Petr přišel a Jana odešla."* zapíše dva výroky o **dvou různých**
+uzlech a v hlášení je vidět, že druhý podmět je **vyslovený**, ne
+převzatý; *„Jan zpíval a tančil."* si nechá **jeden** uzel a oba zápisy;
+*„Němec byl český vlastenec a publikoval…"* beze změny; *„Psi štěkají
+a kočky."* beze změny; dvacet jedna domén se závěry beze změny; jádrové
+relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 81/81; `mypy --strict` čistý; **korpus
+přeměřen** — a **nečekám od něj potvrzení**, dokud W‑67 neopraví Agent 3;
+doložení testem nad bází je pro tohle kolo přípustné, **když se řekne**,
+jako dnes.
+
+---
+
+## ARCHIV — kolo #108
+
+### Status: 🔴 FAIL — B‑24, ztracený řádek u zapsané věty
 
 **Kolo #108.** 1126 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **81/81**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

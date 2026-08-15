@@ -1459,7 +1459,15 @@ CONTRACTS: tuple[Clause, ...] = (
             "byla kosmetika (B‑24). A patro souřadnosti běží AŽ ZA "
             "KVANTIFIKÁTOREM: půjčuje se HOTOVÁ role, protože role bez "
             "kvantifikátoru se do jádra nedostane a druhý zápis by nikdy "
-            "nevznikl (W‑72)"
+            "nevznikl (W‑72). DRUHÁ VĚTA S VLASTNÍM PODMĚTEM si nic "
+            "nepůjčuje — text řekl podruhé, o kom je — a UZEL VZNIKÁ "
+            "Z NĚJ. V hlášení to MUSÍ být vidět: u sdíleného podmětu se "
+            "přenáší TÁŽ zmínka, tady vzniká DRUHÁ, a to je místo, kde "
+            "se dva uzly pro jednoho člověka vyrábějí nejsnáz (M‑2). "
+            "Porovnává se TOTOŽNOST ROLE, ne jméno — kopie a nový uzel "
+            "se stejným lemmatem by se jménem nerozlišily. Role, které "
+            "patro vyrobí, dostanou KVANTIFIKÁTOR: kvantifikátorové "
+            "patro už proběhlo (W‑73)"
         ),
         anchor="core_semantics.cascade:second_predications",
         entry="cascade(",
@@ -1469,9 +1477,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_second_sentence_is_not_reported_as_a_lost_member",
             "test_the_second_sentence_is_named_in_the_trace",
             "test_the_second_sentence_borrows_the_subject_from_the_first",
-            "test_a_second_sentence_with_its_own_subject_is_left_alone",
+            "test_a_second_sentence_with_its_own_subject_keeps_it",
             "test_a_written_sentence_always_names_its_unread_half",
             "test_one_utterance_can_write_two_statements",
+            "test_a_spoken_second_subject_makes_its_own_node",
         ),
     ),
     Clause(

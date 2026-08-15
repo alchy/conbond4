@@ -3224,7 +3224,7 @@ def _own_subject(token: Token, reading: Reading) -> bool:
     )
 
 
-def coordination_tier() -> Tier:
+def coordination_tier(lexicon: Lexicon) -> Tier:
     """DRUHÁ VĚTA SE SDÍLENÝM PODMĚTEM *(W‑71)*.
 
     „Jeho stav se přechodně zlepšil, **ale brzy musel znovu ulehnout**."
@@ -3246,20 +3246,12 @@ def coordination_tier() -> Tier:
     def tier(
         candidates: tuple[Candidate, ...], reading: Reading
     ) -> tuple[tuple[Candidate, ...], str | None]:
-        druhe = [
-            token
-            for token in second_predications(reading)
-            if not _own_subject(token, reading)
-        ]
+        druhe = list(second_predications(reading))
         if not druhe:
             return candidates, None
         notes: list[str] = []
         out: list[Candidate] = []
         for candidate in candidates:
-            subject = candidate.predication.reading(ROLE_SUBJECT)
-            if subject is None:
-                out.append(candidate)
-                continue
             token = druhe[0]
             vlastni = tuple(
                 _nominal(child, reading, _role_for(child, reading) or ROLE_OBJECT)
@@ -3267,20 +3259,57 @@ def coordination_tier() -> Tier:
                 if _role_for(child, reading) is not None
                 and base_deprel(child.deprel) not in ("cop", "aux")
             )
-            jmena = {r.name for r in vlastni}
-            if ROLE_SUBJECT in jmena:  # pragma: no cover — stráž nad stráží
-                out.append(candidate)
-                continue
+            # ROLE, KTEROU VYROBÍ PATRO, MUSÍ DOSTAT KVANTIFIKÁTOR *(W‑73)*.
+            # Kvantifikátorové patro už proběhlo, takže role vzniklé tady
+            # by zůstaly bez něj — a role bez kvantifikátoru se do jádra
+            # nedostane (`UnquantifiedRole`). Přesně na tomhle padl druhý
+            # zápis u sdíleného podmětu (W‑72); tady by padl znovu, jen
+            # o kus dál.
+            vlastni = tuple(
+                role
+                if role.quantifier is not None
+                or role.mention.upos not in QUANTIFIED_UPOS
+                or role.name in UNQUANTIFIED_ROLES
+                else _quantify(role, candidate.predication.mood, reading, lexicon)[0]
+                for role in vlastni
+            )
+            vyslovený = next(
+                (r for r in vlastni if r.name == ROLE_SUBJECT), None
+            )
+            if vyslovený is not None:
+                # PODMĚT VYSLOVENÝ PODRUHÉ *(W‑73)*. „Petr přišel a Jana
+                # odešla." — druhá věta si nic nepůjčuje, řekla si o kom
+                # je sama. Uzel se ZAKLÁDÁ, a právě proto to musí být
+                # v hlášení vidět: u sdíleného podmětu se kopíruje TÁŽ
+                # zmínka, tady vzniká DRUHÁ — a dva uzly pro jednoho
+                # člověka jsou nejdražší chyba, jakou tenhle systém umí
+                # (M‑2). Že se ta dvě jména sejdou na jednom uzlu, když
+                # jsou stejná, zařídí `name_of` z lemmatu; co se hlídat
+                # musí, je, aby si toho člověk VŠIML.
+                role = vlastni
+                zprava = (
+                    f"[DRUHÁ VĚTA „{token.form}“ MÁ VLASTNÍ PODMĚT "
+                    f"(„{vyslovený.mention.form}“) — text ho vyslovil "
+                    f"podruhé, takže se NEPŘEBÍRÁ z první a uzel vzniká "
+                    f"z něj]"
+                )
+            else:
+                subject = candidate.predication.reading(ROLE_SUBJECT)
+                if subject is None:
+                    out.append(candidate)
+                    continue
+                role = (subject, *vlastni)
+                zprava = (
+                    f"[DRUHÁ VĚTA „{token.form}“ PŘEBÍRÁ PODMĚT z první "
+                    f"(„{subject.mention.form}“) — text ho podruhé "
+                    f"nevyslovil a domýšlet se nic nemuselo]"
+                )
             druha = Predication(
                 predicate=token.lemma,
-                roles=tuple(sorted((subject, *vlastni), key=lambda r: r.name)),
+                roles=tuple(sorted(role, key=lambda r: r.name)),
                 mood=candidate.predication.mood,
             )
-            notes.append(
-                f"[DRUHÁ VĚTA „{token.form}“ PŘEBÍRÁ PODMĚT z první "
-                f"(„{subject.mention.form}“) — text ho podruhé nevyslovil "
-                f"a domýšlet se nic nemuselo]"
-            )
+            notes.append(zprava)
             out.append(
                 Candidate(
                     replace(candidate.predication, second=druha),
