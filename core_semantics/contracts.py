@@ -1422,6 +1422,36 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-17",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "SOUŘADNÝ DRUHÝ PŘÍSUDEK JE DRUHÁ VĚTA, ne ztracený člen "
+            "*(W‑70)*. „Jeho stav se přechodně zlepšil, ALE BRZY MUSEL "
+            "ZNOVU ULEHNOUT.“ — ta druhá část není člen první věty; "
+            "hlásit ji jako ztrátu je nepravda o tom, co ta část textu "
+            "je, a ptát se „jak se ta role jmenuje“ je výzva, aby člověk "
+            "dosadil druhou větu jako člen první. Čte se ze STAVBY, ne "
+            "ze spojky: `conj` pod kořenem, který je sám PŘÍSUDEK — ptá "
+            "se `_is_predicate`, takže platí i pro trpný rod a nepíše se "
+            "druhá kopie té otázky (W‑65). SOUŘADNÉ JMÉNO („psi a "
+            "kočky“) tudy NEPROJDE a projít nesmí — to člen věty je. "
+            "Vyjímá se CELÝ PODSTROM: členy druhé věty jsou její. ČÍST "
+            "SE TO ZATÍM NEZAČNE a je to PŘIZNANÁ MEZ, ne rozhodnutí "
+            "o textu — udělat z druhé věty ROLI by byla táž vada jako "
+            "u titulu a u apozice. Změřeno: 35 vět z 238 (15 %), z toho "
+            "18 SDÍLÍ PODMĚT a 17 má VLASTNÍ, tedy dvě různé úlohy "
+            "skoro stejné velikosti"
+        ),
+        anchor="core_semantics.cascade:second_predications",
+        entry="cascade(",
+        enforced_by=(
+            "test_a_coordinated_predicate_is_a_second_sentence",
+            "test_a_coordinated_noun_is_still_a_member",
+            "test_the_second_sentence_is_not_reported_as_a_lost_member",
+            "test_the_second_sentence_is_named_in_the_trace",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(

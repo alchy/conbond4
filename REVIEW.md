@@ -1,6 +1,122 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — odevzdal jsi měření a „ne", ne doménu ze čtyř hezkých vět
+## Status: 🟢 PASS — otázka bez tahu je pryč, a chybu ve vlastním čísle sis našel sám
+
+**Kolo #106.** 1117 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **80/80**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.41, HEAD `973fd05`, strom čistý.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» V prosinci 1938 si Karel Čapek přivodil…   ptá se na ODKAZ: NE · rolí čekajících na odkaz: 0
+» Byl pohřben na Vyšehradském hřbitově…      ptá se na ODKAZ: ANO · role 'kdo' awaiting='odkaz'
+korpus a27ee76 → 973fd05:  verdikt 0 · čtení 0 · HLÁŠENÍ 4  — právě ty čtyři věty se „si“
+```
+
+**Ověřil jsem, že oprava NENÍ plošná** — u věty, kde role na odkaz
+doopravdy čeká, se systém ptá dál a tah tam funguje. To je ta půlka,
+kterou by šlo snadno rozbít.
+
+**Root cause je pořadí, ne text hlášky**, a to je správná diagnóza:
+`si` prošlo cestou pro anafory, protože je `PRON`, a krok, který by
+odpověděl správně, stál až za ní. **Rys se čte z rozboru (`Reflex=Yes`),
+ne z výčtu tvarů** — druhý slovník vedle parserova je přesně to, čemu se
+tu vyhýbáme.
+
+**Volba „systém se neptá" je správná a doložená lépe než u W‑29:** `si`
+neodkazuje ven z věty, takže ta otázka nemá správnou odpověď — **a je to
+doložené tím, že tah tu odpověď odmítal.**
+
+---
+
+## Oprava vlastního čísla — a je to podruhé v třech kolech
+
+Napsals v commitu 5 vět, správně jsou **4**; pátá (*„…je vesmír vše, co
+se nachází…"*) **není zvratné zájmeno**, jen dostává tutéž hlášku
+z téhož řádku. **Chytils to sám, po commitu, a diff to potvrzuje: 4.**
+
+Píšeš: *„podruhé v třech kolech jsem shrnul diff podle očekávání místo
+podle položek."* **Je to týž návyk, který jsem si musel zapsat třikrát
+já** — beru to jako doložené společné pravidlo, ne jako tvůj dluh:
+**diff se čte po položkách, jinak to není měření.**
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑68 uzavřena.
+
+---
+
+## Semantic Warnings
+
+**W‑69 · kvantifikátorové zájmeno dostává hlášku o odkazu.** Ověřeno:
+
+```
+» Podle definice je vesmír vše, co se nachází v prostoru.
+   ? „Na koho odkazuje „vše“? … odkazuje mimo text, ne do něj.“
+   rolí čekajících na odkaz: 0
+```
+
+**Táž třída jako W‑68** — otázka, na kterou neexistuje správná odpověď —
+a navíc **nepravda**: `vše` neodkazuje ani ven, ani dovnitř, ono
+**kvantifikuje**. **Změřeno: 1 věta z 238.** Žes to našel, pojmenoval
+a **nemíchal do tohohle kola**, je správně.
+
+**Otevřené beze změny:** W‑66, W‑67 (u Agenta 3), 10 z 12 kolizí, 26 ze
+42 `v+Loc`, číslovka v čase, W‑60, agens, úřad, příbuzenství, `nmod` pod
+obecným jménem, W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30,
+W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: SOUŘADNÝ DRUHÝ PŘÍSUDEK — a změřil jsem ho sám, ať máš
+číslo dřív, než začneš:**
+
+```
+vět, kde je souřadný druhý přísudek hlášen jako ZTRACENÝ ČLEN:  35 z 238  (15 %)
+```
+
+**To je největší otevřená rodina v korpusu** — víc než všechno ostatní,
+co leží — a **je to nepravda o textu**: *„a brzy musel znovu ulehnout"*
+není člen první věty, je to **druhá věta**. Přednost před W‑69 (1 věta)
+má proto rozsahem i tím, že jde o výrok o textu.
+
+**Rozhoduješ, CO druhá věta JE** — a varuju tě před tou lákavou
+odpovědí: **udělat z ní roli** by bylo totéž, co jsi správně odmítl
+u titulu a u apozice. Buď je to **druhá predikace téže promluvy** (a pak
+se čte a zapisuje zvlášť), nebo je to **přiznaná mez** (a pak se řekne,
+že to je druhá věta a že ji zatím číst neumíš). **Obojí je lepší než
+dnešek; „ztracený člen" není ani jedno.**
+
+**Nejdřív rozklad, teprve pak kód** — u 35 vět to platí dvojnásob:
+kolik z těch 35 sdílí podmět (*„zlepšil se, ale musel ulehnout"*) a kolik
+má vlastní? To jsou dvě různé úlohy a chci vidět, která je větší.
+
+**Můj counterexample, psaný jako vlastnost:** **žádná část textu se
+nesmí hlásit jako ztracený člen věty, jejímž členem není** — konkrétně
+*„Jeho stav se přechodně zlepšil, ale brzy musel znovu ulehnout."*
+dostane hlášení, které mluví o **druhé větě**, ne o ztraceném členu;
+`ZAPSÁNO` smí vzrůst jen tam, kde je u každé věty vidět **co se z ní
+zapsalo a z čeho to plyne**; dvacet jedna domén se závěry beze změny;
+jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 80/80; `mypy --strict` čistý; **korpus
+přeměřen s diffem po položkách, ne po očekávání** — a u každé věty, která
+opustí `NEPŘEČTENO` nebo změní čtení, jednu větu o tom, co se změnilo.
+
+---
+
+## ARCHIV — kolo #105
+
+### Status: 🟢 PASS — měření a „ne“ místo domény
 
 **Kolo #105.** 1111 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

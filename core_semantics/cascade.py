@@ -3179,6 +3179,36 @@ def attribute_tier() -> Tier:
     return tier
 
 
+def second_predications(reading: Reading) -> tuple[Token, ...]:
+    """SOUŘADNÝ DRUHÝ PŘÍSUDEK — druhá věta, ne ztracený člen *(W‑70)*.
+
+    „Jeho stav se přechodně zlepšil, **ale brzy musel znovu ulehnout**."
+    Ta druhá část NENÍ člen první věty; je to DRUHÁ PREDIKACE téže
+    promluvy. Hlásit ji jako ztracený člen je nepravda o tom, co ta část
+    textu je — táž třída jako „nemá ani jeden člen" u nadpisu (W‑64).
+
+    **Čte se ze STAVBY, ne ze spojky.** `conj` pod kořenem, který je sám
+    PŘÍSUDEK — ptá se `_is_predicate`, takže platí i pro trpný rod
+    (kořen `ADJ` + `aux:pass`) a nepíše se druhá kopie té otázky (W‑65).
+    Souřadné JMÉNO („psi a kočky") tudy neprojde a projít nesmí: to
+    člen věty je.
+
+    **Číst se to zatím nezačne, a je to PŘIZNANÁ MEZ, ne rozhodnutí
+    o textu.** Změřeno: 35 vět z 238 (15 %), z toho 18 SDÍLÍ PODMĚT
+    („zlepšil se, ale musel ulehnout") a 17 má VLASTNÍ. Jsou to dvě
+    různé úlohy skoro stejné velikosti a udělat z druhé věty ROLI by
+    byla táž vada, jakou tenhle projekt odmítl u titulu i u apozice.
+    """
+    root = reading.root()
+    if root is None or not _is_predicate(root, reading):
+        return ()
+    return tuple(
+        token
+        for token in reading.children(root.index)
+        if base_deprel(token.deprel) == "conj" and _is_predicate(token, reading)
+    )
+
+
 def lost_members(
     reading: Reading, predication: Predication
 ) -> tuple[tuple[Token, str], ...]:
@@ -3190,11 +3220,37 @@ def lost_members(
     zablokovat zápis věty, které nechybí predikát, ale přívlastek.
     """
     attribute_tokens = {token for _, _, token in genitive_attributes(reading, predication)}
+    # DRUHÁ VĚTA MEZI ZTRACENÉ ČLENY NEPATŘÍ *(W‑70)*. Ptát se na ni
+    # „jak se ta role jmenuje?" znamená vyzvat člověka, aby druhou větu
+    # dosadil jako člen první — a odpověď, která by tomu vyhověla,
+    # neexistuje. Nechává se i její podstrom: členy druhé věty jsou její,
+    # ne ztracené členy první.
+    druha = {t.index for t in second_predications(reading)}
+    if druha:
+        druha |= {
+            token.index
+            for token in reading.tokens
+            if _within_subtree(token, druha, reading)
+        }
     return tuple(
         (token, lost_shape(token, reading))
         for token in dropped_tokens(reading, predication)
-        if token.index not in attribute_tokens
+        if token.index not in attribute_tokens and token.index not in druha
     )
+
+
+def _within_subtree(
+    token: Token, roots: set[int], reading: Reading
+) -> bool:
+    """Leží token pod některým z těch kořenů?"""
+    current: Token | None = token
+    seen: set[int] = set()
+    while current is not None and current.head != 0 and current.index not in seen:
+        seen.add(current.index)
+        if current.head in roots:
+            return True
+        current = _token_at(current.head, reading)
+    return False
 
 
 def _dropped_note(reading: Reading, predication: Predication) -> str | None:
@@ -3208,10 +3264,17 @@ def _dropped_note(reading: Reading, predication: Predication) -> str | None:
     attribute_tokens = {
         token for _, _, token in genitive_attributes(reading, predication)
     }
+    druha = {t.index for t in second_predications(reading)}
+    if druha:
+        druha |= {
+            token.index
+            for token in reading.tokens
+            if _within_subtree(token, druha, reading)
+        }
     lost = [
         token
         for token in dropped_tokens(reading, predication)
-        if token.index not in attribute_tokens
+        if token.index not in attribute_tokens and token.index not in druha
     ]
     if not lost:
         return None
@@ -3420,6 +3483,19 @@ def cascade(
         )
     # Ztráta se hlásí jen u rozhodnutého čtení: u dvou kandidátů se liší,
     # a hlásit ztrátu z čtení, které možná není to pravé, mate.
+    # DRUHÁ VĚTA SE POJMENUJE *(W‑70)*. Do téhle změny se hlásila jako
+    # ztracený člen — tedy jako něco, co z první věty vypadlo — a systém
+    # se ptal, jak se ta role jmenuje. Odpověď na to neexistuje: „a brzy
+    # musel znovu ulehnout" NENÍ člen první věty. Číst se to zatím
+    # nezačne a je to PŘIZNANÁ MEZ, ne rozhodnutí o textu.
+    druhe = second_predications(reading)
+    if druhe:
+        trace.append(
+            "[DRUHÁ VĚTA: "
+            + ", ".join(f"„{t.form}“" for t in druhe)
+            + " — souřadný druhý přísudek, ne člen téhle věty; číst ji "
+            "zatím neumím]"
+        )
     if len(candidates) == 1:
         note = _dropped_note(reading, candidates[0].predication)
         if note:

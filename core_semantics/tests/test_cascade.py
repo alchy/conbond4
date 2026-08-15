@@ -2279,3 +2279,75 @@ def test_the_heading_guard_has_no_second_copy() -> None:
     )
     assert "_is_predicate(" in kod
     assert "upos ==" not in kod
+
+
+# --------------------------------------------------------------------------
+# SOUŘADNÝ DRUHÝ PŘÍSUDEK je DRUHÁ VĚTA *(W‑70)*
+# --------------------------------------------------------------------------
+
+
+def _two_clauses() -> Reading:
+    """«Stav se zlepšil, ale musel ulehnout.»"""
+    return Reading(
+        tokens=(
+            _token(1, "Stav", "stav", "NOUN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "zlepšil", "zlepšit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, ",", ",", "PUNCT", 5, "punct"),
+            _token(4, "ale", "ale", "CCONJ", 5, "cc"),
+            _token(5, "musel", "muset", "VERB", 2, "conj", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(6, "ulehnout", "ulehnout", "VERB", 5, "xcomp", Polarity="Pos"),
+            _token(7, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_coordinated_predicate_is_a_second_sentence() -> None:
+    """„Jeho stav se přechodně zlepšil, **ale brzy musel znovu
+    ulehnout**." Ta druhá část NENÍ člen první věty — je to DRUHÁ
+    PREDIKACE téže promluvy. Hlásit ji jako ztracený člen je nepravda
+    o tom, co ta část textu je, a ptát se „jak se ta role jmenuje" je
+    výzva, aby člověk dosadil druhou větu jako člen první.
+
+    **Změřeno: 35 vět z 238 (15 %)** — největší otevřená rodina korpusu.
+    """
+    from core_semantics.cascade import second_predications
+
+    reading = _two_clauses()
+    assert [t.form for t in second_predications(reading)] == ["musel"]
+
+
+def test_a_coordinated_noun_is_still_a_member() -> None:
+    """PROTIPŘÍKLAD: „psi a kočky" je SOUŘADNÉ JMÉNO, tedy člen věty —
+    a členem zůstat musí. Rozhoduje `_is_predicate`, ne spojka: kdyby se
+    bralo `conj` bez té otázky, zmizel by z věty podmět."""
+    from core_semantics.cascade import second_predications
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Psi", "pes", "NOUN", 2, "nsubj", Case="Nom", Number="Plur"),
+            _token(2, "štěkají", "štěkat", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(3, "a", "a", "CCONJ", 4, "cc"),
+            _token(4, "kočky", "kočka", "NOUN", 1, "conj", Case="Nom", Number="Plur"),
+            _token(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    assert second_predications(reading) == ()
+
+
+def test_the_second_sentence_is_not_reported_as_a_lost_member() -> None:
+    """A CELÝ PODSTROM S NÍ: členy druhé věty jsou JEJÍ, ne ztracené
+    členy první."""
+    verdict = cascade(_two_clauses())
+    formy = {form for form, _ in verdict.lost}
+    assert "musel" not in formy and "ulehnout" not in formy
+
+
+def test_the_second_sentence_is_named_in_the_trace() -> None:
+    """Číst se to zatím nezačne — a PROTO to musí být řečeno. Přiznaná
+    mez je něco jiného než mlčení: „ztracený člen" tvrdil o té části
+    textu něco, co není."""
+    stopa = "\n".join(cascade(_two_clauses()).trace)
+    assert "DRUHÁ VĚTA" in stopa and "„musel“" in stopa
+    assert "číst ji zatím neumím" in stopa
