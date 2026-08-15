@@ -162,6 +162,13 @@ class Predication:
     #: `subset` mění UZÁVĚR báze, kdežto vztah `být` je fakt jako každý
     #: jiný. Proto se sem nikdy nedosazuje potichu.
     relation: Operation | None = None
+    #: Tvar konstrukce, na jejíž význam se ČEKÁ *(B‑17)*. Nese to
+    #: PREDIKACE, ne stopa: stopa je log jednoho tahu, takže odpověď na
+    #: kvantifikátor ji zahodila a otázka na relaci se tím ZTRATILA —
+    #: věta se pak zapsala jako obyčejný vztah, přestože systém v téže
+    #: odpovědi říkal, že tomu tvaru nerozumí. Je to táž lekce jako N‑3:
+    #: ptát se z HOTOVÉ predikace, ne z logu.
+    pending_relation: str = ""
 
     def __post_init__(self) -> None:
         names = [r.name for r in self.roles]
@@ -1340,7 +1347,7 @@ def _propose_relation(
     shape = found.shape
     matches = lexicon.relation_candidates(shape)
     if len(matches) > 1:
-        return predication, (
+        return replace(predication, pending_relation=shape), (
             f"[POZOR: tvar {shape} připouští "
             + " nebo ".join(m.operation.value for m in matches)
             + f" — {RELATION_QUESTION_MARK}{shape}]"
@@ -1352,7 +1359,7 @@ def _propose_relation(
             # správná odpověď není: „Petr byl v Česku." není vztah dvou
             # tříd, je to fakt o Petrovi.
             return predication, None
-        return predication, (
+        return replace(predication, pending_relation=shape), (
             f"[CHYBÍ: co ta stavba tvrdí — tvar {shape} "
             f"{RELATION_QUESTION_MARK}{shape}]"
         )
@@ -1433,24 +1440,23 @@ def as_relation(
 RELATION_QUESTION_MARK = "?stavba="
 
 
-def relation_question(trace: Sequence[str]) -> str | None:
-    """Otázka na to, co konstrukce tvrdí — nebo `None`."""
-    for step in trace:
-        if RELATION_QUESTION_MARK in step:
-            # Po značce následuje tvar a pak `]`, za kterým už kaskáda
-            # připsala svoje „→ zbývá N". Číst do konce řádku by do otázky
-            # vtáhlo cizí text.
-            shape = step.split(RELATION_QUESTION_MARK, 1)[1].split("]", 1)[0]
-            # Nabídka se skládá z `RELATIONAL`, ne z ručního výčtu: ručně
-            # psaný seznam by po přidání relace zůstal starý a systém by
-            # se ptal na míň, než umí — a nikdo by si toho nevšiml,
-            # protože otázka by pořád dávala smysl.
-            menu = ", ".join(sorted(op.value for op in RELATIONAL))
-            return (
-                f"Co ta věta tvrdí o vztahu těch dvou? Tvar je {shape} — "
-                f"{menu}?"
-            )
-    return None
+def relation_question(predication: Predication) -> str | None:
+    """Otázka na to, co konstrukce tvrdí — nebo `None`.
+
+    Počítá se z HOTOVÉ predikace, ne ze stopy *(B‑17)*. Stopa je log
+    jednoho tahu: odpověď na kvantifikátor ji zahodila a otázka na relaci
+    se tím ztratila — věta se zapsala jako obyčejný vztah, přestože se
+    o její konstrukci pořád nevědělo. Táž lekce jako N‑3 a G‑4.
+    """
+    shape = predication.pending_relation
+    if not shape:
+        return None
+    # Nabídka se skládá z `RELATIONAL`, ne z ručního výčtu: ručně psaný
+    # seznam by po přidání relace zůstal starý a systém by se ptal na
+    # míň, než umí — a nikdo by si toho nevšiml, protože otázka by pořád
+    # dávala smysl.
+    menu = ", ".join(sorted(op.value for op in RELATIONAL))
+    return f"Co ta věta tvrdí o vztahu těch dvou? Tvar je {shape} — {menu}?"
 
 
 def quantifier_tier(lexicon: Lexicon) -> Tier:

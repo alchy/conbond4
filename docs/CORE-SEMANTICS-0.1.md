@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.13 | § 9 — ČEKAJÍCÍ KONSTRUKCE ZASTAVÍ ZÁPIS stejně jako čekající kvantifikátor, a tvar, na jehož význam se čeká, visí na PREDIKACI, ne ve stopě: stopa je log jednoho tahu, takže odpověď na cokoli jiného otázku zahodila a věta se zapsala jako obyčejný vztah `být` — zápis pod přiznanou neznalostí (INV‑11); § 13 T63 | 15. 8. 2026 |
 | 0.1.12 | § 9 — `InconsistentOrder` jako pojmenované selhání ZÁPISU: hrana, která by uzavřela uspořádání do kruhu, se odmítá u `attach`, ne až u dotazu; k tomu IREFLEXIVITA `before` (smyčka na sebe je kruh o jednom uzlu) a otevřená otázka o `CONFLICT` variantě; § 13 T62 | 15. 8. 2026 |
 **Rozsah:** definuje jazyk, typování, denotaci, epistemický status,
 pravidla, modalitu, důkaz a identitu. Neřeší parsing, renderování,
@@ -1048,6 +1049,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T63 | otevřená otázka na konstrukci zastaví zápis | „Praha je součástí Plzně.“ + odpověď na KVANTIFIKÁTOR → nezapsáno a otázka na relaci POŘÁD TAM; po odpovědi na relaci zapsáno `contains(part:Praha, whole:Plzeň)`; desátý dialog zapíše `contains` i `within` a jedna otázka potřebuje OBA s důkazem citujícím oba zápisy |
 | T62 | kruh v uspořádání se odmítá u zápisu | `before(b,a)` po `before(a,b)` → `AttachError`, který JMENUJE výroky kruhu; `before(a,a)` odmítnuto vždy; báze po odmítnutí dál odpovídá; H‑3 v uzávěru zůstává jako druhá obrana |
 | T61 | negace obrací monotonii | `¬P(∀maso)` odpoví na `¬P(∃maso)`; kladné `∀→∃` zůstává `U`; dotaz smí být užší, ne širší |
 | T60 | zapsaný výrok se nepřehlíží | `attach(subset(auto, A AND B))` → přímá otázka dá `A` s citací TOHO výroku; zákony § 5.2.1 běží dál beze změny a negativní kontroly (`A OR B ⊆ A`) drží |

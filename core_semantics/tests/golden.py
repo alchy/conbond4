@@ -732,6 +732,85 @@ K5 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# L · zahrnutí v místě i v čase (desátý akceptační dialog)
+# --------------------------------------------------------------------------
+#
+# Tvar „být součástí“ je v obou prvních větách TÝŽ a znamená pokaždé něco
+# jiného (`contains` × `within`), takže se tu ZÁMĚRNĚ zapisuje čtení, které
+# ještě relaci nezná: `být(Gen:…)`. Není to omyl v sadě — je to stav PŘED
+# odpovědí člověka a přesně to, co se nesmí zapsat do báze (B‑17).
+
+L1 = Golden(
+    dialogue="L",
+    text="Petrovice jsou součástí Plzně.",
+    tokens=(
+        tok(1, "Petrovice", "Petrovice", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Geo", Number="Plur"),
+        tok(2, "jsou", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "součástí", "součást", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+        tok(4, "Plzně", "Plzeň", "PROPN", 3, "nmod", Case="Gen", Gender="Fem", NameType="Geo", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="být(Gen:Plzeň, co:součást, kdo:Petrovice)",
+    asks=(
+        "ptá se na relaci: „být součástí“ je TVAR, ne význam, a bez "
+        "odpovědi člověka se tahle věta nesmí zapsat (B‑17)"
+    ),
+)
+
+L2 = Golden(
+    dialogue="L",
+    text="Pondělí je součástí týdne.",
+    tokens=(
+        tok(1, "Pondělí", "pondělí", "NOUN", 3, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "součástí", "součást", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+        tok(4, "týdne", "týden", "NOUN", 3, "nmod", Animacy="Inan", Case="Gen", Gender="Masc", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="být(Gen:týden, co:součást, kdo:∀pondělí)",
+    asks=(
+        "ptá se ZNOVU a na týž tvar — protože odpověď u L1 platila jen "
+        "pro tu jednu větu (`→⊆1`), a tady je správně jiná relace"
+    ),
+)
+
+L3 = Golden(
+    dialogue="L",
+    text="Koncert byl v Petrovicích v pondělí.",
+    tokens=(
+        tok(1, "Koncert", "koncert", "NOUN", 4, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(2, "byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        tok(4, "Petrovicích", "Petrovice", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+        tok(5, "v", "v", "ADP", 6, "case", AdpType="Prep", Case="Acc"),
+        tok(6, "pondělí", "pondělí", "NOUN", 4, "obl", Case="Acc", Gender="Neut", Number="Sing"),
+        tok(7, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    #: DVĚ OKOLNOSTI, ROZLIŠENÉ PÁDEM, ne předložkou: „v+Loc" je místo,
+    #: „v+Acc" čas. Že je tu jedna pojmenovaná (`kdy`) a druhá ne, drží
+    #: rozdíl mezi tvarem a významem viditelný i ve zlatém záznamu.
+    predication="být(kdo:∀koncert, kdy:pondělí, v+Loc:Petrovice)",
+    asks="ptá se, co znamená role „v+Loc“ — tvar zná, význam ne",
+)
+
+L4 = Golden(
+    dialogue="L",
+    text="Byl koncert v Plzni během týdne?",
+    tokens=(
+        tok(1, "Byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(2, "koncert", "koncert", "NOUN", 4, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        tok(4, "Plzni", "Plzeň", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+        tok(5, "během", "během", "ADP", 6, "case", AdpType="Prep", Case="Gen"),
+        tok(6, "týdne", "týden", "NOUN", 4, "obl", Animacy="Inan", Case="Gen", Gender="Masc", Number="Sing"),
+        tok(7, "?", "?", "PUNCT", 4, "punct"),
+    ),
+    predication="být(během+Gen:týden, kdo:∀koncert, v+Loc:Plzeň)",
+    asks="ptá se na obě okolnostní role — „v+Loc“ i „během+Gen“",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
@@ -739,6 +818,7 @@ CORPUS: tuple[Golden, ...] = (
     I1, I2, I3, I4,
     J2, J3, J4,
     K2, K3, K4, K5,
+    L1, L2, L3, L4,
 )
 
 

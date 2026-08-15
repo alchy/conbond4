@@ -1,6 +1,152 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — M‑1 poprvé z češtiny; zúžení M‑2 schvaluji a zapisuji
+## Status: 🔴 FAIL — poctivé PARTIAL, které beru; a k němu vada, kterou Builder nehlásí, protože ji nenašel
+
+**Kolo #67.** 839 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **60/60**, živá parita **33/33**, dialogy 9 / 22 / 15 se závěry
+beze změny, gate *Farmaka* `N`, nula `RECALL_FAILURE`, celá stálá regrese
+zelená. **Builder sám hlásí PARTIAL a přesně jmenuje, co chybí — to je
+správné chování a beru ho tak.** `FAIL` tu znamená „ještě neschváleno",
+ne „udělals to špatně".
+
+**Architectural Health Score: 9,0 / 10**
+
+---
+
+## Co jsem si ověřil, že HOTOVÉ opravdu je
+
+Musel jsem si na to najít správné pořadí odpovědí — první běh mi ukázal
+něco jiného (viz B‑17). **Když se odpoví na relaci, funguje všechno,
+co Builder tvrdí:**
+
+```
+» Praha je součástí Plzně.
+   ✓ rozhodnuto pro TUHLE VĚTU  stavba → contains   (tvar se NEUČÍ)
+   ✓ zapsáno [s0006]  contains(part:Praha, whole:Plzeň)
+» Pondělí je součástí týdne.
+   ✓ zapsáno  within(part:pondělí, whole:týden)
+```
+
+**Smyčka z W‑19 je zavřená, změřeno celou cestou:**
+
+```
+před:  Jel Petr do Plzně?  → U   ? platí contains(part:Praha, whole:Plzeň)?
+po:    Jel Petr do Plzně?  → ANO
+         - řekls: jet(kam:Praha, kdo:Petr, kdy:pondělí)
+         - místo leží uvnitř jiného místa
+           - řekls: contains(part:Praha, whole:Plzeň)
+       [doloženo: s0001, s0006]
+```
+
+**To je poprvé, co článek, který si systém sám vyžádal, jde říct česky
+a odpověď se tím opravdu změní.** Tohle je jádro celého směru a je
+hotové.
+
+**Regresi z kola #59, kterou Builder našel a opravil sám, jsem ověřil:**
+„Byl Petr v Česku?" se už neptá na menu relací, a „Pondělí je před
+úterým." dál dává `before` a odpovídá `A`. Že se menu skládá
+z `RELATIONAL` a ne z ručního výčtu, je správně — ruční seznam po
+přidání relace zestárne a systém se ptá na míň, než umí.
+
+---
+
+## Critical Blockers
+
+### B‑17 · Otevřená otázka na RELACI zápis nezastaví — věta se zapíše špatně a otázka zmizí
+
+**Toto Builder nehlásí, protože to nenašel.** Změřeno živě:
+
+```
+» Praha je součástí Plzně.
+   ? … Co ta věta tvrdí o vztahu těch dvou? cop:součást+Gen —
+       before, contains, disjoint, member, same_as, subset, within?
+   « O tom konkrétním.            (odpověď na KVANTIFIKÁTOR, ne na relaci)
+   ✓ zapsáno [s0001]  být(Gen:Plzeň, co:·součást, kdo:Praha)
+   ? Nevím, co znamená „Gen" — je to tvar, ne význam.
+```
+
+Tři věci najednou, a všechny měřitelné:
+
+1. **Zapsalo se to, přestože systém sám říká, že nerozumí.** Role se
+   jmenuje `Gen` — **tvar, ne význam**, a program to v téže odpovědi
+   přiznává. Zápis pod přiznanou neznalostí (INV‑11).
+2. **Otázka na relaci ZMIZELA.** V prvním doptání menu bylo,
+   v následném už není. Nezodpověděla se — ztratila se.
+3. **Výsledek je věcně špatný.** Věta o zahrnutí skončí v bázi jako
+   `být(Gen:…)`, `contains` v bázi **není**, a smyčka W‑19 zůstane
+   otevřená (změřeno: pořád `U`).
+
+**Root cause je asymetrie, kterou mám změřenou z obou stran:**
+**čekající kvantifikátor zápis ZASTAVÍ** (po odpovědi na `Gen` bylo
+`zapsáno=None`), **čekající relace ne**. Přitom je to táž třída
+rozhodnutí a L‑3 pro kvantifikátor tichý default výslovně zakazuje.
+
+**Nejmenší bezpečná oprava:** dokud je otázka na konstrukci otevřená,
+**nezapisuje se** — přesně jako u kvantifikátoru. Nezakazovat to
+napořád: `být(…)` je legitimní záložní čtení, když člověk řekne, že
+o žádnou z těch relací nejde.
+
+---
+
+## Co Builder sám hlásí jako nehotové (a je to tak)
+
+- **desátý dialog neexistuje** a ve zlaté sadě nové věty nejsou — takže
+  `contains`/`within` z češtiny se dnes měří **jen ručním během**, ne
+  sadou. Kdyby to zítra někdo rozbil, nikdo se to nedozví.
+- **`within` v řetězu neprověřený** — „Byl Petr v týdnu v Česku?" dá
+  0 čtení (dvě určení téhož tvaru `v+Loc` kolidují na jednom jménu role)
+  a „Byl Petr v týdnu?" čte *týden* jako **místo**. **Že to nechtěl
+  hádat na konci kola, je správné rozhodnutí**, ne alibi.
+
+Můj counterexample tedy splněný není: `contains` i `within` z české věty
+**ano**, smyčka W‑19 **ano**, otázka přes `contains` s citací obou
+zápisů **ano** — otázka potřebující **oba** druhy zahrnutí **ne**, nová
+doména **ne**.
+
+---
+
+## Semantic Warnings
+
+**W‑27 · doložka chybí právem.** Že ji Builder nepřidal, dokud není
+doména s průchodem přes `.utter(`, je správně: doložka bez vynucujícího
+testu tvrdí víc, než se měří.
+
+**W‑20, W‑23, W‑25, W‑26** leží dál podle dohody.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: B‑17 — otevřená otázka na relaci musí zastavit
+zápis. Desátý dialog až po ní.**
+
+Pořadí není libovolné: dialog by tu vadu **zafixoval**, protože v něm
+odpovíš na relaci a špatná větev se nikdy neprojde.
+
+1. Čekající konstrukce **blokuje zápis** stejně jako čekající
+   kvantifikátor.
+2. Otázka na relaci se **neztrácí**, dokud na ni někdo neodpoví.
+3. Až pak desátý dialog — a v něm **oba** kroky: správná odpověď
+   i to, že bez ní se **nezapisuje**.
+4. K časové variantě: tvůj návrh *„Přednáška byla v pondělí." +
+   „Byla přednáška v týdnu?"* schvaluji — jedno určení, žádná kolize.
+
+**Můj counterexample — bez něj neschválím:** „Praha je součástí Plzně."
++ odpověď **na kvantifikátor** → **nezapíše se** a otázka na relaci je
+**pořád tam**; po odpovědi na relaci se zapíše `contains(part:Praha,
+whole:Plzeň)`; desátý dialog zapíše `contains` **i** `within`, má krok,
+kde se **nezapisuje**, a otázku, která potřebuje **oba** druhy zahrnutí,
+s důkazem citujícím oba zápisy; nabídka `? platí contains(part:Praha,
+whole:Plzeň)?` u *Čas a prostor* jde česky vyplnit a otázka pak dá `A`;
+devět domén se závěry beze změny; gate *Farmaka* `N`/`s0005`; parita
+≥ 33/33 s novými větami ve zlaté sadě; nula `RECALL_FAILURE`; testy
+zelené; „Pondělí je před pondělím." se pořád nezapíše.
+
+---
+
+## ARCHIV — kolo #66
+
+### Status: 🟢 PASS — M‑1 poprvé z češtiny; zúžení M‑2 schvaluji a zapisuji
 
 **Kolo #66.** 839 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **60/60**, živá parita **33/33**, dialogy 9 / 22 / 15, gate

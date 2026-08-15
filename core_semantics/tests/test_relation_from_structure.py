@@ -355,6 +355,85 @@ def test_nothing_is_written_while_the_relation_is_undecided() -> None:
     assert session.program() == ()
 
 
+# --------------------------------------------------------------------------
+# B‑17 · čekající konstrukce se nese v PREDIKACI, ne ve stopě
+# --------------------------------------------------------------------------
+#
+# Na „Kočka je savec." visí OTÁZKY DVĚ: kvantifikátor rolí a relace. Dřív
+# se čekající relace držela jen ve stopě, a stopa je log JEDNOHO tahu —
+# takže odpověď na kvantifikátor ji zahodila, otázka se ztratila a věta se
+# zapsala jako obyčejný vztah `být`, přestože systém v téže odpovědi říkal,
+# že tomu tvaru nerozumí. Táž lekce jako N‑3 a G‑4: ptát se z HOTOVÉ
+# predikace, ne z logu.
+
+
+def _answer_quantifiers(session: Session, result: object) -> object:
+    """Odpoví na VŠECHNY čekající kvantifikátory a na nic jiného."""
+    from core_semantics.session import answers_quantifier
+
+    current = result
+    while True:
+        predication = current.predication  # type: ignore[attr-defined]
+        assert predication is not None
+        pending = [role for role in predication.roles if role.pending is not None]
+        if not pending:
+            return current
+        role = pending[0]
+        assert role.pending is not None
+        current = session.play(
+            answers_quantifier(
+                "O tom konkrétním.", predication, role.pending, Operation.SELF
+            )
+        )
+
+
+def test_answering_the_quantifier_does_not_write_while_the_relation_waits() -> None:
+    """B‑17. Čekající KONSTRUKCE zastaví zápis stejně jako čekající
+    kvantifikátor — je to táž třída rozhodnutí a tichý default je u ní
+    zakázaný stejně (L‑3). Zapsat tu `být(co:savec, kdo:kočka)` by byl
+    zápis POD PŘIZNANOU NEZNALOSTÍ (INV‑11): systém v témže tahu říká, že
+    tomu tvaru nerozumí."""
+    session = Session()
+    settled = _answer_quantifiers(session, session.utter(CAT, oracle()))
+    assert settled.statement_id is None, (  # type: ignore[attr-defined]
+        "kvantifikátory jsou zodpovězené, ale relace ne — a bez ní se "
+        "nedá napsat, CO ta věta o těch dvou tvrdí"
+    )
+    assert session.program() == ()
+
+
+def test_the_relation_question_survives_an_answer_to_something_else() -> None:
+    """Otázka se NEZTRÁCÍ, dokud na ni někdo neodpoví. Kdyby zmizela,
+    člověk by neměl jak odpovědět a věta by zůstala viset navždy — nebo,
+    hůř, propadla by do zápisu, který nikdo nepotvrdil."""
+    session = Session()
+    settled = _answer_quantifiers(session, session.utter(CAT, oracle()))
+    question = settled.question  # type: ignore[attr-defined]
+    assert question is not None and BARE_SHAPE in question
+    predication = settled.predication  # type: ignore[attr-defined]
+    assert predication is not None
+    assert predication.pending_relation == BARE_SHAPE, (
+        "tvar musí viset na PREDIKACI: stopa je log jednoho tahu a další "
+        "tah ji zahodí"
+    )
+
+
+def test_the_waiting_shape_is_carried_by_the_predication_not_the_trace() -> None:
+    """PŘÍČINA, ne příznak. Otázka se skládá z hotové predikace, takže
+    kdyby se zase začala číst ze stopy, tenhle test padne dřív, než se to
+    projeví ztraceným zápisem."""
+    import inspect
+
+    from core_semantics.cascade import relation_question
+
+    source = inspect.getsource(relation_question)
+    assert "predication.pending_relation" in source
+    assert "trace" not in source, (
+        "stopa je log JEDNOHO tahu — otázka z ní přežije jen do první "
+        "odpovědi na cokoli jiného"
+    )
+
+
 def test_the_answer_completes_the_very_sentence_that_asked() -> None:
     """Odpověď je TAH: naučí tvar a čekající větu přečte ZNOVU."""
     session = Session()

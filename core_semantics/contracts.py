@@ -949,6 +949,35 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-30",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "čekající KONSTRUKCE zastaví zápis stejně jako čekající "
+            "kvantifikátor — je to táž třída rozhodnutí a tichý default je "
+            "u ní zakázaný stejně (L‑3). Tvar, na jehož význam se čeká, "
+            "visí na PREDIKACI, ne ve stopě: stopa je log jednoho tahu, "
+            "takže odpověď na cokoli jiného ji zahodí a otázka se ZTRATÍ — "
+            "věta se pak zapíše jako obyčejný vztah `být`, přestože systém "
+            "v téže odpovědi říká, že tomu tvaru nerozumí, což je zápis "
+            "pod přiznanou neznalostí (INV‑11). Táž lekce jako N‑3 a G‑4: "
+            "ptát se z HOTOVÉ predikace, ne z logu (B‑17)"
+        ),
+        # Kotva je FUNKCE, ne pole `Predication.pending_relation`:
+        # u pole není co číst jako smysl a doložka by tvrdila víc, než se
+        # dá doložit. `relation_question` je místo, kde se ta čekající
+        # konstrukce mění v otázku pro člověka.
+        anchor="core_semantics.cascade:relation_question",
+        # Průchod je `.utter(`: co se doopravdy zapíše do báze, se na
+        # samotné funkci nepozná — a právě to je na téhle doložce podstatné.
+        entry=".utter(",
+        enforced_by=(
+            "test_answering_the_quantifier_does_not_write_while_the_relation_waits",
+            "test_the_relation_question_survives_an_answer_to_something_else",
+            "test_the_waiting_shape_is_carried_by_the_predication_not_the_trace",
+            "test_nothing_is_written_while_the_relation_is_undecided",
+        ),
+    ),
+    Clause(
         id="S-25",
         boundary=SESSION_STORAGE,
         promise=(

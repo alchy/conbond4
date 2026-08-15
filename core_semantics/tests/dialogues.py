@@ -1035,6 +1035,162 @@ IDENTITY = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 10 · Koncert — ZAHRNUTÍ V MÍSTĚ I V ČASE
+# --------------------------------------------------------------------------
+
+INCLUSION = Dialogue(
+    name="Koncert",
+    source=(
+        "„Petrovice jsou součástí Plzně. Pondělí je součástí týdne. "
+        "Koncert byl v Petrovicích v pondělí. … Byl koncert v Plzni "
+        "během týdne?“"
+    ),
+    shapes=(
+        ("PROPN", "Plur", "Nom", "nsubj", Operation.SELF),
+        ("PROPN", "Plur", "Loc", "root", Operation.SELF),
+        ("PROPN", "Sing", "Loc", "root", Operation.SELF),
+        ("PROPN", "Sing", "Gen", "nmod", Operation.SELF),
+        ("NOUN", "Sing", "Ins", "root", Operation.SELF),
+        ("NOUN", "Sing", "Gen", "nmod", Operation.SELF),
+        ("NOUN", "Sing", "Acc", "obl", Operation.SELF),
+        ("NOUN", "Sing", "Gen", "obl", Operation.SELF),
+        ("NOUN", "Sing", "Nom", "nsubj", Operation.EXISTS),
+    ),
+    roles=(("v+Loc", "kde"), ("během+Gen", "kdy")),
+    steps=(
+        Step(
+            text="Petrovice jsou součástí Plzně.",
+            reading=sentence(
+                w("Petrovice", "Petrovice", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Geo", Number="Plur"),
+                w("jsou", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("součástí", "součást", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+                w("Plzně", "Plzeň", "PROPN", 3, "nmod", Case="Gen", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            asks=(
+                "„být součástí“ NENÍ jádrová relace — je to tvar. Systém "
+                "se ptá, kterou relaci ta stavba tvrdí, a MENU JE CELÉ "
+                "RELATIONAL, ne ruční výčet"
+            ),
+            point=(
+                "KROK, KTERÝ NIC NEZAPÍŠE — B‑17. Dokud je otázka na "
+                "konstrukci otevřená, věta se NEZAPISUJE, přesně jako "
+                "u čekajícího kvantifikátoru: je to táž třída rozhodnutí "
+                "a tichý default je u ní zakázaný stejně (L‑3). Dřív se "
+                "tu zapsalo být(Gen:Plzeň, co:·součást, kdo:Petrovice) — "
+                "zápis pod přiznanou neznalostí (INV‑11), a otázka se "
+                "přitom ZTRATILA"
+            ),
+        ),
+        Step(
+            text="Je to místo uvnitř místa.",
+            answers_relation_here=Operation.CONTAINS,
+            writes="contains(part:Petrovice, whole:Plzeň)",
+            point=(
+                "ODPOVĚĎ JE TAH, a `→⊆1` učí JEN TUHLE VĚTU: týž tvar "
+                "znamená o dva kroky dál `within`, takže naučit ho pro "
+                "celou doménu by bylo věcně špatně (N‑11)"
+            ),
+        ),
+        Step(
+            text="Pondělí je součástí týdne.",
+            reading=sentence(
+                w("Pondělí", "pondělí", "NOUN", 3, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("součástí", "součást", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+                w("týdne", "týden", "NOUN", 3, "nmod", Animacy="Inan", Case="Gen", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            asks=(
+                "PTÁ SE ZNOVU, a je to důkaz, že se tvar minule NENAUČIL. "
+                "Kdyby `→⊆1` tvar zapsala, tenhle krok by se nezeptal — "
+                "a odpověděl by `contains` o čase"
+            ),
+            point="druhý krok, který nic nezapíše, a z jiného důvodu než z neznalosti tvaru",
+        ),
+        Step(
+            text="Je to čas uvnitř času.",
+            answers_relation_here=Operation.WITHIN,
+            writes="within(part:pondělí, whole:týden)",
+            point=(
+                "TÝŽ TVAR, JINÁ RELACE. `contains` a `within` se liší "
+                "sortem, ne stavbou — a rozhodnout to umí jen člověk"
+            ),
+        ),
+        Step(
+            text="Koncert byl v Petrovicích v pondělí.",
+            reading=sentence(
+                w("Koncert", "koncert", "NOUN", 4, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+                w("byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Petrovicích", "Petrovice", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+                w("v", "v", "ADP", 6, "case", AdpType="Prep", Case="Acc"),
+                w("pondělí", "pondělí", "NOUN", 4, "obl", Case="Acc", Gender="Neut", Number="Sing"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            reads="být(kde:Petrovice, kdo:∃koncert, kdy:pondělí)",
+            writes="být(kde:Petrovice, kdo:∃koncert, kdy:pondělí)",
+            anchors=("Petrovicích → Petrovice",),
+            point=(
+                "TENHLE krok se zapíše — žádná otázka otevřená není. "
+                "„v+Loc“ je místo a „v+Acc“ čas, a rozdíl nese PÁD, ne "
+                "předložka"
+            ),
+        ),
+        Step(
+            text="Byl koncert v Plzni během týdne?",
+            reading=sentence(
+                w("Byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("koncert", "koncert", "NOUN", 4, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Plzni", "Plzeň", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("během", "během", "ADP", 6, "case", AdpType="Prep", Case="Gen"),
+                w("týdne", "týden", "NOUN", 4, "obl", Animacy="Inan", Case="Gen", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="být(kde:Plzeň, kdo:∃koncert, kdy:týden)",
+            answers="A",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Jedna otázka, která "
+                "potřebuje OBA DRUHY ZAHRNUTÍ najednou: nikdo neřekl, že "
+                "koncert byl v Plzni, ani že byl v týdnu — plyne to "
+                "z faktu a ze DVOU různých zahrnutí, a důkaz cituje "
+                "všechny tři zápisy. Ani jeden z nich by sám nestačil"
+            ),
+        ),
+        Step(
+            text="Byl koncert v Plzni v pondělí?",
+            reading=sentence(
+                w("Byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("koncert", "koncert", "NOUN", 4, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Plzni", "Plzeň", "PROPN", 0, "root", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("v", "v", "ADP", 6, "case", AdpType="Prep", Case="Acc"),
+                w("pondělí", "pondělí", "NOUN", 4, "obl", Case="Acc", Gender="Neut", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="být(kde:Plzeň, kdo:∃koncert, kdy:pondělí)",
+            answers="A",
+            point=(
+                "KONTROLA, ŽE SE TA DVĚ ZAHRNUTÍ NESLILA: tady stačí "
+                "`contains` samo a důkaz `within` NECITUJE. Kdyby ho "
+                "citoval, byl by to důkaz, který se veze"
+            ),
+        ),
+    ),
+    note=(
+        "Desátý akceptační dialog. `contains` a `within` uměla čeština "
+        "vyrobit od N‑2, ale ŽÁDNÁ DOMÉNA je nezapisovala — měřily se jen "
+        "ručním během, takže kdyby to zítra někdo rozbil, nikdo by se to "
+        "nedozvěděl. Doména zároveň drží B‑17: dva kroky, které NIC "
+        "NEZAPÍŠOU, protože je otevřená otázka na konstrukci. Pořadí není "
+        "libovolné — kdyby dialog vznikl PŘED tou opravou, ZAFIXOVAL by "
+        "vadu, protože odpověď na relaci špatnou větev nikdy neprojde."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -1045,4 +1201,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     ORDER,
     EXCLUSION,
     IDENTITY,
+    INCLUSION,
 )

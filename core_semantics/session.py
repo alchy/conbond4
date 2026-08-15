@@ -951,7 +951,7 @@ class Session:
                 # protože v predikaci po sobě nerozhodnutá relace nic
                 # nenechá — čtení zůstane obyčejným vztahem a nedalo by
                 # se z něj poznat, že o něm systém pochybuje.
-                relation_question(turn.trace),
+                relation_question(predication),
                 grounded.question,
             )
             if part
@@ -979,7 +979,7 @@ class Session:
         # vztah `být` — a kdyby člověk vzápětí odpověděl `subset`, ležely
         # by v bázi OBA výroky a ten první by nikdo neodvolal. Je to táž
         # vada jako u ztraceného členu, jen o jinou chybějící věc.
-        pending_relation = relation_question(turn.trace) is not None
+        pending_relation = predication.pending_relation != ""
         routed = (
             None
             if turn.lost or pending_relation
