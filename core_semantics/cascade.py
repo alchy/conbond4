@@ -744,6 +744,23 @@ def _quantified(subject: "Mention", reading: Reading) -> bool:
     )
 
 
+def _coordinated(subject: "Mention", reading: Reading) -> bool:
+    """Je podmět KOORDINACE? *(W‑35)*
+
+    „Karel Čapek **a** jeho bratr Josef **byli** aktéry…" Přísudek je
+    v plurálu podle CELÉ koordinace, ale UD dává jako `nsubj` první člen
+    v singuláru a zbytek věší na něj jako `conj`. Shoda se pak počítá
+    proti jednomu členu místo proti celé skupině.
+
+    Rozhoduje jmenovka rozboru, ne spojka: `conj` je hrana koordinace,
+    kdežto „a" může spojovat i dvě věty nebo dva přívlastky.
+    """
+    return any(
+        token.head == subject.token_index and token.deprel == "conj"
+        for token in reading.tokens
+    )
+
+
 def agreement_tier(
     candidates: tuple[Candidate, ...], reading: Reading
 ) -> tuple[tuple[Candidate, ...], str | None]:
@@ -767,6 +784,14 @@ def agreement_tier(
     Zahazuje to až rod — `Masc` proti `Fem,Neut`. Přidat rod tedy patro
     nezpřísňuje nad rámec toho, co dělalo; nahrazuje jím tu část práce,
     kterou dřív náhodou odváděla rovnost na čísle.
+
+    **U koordinovaného podmětu je řídícím členem CELÁ KOORDINACE**
+    *(W‑35)*. „Karel a jeho bratr Josef **byli**…" — dva a víc členů dá
+    plurál, ať UD označí jako `nsubj` kohokoli. ROD SE TU NEOVĚŘUJE
+    a je to PŘIZNANÁ MEZ: čeština ho u koordinace neřeší průnikem, ale
+    pravidly (muž + žena → mužský životný), a tohle patro to pravidlo
+    celé nemá. Hádat ho by byl tichý default tam, kde se rozhoduje
+    o zahození čtení.
 
     **U kvantifikovaného podmětu se shoda POČÍTÁ PROTI JINÉMU ČLENU, ne
     přeskakuje** *(W‑33)*. „Několik měření … podpořilo." má přísudek
@@ -799,6 +824,23 @@ def agreement_tier(
             if not (number_ok and gender_ok):
                 mismatched.append("kvantifikovaného podmětu")
                 continue
+        elif _coordinated(subject, reading):
+            # KOORDINOVANÝ PODMĚT. Číslo je vlastnost CELÉ koordinace:
+            # dva a víc členů dá plurál bez ohledu na to, že UD označí
+            # jako `nsubj` jeden z nich v singuláru.
+            #
+            # ROD SE TU NEOVĚŘUJE, A JE TO PŘIZNANÁ MEZ, ne opomenutí.
+            # Čeština ho u koordinace neřeší průnikem, ale pravidly
+            # (muž + žena → mužský životný), a to pravidlo celé nemám.
+            # Hádat ho by znamenalo tichý default na místě, kde se
+            # rozhoduje o zahození čtení — a to je horší než přiznaná
+            # neúplnost. Číslo samo přitom celou třídu B odblokuje
+            # a minimální pár „Petr a Pavel četl." dál drží.
+            number_ok = agrees("Plur", verb_number)
+            gender_ok = True
+            if not number_ok:
+                mismatched.append("koordinovaného podmětu")
+                continue
         else:
             number_ok = agrees(subject.feat("Number"), verb_number)
             gender_ok = agrees(subject.feat("Gender"), verb_gender)
@@ -808,6 +850,12 @@ def agreement_tier(
         mismatched.append("čísla" if not number_ok else "rodu")
     if len(survivors) == len(candidates):
         return candidates, None
+    if "koordinovaného podmětu" in mismatched:
+        return tuple(survivors), (
+            f"[PROČ: koordinovaný podmět žádá přísudek v MNOŽNÉM čísle "
+            f"(shoda se počítá proti celé koordinaci, ne proti jejímu "
+            f"prvnímu členu), a tenhle je {verb_number or '?'}]"
+        )
     if "kvantifikovaného podmětu" in mismatched:
         return tuple(survivors), (
             f"[PROČ: kvantifikovaný podmět žádá přísudek ve STŘEDNÍM "

@@ -991,8 +991,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "DÁL. Řídící člen se čte z JMENOVKY ROZBORU (`det:numgov` — UD "
             "jím říká, že determinátor řídí pád své hlavy), ne ze seznamu "
             "slov: seznam by byl druhé místo, kde se to rozhoduje, a "
-            "rozešel by se s parserem. KOORDINOVANÝ podmět tahle větev "
-            "nechytá a padá dál (W‑35, měří se zvlášť)"
+            "rozešel by se s parserem. KOORDINOVANÝ podmět má "
+            "vlastní větev s OPAČNÝM požadavkem (W‑35) a ty dvě se nesmí "
+            "plést"
         ),
         anchor="core_semantics.cascade:_quantified",
         entry="agreement_tier(",
@@ -1000,7 +1001,33 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_quantified_subject_no_longer_blocks_the_reading",
             "test_a_quantified_subject_with_a_plural_predicate_still_falls",
             "test_the_controller_is_read_from_the_parse_label_not_from_a_word_list",
-            "test_a_coordinated_subject_is_left_alone",
+            "test_the_two_branches_never_swap_places",
+        ),
+    ),
+    Clause(
+        id="O-10",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "u KOORDINOVANÉHO PODMĚTU je řídícím členem CELÁ KOORDINACE: "
+            "„Karel a jeho bratr Josef BYLI…“ — dva a víc členů žádá "
+            "MNOŽNÉ číslo, ať UD označí jako `nsubj` kohokoli. Pravidlo je "
+            "KLADNÉ jako u kvantifikace: „Petr a Pavel četl knihu.“ padne "
+            "a řekne proč. Koordinace se pozná z hrany `conj`, ne ze "
+            "spojky — „a“ spojuje i dvě věty nebo dva přívlastky. ROD SE "
+            "U KOORDINACE NEOVĚŘUJE a je to PŘIZNANÁ MEZ: čeština ho "
+            "neřeší průnikem, ale pravidly (muž + žena → mužský životný), "
+            "a tohle patro to pravidlo celé nemá; tichý default na místě, "
+            "kde se rozhoduje o zahození čtení, by byl horší než přiznaná "
+            "neúplnost (W‑35)"
+        ),
+        anchor="core_semantics.cascade:_coordinated",
+        entry="agreement_tier(",
+        enforced_by=(
+            "test_a_coordinated_subject_no_longer_blocks_the_reading",
+            "test_a_coordinated_subject_with_a_singular_predicate_still_falls",
+            "test_the_gender_of_a_coordination_is_a_declared_limit",
+            "test_a_quantified_subject_is_not_treated_as_a_coordination",
+            "test_the_two_branches_never_swap_places",
         ),
     ),
     Clause(

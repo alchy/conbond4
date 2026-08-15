@@ -1,6 +1,129 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozbor bez opravy, dvě třídy, nula vad rozboru
+## Status: 🟢 PASS — kvantifikovaný podmět; pravidlo kladné, ne výjimka
+
+**Kolo #75.** 954 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **68/68**, živá parita **51/51**, dialogy 14 / 37 / 24 se závěry
+beze změny, gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá
+regrese zelená. Jádro 0.1.19 (`ea7cd68`). **W‑33 uzavřena.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Podmínka, na které jsem trval, je splněná doslova
+
+```
+» Několik hostů přišlo.   ◐ přečteno  přijít(kdo:host)
+» Několik hostů přišli.   → NEVÍM, jak to čtu
+     [PROČ: kvantifikovaný podmět žádá přísudek ve STŘEDNÍM JEDNOTNÉM
+      (řídí ho kvantifikátor, ne to jméno), a tenhle je Masc/Plur]
+```
+
+**Kdyby se shoda jen vypnula, druhá věta by prošla.** Neprošla — pravidlo
+je kladné: ověřuje, co ta konstrukce v češtině žádá.
+
+**Řídící člen se čte z jmenovky rozboru, ne ze seznamu slov,** a je na to
+test, který slova „několik / mnoho / pět" ve zdrojáku té funkce
+**zakazuje**. To je ta správná pojistka: seznam slov by byl druhé místo,
+kde se totéž rozhoduje, a rozešel by se s parserem.
+
+```
+» Karel Čapek a jeho bratr Josef byli aktéry.  → 0 čtení   (třída B, drží)
+» Psi byla v pondělí.                          → 0 čtení   (shoda rodu)
+» Obsahuje citron vitamíny?                    ✓ jedno čtení, zúženo
+```
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Korpus: čistá revize proti čisté revizi
+
+Přečteno mnou z obou záznamů, ne z hlášení:
+
+```
+6afc38d   NEPŘEČTENO 30 · PTÁ SE 206 · CHYBA 2
+ea7cd68   NEPŘEČTENO 26 · PTÁ SE 210 · CHYBA 2
+
+sám blokuje:  morfologie 10 → 6
+              role 39 → 39 · role_nenalezena 12 → 12 · rozbor 5 → 5
+              kolize_rolí 3 → 3 · segmentace 2 → 2 · kvantifikace 1 → 1
+
+změnilo stav 4:   NEPŘEČTENO → PTÁ SE  4      opačně  0
+```
+
+**Moje podmínka „žádná jiná třída nesmí přibrat" je tentokrát splněná
+i v číslech**, ne jen v substanci. A **poprvé je to diff dvou čistých
+revizí** — obě čísla jdou zopakovat.
+
+**Zbylých šest je přesně třída B**, ověřeno výpisem po jedné.
+
+**Vedlejší účinek, který hlásí sám a je to uzavření staré položky:**
+*„Několik … měření tuto inflaci … podpořilo."* se teď čte **správně**
+jako `podpořit(co:inflace, kdo:měření)`. V kole #73 ta věta ztratila
+čtení s **prohozeným** podmětem a předmětem; teď má to správné. Jediná
+„zhoršená" věta z minulého kola je tím vyřízená — **a je z ní zlepšení.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑35 (nesu dál, nedotčená schválně) · koordinovaný podmět, 6 vět.**
+Potřebuje počítat shodu proti **celé koordinaci**, což je nová operace
+nad stromem, ne nové čtení jmenovky. Že na ni nesáhl, aby šla měřit
+zvlášť, je správně.
+
+**W‑23, W‑25, W‑26, W‑30, W‑31, W‑36** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑35 — koordinovaný podmět.**
+
+Je to poslední třída, kterou má korpus doloženou, a po ní `morfologie`
+jako jediný blokátor **klesne na nulu**. Tvar řešení je jiný než u C
+a ty jsi to popsal správně: shoda se počítá proti **celé koordinaci**,
+tedy proti `nsubj` **spolu s jeho potomky `conj`**.
+
+**Dvě věci, které z toho udělají obecnou opravu, ne záplatu:**
+
+1. **Číslo je vlastnost koordinace, ne jejího prvního členu.** Dva
+   a víc členů → `Plur`, bez ohledu na to, že UD označí jako `nsubj`
+   jeden z nich v singuláru.
+2. **Rod se v češtině řeší podle pravidel, ne průnikem.** Muž + žena →
+   mužský životný. Pokud si nejsi jistý celým rozhodovacím pravidlem,
+   **nehádej ho**: ověř zatím jen **číslo** a rod u koordinace nech
+   projít, ale **zapiš to jako známou mez**. Tichý default na rodu by
+   byl horší než přiznaná neúplnost.
+
+**Můj counterexample — bez něj neschválím:** všech **šest** vět třídy B
+se přečte; věta s koordinovaným podmětem a přísudkem v **singuláru**
+(*„Petr a Pavel četl knihu."*) se **dál zahodí a řekne proč**;
+třída C **zůstane přečtená** a minimální pár *„Několik hostů přišli."*
+dál padá; „Psi byla v pondělí." dál padá; „Obsahuje citron vitamíny?"
+se dál zužuje; čtrnáct domén se závěry beze změny; devět z devíti
+jádrových relací dál píše česká věta; gate *Farmaka* `N`/`s0005`;
+parita ≥ 51/51; nula `RECALL_FAILURE`; testy zelené; **a korpus nad
+čistou revizí ukáže `morfologie` = 0** a žádnou jinou třídu, která by
+přibrala větu odjinud než o vrstvu níž.
+
+---
+
+## ARCHIV — kolo #74
+
+### Status: 🟢 PASS — rozbor bez opravy, dvě třídy, nula vad rozboru
 
 **Kolo #74.** Do jádra **nesáhl vůbec** — `git status` hlásí jen
 `REVIEW.md`, což je můj soubor. 947 testů zelených, `mypy --strict`

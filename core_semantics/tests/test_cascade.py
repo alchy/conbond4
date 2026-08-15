@@ -684,19 +684,106 @@ def test_the_controller_is_read_from_the_parse_label_not_from_a_word_list() -> N
         assert f'"{word}"' not in source
 
 
-def test_a_coordinated_subject_is_left_alone() -> None:
-    """Třída B (koordinovaný podmět) se v tomhle kole NEOPRAVUJE — a nesmí
-    se ani náhodou spravit. Kdyby ji `det:numgov` větev chytila, přestalo
-    by jít měřit, co která oprava udělala."""
-    reading = Reading(
+def test_the_two_branches_never_swap_places() -> None:
+    """Kvantifikace a koordinace jsou DVĚ RŮZNÉ konstrukce s OPAČNÝM
+    požadavkem: první žádá střední jednotné, druhá množné číslo. Kdyby si
+    ty větve prohodily místo, prošlo by „Několik hostů přišli." i „Petr
+    a Pavel četl knihu." — obojí je špatně česky.
+
+    Do #75 tady stál test, který držel, že koordinace PADÁ, protože se
+    tehdy záměrně neopravovala. Tu hranici zrušilo zadání #76; zůstává
+    z ní to, co platí dál — že se ty dvě větve nesmí plést.
+    """
+    from core_semantics.cascade import _coordinated, _quantified
+
+    quantified = _quantified_clause("přišlo", {"Number": "Sing", "Gender": "Neut"})
+    coordinated = _coordinated_clause("četli", {"Number": "Plur", "Gender": "Masc"})
+    for reading, je_kvantifikace, je_koordinace in (
+        (quantified, True, False),
+        (coordinated, False, True),
+    ):
+        subject = generate(reading)[0].predication.role(ROLE_SUBJECT)
+        assert subject is not None
+        assert _quantified(subject, reading) is je_kvantifikace
+        assert _coordinated(subject, reading) is je_koordinace
+
+
+# --------------------------------------------------------------------------
+# Koordinovaný podmět — W‑35
+# --------------------------------------------------------------------------
+#
+# „Karel Čapek a jeho bratr Josef **byli** aktéry…" Přísudek je v plurálu
+# podle CELÉ koordinace, ale UD dává jako `nsubj` první člen v singuláru
+# a zbytek věší na něj jako `conj`.
+#
+# ROD SE TU NEOVĚŘUJE a je to PŘIZNANÁ MEZ, ne opomenutí: čeština ho
+# u koordinace neřeší průnikem, ale pravidly (muž + žena → mužský
+# životný), a tohle patro to pravidlo celé nemá. Hádat ho by byl tichý
+# default tam, kde se rozhoduje o zahození čtení.
+
+
+def _coordinated_clause(verb: str, verb_feats: dict[str, str]) -> Reading:
+    """„Petr a Pavel <sloveso> knihu." — koordinace jako `conj` pod podmětem."""
+    return Reading(
         tokens=(
-            _token(1, "Karel", "Karel", "PROPN", 3, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
-            _token(2, "Josef", "Josef", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Masc"),
-            _token(3, "přišli", "přijít", "VERB", 0, "root", Number="Plur", Gender="Masc"),
+            _token(1, "Petr", "Petr", "PROPN", 3, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, "Pavel", "Pavel", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(3, verb, verb.lower(), "VERB", 0, "root", **verb_feats),
+            _token(4, "knihu", "kniha", "NOUN", 3, "obj", Case="Acc", Number="Sing", Gender="Fem"),
+            _token(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_coordinated_subject_no_longer_blocks_the_reading() -> None:
+    """Podmět je `Sing`, přísudek `Plur` — a přesto je to bezvadná čeština,
+    protože číslo je vlastnost CELÉ koordinace, ne jejího prvního členu."""
+    reading = _coordinated_clause("četli", {"Number": "Plur", "Gender": "Masc"})
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors, why
+
+
+def test_a_coordinated_subject_with_a_singular_predicate_still_falls() -> None:
+    """PROTIPŘÍKLAD. Pravidlo je kladné: dva a víc členů ŽÁDÁ plurál,
+    takže „Petr a Pavel četl knihu." padne a řekne proč. Kdyby se shoda
+    u koordinace jen vypnula, prošlo by to."""
+    reading = _coordinated_clause("četl", {"Number": "Sing", "Gender": "Masc"})
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors == ()
+    assert why is not None and "MNOŽNÉM" in why
+
+
+def test_the_gender_of_a_coordination_is_a_declared_limit() -> None:
+    """MEZ SE ŘÍKÁ NAHLAS. „Petr a Marie četli." má rod, který čeština
+    počítá pravidly (muž + žena → mužský životný), ne průnikem. Patro to
+    pravidlo nemá, takže rod u koordinace NEOVĚŘUJE — a je to napsané
+    v kódu, ne mlčky."""
+    import inspect
+
+    from core_semantics.cascade import agreement_tier as tier
+
+    assert "PŘIZNANÁ MEZ" in inspect.getsource(tier)
+
+    mixed = Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 3, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, "Marie", "Marie", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Fem"),
+            _token(3, "četli", "číst", "VERB", 0, "root", Number="Plur", Gender="Masc"),
             _token(4, ".", ".", "PUNCT", 3, "punct"),
         ),
         provenance="test",
     )
+    survivors, _ = agreement_tier(generate(mixed), mixed)
+    assert survivors, "smíšený rod projde — ověřuje se jen číslo"
+
+
+def test_a_quantified_subject_is_not_treated_as_a_coordination() -> None:
+    """Obě větve mají OPAČNÝ požadavek a nesmí se plést. „Několik hostů
+    přišli." má kvantifikátor a padá na STŘEDNÍM JEDNOTNÉM — kdyby ho
+    chytila koordinační větev, prošlo by to, protože přísudek je
+    v plurálu."""
+    reading = _quantified_clause("přišli", {"Number": "Plur", "Gender": "Masc"})
     survivors, why = agreement_tier(generate(reading), reading)
-    assert survivors == (), "koordinace pořád padá — je to W‑35, ne tohle kolo"
-    assert why is not None and "shoda čísla" in why
+    assert survivors == ()
+    assert why is not None and "STŘEDNÍM JEDNOTNÉM" in why
