@@ -1102,6 +1102,31 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-11",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "VÍCESLOVNÉ JMÉNO je JEDEN UZEL. „Josef Hora“ není hlava "
+            "s přívlastkem — UD to říká hranou `flat` — a dokud se ta "
+            "hrana zahazovala, četla se věta jako fakt o uzlu `Josef`. "
+            "Nebyla to ztráta členu, byl to ZÁPIS O JINÉM UZLU: „Karel "
+            "Čapek“ a „Karel Poláček“ by tiše splynuli v jeden a "
+            "nepoznalo by se to, protože obojí by vypadalo jako doložený "
+            "fakt o Karlovi. Díly se skládají do LEMMATU v pořadí podle "
+            "POZICE v textu a hlásí se jako POHLCENÉ, ne zahozené. Stráž "
+            "je úzká: `flat` pod OBECNÝM jménem není jméno, ale seznam "
+            "(B‑21)"
+        ),
+        anchor="core_semantics.cascade:name_parts_of",
+        entry="generate(",
+        enforced_by=(
+            "test_a_multiword_name_is_one_node",
+            "test_two_people_sharing_a_first_name_do_not_merge",
+            "test_the_name_parts_are_absorbed_not_dropped",
+            "test_the_order_of_name_parts_follows_the_text",
+            "test_a_flat_under_a_common_noun_is_not_a_name",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(

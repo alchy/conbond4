@@ -343,7 +343,52 @@ def attributes_of(token: Token, reading: Reading) -> tuple[Token, ...]:
     )
 
 
+def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
+    """Další díly VÍCESLOVNÉHO JMÉNA — `flat` *(B‑21)*.
+
+    „Josef Hora" není hlava s přívlastkem, je to JEDNO JMÉNO; UD to říká
+    hranou `flat`. Dokud se ta hrana zahazovala, četla se ta věta jako
+    fakt o uzlu `Josef` a příjmení se ohlásilo jako ztracený člen — ale
+    ztráta to nebyla, byl to ZÁPIS O JINÉM UZLU. Dva různí lidé s týmž
+    křestním jménem („Karel Čapek", „Karel Poláček") by tiše splynuli
+    v jeden, a nepoznalo by se to: obojí by vypadalo jako doložený fakt
+    o Karlovi.
+
+    Skládá se `flat` i `appos` pod vlastním jménem — obojí jsou části
+    téhož pojmenování. Vylučuje se všechno ostatní: `flat` pod obecným
+    jménem není jméno, ale seznam, a to je jiná operace.
+
+    Pořadí se drží podle POZICE v textu, ne podle pořadí hran: „Josef
+    Hora" a „Hora Josef" nejsou totéž a identifikátor uzlu se tím řídit
+    musí.
+    """
+    if token.upos != "PROPN":
+        return ()
+    return tuple(
+        sorted(
+            (
+                child
+                for child in reading.children(token.index)
+                if base_deprel(child.deprel) in ("flat", "appos")
+                and child.upos == "PROPN"
+            ),
+            key=lambda t: t.index,
+        )
+    )
+
+
 def _composed_mention(token: Token, reading: Reading) -> Mention:
+    jmeno = name_parts_of(token, reading)
+    if jmeno:
+        # VÍCESLOVNÉ JMÉNO. Díly stojí ZA hlavou, protože tak stojí
+        # v textu — „Josef Hora", ne „Hora Josef".
+        return Mention(
+            lemma="_".join([token.lemma, *(p.lemma for p in jmeno)]),
+            form=" ".join([token.form, *(p.form for p in jmeno)]),
+            token_index=token.index,
+            upos=token.upos,
+            feats=token.feats,
+        )
     parts = attributes_of(token, reading)
     if not parts:
         return _mention(token)
@@ -395,7 +440,11 @@ def _nominal(token: Token, reading: Reading, name: str) -> RoleReading:
     return RoleReading(
         name,
         _composed_mention(token, reading),
+        # Díly víceslovného jména jsou POHLCENÉ, ne ztracené *(B‑21)*:
+        # jsou v lemmatu uzlu. Hlásit je jako zahozené by byla nepravda
+        # vedle vlastního čtení — táž třída jako W‑20.
         absorbed=tuple(t.index for t in attributes_of(token, reading))
+        + tuple(t.index for t in name_parts_of(token, reading))
         + ((possessive.index,) if possessive else ()),
         awaiting=AWAITING_REFERENCE if possessive else "",
     )

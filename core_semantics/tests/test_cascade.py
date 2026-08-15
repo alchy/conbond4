@@ -1120,3 +1120,83 @@ def test_a_sentence_with_an_unnamed_subordinate_role_is_not_written() -> None:
     ]
     assert len(napsane) == 1, f"věta smí být v bázi JEDNOU, je {len(napsane)}×"
     assert "proč:∃pršet" in str(napsane[0].formula)
+
+
+# --------------------------------------------------------------------------
+# Víceslovné jméno — B‑21
+# --------------------------------------------------------------------------
+#
+# „Josef Hora" není hlava s přívlastkem, je to JEDNO JMÉNO; UD to říká
+# hranou `flat`. Dokud se ta hrana zahazovala, četla se věta jako fakt
+# o uzlu `Josef` — a to nebyla ztráta členu, byl to ZÁPIS O JINÉM UZLU.
+
+
+def _full_name(first: str, second: str, verb: str = "zemřít") -> Reading:
+    return Reading(
+        tokens=(
+            _token(1, first, first, "PROPN", 3, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, second, second, "PROPN", 1, "flat", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(3, verb, verb, "VERB", 0, "root", Number="Sing", Gender="Masc"),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_multiword_name_is_one_node() -> None:
+    """Příjmení se skládá do lemmatu uzlu, ne zahazuje."""
+    reading = _full_name("Josef", "Hora")
+    predication = generate(reading)[0].predication
+    subject = predication.role(ROLE_SUBJECT)
+    assert subject is not None
+    assert subject.lemma == "Josef_Hora"
+
+
+def test_two_people_sharing_a_first_name_do_not_merge() -> None:
+    """NEJDRAŽŠÍ PŮLKA TÉHLE VADY. „Karel Čapek" a „Karel Poláček" by
+    tiše splynuli v jeden uzel a nepoznalo by se to — obojí by vypadalo
+    jako doložený fakt o Karlovi."""
+    prvni = generate(_full_name("Karel", "Čapek"))[0].predication
+    druhy = generate(_full_name("Karel", "Poláček"))[0].predication
+    a = prvni.role(ROLE_SUBJECT)
+    b = druhy.role(ROLE_SUBJECT)
+    assert a is not None and b is not None
+    assert a.lemma != b.lemma
+    assert {a.lemma, b.lemma} == {"Karel_Čapek", "Karel_Poláček"}
+
+
+def test_the_name_parts_are_absorbed_not_dropped() -> None:
+    """Díly jména jsou v LEMMATU uzlu, takže hlásit je jako zahozené by
+    byla nepravda vedle vlastního čtení — táž třída jako W‑20."""
+    from core_semantics.cascade import dropped_tokens
+
+    reading = _full_name("Josef", "Hora")
+    predication = generate(reading)[0].predication
+    assert dropped_tokens(reading, predication) == ()
+
+
+def test_the_order_of_name_parts_follows_the_text() -> None:
+    """„Josef Hora" a „Hora Josef" nejsou totéž a identifikátor uzlu se
+    tím řídit musí."""
+    from core_semantics.cascade import name_parts_of
+
+    reading = _full_name("Josef", "Hora")
+    parts = name_parts_of(reading.tokens[0], reading)
+    assert [t.form for t in parts] == ["Hora"]
+
+
+def test_a_flat_under_a_common_noun_is_not_a_name() -> None:
+    """Stráž zůstává úzká: `flat` pod obecným jménem není jméno, ale
+    seznam, a to je jiná operace."""
+    from core_semantics.cascade import name_parts_of
+
+    seznam = Reading(
+        tokens=(
+            _token(1, "město", "město", "NOUN", 3, "nsubj", Case="Nom", Number="Sing", Gender="Neut"),
+            _token(2, "Praha", "Praha", "PROPN", 1, "flat", Case="Nom", Number="Sing", Gender="Fem"),
+            _token(3, "leží", "ležet", "VERB", 0, "root", Number="Sing"),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    assert name_parts_of(seznam.tokens[0], seznam) == ()

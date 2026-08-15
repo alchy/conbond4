@@ -1953,6 +1953,90 @@ SUBORDINATE = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 17 · Dva Karlové — VÍCESLOVNÉ JMÉNO je jeden uzel
+# --------------------------------------------------------------------------
+
+FULL_NAME = Dialogue(
+    name="Dva Karlové",
+    source="„Karel Čapek byl spisovatel. … Byl Karel Poláček spisovatel?“",
+    shapes=(
+        ("PROPN", "Sing", "Nom", "nsubj", Operation.SELF),
+        ("NOUN", "Sing", "Nom", "root", Operation.SELF),
+    ),
+    steps=(
+        Step(
+            text="Karel Čapek byl spisovatel.",
+            reading=sentence(
+                w("Karel", "Karel", "PROPN", 4, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("Čapek", "Čapek", "PROPN", 1, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("spisovatel", "spisovatel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            reads="member(elem:·Karel_Čapek, group:·spisovatel)",
+            writes="member(elem:Karel_Čapek, group:·spisovatel)",
+            point=(
+                "PŘÍJMENÍ JE V UZLU, ne ztracené. Dřív se tahle věta "
+                "zapsala o uzlu `Karel` a „Čapek“ se ohlásil jako "
+                "ZAHOZENÝ — jenže to nebyla ztráta členu, byl to ZÁPIS "
+                "O JINÉM UZLU"
+            ),
+        ),
+        Step(
+            text="Byl Karel Čapek spisovatel?",
+            reading=sentence(
+                w("Byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("Karel", "Karel", "PROPN", 4, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("Čapek", "Čapek", "PROPN", 2, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("spisovatel", "spisovatel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="member(elem:·Karel_Čapek, group:·spisovatel)",
+            answers="A",
+            point=(
+                "celé jméno se trefí na TÝŽ uzel — složení běží "
+                "v `generate`, tedy JEDNOU PRO VŠECHNY POZICE, takže "
+                "podmět oznamovací věty a podmět otázky míří na totéž"
+            ),
+        ),
+        Step(
+            text="Byl Karel Poláček spisovatel?",
+            reading=sentence(
+                w("Byl", "být", "AUX", 4, "cop", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("Karel", "Karel", "PROPN", 4, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("Poláček", "Poláček", "PROPN", 2, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("spisovatel", "spisovatel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="member(elem:·Karel_Poláček, group:·spisovatel)",
+            answers="U",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA, a je to ta NEJDRAŽŠÍ "
+                "půlka celé vady: o Poláčkovi nikdo nic neřekl, takže `U`. "
+                "Dokud se příjmení zahazovalo, dala tahle otázka `A` — oba "
+                "Karlové splynuli v jeden uzel a nepoznalo by se to, "
+                "protože odpověď by vypadala jako doložený fakt"
+            ),
+        ),
+    ),
+    note=(
+        "Sedmnáctý akceptační dialog. „Josef Hora“ není hlava "
+        "s přívlastkem, je to JEDNO JMÉNO — UD to říká hranou `flat`. "
+        "Pořadí kola určilo KUMULATIVNÍ POKRYTÍ, ne pořadí v seznamu: "
+        "rodina víceslovných jmen přidávala k rodině A šest vět, kdežto "
+        "zbytek vnořených vět jen dvě."
+    ),
+    limit=(
+        "CO SE TÍM NEŘEŠÍ: `flat` pod OBECNÝM jménem. „město Praha“ není "
+        "víceslovné jméno, ale seznam nebo apozice k obecnému jménu, a to "
+        "je jiná operace — složit to do lemmatu by vyrobilo třídu "
+        "`město_Praha`, která není ani město, ani Praha. Stráž je proto "
+        "úzká na `PROPN` a je na to test."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -1970,4 +2054,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     PRODROP,
     ATTRIBUTE,
     SUBORDINATE,
+    FULL_NAME,
 )

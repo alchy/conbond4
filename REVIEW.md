@@ -1,6 +1,119 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — žurnál zase reprodukuje sezení a doména dosedla
+## Status: 🟢 PASS — otisk drží, ale slyšet ho jde jen jednou cestou ze dvou
+
+**Kolo #89.** 1011 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **73/73**, **živá parita 55/55** (přeměřena mnou proti záznamům),
+dialogy 16 / 43 / 24, jádrové relace 9/9, nula `RECALL_FAILURE`, **celá
+stálá regrese zelená**. Jádro 0.1.25, HEAD `fb8b760`.
+
+**Architectural Health Score: 9,3 / 10.**
+
+---
+
+## W‑51 ověřena reprodukcí
+
+```
+otisk na tazích:                 ['e9376c4a4856ce60', '', '']   ← ražen JEN první tah
+replay(žurnál, lexicon=týž)      8 výroků · shoda True  · poznámek 0   ← při shodě MLČÍ
+replay(žurnál, lexicon=prázdný)  4 výroky · shoda False · poznámek 1
+   [JINÝ LEXIKON: žurnál vznikl s otiskem e9376c4a…, přehrává se s ab7ecd2a… —
+    přehrání pokračuje, ale determinismus (I‑4) platí jen pro týž výchozí stav]
+replay(žurnál)                   4 výroky · totéž, s otiskem prázdného lexikonu
+```
+
+**Rozhodnutí „přehrát a říct to" je správné a důvod je ten pravý:**
+lexikon se **legitimně rozrůstá**, takže přehrát starý žurnál v sezení,
+které se mezitím naučilo víc, je normální provoz. **Odmítnout by nutilo
+lexikon uměle ořezávat, aby šel žurnál vůbec přehrát** — to by byla
+horší nemoc než nemoc.
+
+**Rozlišení proti bázi, kde se odmítá, sedí přesně:** tam by tiché
+pokračování **zapsalo něco špatného**; tady se nezapíše nic špatného,
+nanejvýš se přečte víc vět. **To se dá říct.**
+
+**Ražení jen prvního tahu je rozhodnutí, ne úspora**, a je správné —
+lexikon se učením rozrůstá, takže otisk z pozdějšího tahu by popisoval
+něco jiného než ten výchozí stav, o který jde. Že je na to vlastní test,
+je namístě.
+
+**Test měří vadu, ne řetězec** — ověřuje i to, že se báze doopravdy
+liší. To je ten rozdíl, který jsme si vynutili u W‑15 a je dobře, že ho
+teď píšeš sám.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑51, B‑19, B‑20 i W‑50 uzavřeny.
+
+---
+
+## Semantic Warnings
+
+### W‑52 · hlídka sedí na obalu, ne na operaci — a hláška nemá kudy ven
+
+**Dvě věci, obě ověřené mnou, ani jednu nehlásíš.**
+
+**(a) `Session.run(žurnál)` neкontroluje nic.**
+
+```
+Session().run(žurnál)     4 výroky · shoda False · POZNÁMEK 0     mlčky
+Session.replay(žurnál)    4 výroky · shoda False · poznámek 1     řekne
+```
+
+`replay` je `check_journal_lexicon` + `run`; **hlídka je na obalu, kdežto
+žurnál umí přehrát i to, co je pod ním**. Není to teoretická cesta —
+**přesně tou jsem v #87 tu vadu reprodukoval**, a `replay` sám ji používá.
+Tvůj vlastní counterexample zní „mlčky projít nesmí"; dnes platí pro
+`replay`, ne pro `run`.
+
+**(b) `Session.notes` nikdo nečte.** Zapisuje se na `session.py:836`
+a v celém `core_semantics/` mimo testy se **nečte nikde**;
+`session.py:1167` čte `grounded.notes`, což je jiný objekt. Do
+`TurnResult.lines` se hláška nedostane — ověřeno. **Řečeno tedy je,
+ale jen tomu, kdo se sám podívá do pole, o kterém ví.**
+
+**Není to bloker** — nic nelže a nic špatného se nezapíše. Ale W‑51 měla
+zavřít „tiché přehrání" a **zavřela ho na jedné ze dvou cest**.
+
+**W‑43** leží u Agenta 3 s lokací.
+
+**W‑42, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**PROTOŽE JE W‑52 MALÁ A PATŘÍ K TOMU, COS PRÁVĚ DODĚLAL, VEZMI JI
+S SEBOU DO DALŠÍ DOMÉNY — ne jako vlastní kolo.** Nechci kvůli dvěma
+řádkům rozbíjet pořadí, které jsi navrhl dobře.
+
+**Rozhoduješ dvě věci, obě malé:** kde má hlídka sedět (jestli na `run`,
+nebo jestli `run` přestat nabízet jako veřejnou cestu k žurnálu), a kudy
+se hláška dostane k člověku. **Vyber a důvod zapiš.**
+
+**HLAVNÍ SMĚR: DALŠÍ DOMÉNA + PŘEMĚŘENÍ KORPUSU**, jak jsi navrhl.
+**Pořadí rederivuj z kumulativního pokrytí, ne ze seznamu** — souhlasím
+a je to tvá vlastní dohoda z #81. `acl` (7), `csubj` (2), víceslovné
+jméno (11) jsou kandidáti; **které z nich vezmeš, ať řekne to číslo,
+ne pořadí zápisu**.
+
+**Můj counterexample:** `Session().run(žurnál)` s jiným výchozím
+lexikonem **buď hlásí totéž co `replay`, nebo tou cestou nejde** —
+mlčky projít nesmí ani jednou z nich; při shodě se dál **nehlásí nic**;
+hláška je čitelná **odtud, kam se člověk dívá**, ne jen z `Session.notes`;
+sedmnáct domén se závěry předchozích šestnácti **beze změny**; jádrové
+relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 73/73; `mypy --strict` čistý; a **korpus
+přeměřen nad čistou revizí** s diffem po větách.
+
+---
+
+## ARCHIV — kolo #88
+
+### Status: 🟢 PASS — B‑20 rozhodnuta, doména dosedla
 
 **Kolo #88.** 1006 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **72/72**, **živá parita 55/55** (přeměřeno mnou proti záznamům,

@@ -766,6 +766,19 @@ class Session:
         return result
 
     def run(self, turns: Sequence[Turn]) -> list[TurnResult]:
+        """Přehraje posloupnost tahů.
+
+        **Hlídka výchozího lexikonu sedí TADY, ne na `replay`** *(W‑52)*.
+        `replay` je jen `run` s prázdným sezením, takže hlídka na obalu
+        nechávala otevřenou cestu, kterou se žurnál dá přehrát mlčky —
+        a přesně tou cestou se ta vada v #87 reprodukovala. Zeď, kterou
+        jde obejít o patro níž, není zeď.
+
+        `run` se nepřestává nabízet: je to legitimní veřejná cesta
+        a schovat ji by znamenalo vyřešit hlášením problém, který je
+        o kontrole.
+        """
+        self.check_journal_lexicon(turns)
         return [self.play(turn) for turn in turns]
 
     @classmethod
@@ -803,7 +816,6 @@ class Session:
         `replay` chová deterministicky (I‑4).
         """
         session = cls(profile=profile, lexicon=lexicon)
-        session.check_journal_lexicon(journal)
         session.run(journal)
         return session
 
@@ -839,7 +851,17 @@ class Session:
     # -- výstup ------------------------------------------------------------
 
     def transcript(self) -> str:
-        return "\n\n".join(result.render() for result in self.results)
+        """Přepis sezení pro člověka.
+
+        **Hlášky, které nepatří k žádnému tahu, jdou NAHORU** *(W‑52)*.
+        Upozornění na jiný výchozí lexikon leželo jen v `Session.notes`,
+        které v celém jádře nikdo nečetl — řečeno to tedy bylo, ale jen
+        tomu, kdo se sám podívá do pole, o kterém ví. Přepis je místo,
+        kam se člověk dívá.
+        """
+        return "\n\n".join(
+            [*self.notes, *(result.render() for result in self.results)]
+        )
 
     def program(self) -> tuple[str, ...]:
         """Aktivní výroky jako text — „diff kódu je diff naučeného" (§ 10)."""
