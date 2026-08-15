@@ -919,6 +919,118 @@ EXCLUSION = Dialogue(
 )
 
 
+
+# --------------------------------------------------------------------------
+# 9 · Micka a Mourek — identita a její SPOR
+# --------------------------------------------------------------------------
+
+IDENTITY = Dialogue(
+    name="Micka a Mourek",
+    source="„Mourek je kočka. Micka je Mourek. … Micka není Mourek.“",
+    steps=(
+        Step(
+            text="Mourek je kočka.",
+            reading=sentence(
+                w("Mourek", "Mourek", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("kočka", "kočka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Mourek, group:·kočka)",
+            writes="member(elem:Mourek, group:·kočka)",
+            point="fakt, který bude téct přes identitu — a pak přestane",
+        ),
+        Step(
+            text="Micka je Mourek.",
+            reading=sentence(
+                w("Micka", "Micka", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Mourek", "Mourek", "PROPN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="same_as(left:·Micka, right:·Mourek)",
+            writes="same_as(left:Micka, right:Mourek)",
+            point=(
+                "IDENTITA Z ČESKÉ VĚTY. Dvě VLASTNÍ JMÉNA spojená sponou "
+                "netvrdí členství — „Mourek“ není třída, do které by Micka "
+                "patřila. Slovní druh OBOU stran je proto součást tvaru"
+            ),
+        ),
+        Step(
+            text="Je Micka kočka?",
+            reading=sentence(
+                w("Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Micka", "Micka", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Giv", Number="Sing"),
+                w("kočka", "kočka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Micka, group:·kočka)",
+            answers="A",
+            point=(
+                "FAKT TEČE PŘES IDENTITU a důkaz cituje OBA zápisy — "
+                "o Micce samotné nikdo neřekl nic"
+            ),
+        ),
+        Step(
+            text="Micka není Mourek.",
+            reading=sentence(
+                w("Micka", "Micka", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("není", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Mourek", "Mourek", "PROPN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="¬same_as(left:·Micka, right:·Mourek)",
+            writes="¬same_as(left:Micka, right:Mourek)",
+            point=(
+                "POPŘENÍ SE ZAPÍŠE VEDLE, původní výrok zůstává NEDOTČENÝ "
+                "— systém si stranu sporu nevybírá (I‑3)"
+            ),
+        ),
+        Step(
+            text="Micka je Mourek?",
+            reading=sentence(
+                w("Micka", "Micka", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Mourek", "Mourek", "PROPN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="same_as(left:·Micka, right:·Mourek)",
+            answers="CONFLICT",
+            point=(
+                "PŘÍMÁ OTÁZKA NA SPORNOU IDENTITU dá `CONFLICT` se DVĚMA "
+                "důkazy. Otázka se ptá bez inverze („Micka je Mourek?“), "
+                "protože dvě vlastní jména za sebou parser čte jako JEDNO "
+                "složené jméno (`flat`) — je to mez rozboru, ne kaskády"
+            ),
+        ),
+        Step(
+            text="Je Micka kočka?",
+            reading=sentence(
+                w("Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Micka", "Micka", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Giv", Number="Sing"),
+                w("kočka", "kočka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Micka, group:·kočka)",
+            answers="U",
+            point=(
+                "ZÁVĚR DOMÉNY: M‑1 Z ČEŠTINY. Táž otázka, která o tři "
+                "kroky dřív dala `A`, padá zpátky na `U` — přes spornou "
+                "identitu fakty NETEČOU. A `U`, ne `N`: nikdo neřekl, že "
+                "Micka kočka není; jen se přestalo vědět, že je"
+            ),
+        ),
+    ),
+    note=(
+        "Devátý akceptační dialog. `same_as` byla poslední jádrová relace, "
+        "na které visí M‑1, a ta byla ve stálé regresi měřená VÝHRADNĚ NA "
+        "FORMULÍCH. U identity je to nejdražší druh mezery: chyba tam uzly "
+        "tiše slévá nebo štěpí, a to nepozná žádný test, ke kterému jazyk "
+        "nevede."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -928,4 +1040,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     VEGETARIAN,
     ORDER,
     EXCLUSION,
+    IDENTITY,
 )

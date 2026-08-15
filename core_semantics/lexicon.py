@@ -363,6 +363,7 @@ RELATIONAL: frozenset["Operation"] = frozenset(
         Operation.SUBSET,
         Operation.DISJOINT,
         Operation.BEFORE,
+        Operation.SAME_AS,
     }
 )
 
@@ -699,6 +700,12 @@ _RELATION_SEED: tuple[tuple[str, Operation], ...] = (
     # má týž tvar, ale tam je kořen MÍSTO, ne druhý člen uspořádání —
     # rozliší to sort filleru, ne tvar předložky).
     ("cop:před+Ins", Operation.BEFORE),
+    # „Micka je Mourek." Dvě VLASTNÍ JMÉNA spojená sponou jsou tvrzení
+    # o IDENTITĚ, ne o členství: „Mourek" není třída, do které by Micka
+    # patřila. Záporná varianta je táž relace se silnou negací — sporná
+    # hrana, přes kterou od M‑1 fakty netečou.
+    ("cop:PROPN=PROPN", Operation.SAME_AS),
+    ("cop:PROPN≠PROPN", Operation.SAME_AS),
 )
 
 

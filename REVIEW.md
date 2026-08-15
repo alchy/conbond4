@@ -1,6 +1,124 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — osmá doména říká „ne" z vyloučení tříd; důkaz ale nedosáhne na větu, kterou člověk řekl
+## Status: 🟢 PASS — citace dosáhla na původ; W‑24 zavřena
+
+**Kolo #65.** 828 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **59/59**, živá parita **29/29**, dialogy 8 / 19 / 12 se závěry
+beze změny, gate *Farmaka* `N` a **jeho doložka beze změny** (`s0005`),
+nula `RECALL_FAILURE`, celá stálá regrese zelená.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Měřeno mnou
+
+```
+Je Čimčara savec?  → NE
+   - pravidlo p0001: ¬member(elem:x, group:·savec) <- member(elem:x, group:·vrabec)
+     - a to plyne z toho, že řekls: disjoint(a:·vrabec, b:·savec)
+     - prvek podtřídy je prvkem nadtřídy
+       - řekls: member(elem:Čimčara, group:·vrabec)
+cited:  ('p0001', 's0001', 's0002')      origins: ('s0001',)
+listy důkazu: ['p0001', 's0002']         ← STROM SE NEZMĚNIL
+```
+
+**Důkaz se nevymyslel, jen se dorenderoval** — přesně to jsem zadal:
+listy jsou pořád `p0001, s0002`, změnilo se, co se z nich ukáže. Tělo
+pravidla je celé, mnohotečka pryč.
+
+**Potlačení se nepřehnalo**, ověřeno protipólem: výrok **bez**
+`derived_from` má `cited == ('s0001',)` a `origins == ()`, tedy přesně
+jako dřív.
+
+**Citace ostatních domén beze změny** — prošel jsem všech dvanáct
+závěrů: `s0005` u *Farmak*, `s0001–s0004` u *Vegetariána*,
+`s0001, s0002` u *Pořadí dnů*. Přibylo **jen** `s0001` u *Vrabce*.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓
+ireflex ✓ · opačná ✓ · W-19 ✓
+```
+
+**Původy nese report, ne volající** — `verify()` si je bere z
+`AuditReport.origins`, takže se nepočítají dvakrát. Builderův odkaz na
+dvě kopie `REQUIRES_BOUND` z A‑24 sedí: kdyby si je každý počítal sám,
+`verify` by hlídalo jiný seznam, než se vypsal. **A invariant
+`cited == listy` nepřepsal na slabší tvrzení, ale na nové** (`listy plus
+původ`) i s odůvodněním — to je rozdíl, na kterém mi záleží.
+
+---
+
+## Kde je moje formulace přesnější, než co jde splnit
+
+Můj gate zněl *„je vidět **řekls: Vrabec není savec.**"*. V odůvodnění
+se ukáže **formule** `disjoint(a:·vrabec, b:·savec)`, ne česká věta —
+a **Builder to řekl sám, dřív než bych to změřil**. Má pravdu: text věty
+v bázi **není**, prezentér renderuje z toho, co je zapsané, a nést
+surface větu v bázi je **jiné rozhodnutí**, ne dodělávka.
+
+**Substanci mé podmínky to splňuje** — člověk obě své věty pozná
+a `s0001` je v `cited`. Zapisuju to jako otevřenou otázku, ne jako dluh:
+*má báze nést i větu, kterou to člověk řekl?* Až na to dojde, je to
+rozhodnutí o § 8 a o tom, co je ještě jádro.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑25 (otevřená otázka, ne vada) · citace ukazuje formuli, ne větu.**
+Viz výš. Dokud báze nese jen formule, je tohle správně; kdyby se to mělo
+změnit, je to vědomé rozhodnutí (I‑13), ne úprava prezentéru.
+
+**W‑23** (pořadí nabídek) a **W‑20** (šum ve stopě) leží dál podle
+dohody.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: `same_as` z české věty — a s ním sporná identita.**
+
+**Gate:** sada zapisuje krokem **čtyři z devíti** jádrových predikátů
+(`before`, `disjoint`, `member`, `subset`). Chybí `complete`,
+`contains`, `name`, `same_as`, `within`.
+
+**Proč `same_as` a proč teď:** je to jediná zbývající relace, na které
+visí **M‑1** — „přes spornou identitu fakty netečou" — a ta je v mé
+stálé regresi od začátku, **měřená výhradně na formulích**. Táž třída
+jako `before` před kolem #59 a `disjoint` před #64: schopnost v jádře,
+ke které jazyk nevede. U identity je to ale **nejdražší**, protože chyba
+tam uzly tiše slévá nebo štěpí — a to nepozná ani jeden dnešní test,
+protože žádná česká věta `same_as` nezapíše.
+
+**Druhý důvod, změřený:** *Petrovice* už dnes kanonizují jméno („týž
+uzel, o kterém už řeč byla"), ale `same_as` **nezapisují** — takže se
+nikdy neprověří rozdíl mezi *„trefil jsem týž uzel"* a *„člověk řekl,
+že to je týž člověk"*.
+
+**Můj counterexample — bez něj neschválím:** nová doména zapíše
+`same_as` **z české věty**; otázka **přes tu identitu** dá `A`
+s důkazem, který cituje **oba** zápisy; pak člověk identitu **popře**
+česky, přímá otázka na ni dá `CONFLICT` se **dvěma** důkazy, a otázka na
+fakt, který přes ni tekl, spadne zpátky na **`U`, ne `N`** (M‑1 z češtiny);
+původní zápis zůstane **nedotčený** (nedestruktivní `same_as` — ověřím
+`inspect`); osm domén se závěry beze změny (a když se některý změní,
+**napiš to**); gate *Farmaka* `N` s doložkou `s0005`; parita ≥ 29/29
+s novými větami ve zlaté sadě; nula `RECALL_FAILURE`; testy zelené;
+„Pondělí je před pondělím." se pořád nezapíše.
+
+---
+
+## ARCHIV — kolo #64
+
+### Status: 🟢 PASS — osmá doména říká „ne" z vyloučení tříd; důkaz ale nedosáhne na větu, kterou člověk řekl
 
 **Kolo #64.** 820 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **58/58**, živá parita **29/29**, dialogy 8 / 19 / 12, gate

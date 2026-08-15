@@ -61,6 +61,7 @@ RELATION_ROLES: dict[Operation, tuple[str, str]] = {
     Operation.SUBSET: ("sub", "sup"),
     Operation.DISJOINT: ("a", "b"),
     Operation.BEFORE: ("earlier", "later"),
+    Operation.SAME_AS: ("left", "right"),
 }
 
 #: Relace, jejichž fillery NEJSOU skupiny, takže kvantifikátor nenesou
@@ -1258,10 +1259,15 @@ def relation_shape(
         # navrhnout relaci z něčeho, čemu nerozumím, by bylo horší než
         # nenavrhnout nic.
         return None
-    if complement.mention.upos != "NOUN":
+    if complement.mention.upos not in ("NOUN", "PROPN"):
         # JMENNÝ přísudek, ne jakýkoli. „To auto je modré." je VLASTNOST,
         # ne vztah tříd — ptát se u ní na členství nebo podmnožinu je
         # otázka bez odběratele, ať člověk odpoví cokoli.
+        #
+        # `PROPN` na pravé straně je ale VLASTNÍ JMÉNO, ne vlastnost:
+        # „Micka je Mourek." netvrdí členství (Mourek není třída), tvrdí
+        # IDENTITU. Slovní druh obou stran je proto součást tvaru
+        # a rozhoduje o tom, která relace to je (N‑10).
         return None
     if subject.mention.upos not in ("NOUN", "PROPN"):
         return None

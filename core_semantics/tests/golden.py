@@ -669,12 +669,76 @@ J4 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# Dialog K — identita a její spor
+# --------------------------------------------------------------------------
+#
+# Spona mezi dvěma VLASTNÍMI JMÉNY se živě neměřila vůbec. „Je Micka
+# kočka?" je v sadě jen jednou, i když se v doméně ptá dvakrát — podruhé
+# se liší BÁZE, ne rozbor, a zlatá sada měří rozbor. „Mourek je kočka."
+# tu není podruhé, je to G4.
+#
+# Rozbor „Je Micka kočka?" jsem nejdřív OPSAL ze sousední věty a parita
+# to odmítla: v „Micka je Mourek." čte parser „Micku" jako MASKULINUM
+# (táhne to následující mužské jméno), kdežto samostatně jako femininum.
+# Přesně kvůli tomuhle se nahrávky měří proti živé službě.
+
+K2 = Golden(
+    dialogue="K",
+    text="Micka je Mourek.",
+    tokens=(
+        tok(1, "Micka", "Micka", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "Mourek", "Mourek", "PROPN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="same_as(left:·Micka, right:·Mourek)",
+)
+
+K3 = Golden(
+    dialogue="K",
+    text="Je Micka kočka?",
+    tokens=(
+        tok(1, "Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "Micka", "Micka", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Giv", Number="Sing"),
+        tok(3, "kočka", "kočka", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+        tok(4, "?", "?", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Micka, group:·kočka)",
+)
+
+K4 = Golden(
+    dialogue="K",
+    text="Micka není Mourek.",
+    tokens=(
+        tok(1, "Micka", "Micka", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "není", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Neg", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "Mourek", "Mourek", "PROPN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="¬same_as(left:·Micka, right:·Mourek)",
+)
+
+K5 = Golden(
+    dialogue="K",
+    text="Micka je Mourek?",
+    tokens=(
+        tok(1, "Micka", "Micka", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "Mourek", "Mourek", "PROPN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(4, "?", "?", "PUNCT", 3, "punct"),
+    ),
+    predication="same_as(left:·Micka, right:·Mourek)",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
     H1, H2, H3, H4, H5, H6,
     I1, I2, I3, I4,
     J2, J3, J4,
+    K2, K3, K4, K5,
 )
 
 

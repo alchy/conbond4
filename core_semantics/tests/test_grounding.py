@@ -337,12 +337,39 @@ def test_repeated_name_says_it_is_the_same_node() -> None:
     ), again.lines
 
 
-def test_canonisation_refuses_when_identity_is_disputed() -> None:
-    """Podmínka B z M‑2: kanonizace konzultuje `¬same_as`.
+def test_canonisation_refuses_when_the_same_name_is_disputed() -> None:
+    """Podmínka B z M‑2 — a od N‑10 ZÚŽENÁ na uzly TÉHOŽ JMÉNA.
 
-    Když si báze o totožnosti protiřečí, ztotožnit další zmínku mlčky by
-    znamenalo rozhodnout spor za člověka."""
-    from core_semantics.ast import same_as_of
+    Tam ztotožnit mlčky opravdu nejde: neví se, KTERÝ z nich zmínka
+    trefila, a rozhodnout to za člověka by znamenalo vzít zpátky
+    rozdělení, které sám udělal."""
+    from core_semantics.ast import Label, P_NAME, atom, role
+
+    session = Session(lexicon=shaped(PROPN_SUBJECT, NOUN_OBJECT))
+    session.utter("Filip má auto.", has_car())
+    session.kb.attach(
+        atom(P_NAME, role("of", Entity("Filip_2")), role("value", Label("Filip")))
+    )
+    session.kb.attach(
+        atom(P_NAME, role("of", Entity("Filip")), role("value", Label("Filip")))
+    )
+
+    result = session.utter("Filip má auto.", has_car())
+    assert result.statement_id is None
+    assert result.question is not None
+    assert "Kterého" in result.question
+
+
+def test_a_dispute_with_another_name_gets_a_verdict_not_a_question() -> None:
+    """N‑10. Spor s uzlem JINÉHO jména nezpochybňuje, KTERÝ uzel se míní
+    — zpochybňuje jejich TOTOŽNOST, a to je práce evaluátoru (M‑1).
+
+    Odmítnout tu zakotvení znamenalo, že se člověk na spornou identitu
+    nikdy nedozvěděl verdikt: přímá otázka nedala `CONFLICT` a otázka na
+    fakt nedala `U`, obojí skončilo doptáním na to, kdo je kdo. Verdikt
+    je víc než otázka — a M‑1 ho slibuje."""
+    from core_semantics.ast import QueryStatus, same_as_of
+    from core_semantics.engine import Engine
 
     session = Session(lexicon=shaped(PROPN_SUBJECT, NOUN_OBJECT))
     session.utter("Filip má auto.", has_car())
@@ -351,10 +378,11 @@ def test_canonisation_refuses_when_identity_is_disputed() -> None:
         same_as_of(Entity("Filip"), Entity("Filip_z_Brna")).complement()
     )
 
-    result = session.utter("Filip má auto.", has_car())
-    assert result.statement_id is None
-    assert result.question is not None
-    assert "protiřečí" in result.question
+    verdict = Engine(session.kb).ask(
+        same_as_of(Entity("Filip"), Entity("Filip_z_Brna"))
+    )
+    assert verdict.status is QueryStatus.CONFLICT
+    assert verdict.conflict is not None and len(verdict.conflict) == 2
 
 
 def test_name_identity_lives_in_one_place() -> None:

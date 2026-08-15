@@ -253,6 +253,25 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="J-10",
+        boundary=KERNEL_LEARNING,
+        promise=(
+            "IDENTITU vyrobí česká věta: spona mezi dvěma VLASTNÍMI JMÉNY "
+            "netvrdí členství (jméno není třída), tvrdí `same_as`; záporná "
+            "varianta je táž relace se silnou negací. Kanonizace jmen "
+            "(M‑2) odmítá zakotvit jen spor mezi uzly TÉHOŽ JMÉNA — spor "
+            "s uzlem JINÉHO jména patří evaluátoru, protože M‑1 na něj "
+            "slibuje verdikt (`CONFLICT`, a fakt přes tu identitu padá na "
+            "`U`), a otázka je míň než verdikt (N‑10)"
+        ),
+        anchor="core_semantics.grounding:_canonical_name",
+        entry=".utter(",
+        enforced_by=(
+            "test_canonisation_refuses_when_the_same_name_is_disputed",
+            "test_a_dispute_with_another_name_gets_a_verdict_not_a_question",
+        ),
+    ),
+    Clause(
         id="J-8",
         boundary=KERNEL_LEARNING,
         promise=(
@@ -649,7 +668,8 @@ CONTRACTS: tuple[Clause, ...] = (
         entry=".utter(",
         enforced_by=(
             "test_repeated_name_says_it_is_the_same_node",
-            "test_canonisation_refuses_when_identity_is_disputed",
+            "test_canonisation_refuses_when_the_same_name_is_disputed",
+            "test_a_dispute_with_another_name_gets_a_verdict_not_a_question",
         ),
     ),
     Clause(

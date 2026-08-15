@@ -278,7 +278,23 @@ def _canonical_name(reading: RoleReading, view: ResolvedGraphView) -> _Resolutio
         )
     node = _sort_for(reading.name, bearers[0] if bearers else name, concrete=True)
     known = view.is_known(node.id)
-    disputed = view.index.disputed_with(node.id)
+    # **Jen spor o uzly TÉHOŽ JMÉNA** *(N‑10)*. Podmínka B z M‑2 mluví
+    # o případu, kdy je řečeno, že uzel NENÍ týž jako jiný uzel TÉHOŽ
+    # JMÉNA — tam ztotožnit mlčky opravdu nejde, protože se neví, který
+    # z nich zmínka trefila.
+    #
+    # Spor s uzlem JINÉHO jména je něco jiného: „Micka není Mourek."
+    # nezpochybňuje, KTERÝ uzel se jménem „Micka" se míní — zpochybňuje
+    # jejich TOTOŽNOST, a to je práce evaluátoru (M‑1: přes spornou
+    # identitu fakty netečou). Odmítnout tu zakotvení znamenalo, že se
+    # člověk na spornou identitu nikdy nedozvěděl verdikt: přímá otázka
+    # nedala `CONFLICT` a otázka na fakt nedala `U`, obojí skončilo
+    # doptáním na to, kdo je kdo.
+    disputed = [
+        other
+        for other in view.index.disputed_with(node.id)
+        if other in bearers or other in view.nodes_named(name)
+    ]
     if disputed:
         return (
             None,
