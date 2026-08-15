@@ -1440,7 +1440,17 @@ CONTRACTS: tuple[Clause, ...] = (
             "o textu — udělat z druhé věty ROLI by byla táž vada jako "
             "u titulu a u apozice. Změřeno: 35 vět z 238 (15 %), z toho "
             "18 SDÍLÍ PODMĚT a 17 má VLASTNÍ, tedy dvě různé úlohy "
-            "skoro stejné velikosti"
+            "skoro stejné velikosti. DRUHÁ VĚTA SE SDÍLENÝM PODMĚTEM SE "
+            "OD W‑71 ČTE A ZAPISUJE ZVLÁŠŤ: podmět NEVYSLOVILA a "
+            "nemusela — řekla ho první — takže se BERE Z TÉŽE PROMLUVY "
+            "a v hlášení je řečeno, ODKUD. Kopíruje se táž zmínka, "
+            "nezakládá se druhá: dva uzly pro jednoho člověka jsou "
+            "nejdražší chyba, jakou tenhle systém umí (M‑2). Jsou to DVĚ "
+            "PREDIKACE a platí OBĚ — slít je do jedné formule by "
+            "tvrdilo, že „zlepšil se“ a „musel ulehnout“ je jeden děj. "
+            "Zábrany platí na obě stejně (B‑19) a hlásí se JEN ta druhá "
+            "věta, kterou číst NEUMÍME — jinak by systém o jedné věci "
+            "řekl dvě věci, které si odporují (W‑20)"
         ),
         anchor="core_semantics.cascade:second_predications",
         entry="cascade(",
@@ -1449,6 +1459,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_coordinated_noun_is_still_a_member",
             "test_the_second_sentence_is_not_reported_as_a_lost_member",
             "test_the_second_sentence_is_named_in_the_trace",
+            "test_the_second_sentence_borrows_the_subject_from_the_first",
+            "test_a_second_sentence_with_its_own_subject_is_left_alone",
         ),
     ),
     Clause(

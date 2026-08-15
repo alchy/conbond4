@@ -89,6 +89,8 @@ from .cascade import (
     surface_roles,
     role_mapping_tier,
     passive_tier,
+    coordination_tier,
+    ROLE_SUBJECT,
     passive_question,
 )
 from .engine import Engine
@@ -789,6 +791,10 @@ class Session:
             # za přívlastkem, protože je to táž třída věci — něco, co ve
             # větě stojí vedle predikace — a taky nic neblokuje.
             title_tier(),
+            # Druhá věta se sdíleným podmětem (W‑71). AŽ ZA anaforou
+            # a pro‑dropem: podmět první věty musí být hotový dřív, než
+            # si ho druhá půjčí — jinak by si půjčila rozdělanou roli.
+            coordination_tier(),
             # Vedlejší věta jako role hlavní predikace. Za přívlastkem:
             # obojí reifikuje, ale tohle přidává ROLI, takže musí běžet
             # dřív, než se počítají ztracené členy.
@@ -1445,13 +1451,53 @@ class Session:
                     else None
                 ),
             )
+        # DRUHÁ VĚTA SE ZAPÍŠE ZVLÁŠŤ *(W‑71)*. Až po první, a jen když
+        # se první zapsala: kdyby se zapsala druhá bez první, ležel by
+        # v bázi konec promluvy bez jejího začátku.
+        druha_radky = self._write_second(index, predication, routed)
         return replace(
             routed,
             turn=turn,
-            lines=(*lines, *routed.lines),
+            lines=(*lines, *routed.lines, *druha_radky),
             predication=predication,
             trace=turn.trace,
             question=question,
+        )
+
+    def _write_second(
+        self, index: int, predication: Predication, routed: TurnResult
+    ) -> tuple[str, ...]:
+        """Zapíše DRUHOU VĚTU se sdíleným podmětem *(W‑71)*.
+
+        **Vlastní zápis, ne rozšíření prvního.** Jsou to dvě predikace
+        téže promluvy a platí OBĚ; slít je do jedné formule by znamenalo
+        tvrdit, že „zlepšil se" a „musel ulehnout" je jeden děj.
+
+        **Zábrany platí obě stejně.** Role s tvarem místo jména zastaví
+        i druhou větu (W‑62) — a je to pak vidět, protože jinak by
+        nezapsaná druhá věta vypadala jako věta, která tam není.
+        """
+        druha = predication.second
+        if druha is None or routed.statement_id is None:
+            return ()
+        if surface_roles(druha):
+            return (
+                "  [DRUHÁ VĚTA NEZAPSÁNA: role "
+                + ", ".join(f"„{jmeno}“" for jmeno in surface_roles(druha))
+                + " má za jméno TVAR (B‑19)]",
+            )
+        grounded = ground(druha, self.kb.view(), discourse=self._discourse)
+        if grounded.formula is None:
+            return ("  [DRUHÁ VĚTA NEZAPSÁNA: nezakotvila se]",)
+        sid = self.kb.attach(
+            grounded.formula, provenance=f"tah {index}: druhá věta"
+        )
+        podmet = druha.role(ROLE_SUBJECT)
+        return (
+            f"✓ zapsáno [{sid}]  {grounded.formula}",
+            f"[DRUHÁ VĚTA téže promluvy — podmět "
+            f"„{podmet.form if podmet else '?'}“ PŘEBÍRÁ Z PRVNÍ, text ho "
+            f"podruhé nevyslovil]",
         )
 
     def _route(

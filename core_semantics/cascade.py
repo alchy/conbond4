@@ -221,6 +221,12 @@ class Predication:
     #: je to druhý výrok VEDLE věty, ne chybějící role. Věta „Nad hrobem
     #: promluvil básník Josef Hora.“ je celá i bez něj.
     pending_title: tuple[tuple[str, str, int], ...] = ()
+    #: DRUHÁ PREDIKACE téže promluvy *(W‑71)*. „Jeho stav se zlepšil, ale
+    #: musel ulehnout." jsou DVĚ VĚTY; první nese druhou, protože si ji
+    #: druhá půjčuje o jedinou věc — PODMĚT. Vlastní pole, ne druhý
+    #: kandidát: kandidáti jsou VARIANTY TÉHOŽ čtení a vybírá se z nich
+    #: jeden, kdežto tyhle dvě predikace platí OBĚ.
+    second: "Predication | None" = None
 
     def __post_init__(self) -> None:
         names = [r.name for r in self.roles]
@@ -3209,6 +3215,83 @@ def second_predications(reading: Reading) -> tuple[Token, ...]:
     )
 
 
+def _own_subject(token: Token, reading: Reading) -> bool:
+    """Má ta druhá věta VLASTNÍ podmět? *(W‑71)*"""
+    return any(
+        child.head == token.index
+        and base_deprel(child.deprel) in SUBJECT_DEPRELS
+        for child in reading.tokens
+    )
+
+
+def coordination_tier() -> Tier:
+    """DRUHÁ VĚTA SE SDÍLENÝM PODMĚTEM *(W‑71)*.
+
+    „Jeho stav se přechodně zlepšil, **ale brzy musel znovu ulehnout**."
+    Druhá věta podmět NEVYSLOVILA a nemusela — řekla ho první. Systém si
+    ho tedy NEDOMÝŠLÍ: BERE HO Z TÉŽE PROMLUVY a v hlášení to říká.
+
+    **Jen se SDÍLENÝM podmětem, a je to hranice měření, ne pohodlí.**
+    Změřeno (kolo #107): 35 vět, z toho 18 podmět sdílí a 17 má vlastní.
+    U vlastního podmětu by se řešily DVĚ věci naráz — druhá predikace
+    A o kom je — a smíchané kolo se neměří. Věty s vlastním podmětem se
+    proto dál jen HLÁSÍ jako druhá věta (W‑70).
+
+    **Podmět se KOPÍRUJE, nezakládá.** Je to táž zmínka z téže promluvy,
+    takže musí padnout na týž uzel; vyrobit druhou zmínku by znamenalo
+    riskovat dva uzly pro jednoho člověka — nejdražší chyba, jakou tenhle
+    systém umí (M‑2).
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        druhe = [
+            token
+            for token in second_predications(reading)
+            if not _own_subject(token, reading)
+        ]
+        if not druhe:
+            return candidates, None
+        notes: list[str] = []
+        out: list[Candidate] = []
+        for candidate in candidates:
+            subject = candidate.predication.reading(ROLE_SUBJECT)
+            if subject is None:
+                out.append(candidate)
+                continue
+            token = druhe[0]
+            vlastni = tuple(
+                _nominal(child, reading, _role_for(child, reading) or ROLE_OBJECT)
+                for child in reading.children(token.index)
+                if _role_for(child, reading) is not None
+                and base_deprel(child.deprel) not in ("cop", "aux")
+            )
+            jmena = {r.name for r in vlastni}
+            if ROLE_SUBJECT in jmena:  # pragma: no cover — stráž nad stráží
+                out.append(candidate)
+                continue
+            druha = Predication(
+                predicate=token.lemma,
+                roles=tuple(sorted((subject, *vlastni), key=lambda r: r.name)),
+                mood=candidate.predication.mood,
+            )
+            notes.append(
+                f"[DRUHÁ VĚTA „{token.form}“ PŘEBÍRÁ PODMĚT z první "
+                f"(„{subject.mention.form}“) — text ho podruhé nevyslovil "
+                f"a domýšlet se nic nemuselo]"
+            )
+            out.append(
+                Candidate(
+                    replace(candidate.predication, second=druha),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
+
+
 def lost_members(
     reading: Reading, predication: Predication
 ) -> tuple[tuple[Token, str], ...]:
@@ -3488,13 +3571,17 @@ def cascade(
     # se ptal, jak se ta role jmenuje. Odpověď na to neexistuje: „a brzy
     # musel znovu ulehnout" NENÍ člen první věty. Číst se to zatím
     # nezačne a je to PŘIZNANÁ MEZ, ne rozhodnutí o textu.
-    druhe = second_predications(reading)
+    # HLÁSÍ SE JEN TA, KTEROU NEUMÍME *(W‑71)*. Druhá věta se sdíleným
+    # podmětem se od téhle chvíle ČTE, takže tvrdit o ní „číst ji zatím
+    # neumím" by byly dvě hlášky o jedné věci, které si odporují — a to
+    # je horší než jedna (W‑20).
+    druhe = [t for t in second_predications(reading) if _own_subject(t, reading)]
     if druhe:
         trace.append(
             "[DRUHÁ VĚTA: "
             + ", ".join(f"„{t.form}“" for t in druhe)
-            + " — souřadný druhý přísudek, ne člen téhle věty; číst ji "
-            "zatím neumím]"
+            + " — souřadný druhý přísudek s VLASTNÍM podmětem, ne člen "
+            "téhle věty; číst ji zatím neumím]"
         )
     if len(candidates) == 1:
         note = _dropped_note(reading, candidates[0].predication)

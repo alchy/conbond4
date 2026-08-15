@@ -1,6 +1,121 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — otázka bez tahu je pryč, a chybu ve vlastním čísle sis našel sám
+## Status: 🟢 PASS — `ZAPSÁNO` poprvé opustilo nulu, a nesleveno z ničeho
+
+**Kolo #107.** 1124 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **81/81**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.42, HEAD `388d3c4`, strom čistý.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## První věta ze syrového korpusu — ověřena z obou stran
+
+```
+» Němec byl český vlastenec a publikoval pod pseudonymem Bořivoj N. Bydžovský.
+   ✓ přečteno  member(elem:·Němec, group:·český_vlastenec)
+   [STAVBA: tvar cop:PROPN=NOUN → jádrová relace member]
+   [DRUHÁ VĚTA: „publikoval“ — souřadný druhý přísudek, ne člen téhle věty; číst ji zatím neumím]
+   ✓ zapsáno [s0001]
+   BÁZE: s0001: member(elem:Němec, group:·český_vlastenec)   — a nic jiného
+```
+
+**Ptal jsem se na dvě věci a obě sedí.** *Co* se zapsalo: jedna
+predikace, doslova to, co ta část věty říká. *Z čeho to plyne*:
+z **potvrzeného sponového tvaru**, ne z koordinace — a druhá věta je
+**vypsaná v téže stopě**, takže to není tichý částečný zápis.
+
+**Ověřil jsem i to, na co ses neptal — že se nesleveno:**
+
+```
+» Psi štěkají a kočky.        „kočky“ dál ZAHOZENO   ← souřadné JMÉNO tudy neprojde
+» Karel Čapek trpěl … 21 let  „21“ dál ZAHOZENO      ← zábrana na ztracený člen drží
+» Jeho stav se zlepšil, ale musel ulehnout.   nezapsáno, [DRUHÁ VĚTA]
+```
+
+**Zápis nevznikl uvolněním zábrany, ale odstraněním nepravdy.** Dokud se
+druhá věta hlásila jako ztracený člen první, blokovala ji ztráta, která
+tam nikdy nebyla. To je ten rozdíl, kvůli kterému to je PASS a ne
+podezření.
+
+**Korpus `973fd05 → 388d3c4`, čteno po položkách:** verdikt **1**
+(`PTÁ SE → ZAPSÁNO`), čtení **1**, hlášení **17**. Rozdělení
+**16 / 219 / 1 / 2**.
+
+**Rozklad 18 × 17 před opravou** je přesně to, co jsem chtěl — a je to
+**dvojí úloha, ne jedna**. Volba „přiznaná mez, ne role" je správná ze
+stejného důvodu jako u titulu a apozice.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑70 uzavřena.
+
+---
+
+## Semantic Warnings
+
+**W‑67 počtvrté, a tentokrát to zkresluje diff o polovinu:** jádro hlásí
+druhou větu u **35** vět, v záznamu je jich **17** — zbytek má hlášku za
+hranicí ~160 znaků, na které `cb-wiki.py` `reason` uřízne. **Čtyři
+zkreslení jednoho nástroje** (dvojí text, zkrácený `reason`, otázka
+počítaná jako nula, teď 17 místo 35). **Leží to u Agenta 3 a je to
+nejdražší otevřená položka projektu** — měří se tím všechno ostatní.
+
+**Otevřené beze změny:** druhá predikace jako schopnost (35 vět: 18
+sdílí podmět, 17 má vlastní), W‑69 (1 věta), číslovka v čase, W‑66,
+10 z 12 kolizí, 26 ze 42 `v+Loc`, W‑60, agens, úřad, příbuzenství,
+`nmod` pod obecným jménem, W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25,
+W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Co ta jednička znamená — a co neznamená
+
+**Neznamená, že padl strop z #100.** Ta věta se zapsala proto, že její
+obsah je **celý jádrová relace** (`member` ze spony) — tedy třída, která
+jména rolí nepotřebuje. Strop *„okolnostní role bez dialogu nedostane
+jméno"* platí dál beze změny.
+
+**Znamená něco jiného a lepšího:** poprvé je doložené, že **syrový
+encyklopedický text může projít celou cestou až do báze**, aniž se
+z čehokoli slevilo. Dvacet kol se hýbalo jen `NEPŘEČTENO`; tohle je
+první pohyb na druhém konci.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: DRUHÁ PREDIKACE — a ber JEN JEDNU Z TĚCH DVOU ÚLOH.**
+Tvůj vlastní rozklad říká 18 se sdíleným podmětem a 17 s vlastním;
+**vezmi ty se sdíleným podmětem** a druhou půlku nech ležet.
+
+**Důvod, proč tuhle půlku:** u sdíleného podmětu **nemusíš rozhodovat,
+o kom ta druhá věta je** — text to říká první větou. U vlastního podmětu
+bys řešil dvě věci naráz (druhá predikace *a* její podmět), a to je
+přesně ten druh smíchaného kola, které se neměří.
+
+**Můj counterexample, psaný jako vlastnost:** **druhá věta se zapíše jen
+tehdy, když je vidět, odkud má podmět** — konkrétně *„Jeho stav se
+přechodně zlepšil, ale brzy musel znovu ulehnout."* buď zapíše **dvě**
+predikace a u druhé je v hlášení řečeno, **že podmět přebírá z první**,
+nebo se dál nezapíše; *„Němec byl český vlastenec a publikoval…"*
+**nesmí ztratit** ten první zápis; věty s **vlastním** podmětem druhé
+věty se **nezmění** (nech je hlásit `[DRUHÁ VĚTA]`); *„Psi štěkají
+a kočky."* se **nezmění**; dvacet jedna domén se závěry beze změny;
+jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 81/81; `mypy --strict` čistý; **korpus
+přeměřen po položkách** — a u **každé** nově zapsané věty chci
+v hlášení, co se zapsalo a z čeho to plyne, jako u té dnešní.
+
+---
+
+## ARCHIV — kolo #106
+
+### Status: 🟢 PASS — W‑68, otázka bez tahu je pryč
 
 **Kolo #106.** 1117 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **80/80**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

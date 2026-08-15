@@ -2345,9 +2345,65 @@ def test_the_second_sentence_is_not_reported_as_a_lost_member() -> None:
 
 
 def test_the_second_sentence_is_named_in_the_trace() -> None:
-    """Číst se to zatím nezačne — a PROTO to musí být řečeno. Přiznaná
-    mez je něco jiného než mlčení: „ztracený člen" tvrdil o té části
-    textu něco, co není."""
-    stopa = "\n".join(cascade(_two_clauses()).trace)
-    assert "DRUHÁ VĚTA" in stopa and "„musel“" in stopa
+    """Přiznaná mez je něco jiného než mlčení: „ztracený člen" tvrdil
+    o té části textu něco, co není.
+
+    **Hlásí se JEN ta, kterou neumíme** *(W-71)*: druhá věta se SDÍLENÝM
+    podmětem se od té chvíle čte, takže tvrdit u ní „číst ji zatím
+    neumím" by byly dvě hlášky o jedné věci, které si odporují."""
+    vlastni = Reading(
+        tokens=(
+            _token(1, "Stav", "stav", "NOUN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "zlepšil", "zlepšit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "ale", "ale", "CCONJ", 5, "cc"),
+            _token(4, "lékař", "lékař", "NOUN", 5, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(5, "váhal", "váhat", "VERB", 2, "conj", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(6, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    stopa = chr(10).join(cascade(vlastni).trace)
+    assert "DRUHÁ VĚTA" in stopa and "váhal" in stopa
     assert "číst ji zatím neumím" in stopa
+    sdileny = chr(10).join(cascade(_two_clauses()).trace)
+    assert "číst ji zatím neumím" not in sdileny
+
+
+def test_the_second_sentence_borrows_the_subject_from_the_first() -> None:
+    """DRUHÁ VĚTA SE SDÍLENÝM PODMĚTEM *(W‑71)*. „Stav se zlepšil, ale
+    musel ulehnout." — druhá věta podmět NEVYSLOVILA a nemusela: řekla ho
+    první. Systém si ho tedy NEDOMÝŠLÍ, BERE HO Z TÉŽE PROMLUVY.
+
+    Podmět se KOPÍRUJE, nezakládá: je to táž zmínka, takže musí padnout
+    na týž uzel — vyrobit druhou by riskovalo dva uzly pro jednoho
+    člověka (M‑2)."""
+    from core_semantics.cascade import coordination_tier
+
+    verdict = cascade(_two_clauses(), tiers=(*HARD_TIERS, coordination_tier()))
+    first = verdict.survivors[0].predication
+    assert first.second is not None
+    assert first.second.predicate == "muset"
+    podmet = first.second.role(ROLE_SUBJECT)
+    assert podmet is not None and podmet.lemma == "stav"
+    assert podmet is first.role(ROLE_SUBJECT), "táž zmínka, ne druhá kopie"
+
+
+def test_a_second_sentence_with_its_own_subject_is_left_alone() -> None:
+    """HRANICE MĚŘENÍ, ne pohodlí: 18 vět podmět sdílí a 17 má vlastní.
+    U vlastního by se řešily DVĚ věci naráz — druhá predikace A o kom
+    je — a smíchané kolo se neměří."""
+    from core_semantics.cascade import coordination_tier
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Stav", "stav", "NOUN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "zlepšil", "zlepšit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "ale", "ale", "CCONJ", 5, "cc"),
+            _token(4, "lékař", "lékař", "NOUN", 5, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(5, "váhal", "váhat", "VERB", 2, "conj", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(6, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    verdict = cascade(reading, tiers=(*HARD_TIERS, coordination_tier()))
+    assert verdict.survivors[0].predication.second is None
