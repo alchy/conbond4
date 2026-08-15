@@ -1,6 +1,162 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — kvantifikovaný podmět; pravidlo kladné, ne výjimka
+## Status: 🟢 PASS — a moje podmínka byla nesplnitelná; Builder to změřil dřív, než ji zabudoval
+
+**Kolo #76.** 966 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **69/69**, živá parita **51/51**, dialogy 14 / 37 / 24 se závěry
+beze změny, gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá
+regrese zelená. Jádro 0.1.20 (`8b691b3`). **Ohlásil PARTIAL, a přesto to
+schvaluji — protože ta nesplněná podmínka byla moje chyba.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Moje pravidlo bylo špatně a on to doložil
+
+Napsal jsem: *„dva a víc členů → Plur, bez ohledu na to, že UD označí
+jako `nsubj` jeden z nich v singuláru."* **Vzal to doslova a změřil to:
+shodilo to sedm bezvadných českých vět** a `morfologie` místo na 0
+**stoupla na 7**.
+
+Stačí jediný protipříklad, aby bylo vidět, jak hrubé to pravidlo bylo:
+
+```
+» Vesmír či kosmos je označení.                   ✓ přečteno   (disjunkce!)
+» Ke chřipce se přidal zánět ledvin a zápal plic. ✓ přečteno   (přísudek PŘED podmětem)
+```
+
+**Disjunkce plurál nežádá a přísudek před podmětem taky ne.** Zúžení,
+které z toho udělal — plurál žádá koordinace, jen když **sčítá** (`a`/`i`,
+ne `či`/`nebo`) **a** přísudek stojí **za** podmětem, s typem čteným
+z hrany `cc` — je pravidlo měřené, ne odhadnuté.
+
+**A pak našel svou vlastní vadu v tom zúžení**, což je ten druhý krok,
+na kterém mi záleží: vracet `False` znamenalo *„koordinace tu není"*,
+takže věta spadla na porovnání **s prvním členem**. `_coordinated` má
+teď **tři stavy** — `True` žádá plurál, `False` je obojí správně, `None`
+koordinace není. Slít poslední dva by poslalo větu do větve, která
+o koordinaci neví.
+
+---
+
+## Měřeno mnou
+
+```
+» Karel Čapek a jeho bratr Josef byli aktéry.   ✓ přečteno
+» Petr a Pavel četli knihu.                     ✓ přečteno
+» Petr a Pavel četl knihu.                      → 0 čtení
+     [PROČ: koordinovaný podmět žádá přísudek v MNOŽNÉM čísle …]
+» Několik hostů přišlo. ✓ · Několik hostů přišli. → 0 čtení
+» Psi byla v pondělí.   → 0 čtení · Obsahuje citron vitamíny? ✓ zúženo
+```
+
+**Korpus, dvě čisté revize:**
+
+```
+ea7cd68   NEPŘEČTENO 26 · PTÁ SE 210     morfologie 6
+8b691b3   NEPŘEČTENO 21 · PTÁ SE 215     morfologie 1
+změnilo stav 7:  NEPŘEČTENO → PTÁ SE 6   ·   opačně 1
+```
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Ta jedna zbylá věta: jeho argument je správný
+
+> „Přesné datum a místo narození Boženy Němcové dosud **není** známo."
+
+Táž stavba jako *„Petr a Pavel četl knihu."* — spojka `a`, přísudek za
+podmětem, sloveso v singuláru. **Jedna z nich je čeština a druhá ne,
+a rozdíl je v tom, jestli členy míní jednu věc, nebo dvě.** Splnit
+obojí naráz (`morfologie = 0` **i** pád „Petr a Pavel četl knihu.")
+s tím, co patro ví, **nejde** — jedno se musí obětovat.
+
+**Volil hlasitý pád před tichým průchodem a volil správně.** Je to táž
+volba jako u rodu a u kvantifikace, kde jsem na kladném pravidle trval
+sám.
+
+**Jedno upřesnění k jeho „v rozboru to vidět není":** částečný signál
+tam **je** — změřil jsem si to:
+
+```
+Petr   PROPN  nsubj  {'Animacy': 'Anim', 'Gender': 'Masc', …}
+datum  NOUN   nsubj  {'Gender': 'Neut', …}          ← Animacy chybí
+```
+
+**Není to ale pravidlo, je to korelace.** Životnost s pojmovou jednotou
+souvisí, ale neurčuje ji („stůl a židle stály" je taky plurál). Proto to
+předávám jako **hypotézu k měření**, ne jako zadání — přesně v duchu
+poučení, které si z tohohle kola vzal sám.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑37 · jedna věta v `morfologie` zůstává a je to vědomá volba.**
+Zapsané: raději hlasitý pád než tichý průchod negramatické věty.
+
+**W‑38 · rod se u koordinace neověřuje** — povolil jsem to a je to
+zapsaná mez v kódu i v testu.
+
+**Nahrazený test je v pořádku:** `test_a_coordinated_subject_is_left_alone`
+držel **hranici rozsahu** kola #75, kterou tohle zadání zrušilo; zůstalo
+z něj `test_the_two_branches_never_swap_places`, protože kvantifikace
+a koordinace mají **opačný** požadavek. Starý hlídal rozsah, nový hlídá
+věcný rozdíl.
+
+**W‑23, W‑25, W‑26, W‑30, W‑31, W‑36** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**Poučení, které sis vzal — *„pravidlo o jazyce si mám změřit dřív, než
+ho zabuduju, i když přijde ze zadání"* — beru jako závazné pro nás oba.
+Platí i na mě: příště ti pravidlo češtiny nedám jako hotové, ale jako
+hypotézu s prosbou o měření.**
+
+**JEDINÝ DALŠÍ SMĚR: `role` — 40 vět, největší zbylá třída.**
+
+Morfologie je vyčerpaná (1 věta, vědomá volba). Podle baseline `8b691b3`
+je teď **`role` jediným blokátorem u 40 vět z 238**, tedy 17 %, a je to
+**pětinásobek** všeho ostatního dohromady. Věty typu *„Byl pohřben na
+Vyšehradském hřbitově v Praze."* se přečtou, ale povrchový tvar nemá
+jméno role.
+
+**Nejdřív rozbor, teprve pak oprava** — přesně jako u morfologie
+v kole #74, a z téhož důvodu: 40 vět je dost na to, aby v nich byly tři
+různé příčiny, a hádat, která je ta hlavní, by znamenalo opravovat
+naslepo.
+
+**Můj counterexample — a tentokrát je to podmínka na rozbor, ne na
+opravu:** ke každé z těch 40 vět je zapsáno, **který povrchový tvar**
+zůstal bez jména a **kolik vět ten tvar sdílí**; tvary se seřadí podle
+četnosti; **žádná oprava se neudělá dřív, než ten seznam existuje**;
+čtrnáct domén se závěry beze změny; jádrové relace 9/9; gate *Farmaka*
+`N`/`s0005`; parita ≥ 51/51; nula `RECALL_FAILURE`; testy zelené.
+
+**Otázka, kterou ten rozbor má zodpovědět:** je `role` **jedna** mezera
+(chybí obecná pravidla pro předložkové vazby), nebo **čtyřicet**
+jednotlivých doptání, která jsou vlastně v pořádku? Na tom závisí, jestli
+je to vada, nebo normální provoz dialogu.
+
+---
+
+## ARCHIV — kolo #75
+
+### Status: 🟢 PASS — kvantifikovaný podmět; pravidlo kladné, ne výjimka
 
 **Kolo #75.** 954 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **68/68**, živá parita **51/51**, dialogy 14 / 37 / 24 se závěry
