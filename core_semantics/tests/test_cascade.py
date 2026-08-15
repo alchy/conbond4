@@ -2105,3 +2105,82 @@ def test_no_role_named_by_its_form_reaches_the_base() -> None:
                 f"{dialogue.name} / {step.text!r}: zapsáno s rolí, "
                 f"jejíž jméno je tvar — {result.predication}"
             )
+
+
+# --------------------------------------------------------------------------
+# DVA ČLENY, JEDNO JMÉNO *(W‑63)*
+# --------------------------------------------------------------------------
+
+
+def _two_adverbs(second: str) -> Reading:
+    """«Interpretace byla ovšem zcela podřízena.» — dvě příslovce."""
+    return Reading(
+        tokens=(
+            _token(1, "interpretace", "interpretace", "NOUN", 5, "nsubj:pass", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(2, "byla", "být", "AUX", 5, "aux:pass", Number="Sing", Polarity="Pos"),
+            _token(3, "ovšem", "ovšem", "PART", 5, second),
+            _token(4, "zcela", "zcela", "ADV", 5, "advmod"),
+            _token(5, "podřízena", "podřízený", "ADJ", 0, "root", Gender="Fem", Number="Sing", Polarity="Pos", Voice="Pass"),
+            _token(6, ".", ".", "PUNCT", 5, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_two_members_with_one_name_both_fall_back_to_their_shape() -> None:
+    """VĚTA MĚLA VŠECHNO — podmět, okolnost i argument — a nezbylo z ní
+    ani jedno čtení, protože „ovšem" (`advmod:emph`) a „zcela"
+    (`advmod`) dostaly oba roli `jak`.
+
+    Vybrat jeden z nich by byl tichý default u role, kterou věta
+    VYSLOVILA dvakrát. Oba proto padnou zpátky na SVŮJ TVAR — a rozbor
+    je rozlišuje, i když jméno role ne."""
+    candidates = generate(_two_adverbs("advmod:emph"))
+    assert candidates, "věta se čte, ne že se zahodí"
+    jmena = {r.name for r in candidates[0].predication.roles}
+    assert {"advmod", "advmod:emph"} <= jmena
+    assert "jak" not in jmena
+
+
+def test_the_fallback_asks_and_does_not_write() -> None:
+    """Mezistav PTÁ SE je VÝSLEDEK, ne slabina: role má za jméno tvar,
+    takže se systém ptá a NEZAPISUJE (W‑62)."""
+    predication = generate(_two_adverbs("advmod:emph"))[0].predication
+    assert {"advmod", "advmod:emph"} <= set(surface_roles(predication))
+    assert role_question(predication) is not None
+
+
+def test_an_unresolvable_collision_says_so_instead_of_lying() -> None:
+    """DVĚ HOLÁ `advmod` nerozliší ani pád zpátky na tvar — „často"
+    i „služebně" mají tvar `advmod`. Věta se přečíst nedá, ALE hlásit
+    u ní „nemá ani jeden člen, který bych uměl pojmenovat" je NEPRAVDA
+    O TEXTU: členy má a umí je pojmenovat, a právě to je ten problém."""
+    from core_semantics.cascade import why_nothing
+
+    reading = _two_adverbs("advmod")
+    assert generate(reading) == ()
+    duvod = why_nothing(reading)
+    assert "týž tvar" in duvod and "advmod" in duvod
+    assert "ani jeden člen" not in duvod
+    assert "„ovšem“" in duvod and "„zcela“" in duvod
+
+
+def test_a_nominal_phrase_is_not_a_predicate_without_members() -> None:
+    """„Úrazy způsobené pády." má jediné dítě `amod` — jenže to je
+    PŘÍVLASTEK a `generate` ho SKLÁDÁ DO ZMÍNKY hlavy. Hlásit „neumím ho
+    pojmenovat" je nepravda o vlastní práci: roli z něj udělat nejde,
+    protože rolí není."""
+    from core_semantics.cascade import why_nothing
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Úrazy", "úraz", "NOUN", 0, "root", Case="Nom", Gender="Masc", Number="Plur"),
+            _token(2, "způsobené", "způsobený", "ADJ", 1, "amod", Case="Nom", Number="Plur"),
+            _token(3, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    assert generate(reading) == ()
+    duvod = why_nothing(reading)
+    assert "JMENNÁ FRÁZE" in duvod
+    assert "neumím" not in duvod

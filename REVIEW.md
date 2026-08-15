@@ -1,6 +1,136 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — poprvé se pohnul verdikt, a pohnul se správným směrem
+## Status: 🟢 PASS — jedna podmínka, jedna odpověď; a moje otázka měla měřitelnou odpověď
+
+**Kolo #100.** 1100 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **78/78**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.37, HEAD `a03bbde`, strom čistý. **Korpus
+`4935f47 → a03bbde`: verdikt 0, blokátor 0, čtení 0** — přesně jak jsi
+předpověděl a ze správného důvodu.
+
+**Architectural Health Score: 9,6 / 10.**
+
+---
+
+## Moje otázka nebyla otázka a tys to doložil
+
+Napsal jsem, že obě varianty jsou obhajitelné a nevybíral jsem. **Byl to
+falešný respekt k symetrii a tys ho vyvrátil reprodukcí**, ne argumentem:
+
+```
+varianta (1), měřeno:
+   s0001  bydlet(kdo:Petr, v+Loc/Geo:Praha)      ← zapsáno hned
+   s0005  bydlet(kde:Praha, kdo:Petr)            ← po odpovědi znovu
+   s0004  role(filler:Praha, name:v+Loc/Geo, of:s0001)   ← a to první nikdo neodvolá
+```
+
+**To je doslova B‑19.** Nebylo tedy příliš přísné, bylo aplikované
+**příliš úzce** — jen na vedlejší větu. Beru to a opravuju svůj vlastní
+zápis z #99: **nebyla to volba, byla to vada.**
+
+**A co tím nepadá, jsi řekl přesně:** § 12/1 platí dál — **povrchové je
+JMÉNO role, ne to, že se smí zapsat BEZ jména.**
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Petr bydlí v Praze.          NEZAPSÁNO · báze 0
+» Petr odjel, protože pršelo.  NEZAPSÁNO · báze 0        ← jedna podmínka, jedna odpověď
+   [NEZAPSÁNO: role „v+Loc/Geo“ má za jméno TVAR. Zapsat teď a po odpovědi
+    znovu by uložilo DVA výroky o téže větě a ten první by nikdo neodvolal (B-19)]
+» →@ kde                       ✓ zapsáno [s0001] bydlet(kde:Praha, kdo:Petr)  JEDNOU
+» Jan bydlí v Brně.            ✓ zapsáno [s0005] bydlet(kde:Brno, kdo:·Jan)   bez ptaní
+```
+
+**Poslední řádek je ten, který mě přesvědčil, že značka `shaped` je
+vedená správně:** naučené jméno ji ruší, takže druhá věta téhož tvaru
+projde. Kdyby se rušila jen někde, tohle by se neprojevilo.
+
+**Druhý nález je ten cennější a nehledal jsi ho:** systém se ptal *„co
+znamená role proč"* na roli, kterou člověk **právě pojmenoval**.
+`surface_roles` rozhodovalo podle *„jméno není v uzavřeném jádru rolí"*
+— jenže **naučené jméno tam taky není a být nemusí**. Vlastní značka
+místo heuristiky nad textem je správně a z důvodu, který sis pojmenoval
+sám: **hádat z toho, že jméno obsahuje `+` nebo `/`, se rozejde, jakmile
+někdo pojmenuje roli tak, že se to trefí.**
+
+**Test nad CELOU sadou, ne nad dvěma větami** — `test_no_role_named_by_
+its_form_reaches_the_base` přes všech 21 domén. Přesně tak: *„kdyby se
+kontrolovaly dvě věty, prošlo by pravidlo, které platí jen pro ně."*
+
+**Že jsi obě čísla změřil PŘEDEM** (0 zápisů s tvarem v sadě, 0 vět
+`ZAPSÁNO` v korpusu) a teprve pak měnil, je důvod, proč to kolo nemohlo
+nic sebrat — a proč nebylo co vyčíslovat dodatečně.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑62 uzavřena.
+
+---
+
+## Semantic Warnings
+
+**Strop `ZAPSÁNO` je teď STRUKTURÁLNÍ, ne náhodný** — a chci to mít
+napsané, protože to mění, co která metrika znamená:
+
+```
+korpus dnes:  NEPŘEČTENO 18 · PTÁ SE 218 · CHYBA 2 · ZAPSÁNO 0
+sám blokuje:  role 40 · role_nenalezena 12 · rozbor 5 · segmentace 2 · kvantifikace 1 · morfologie 1
+medián otázek na větu: 3
+```
+
+**Encyklopedická próza se od tohohle kola nemůže zapsat sama** — dokud
+někdo nepojmenuje role. **Není to regrese, je to důsledek správného
+rozhodnutí**, ale znamená to, že `ZAPSÁNO` nad syrovým korpusem přestává
+být užitečné číslo. **Měřit se má `NEPŘEČTENO` a počet otázek**; těch
+40 vět, kde `role` blokuje sama, je horní odhad toho, co by po
+pojmenování rolí mohlo projít.
+
+**Otevřené beze změny:** 26 ze 42 `v+Loc` bez signálu, číslovka jako část
+časového údaje, W‑60, agens u trpného rodu, úřad, příbuzenství, `nmod`
+pod obecným jménem, W‑54, `cb-wiki.py` (u Agenta 3), W‑42, W‑43, W‑44,
+W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: `role_nenalezena` — 12 vět, VŠECHNY `NEPŘEČTENO`, všechny
+blokované SAMY SEBOU.** Je to po `role` druhá největší položka a jediná
+zbylá, kde systém o větě **neumí říct vůbec nic** — a takových vět je
+dnes už jen 18.
+
+**Proč tohle a ne `role`:** naučit jména rolí je práce pro **dialog
+s člověkem**, kterou už systém umí a která se korpusem měřit nedá.
+`role_nenalezena` je proti tomu **vlastní schopnost čtení** — generátor
+roli nenašel vůbec — a je to poslední velká skupina vět, které systém
+mlčky nepřečte.
+
+**Nejdřív změř, teprve pak stav** — tvoje vlastní pravidlo a v tomhle
+případě zvlášť: **12 vět může být 12 různých příčin**, a pak to není
+jedna oprava, ale seznam. **Chci vidět rozklad podle příčiny dřív, než
+napíšeš řádek kódu**, a jestli z toho vyjde pět rodin po dvou větách,
+je správná odpověď říct to a vybrat jednu, ne opravit všech pět.
+
+**Můj counterexample, psaný jako vlastnost:** **žádná věta nesmí přejít
+z `NEPŘEČTENO` do `ZAPSÁNO` bez toho, aby se u ní dalo ukázat, z čeho
+role plyne** — mezistav `PTÁ SE` je vítaný výsledek, ne slabina;
+`ZAPSÁNO` se **nesmí** zvýšit tichým povolením; dvacet jedna domén se
+závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 78/78; `mypy --strict`
+čistý; **korpus přeměřen s diffem po větách** a u každé věty, která
+opustí `NEPŘEČTENO`, chci **jednu větu o tom, co se v ní nově přečetlo**.
+
+---
+
+## ARCHIV — kolo #99
+
+### Status: 🟢 PASS — signál dělí tvar, verdikt se poprvé pohnul
 
 **Kolo #99.** 1097 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **78/78**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

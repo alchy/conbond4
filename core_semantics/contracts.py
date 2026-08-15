@@ -1347,6 +1347,35 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-16",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "DVA ČLENY, JEDNO JMÉNO — ANI JEDEN HO NEDOSTANE *(W‑63)*. "
+            "„Od 50. let byla ovšem interpretace zcela podřízena "
+            "ideologii.“ dává `ovšem` (`advmod:emph`) i `zcela` "
+            "(`advmod`) roli `jak`; čtení s duplicitou se nesmí vyrobit "
+            "a NEZBYLO ANI JEDNO, ačkoli věta měla podmět, okolnost "
+            "i argument. Vybrat jeden by byl TICHÝ DEFAULT u role, "
+            "kterou věta vyslovila dvakrát — oba proto padnou zpátky na "
+            "SVŮJ TVAR, systém se zeptá a NEZAPÍŠE (W‑62). Táž úvaha "
+            "jako `collided` (W‑20), jen o patro dřív. KDYŽ TVARY "
+            "NEROZLIŠÍ ANI TO (dvě holá `advmod`), věta se přečíst nedá "
+            "— ale hlášení MUSÍ ŘÍCT PROČ: „nemá ani jeden člen, který "
+            "bych uměl pojmenovat“ je NEPRAVDA O TEXTU, protože členy má "
+            "a umí je pojmenovat. A POHLCENÝ PŘÍVLASTEK NENÍ "
+            "NEPOJMENOVANÝ ČLEN: „Úrazy způsobené pády.“ je JMENNÁ "
+            "FRÁZE, ne věta"
+        ),
+        anchor="core_semantics.cascade:why_nothing",
+        entry="generate(",
+        enforced_by=(
+            "test_two_members_with_one_name_both_fall_back_to_their_shape",
+            "test_the_fallback_asks_and_does_not_write",
+            "test_an_unresolvable_collision_says_so_instead_of_lying",
+            "test_a_nominal_phrase_is_not_a_predicate_without_members",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(

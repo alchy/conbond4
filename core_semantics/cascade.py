@@ -30,6 +30,7 @@ strukturám.
 
 from __future__ import annotations
 
+import collections
 from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Callable, Sequence
@@ -879,6 +880,32 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
         role = _role_for(token, reading)
         if role is not None:
             fixed.append(_nominal(token, reading, role))
+
+    # DVA ČLENY, JEDNO JMÉNO — ANI JEDEN HO NEDOSTANE *(W‑63)*.
+    # „Od 50. let byla ovšem interpretace zcela podřízena ideologii."
+    # dává `ovšem` (`advmod:emph`) i `zcela` (`advmod`) roli `jak`,
+    # čtení s duplicitou se nesmí vyrobit a NEZBYLO ANI JEDNO — věta
+    # skončila jako nepřečtená, ačkoli měla podmět, okolnost i argument.
+    #
+    # Vybrat jeden z nich by byl tichý default u role, kterou věta
+    # VYSLOVILA dvakrát. Oba proto padnou zpátky na SVŮJ TVAR a systém
+    # se zeptá — je to táž úvaha jako u `collided` (W‑20), jen o patro
+    # dřív: odpověď systém nezná a ptát se na ni je poctivé.
+    obsazena = collections.Counter(r.name for r in fixed)
+    if any(kolik > 1 for kolik in obsazena.values()):
+        fixed = [
+            _nominal(
+                next(t for t in members if t.index == r.mention.token_index),
+                reading,
+                surface_role(
+                    next(t for t in members if t.index == r.mention.token_index),
+                    reading,
+                ),
+            )
+            if obsazena[r.name] > 1
+            else r
+            for r in fixed
+        ]
 
     variants: list[tuple[RoleReading, ...]] = []
     if carrier is not anchor:
@@ -3236,6 +3263,34 @@ def why_nothing(reading: Reading) -> str:
         )
 
     anchor = head[1]
+    # KOLIZE I MEZI OKOLNOSTMI, NE JEN MEZI JÁDROVÝMI ČLENY *(W‑63)*.
+    # „byl často služebně překládán" má dva `advmod`, oba dostanou `jak`
+    # a oba mají TÝŽ TVAR, takže je nerozliší ani pád zpátky na tvar.
+    # Věta se přečíst nedá — ale hlásit u ní „nemá ani jeden člen, který
+    # bych uměl pojmenovat" je NEPRAVDA O TEXTU: členy má, umí je
+    # pojmenovat, a právě to je ten problém. Je to táž rodina jako W‑20,
+    # jen o patro dřív.
+    okolnosti = [
+        token
+        for token in reading.children(anchor.index)
+        if token.deprel not in NOMINAL_DEPRELS
+        and token.deprel != "cop"
+        and _role_for(token, reading) is not None
+    ]
+    tvary = [surface_role(token, reading) for token in okolnosti]
+    srazene = sorted({t for t in tvary if tvary.count(t) > 1})
+    if srazene:
+        slova = ", ".join(
+            f"„{token.form}“"
+            for token in okolnosti
+            if surface_role(token, reading) in srazene
+        )
+        return (
+            "dva členy mají týž tvar ("
+            + ", ".join(srazene)
+            + f") a chtějí touž roli — {slova}. Který je který, "
+            "z rozboru nepoznám"
+        )
     nominals = [
         token
         for token in reading.children(anchor.index)
@@ -3255,9 +3310,28 @@ def why_nothing(reading: Reading) -> str:
         )
 
     if not nominals:
+        # POHLCENÝ PŘÍVLASTEK NENÍ NEPOJMENOVANÝ ČLEN *(W‑63)*. „Úrazy
+        # způsobené pády." má jediné dítě `amod`, jenže to je PŘÍVLASTEK
+        # a `generate` ho SKLÁDÁ DO ZMÍNKY hlavy. Hlásit u něj „neumím ho
+        # pojmenovat" je nepravda o vlastní práci: neumí se z něj udělat
+        # ROLE, protože rolí není — je to část jména.
+        pohlcene = {
+            attribute.index
+            for attribute in attributes_of(anchor, reading)
+        }
         unmapped = sorted(
-            {t.deprel for t in reading.children(anchor.index) if t.deprel != "punct"}
+            {
+                t.deprel
+                for t in reading.children(anchor.index)
+                if t.deprel != "punct" and t.index not in pohlcene
+            }
         )
+        if not unmapped and pohlcene:
+            return (
+                f"„{head[0].form}“ je JMENNÁ FRÁZE, ne věta: jediné, co "
+                f"pod ním visí, je přívlastek, a ten se skládá do zmínky "
+                f"— role z něj nevzniká"
+            )
         return (
             f"přísudek „{head[0].form}“ nemá ani jeden člen, který bych "
             f"uměl pojmenovat" + (f" (rozbor dal {', '.join(unmapped)})" if unmapped else "")
