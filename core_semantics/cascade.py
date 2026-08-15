@@ -678,7 +678,9 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
         )
         if follows_parser:
             origin = "rozbor parseru"
-        elif any(token.deprel == "nsubj" for token in nominals):
+        elif any(base_deprel(token.deprel) == "nsubj" for token in nominals):
+            # ZÁKLAD, ne přesná shoda: `nsubj:pass` JE podmět (38× v
+            # korpusu), jen trpný. Popisek původu čtení o něm mlčet nemá.
             origin = "záměna kdo/co (nominativ = akuzativ)"
         else:
             # Parser podmět vůbec nedal, takže není co zaměňovat — čtení
@@ -1346,6 +1348,9 @@ def _determiner_of(mention: Mention, reading: Reading) -> Token | None:
         (
             child
             for child in reading.children(mention.token_index)
+            # PŘESNÁ SHODA ZÁMĚRNĚ: `det:numgov` a `det:nummod` jsou
+            # KVANTIFIKÁTORY („několik psů"), ne přívlastky. Složit je do
+            # lemmatu by z „několik psů" udělalo druh psa *(W‑47)*.
             if child.deprel == "det"
         ),
         None,
@@ -1637,7 +1642,14 @@ def prodrop_tier() -> Tier:
         root = next((t for t in reading.tokens if t.head == 0), None)
         if root is None or root.upos not in ("VERB", "AUX"):
             return candidates, None
-        if any(t.head == root.index and t.deprel == "nsubj" for t in reading.tokens):
+        # ZÁKLAD, ne přesná shoda *(W‑47)*. `nsubj:pass` JE vyslovený
+        # podmět — „Karel Čapek byl pohřben…" ho má. Kdyby se sem
+        # nezapočítal, patro by u KAŽDÉ trpné věty tvrdilo, že podmět
+        # chybí, a ptalo se na antecedent někoho, kdo ve větě stojí.
+        if any(
+            t.head == root.index and base_deprel(t.deprel) == "nsubj"
+            for t in reading.tokens
+        ):
             return candidates, None
         feats = dict(root.feats)
         if "Gender" not in feats and "Number" not in feats:
@@ -1760,8 +1772,12 @@ def naming_shape(reading: Reading) -> "_Naming | None":
         # Bez zvratného „se" je „jmenovat" jmenovat DO funkce, ne nazývat
         # se — a to je docela jiné tvrzení.
         return None
-    subject = next((t for t in children if t.deprel == "nsubj"), None)
-    obj = next((t for t in children if t.deprel == "obj"), None)
+    # ZÁKLAD u obou: „Jan se jmenuje Honza." je aktivní, ale trpná
+    # varianta („byl nazván…") je táž konstrukce s `nsubj:pass`.
+    subject = next(
+        (t for t in children if base_deprel(t.deprel) == "nsubj"), None
+    )
+    obj = next((t for t in children if base_deprel(t.deprel) == "obj"), None)
     if subject is None or obj is None:
         return None
     return _Naming(subject=subject.index, value=obj.index)
@@ -1865,7 +1881,8 @@ def completeness_shape(predication: Predication, reading: Reading) -> str | None
     # svět na základě věty, která o výčtu vůbec nemluví, by bylo přesně
     # to, co dělat nesmí.
     if not any(
-        t.deprel == "nsubj" and dict(t.feats).get("PronType") == "Dem"
+        base_deprel(t.deprel) == "nsubj"
+        and dict(t.feats).get("PronType") == "Dem"
         for t in children
     ):
         return None
@@ -2339,7 +2356,15 @@ def subordinate_clauses(reading: Reading) -> tuple[tuple[str, str, int], ...]:
         return ()
     najdene: list[tuple[str, str, int]] = []
     for token in reading.tokens:
-        if token.deprel != "advcl" or token.head != head[1].index:
+        if token.head != head[1].index:
+            continue
+        if token.deprel != "advcl":
+            # PODTYP SE VYLUČUJE VÝSLOVNĚ *(W‑47)*, ne řetězcovou shodou.
+            # `advcl:pred` je DOPLNĚK („ukázalo se JAKO snižující"), ne
+            # okolnost: neodpovídá na proč ani kdy, ale na to, ČÍM se ta
+            # věc ukázala být. Sémanticky patří k `xcomp`, který se
+            # skládá do přísudku, ne přidává roli. V korpusu je ho 30
+            # výskytů proti 21 holým `advcl`, takže na náhodě stát nesmí.
             continue
         marks = [
             t.lemma

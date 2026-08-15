@@ -1,6 +1,129 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — `advcl` stojí; a moje „pět vět" bylo zase číslo bez ověření
+## Status: 🟢 PASS — správnost stojící na náhodě; a je to NÁVRAT staré třídy vad
+
+**Kolo #83.** Do jádra **nesáhl** — 989 testů zelených, `mypy --strict`
+čistý na 61 souborech, doložky **71/71**, živá parita **53/53**, dialogy
+15 / 41 / 24, gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá
+stálá regrese zelená. Jádro zůstává 0.1.20.
+
+**Architectural Health Score: 9,0 / 10** — sníženo kvůli W‑47 níž.
+
+---
+
+## Jeho odpověď je lepší než otázka, kterou jsem položil
+
+Ptal jsem se „je stráž správně, nebo úzká?". Odpověděl: **účinek je
+správný u všech tří, ale u dvou z nich z nesprávného důvodu** — a to je
+horší, než kdyby byla prostě úzká. **Správnost, která stojí na náhodě,
+se rozpadne při první změně, o které nikdo nebude vědět.** S tou větou
+souhlasím bez výhrad.
+
+Reprodukováno mnou (`nalezy/advcl_straz.py --korpus`):
+
+```
+advcl:pred   30 výskytů        ← ČASTĚJŠÍ než vlastní advcl
+advcl        21
+pod čím visí: přísudek 24 · ADJ 15 · VERB 6 · ADV 4 · NOUN 2
+```
+
+Dvě ze tří vět mají `advcl:pred`, splňují **obě** podmínky stráže —
+pod přísudkem, se spojkou — a stráž je nebere jen proto, že porovnává
+`deprel != "advcl"` **řetězcem**. Třetí věta je naopak přesně ten
+případ, pro který byla stráž zamýšlená.
+
+**Věcně je vyloučení správné** a jeho argument sedí: `advcl:pred` je
+**doplněk**, ne okolnost — *„ukázalo se jako snižující"* neodpovídá na
+proč ani kdy, ale na to, **čím** se ta věc ukázala být; sémanticky je
+blíž `xcomp`, který se podle mého rozhodnutí z #81 skládá do přísudku.
+**Stráž má tedy správný rozsah, jen ho nevyjadřuje.**
+
+**A vzal zpět svou vlastní nejistotu z minulého kola** s vysvětlením
+proč (hledal holé `advcl`, ne podtyp). Odvolat pochybnost je stejně
+cenné jako ji vyslovit.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Critical Blockers
+
+**Žádné.** Ale W‑47 níž není drobnost a je to důvod, proč jsem snížil
+skóre.
+
+---
+
+## Semantic Warnings
+
+### W‑47 · podtypy deprelů se porovnávají řetězcem — a je to NÁVRAT
+
+Tohle už jsme jednou diagnostikovali: **dodatek N** popsal přesně
+*„podtypy UD deprelů porovnávané přesnou shodou — celý trpný rod
+neviditelný"*. Třída vad se vrátila.
+
+**Změřil jsem si rozsah sám**, a je větší než jedna stráž:
+
+```
+v cascade.py: 16 míst porovnává deprel ŘETĚZCOVOU ROVNOSTÍ
+   deprel == "cop" · "nsubj" (3×) · "conj" · "cc" · "det" · "obj" · "nmod" · "advcl" …
+podtypy DOLOŽENÉ v korpusovém záznamu:
+   nsubj:pass  56 ×        obl:arg  38 ×
+   ccomp:moci   1 ×        xcomp:pomoci  1 ×
+```
+
+**`nsubj:pass` je v záznamu 56×** a `deprel == "nsubj"` je v kaskádě na
+třech místech. **Netvrdím, že to je vada** — nevím, jestli se deprel
+někde po cestě normalizuje, a podle svého vlastního pravidla to bez
+měření tvrdit nebudu. **Tvrdím, že se to musí projít a rozhodnout.**
+
+**W‑46 uzavřena** tímhle rozborem. **W‑42, W‑43, W‑44, W‑45, W‑23,
+W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: projít VŠECHNA místa, kde se deprel porovnává
+řetězcem, a u každého rozhodnout — s důvodem v kódu.**
+
+Tvoje dvě navržené drobnosti se do toho vejdou obě: `advcl:pred`
+vyloučit **výslovně**, a doména až potom, s `limit`em, který ten důvod
+nese. **Schvaluji obojí, jen v tomhle pořadí a v širším rámci** —
+protože oprava jednoho místa nechá patnáct dalších viset na téže
+náhodě.
+
+**Proč survey, a ne jen ta jedna stráž:** je to **návrat pojmenované
+třídy vad**. Když se třída vrátí, opravuje se třída, ne výskyt — jinak
+se vrátí potřetí.
+
+**Co má rozbor dát ke každému místu:** který deprel se porovnává,
+**jaké podtypy k němu v korpusu doopravdy jsou** (ne teoreticky), a
+rozhodnutí **„podtyp patří dovnitř / patří ven"** s důvodem. Kde je
+odpověď „ven", ať to kód **říká**, ne ať to vyjde.
+
+**Můj counterexample — čísla jsou MĚŘENÁ (16 míst, 4 podtypy
+v záznamu), rozhodnutí jsou na tobě:** tabulka všech míst
+s porovnáním deprelu a u každého doložené podtypy z korpusu; explicitní
+rozhodnutí u každého; **`advcl:pred` vyloučen výslovně a s důvodem**;
+**chování se nezmění ani o jednu větu**, dokud se nerozhodne jinak —
+a kde se změní, je to v diffu vidět a zdůvodněné; patnáct domén se
+závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 53/53; nula `RECALL_FAILURE`; testy zelené; jádro **zůstává
+0.1.20**; korpus přeměřen nad čistou revizí.
+
+**Doména na `advcl` až po tom** — a s `limit`em, který říká, že
+`advcl:pred` se úmyslně nebere a proč. To je tvůj návrh a je správný:
+hranice bez zapsaného důvodu se čte jako opomenutí.
+
+---
+
+## ARCHIV — kolo #82
+
+### Status: 🟢 PASS — `advcl` stojí; a moje „pět vět" bylo zase číslo bez ověření
 
 **Kolo #82.** 989 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **71/71**, živá parita **53/53**, dialogy 15 / 41 / 24 beze změny,
