@@ -166,8 +166,17 @@ def test_surface_role_cannot_be_grounded_and_says_so() -> None:
 
 
 def test_pronoun_is_refused_out_loud() -> None:
-    """Zájmeno potřebuje aktivaci (§ 4). Etalon ji nemá, protože mluví
-    jmény — a mez se ŘEKNE, nepředstírá se."""
+    """Zájmeno BEZ ANTECEDENTU se odmítne NAHLAS.
+
+    Od 0.1.16 už zájmena nejsou celá za hranicí: kandidáta z předchozí
+    věty systém NAVRHNE a zeptá se. Když ale předchozí věta žádného
+    nenabízí — a v prázdném sezení nenabízí nikoho — nesmí se sáhnout
+    jinam. Nabídnout uzel odjinud znamená tvrdit, že text odkazuje tam,
+    kde nic nestojí, a to je horší než přiznat mez.
+
+    Zápis je zakázaný pořád stejně: dokud o odkazu nepadne rozhodnutí,
+    věta se nezapisuje.
+    """
     assert "PRON" in UNSUPPORTED_UPOS
     session = Session(lexicon=shaped(NOUN_OBJECT))
     result = session.utter(
@@ -181,7 +190,7 @@ def test_pronoun_is_refused_out_loud() -> None:
     )
     assert result.statement_id is None
     assert result.question is not None
-    assert "Zájmena zatím neumím" in result.question
+    assert "V předchozí větě nikdo takový nestojí" in result.question
     assert session.program() == ()
 
 

@@ -949,6 +949,37 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-34",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "KONTEXT TEXTU: sezení si pamatuje, co bylo zakotveno ve větě "
+            "PŘEDTÍM, a z toho NAVRHUJE antecedenty zájmen. Je to nová "
+            "INFORMACE, ne nová inference — nic se z ní neodvozuje, jen "
+            "se z ní nabízí. Shoda rodu a čísla kandidáty jen ZUŽUJE, "
+            "nikdy nevybírá, a systém se ptá i tehdy, když je kandidát "
+            "JEDINÝ (I‑13): rozdíl mezi „trefil jsem týž uzel“ a „člověk "
+            "řekl, že to je týž“ je celá M‑2 a tichý default u identity "
+            "uzly tiše slije nebo rozštěpí. Dokud rozhodnutí nepadne, "
+            "NEZAPISUJE SE NIC. Kandidát, který v předchozí větě není, se "
+            "NENABÍDNE, a skupina se nenabídne nikdy — zájmeno odkazuje "
+            "na uzel, ne na třídu. Kontext se posouvá jen po větě, která "
+            "se opravdu zakotvila"
+        ),
+        anchor="core_semantics.grounding:Discourse",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_antecedent_is_offered_from_the_previous_sentence",
+            "test_nothing_is_written_before_the_reference_is_decided",
+            "test_it_asks_even_when_the_candidate_is_the_only_one",
+            "test_a_candidate_that_is_not_in_the_previous_sentence_is_not_offered",
+            "test_a_group_is_never_offered_as_an_antecedent",
+            "test_after_the_decision_the_fact_lands_on_the_same_node",
+            "test_the_question_about_that_node_is_then_answered",
+            "test_without_the_answer_the_question_stays_unknown",
+            "test_the_context_moves_only_after_a_sentence_that_grounded",
+        ),
+    ),
+    Clause(
         id="S-32",
         boundary=SESSION_STORAGE,
         promise=(

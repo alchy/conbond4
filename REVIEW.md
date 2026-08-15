@@ -1,6 +1,173 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — uzavření světa z české věty, celý kruh; a nález, který je cennější než sama doména
+## Status: 🟢 PASS — DEVĚT Z DEVÍTI jádrových relací píše česká věta
+
+**Kolo #70.** 904 testů zelených, `mypy --strict` čistý na 60 souborech,
+doložky **64/64**, živá parita **45/45**, dialogy 12 / 31 / 22, gate
+*Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá regrese zelená.
+**Jedenáct starých domén se závěry beze změny.** Jádro 0.1.15.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Milník, který stojí za zapsání
+
+```
+jádrové predikáty zapsané krokem z ČESKÉ VĚTY:  9 z 9    zbývá: —
+before · complete · contains · disjoint · member · name · same_as · subset · within
+```
+
+Před kolem #59 to byly **dva**. Vzorec „schopnost v jádře, ke které jazyk
+nevede" — ten, který vyrobil B‑10, B‑11, B‑13 i W‑19 — **v tomhle
+seznamu už nemá kde být.**
+
+## Měřeno mnou
+
+```
+» Jan je učitel.                ✓ member
+» Je Honza učitel?              → NEVÍM
+» Jan se jmenuje taky Honza.    ✓ name(of:Jan, value:Honza)
+» Je Honza učitel?              → ANO
+     Honza → Jan (kanonicky; týž uzel, o kterém už řeč byla)
+     - řekls: member(elem:Jan, group:·učitel)
+   [doloženo: s0001, s0002]        ← ZAKOTVENÍ JE V CITACI
+```
+
+**Nález kolo je téže třídy jako výčet u uzavření v #69 a je správný:**
+odpověď, která se na uzel dostala **přes jméno**, dřív necitovala výrok,
+kterým je to jméno navázané — čtenář neměl jak zjistit, proč otázka
+o Honzovi skončila u Jana. Zakotvení není premisa důkazu, je to krok
+**před** ním; ale bez něj by se dotaz na ten uzel netrefil, takže do
+citace patří.
+
+**Stráže, které jsem si ověřil sám:**
+
+```
+» Ředitel jmenuje Jana.         ◐ jmenovat(co:Jan, kdo:∀ředitel)   ← NENÍ pojmenování
+» Honza se jmenuje taky Jan.    ✓ name(of:Honza, value:Jan)        ← strany určuje DEPREL
+```
+
+Obě jména jsou v nominativu, takže generátor vyrobí dvě čtení a podle
+pořadí by se jednou zapsal pravý opak. Že o stranách rozhoduje `deprel`
+a ne pozice, je ta správná odpověď.
+
+**W‑20 zavřena.** Příčina byla **jedna větev pro dvě různé věci**: role
+s právě jedním mapováním, jehož kanonické jméno už někdo v téže větě
+zabral, spadla do větve „tvar, který nikdo nepojmenoval". Teď se to
+jmenuje `[KOLIZE: …]` a **neptá se** — otázka, na kterou systém odpověď
+zná, je otázka bez odběratele. Test to tvrdí chováním (`question is None`).
+
+**W‑29 zavřena a výjimka je úzká, ověřeno protipólem:**
+
+```
+» To jsou všichni psi.   ptá se na referenci: NE
+» Ten pes štěká.         ptá se na referenci: ANO
+```
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete/nepřímý ✓ · complete/cizí ✓
+```
+
+**`ROLE_SORTS` beru jako správnou delegaci.** `name` je první relace,
+kde strany **nejsou na téže ose** — `of` je uzel, `value` je nálepka —
+a slít je do jednoho sortu by znamenalo, že jméno je porovnatelné
+s uzlem, který ho nese. Že `Operation.NAME` je v menu, ale **ne**
+v `RELATIONAL`, je táž úvaha ze druhé strany: u „Kočka je savec." by to
+byla položka, na kterou tam nejde odpovědět.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑30 (drobný) · `test_the_collision_mark_survives_the_later_tiers`
+tvrdí TVAR, ne chování** — že pole `collided` existuje a že ve zdrojáku
+je řetězec „W‑20". Chování hlídá vedlejší test (`question is None`),
+takže iluze pokrytí nevzniká; ten druhý je ale ozdobný a při přejmenování
+pole zůstane zelený z nesprávného důvodu.
+
+**W‑23, W‑25, W‑26** leží dál podle dohody.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: KONTEXT TEXTU — zájmena a zástupná označení.
+Zadáno člověkem, ne mnou, a je to správně.**
+
+Jádrové relace jsou hotové. Největší díra, kterou systém dnes **sám
+hlásí**, je tahle:
+
+```
+» On má auto.
+   ? Na koho odkazuje „On“? Zájmena zatím neumím — potřebují vědět,
+     o čem se právě mluví, a to je vrstva, kterou nemám.
+```
+
+**Zadání od člověka, doslova:** *„slova jako on, jeho, zástupná označení
+— jsou data, která vycházejí ze struktury textu"* a *„conbond3 pracoval
+s hledáním podmětu pro možnost přiřazení vět"*. To je rozhodnutí
+o architektuře a beru ho jako závazné: rozřešení odkazu **není hádání
+z významu**, je to čtení ze **struktury sousedství vět** — týž princip
+jako celý zbytek systému, kde tvar navrhuje a jádro rozhoduje.
+
+**Co z toho plyne pro tvar řešení:**
+
+1. Sezení dnes zná **tah**, ne **text**. Odkaz potřebuje vědět, co bylo
+   ve **větě předtím** — to je nová informace, ne nová inference.
+2. Kandidát na antecedent se **navrhuje**, nikdy nedosazuje. Tichý default
+   u identity je nejdražší chyba, jakou tenhle systém může udělat
+   (uzly se tiše slijí nebo rozštěpí).
+3. Když je kandidát právě jeden a shoda rodu/čísla sedí, **pořád se
+   ptá** — dokud o tom nepadne vědomé rozhodnutí (I‑13). Rozdíl mezi
+   „trefil jsem týž uzel" a „člověk řekl, že to je týž" je celá M‑2.
+
+**Můj counterexample — bez něj neschválím:** dvouvětá doména, kde druhá
+věta odkazuje zájmenem, systém **navrhne** antecedent z předchozí věty
+a **zeptá se**; po odpovědi zapíše fakt na **týž uzel** a otázka na něj
+odpoví `A` s důkazem citujícím **oba** výroky i zakotvení; **bez
+odpovědi se nezapíše nic**; kandidát, který v předchozí větě není, se
+**nenabídne**; dvanáct domén se závěry beze změny (a když se některý
+změní, **napiš to**); devět z devíti jádrových relací dál píše česká
+věta; gate *Farmaka* `N`/`s0005`; parita ≥ 45/45; nula `RECALL_FAILURE`;
+testy zelené.
+
+**ROZHODNUTÍ ČLOVĚKA O TOM, KDE TO ŘEŠIT — a je závazné.** Doslova:
+*„musíš předzpracovat text tak, aby byl čitelný pro conBond4, nebo
+doplnit conBondu4 funkcionalitu. Dialogový text se bude podobat textu,
+který nacházíš běžně na internetu. Proto je zásadní, aby se systém uměl
+chovat tak, aby psanému textu rozuměl NATIVNĚ."*
+
+**Znamená to: doplnit jádro, ne obcházet ho předzpracováním.** Čistič,
+který zájmena předem nahradí jmény, by vyrobil text, jakému rozumí
+conBond4 — a zakryl by přesně to, co se má naučit. Předzpracování
+zůstává nástrojem na **měření** (co dnes projde), ne na **schování**
+toho, co neprojde.
+
+Do téže třídy patří i tvary, které člověk vyjmenoval vedle zájmen:
+`on`, `jeho`, `její`, a slovesné tvary `byli`, `jsou` — shoda rodu
+a čísla na přísudku je **taky odkaz do struktury textu**, ne jen
+gramatická ozdoba, a je to totéž vodítko, kterým se hledá podmět.
+
+**Materiál k měření už existuje a nemusíš ho vyrábět:** `conbond4-utils`
+bere téma z Wikipedie, dělí ho **touž službou**, která větu rozebírá,
+a měří, kam se každá věta dostane. První měření na čtyřech tématech
+(236 vět) dalo **`ZAPSÁNO 0`** — encyklopedická próza je dnes celá za
+hranicí, a zájmena jsou jeden z důvodů. To číslo je teď měřitelný cíl.
+
+---
+
+## ARCHIV — kolo #69
+
+### Status: 🟢 PASS — uzavření světa z české věty, celý kruh; a nález, který je cennější než sama doména
 
 **Kolo #69.** 877 testů zelených, `mypy --strict` čistý na 59 souborech,
 doložky **62/62**, živá parita **42/42**, dialogy 11 / 29 / 20, gate

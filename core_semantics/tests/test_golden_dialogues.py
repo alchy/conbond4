@@ -23,7 +23,7 @@ from core_semantics.session import (
     names_relation_here,
 )
 from core_semantics.ast import Group
-from core_semantics.session import declares_complete, revokes
+from core_semantics.session import declares_complete, decides_reference, revokes
 from core_semantics.tests._console import echo
 from core_semantics.tests.dialogues import DIALOGUES, Dialogue, Step
 
@@ -65,6 +65,7 @@ def _is_turn(step: Step) -> bool:
         or step.answers_here is not None
         or step.answers_relation is not None
         or step.answers_relation_here is not None
+        or step.decides_reference is not None
         or step.declares_complete != ""
         or step.revokes_complete != ""
     )
@@ -80,6 +81,14 @@ def _answer(
     hlídala shodu dvou zápisů místo chování."""
     assert done, "tah bez předchozí věty nemá na co odpovídat"
     previous, result = done[-1]
+    if step.decides_reference is not None:
+        # ODKAZ. Rozhoduje se na PREDIKACI předchozího kroku — ta nese
+        # roli, která na antecedent čeká.
+        role_name, node_id = step.decides_reference
+        assert result.predication is not None
+        return session.play(
+            decides_reference(step.text, result.predication, role_name, node_id)
+        )
     if step.declares_complete:
         # UZAVŘENÍ SVĚTA. Není to odpověď na otázku po tvaru — je to
         # prohlášení mluvčího, takže se skládá ze skupiny, ne z toho, na

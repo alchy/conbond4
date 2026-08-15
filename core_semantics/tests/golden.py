@@ -954,6 +954,62 @@ N3 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# O · kontext textu (třináctý akceptační dialog)
+# --------------------------------------------------------------------------
+#
+# V PRÁZDNÉ bázi nemá zájmeno kam ukázat — sada proto fixuje, že se systém
+# ptá a nic si nedomýšlí. Že v doméně kandidát z předchozí věty JE, měří
+# sada dialogů; tady se drží ta druhá půlka, bez které by první nedávala
+# smysl: bez kontextu se NEHÁDÁ.
+
+O1 = Golden(
+    dialogue="O",
+    text="On bydlí v Petrovicích.",
+    tokens=(
+        tok(1, "On", "on", "PRON", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing", Person="3", PronType="Prs"),
+        tok(2, "bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        tok(4, "Petrovicích", "Petrovice", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+        tok(5, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    predication="bydlet(kdo:on, v+Loc:Petrovice)",
+    asks=(
+        "zájmeno čeká na ODKAZ. Bez předchozí věty není koho nabídnout — "
+        "a nabídnout uzel odjinud by znamenalo tvrdit, že text odkazuje "
+        "tam, kde nic nestojí"
+    ),
+)
+
+O2 = Golden(
+    dialogue="O",
+    text="Ona bydlí v Praze.",
+    tokens=(
+        tok(1, "Ona", "on", "PRON", 2, "nsubj", Case="Nom", Gender="Fem", Number="Sing", Person="3", PronType="Prs"),
+        tok(2, "bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        tok(4, "Praze", "Praha", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    predication="bydlet(kdo:on, v+Loc:·Praha)",
+    asks="týž tvar, ženský rod — shoda je vodítko, kterým se kandidáti ZUŽUJÍ",
+)
+
+O3 = Golden(
+    dialogue="O",
+    text="Bydlí Jan v Plzni?",
+    tokens=(
+        tok(1, "Bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "Jan", "Jan", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        tok(4, "Plzni", "Plzeň", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+        tok(5, "?", "?", "PUNCT", 1, "punct"),
+    ),
+    predication="bydlet(kdo:·Jan, v+Loc:·Plzeň)",
+    asks="„v+Loc“ je v prázdném lexikonu pořád jen tvar, ne význam",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
@@ -964,6 +1020,7 @@ CORPUS: tuple[Golden, ...] = (
     L1, L2, L3, L4,
     M1, M2, M3, M4, M5,
     N1, N2, N3,
+    O1, O2, O3,
 )
 
 

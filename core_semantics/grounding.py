@@ -136,6 +136,12 @@ class Grounded:
     anchors: tuple[Anchor, ...] = ()
     notes: tuple[str, ...] = ()
     question: str | None = None
+    #: Tokeny, na které se ZEPTALO ZAKOTVENÍ. Kaskáda se na tytéž role
+    #: může ptát po kvantifikátoru — jenže u zájmena ho rozhodne až
+    #: antecedent, takže by to byla otázka na něco, co ta druhá odpověď
+    #: stejně nastaví. Dvě otázky na tutéž věc jsou horší než jedna:
+    #: člověk neví, kterou z nich odpovídá.
+    asked: tuple[int, ...] = ()
 
     @property
     def cited(self) -> tuple[str, ...]:
@@ -150,6 +156,60 @@ class Grounded:
     @property
     def ok(self) -> bool:
         return self.formula is not None
+
+
+@dataclass(frozen=True, slots=True)
+class Discourse:
+    """Co bylo řečeno ve VĚTĚ PŘEDTÍM — kontext textu *(0.1.16)*.
+
+    **Je to nová INFORMACE, ne nová inference.** Sezení dosud znalo TAH,
+    ne TEXT: každá věta se zakotvovala sama za sebe, protože etalon mluvil
+    jmény a odkaz nepotřeboval. Souvislý psaný text ale odkazuje pořád —
+    „Jan je učitel. **On** bydlí v Praze." — a bez paměti předchozí věty
+    není zájmeno na co navázat.
+
+    **Předzpracování by to zakrylo.** Čistič, který zájmena předem nahradí
+    jmény, vyrobí text, jakému systém rozumí, a schová právě to, co se má
+    naučit. Proto je kontext tady, ve vrstvě, která zmínky na uzly váže.
+
+    Drží se ZMÍNKA i UZEL: jméno samo by nestačilo, protože kandidát se
+    musí umět shodnout v rodě a čísle, a to je vlastnost zmínky.
+    """
+
+    #: `(zmínka, uzel)` z poslední zakotvené věty, v pořadí výskytu.
+    mentions: tuple[tuple[Mention, Term], ...] = ()
+
+    def candidates(self, pronoun: Mention) -> tuple[tuple[Mention, Term], ...]:
+        """Antecedenti, kteří se se zájmenem SHODUJÍ v rodě a čísle.
+
+        Shoda je vodítko struktury textu, ne důkaz — proto se jí kandidáti
+        jen ZUŽUJÍ, nikdy nevybírá. Kandidát, který v předchozí větě není,
+        se nenabídne vůbec: nabídnout uzel odjinud znamená tvrdit, že text
+        odkazuje tam, kde nic nestojí.
+        """
+        want = dict(pronoun.feats)
+        found: list[tuple[Mention, Term]] = []
+        for mention, term in self.mentions:
+            if term.SORT is Sort.GROUP:
+                # Skupina není uzel. „Jan je učitel." nabízí Jana, ne
+                # „učitele": zájmeno odkazuje na TOHO, o kom byla řeč,
+                # a ztotožnit ho s celou třídou by z individua udělalo
+                # druh.
+                continue
+            feats = dict(mention.feats)
+            if any(
+                key in want and key in feats and want[key] != feats[key]
+                for key in ("Gender", "Number")
+            ):
+                continue
+            found.append((mention, term))
+        return tuple(found)
+
+
+#: Zájmena, která odkazují do PŘEDCHOZÍHO textu. Osobní a přivlastňovací
+#: ve 3. osobě — první a druhá osoba míří na účastníky rozhovoru, ne do
+#: textu, a tam by antecedent hledat nešlo.
+ANAPHORIC_LEMMAS = ("on", "jeho", "její", "jejich", "ten", "tento")
 
 
 def name_of(mention: Mention) -> str:
@@ -216,6 +276,53 @@ def _presentational_subject(reading: RoleReading) -> bool:
     )
 
 
+def _resolve_anaphor(reading: RoleReading, discourse: Discourse) -> _Resolution:
+    """Zájmeno na antecedent z PŘEDCHOZÍ věty — NÁVRH, nikdy dosazení.
+
+    **Ptá se i tehdy, když je kandidát právě jeden.** Shoda rodu a čísla
+    je vodítko struktury textu, ne důkaz: „Jan je učitel. On bydlí
+    v Praze." má jediného kandidáta, ale „trefil jsem týž uzel" a „ČLOVĚK
+    ŘEKL, že to je týž" jsou dvě různé věci a celá M‑2 stojí na tom
+    rozdílu. Tichý default u identity je nejdražší chyba, jakou tenhle
+    systém může udělat — uzly se tiše slijí nebo rozštěpí a nepozná to
+    žádný test, ke kterému jazyk nevede.
+
+    **Kandidát, který v předchozí větě není, se NENABÍDNE.** Nabídnout uzel
+    odjinud znamená tvrdit, že text odkazuje tam, kde nic nestojí.
+    """
+    mention = reading.mention
+    if mention.lemma not in ANAPHORIC_LEMMAS:
+        return (
+            None,
+            BindingType.GROUP,
+            "",
+            f"Na koho odkazuje „{mention.form}“? Tohle zájmeno neumím "
+            f"navázat — odkazuje mimo text, ne do něj. Řekni to prosím "
+            f"jménem.",
+        )
+    offered = discourse.candidates(mention)
+    if not offered:
+        return (
+            None,
+            BindingType.GROUP,
+            "",
+            f"Na koho odkazuje „{mention.form}“? V předchozí větě nikdo "
+            f"takový nestojí — a nabídnout uzel odjinud by znamenalo "
+            f"tvrdit, že text odkazuje tam, kde nic není. Řekni to prosím "
+            f"jménem.",
+        )
+    which = ", ".join(f"„{m.form}“ ({t.id})" for m, t in offered)
+    return (
+        None,
+        BindingType.GROUP,
+        "",
+        f"Na koho odkazuje „{mention.form}“? Z předchozí věty to podle "
+        f"shody rodu a čísla může být {which}. Rozhodnout to musíš ty — "
+        f"shoda je vodítko, ne důkaz, a ztotožnit uzly mlčky je "
+        f"nejdražší chyba, jakou můžu udělat.",
+    )
+
+
 #: `(uzel, druh vazby, dovysvětlení, otázka)`. Uzel `None` znamená doptání.
 _Resolution = tuple[Term | None, BindingType, str, str | None]
 
@@ -226,6 +333,7 @@ def _ground_role(
     reading: RoleReading,
     view: ResolvedGraphView,
     relation: Sort | None = None,
+    discourse: "Discourse | None" = None,
 ) -> _Resolution:
     mention = reading.mention
 
@@ -251,14 +359,7 @@ def _ground_role(
         return _UNRESOLVED
 
     if mention.upos in UNSUPPORTED_UPOS:
-        return (
-            None,
-            BindingType.GROUP,
-            "",
-            f"Na koho odkazuje „{mention.form}“? Zájmena zatím neumím — "
-            f"potřebují vědět, o čem se právě mluví, a to je vrstva, "
-            f"kterou nemám. Řekni to prosím jménem.",
-        )
+        return _resolve_anaphor(reading, discourse or Discourse())
 
     if reading.awaiting == AWAITING_QUANTIFIER:
         return _UNRESOLVED  # otázku už položila kaskáda; nedublovat ji
@@ -452,7 +553,11 @@ def semantic_rejection(engine: "Engine") -> Callable[[Predication], Rejection | 
     return reject
 
 
-def ground(predication: Predication, view: ResolvedGraphView) -> Grounded:
+def ground(
+    predication: Predication,
+    view: ResolvedGraphView,
+    discourse: "Discourse | None" = None,
+) -> Grounded:
     """Zmínky na uzly a čtení na formuli.
 
     **Nic nezapisuje.** Vrátí formuli; zapsat ji je tah `!`, a jen tam smí
@@ -461,6 +566,7 @@ def ground(predication: Predication, view: ResolvedGraphView) -> Grounded:
     anchors: list[Anchor] = []
     notes: list[str] = []
     questions: list[str] = []
+    asked: list[int] = []
     fillers = []
 
     relation_sort = (
@@ -473,10 +579,14 @@ def ground(predication: Predication, view: ResolvedGraphView) -> Grounded:
     per_role = ROLE_SORTS.get(predication.predicate, {})
     for reading in predication.roles:
         term, binding, detail, question = _ground_role(
-            reading, view, per_role.get(reading.name, relation_sort)
+            reading,
+            view,
+            per_role.get(reading.name, relation_sort),
+            discourse or Discourse(),
         )
         if question:
             questions.append(question)
+            asked.append(reading.mention.token_index)
         if term is None:
             if not question:
                 notes.append(
@@ -520,6 +630,7 @@ def ground(predication: Predication, view: ResolvedGraphView) -> Grounded:
             anchors=tuple(anchors),
             notes=tuple(notes),
             question=" ".join(questions) if questions else None,
+            asked=tuple(asked),
         )
 
     try:

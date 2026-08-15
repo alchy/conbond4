@@ -71,6 +71,7 @@ from .cascade import (
     quantifier_tier,
     as_relation,
     complete_question,
+    anaphora_tier,
     completeness_tier,
     naming_tier,
     relation_question,
@@ -82,7 +83,13 @@ from .cascade import (
 from .engine import Engine
 from .epistemics import BoundResult, query_bound
 from .gaps import GapFinder
-from .grounding import BindingType, Grounded, ground, semantic_rejection
+from .grounding import (
+    BindingType,
+    Discourse,
+    Grounded,
+    ground,
+    semantic_rejection,
+)
 from .lexicon import (
     Lexicon,
     Mood,
@@ -598,6 +605,13 @@ class Session:
         #: podle jiných naučených vzorů a „diff naučeného" (§ 10) by nešel
         #: přečíst z žurnálu.
         self.lexicon = czech_seed() if lexicon is None else lexicon
+        #: KONTEXT TEXTU — co bylo zakotveno ve větě předtím *(0.1.16)*.
+        #: Sezení dosud znalo TAH, ne TEXT: každá věta se zakotvovala sama
+        #: za sebe, protože etalon mluvil jmény. Souvislý psaný text ale
+        #: odkazuje pořád, a zájmeno bez paměti předchozí věty nemá na co
+        #: navázat. Je to nová INFORMACE, ne nová inference — nic se z ní
+        #: neodvozuje, jen se z ní NABÍZEJÍ kandidáti.
+        self._discourse = Discourse()
 
     def tiers(self) -> tuple[Tier, ...]:
         """Patra kaskády v pořadí § 5.2: tvrdé filtry → konzistence s bází
@@ -621,6 +635,9 @@ class Session:
             # role na jádrové (`of`/`value`), takže co přijde po něm, už
             # vidí hotovou jádrovou relaci.
             naming_tier(),
+            # Odkaz PŘED kvantifikátorem: role, která čeká na antecedent,
+            # se na kvantifikátor ptát nemá — rozhodne ho ten antecedent.
+            anaphora_tier(),
             # Uzavření světa až ZA relací: patro jen navrhuje a nikdy nic
             # nedosazuje, takže pořadí nemění čtení — mění jen to, v jakém
             # pořadí se člověk ptá.
@@ -974,8 +991,23 @@ class Session:
         # Je to zrcadlo nálezu z N‑3: tam se otázka četla ze STOPY, tedy
         # z logu, tady se počítala PŘED krokem, který ji ruší. Obojí má
         # touž opravu — ptát se AŽ VÝSLEDKU.
-        grounded = ground(predication, self.kb.view())
+        grounded = ground(predication, self.kb.view(), self._discourse)
+        # Kontext se posouvá jen po větě, která se OPRAVDU zakotvila.
+        # Věta, u které se systém ptá, ještě není řečená do konce, a
+        # nabízet z ní antecedenty by znamenalo odkazovat na uzly, o
+        # kterých se teprve rozhoduje.
+        if grounded.formula is not None:
+            self._discourse = Discourse(
+                mentions=tuple(
+                    (anchor.mention, anchor.term) for anchor in grounded.anchors
+                )
+            )
         anchored = {anchor.mention.token_index for anchor in grounded.anchors}
+        # Role, na kterou se už ptá ZAKOTVENÍ, se nemá ptát podruhé na
+        # kvantifikátor: u zájmena ho rozhodne až antecedent, takže by to
+        # byla otázka na něco, co ta druhá odpověď stejně nastaví — a
+        # člověk by nevěděl, kterou z těch dvou právě odpovídá.
+        anchored |= set(grounded.asked)
         still_open = tuple(
             role
             for role in predication.open_roles()
@@ -1266,7 +1298,7 @@ class Session:
                 trace=verdict.trace,
             )
         predication = verdict.decided.predication
-        grounded = ground(predication, self.kb.view())
+        grounded = ground(predication, self.kb.view(), self._discourse)
         lines.append(f"  čtení: {predication}")
         owned = self._possessed_node(grounded)
         if owned is None:

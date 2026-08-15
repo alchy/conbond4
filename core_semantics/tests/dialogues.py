@@ -107,6 +107,11 @@ class Step:
     #: pole, a ne jedna z odpovědí: `complete(g)` se ničím neučí a je to
     #: jediný výrok, který mění, co znamená TICHO.
     declares_complete: str = ""
+    #: `(jméno role, uzel)` — krok ROZHODUJE, na koho zájmeno odkazuje
+    #: (`→=`). Vlastní pole: shoda rodu a čísla je vodítko struktury
+    #: textu, ne důkaz, takže antecedent vybírá ČLOVĚK i tehdy, když je
+    #: kandidát jediný.
+    decides_reference: tuple[str, str] | None = None
     #: Důvod — krok ODVOLÁVÁ výrok zapsaný krokem `declares_complete`.
     #: Uzavření světa je DEKLARACE, ne trvalá vlastnost, a sada to musí
     #: umět projít celou cestou tam i zpět.
@@ -1448,6 +1453,141 @@ NAMING = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 13 · Jan a Plzeň — KONTEXT TEXTU, zájmeno odkazuje do předchozí věty
+# --------------------------------------------------------------------------
+
+DISCOURSE = Dialogue(
+    name="Jan a Plzeň",
+    source="„Jan je učitel. … On bydlí v Petrovicích. … Bydlí Jan v Plzni?“",
+    shapes=(
+        ("PROPN", "Sing", "Nom", "nsubj", Operation.SELF),
+        ("PROPN", "Plur", "Nom", "nsubj", Operation.SELF),
+        ("PROPN", "Plur", "Loc", "obl", Operation.SELF),
+        ("PROPN", "Sing", "Loc", "obl", Operation.SELF),
+        ("PROPN", "Sing", "Gen", "nmod", Operation.SELF),
+        ("NOUN", "Sing", "Nom", "root", Operation.SELF),
+        ("NOUN", "Sing", "Ins", "root", Operation.SELF),
+    ),
+    roles=(("v+Loc", "kde"),),
+    steps=(
+        Step(
+            text="Jan je učitel.",
+            reading=sentence(
+                w("Jan", "Jan", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("učitel", "učitel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Jan, group:·učitel)",
+            writes="member(elem:Jan, group:·učitel)",
+            point="věta, do které bude další věta ODKAZOVAT — kontext, ne jen fakt",
+        ),
+        Step(
+            text="Ona bydlí v Praze.",
+            reading=sentence(
+                w("Ona", "on", "PRON", 2, "nsubj", Case="Nom", Gender="Fem", Number="Sing", Person="3", PronType="Prs"),
+                w("bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Praze", "Praha", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            asks=(
+                "KANDIDÁT, KTERÝ V PŘEDCHOZÍ VĚTĚ NENÍ, SE NENABÍDNE. "
+                "„Ona“ je ženského rodu, v předchozí větě stojí jen Jan — "
+                "systém proto nenabídne nikoho a řekne proč. Nabídnout "
+                "uzel odjinud by znamenalo tvrdit, že text odkazuje tam, "
+                "kde nic nestojí"
+            ),
+            point="krok, který NIC NEZAPÍŠE, a je to správně",
+        ),
+        Step(
+            text="On bydlí v Petrovicích.",
+            reading=sentence(
+                w("On", "on", "PRON", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing", Person="3", PronType="Prs"),
+                w("bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Petrovicích", "Petrovice", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            asks=(
+                "NAVRHNE antecedent z předchozí věty a ZEPTÁ SE — i když "
+                "je kandidát JEDINÝ a shoda rodu a čísla sedí. Shoda je "
+                "vodítko struktury textu, ne důkaz: „trefil jsem týž "
+                "uzel“ a „člověk řekl, že to je týž“ jsou dvě různé věci "
+                "a celá M‑2 stojí na tom rozdílu"
+            ),
+            point=(
+                "DRUHÝ krok, který nic nezapíše. Tichý default u identity "
+                "je nejdražší chyba, jakou tenhle systém může udělat: uzly "
+                "se tiše slijí nebo rozštěpí a nepozná to žádný test, "
+                "ke kterému jazyk nevede"
+            ),
+        ),
+        Step(
+            text="Myslím Jana.",
+            decides_reference=("kdo", "Jan"),
+            reads="bydlet(kde:Petrovice, kdo:on)",
+            writes="bydlet(kde:Petrovice, kdo:Jan)",
+            point=(
+                "ODPOVĚĎ JE TAH (`→=`) a teprve po ní se zapisuje — na "
+                "TÝŽ uzel, o kterém byla řeč v první větě. Rozhodnutí leží "
+                "v žurnálu, takže se `replay` neptá podruhé a nevyjde ani "
+                "jinak, kdyby mezitím v bázi přibyl další kandidát"
+            ),
+        ),
+        Step(
+            text="Petrovice jsou součástí Plzně.",
+            reading=sentence(
+                w("Petrovice", "Petrovice", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Geo", Number="Plur"),
+                w("jsou", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("součástí", "součást", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+                w("Plzně", "Plzeň", "PROPN", 3, "nmod", Case="Gen", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            asks="tvar „být součástí“ je dvojznačný a ptá se (B‑17)",
+            point="článek, bez kterého by závěr domény neplynul",
+        ),
+        Step(
+            text="Je to místo uvnitř místa.",
+            answers_relation_here=Operation.CONTAINS,
+            writes="contains(part:Petrovice, whole:Plzeň)",
+            point="`→⊆1` — per‑větná relace, tvar se neučí (N‑11)",
+        ),
+        Step(
+            text="Bydlí Jan v Plzni?",
+            reading=sentence(
+                w("Bydlí", "bydlet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Jan", "Jan", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Plzni", "Plzeň", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
+            ),
+            reads="bydlet(kde:Plzeň, kdo:·Jan)",
+            answers="A",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Nikdo neřekl, že Jan "
+                "bydlí v Plzni — plyne to z faktu, který se do báze dostal "
+                "PŘES ZÁJMENO, a ze zahrnutí míst. Důkaz cituje OBA "
+                "zápisy, a ten první by bez rozhodnutí o odkazu vůbec "
+                "nevznikl"
+            ),
+        ),
+    ),
+    note=(
+        "Třináctý akceptační dialog a první, který potřebuje KONTEXT "
+        "TEXTU. Sezení dosud znalo TAH, ne TEXT: každá věta se zakotvovala "
+        "sama za sebe, protože etalon mluvil jmény. Souvislý psaný text "
+        "ale odkazuje pořád, a bez paměti předchozí věty není zájmeno na "
+        "co navázat. Je to nová INFORMACE, ne nová inference — nic se "
+        "z ní neodvozuje, jen se z ní NABÍZEJÍ kandidáti. Předzpracování "
+        "by tuhle mezeru zakrylo: čistič, který zájmena předem nahradí "
+        "jmény, vyrobí text, jakému systém rozumí, a schová právě to, co "
+        "se má naučit."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -1461,4 +1601,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     INCLUSION,
     CLOSURE,
     NAMING,
+    DISCOURSE,
 )

@@ -1401,6 +1401,63 @@ def relation_tier(lexicon: Lexicon) -> Tier:
     return tier
 
 
+#: Zájmena, která odkazují do PŘEDCHOZÍHO textu. Osobní a přivlastňovací
+#: ve 3. osobě; první a druhá osoba míří na účastníky rozhovoru, ne do
+#: textu, a tam by antecedent hledat nešlo.
+ANAPHORIC_LEMMAS = ("on", "jeho", "její", "jejich")
+
+
+def anaphora_tier() -> Tier:
+    """Zájmeno ČEKÁ NA ODKAZ — kontext textu *(0.1.16)*.
+
+    Patro nic nerozhoduje a nic nenavrhuje; jen označí roli, jejíž zmínka
+    je anaforické zájmeno, jako čekající na rozhodnutí o odkazu. Kandidáty
+    nabízí až zakotvení, protože jen ono zná předchozí větu.
+
+    **Proč to musí být tady, a ne jen v otázce.** Otázku umí položit
+    zakotvení, ale ODPOVĚĎ (`→=`) hledá roli, která na odkaz čeká — a
+    hledá ji v PREDIKACI. Kdyby značka zůstala jen u otázky, systém by se
+    zeptal a vzápětí odmítl odpověď se slovy „role na odkaz nečeká". Je to
+    táž lekce jako B‑17: stav, na kterém někdo staví, musí mít vlastní
+    místo v predikaci, ne jen ve výstupu jednoho kroku.
+
+    **Kvantifikátor se u zájmena neptá.** Rozhodne ho antecedent, takže by
+    to byla otázka na něco, co druhá odpověď stejně nastaví.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        marked: list[Candidate] = []
+        for candidate in candidates:
+            roles = []
+            for role in candidate.predication.roles:
+                if (
+                    role.mention.lemma in ANAPHORIC_LEMMAS
+                    and role.mention.upos in ("PRON", "DET")
+                    and not role.resolved
+                ):
+                    notes.append(
+                        f"[ODKAZ: „{role.mention.form}“ ukazuje do "
+                        f"předchozí věty — čeká se na rozhodnutí]"
+                    )
+                    roles.append(
+                        replace(role, awaiting=AWAITING_REFERENCE, pending=None)
+                    )
+                    continue
+                roles.append(role)
+            marked.append(
+                Candidate(
+                    replace(candidate.predication, roles=tuple(roles)),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(marked), "; ".join(notes) if notes else None
+
+    return tier
+
+
 def naming_shape(reading: Reading) -> "_Naming | None":
     """Konstrukce „X **se jmenuje** Y" — nebo `None`.
 
