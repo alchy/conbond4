@@ -1471,3 +1471,69 @@ def test_an_ambiguous_number_still_counts_as_singular() -> None:
         provenance="test",
     )
     assert [t.form for t in titled_name_of(hlava, reading)] == ["Božena"]
+
+
+# --------------------------------------------------------------------------
+# ZEĎ JMEN ROLÍ — dvě DOLOŽENÉ MEZE, ne zamýšlené *(kolo #96)*
+# --------------------------------------------------------------------------
+#
+# Obojí je NÁLEZ Z MĚŘENÍ, ne oprava: rozhodnutí, co se s tím udělá,
+# patří dalšímu kolu. Testy tu jsou proto, aby ta mez byla DOLOŽENÁ —
+# a aby se dalo poznat, kdy přestane platit.
+
+
+def test_a_composed_head_hides_its_genitive_attribute() -> None:
+    """PŘEHLÉDNUTÝ PŘÍVLASTEK — 13 z 22 výskytů tvaru `Gen` v korpusu.
+
+    `genitive_attributes` páruje hlavu SHODOU LEMMAT, jenže zmínka ve
+    čtení je SLOŽENÁ: „prvním předsedou **odboru**" má v rozboru hlavu
+    `předseda`, ale ve čtení leží `první_předseda`. Shoda selže a genitiv
+    skončí jako ROLE PREDIKACE, na kterou se systém ptá „co znamená".
+
+    **Je to posedmé táž rodina** (W‑32, W‑47, W‑48, B‑18, B‑22, W‑53):
+    kategorie porovnaná přesnou shodou tam, kde hodnotu skládá někdo
+    jiný. Stabilní identita je `token_index`, ne lemma.
+    """
+    from core_semantics.cascade import genitive_attributes
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Byl", "být", "AUX", 3, "cop", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "prvním", "první", "ADJ", 3, "amod", Case="Ins", Gender="Masc", Number="Sing"),
+            _token(3, "předsedou", "předseda", "NOUN", 0, "root", Animacy="Anim", Case="Ins", Gender="Masc", Number="Sing"),
+            _token(4, "odboru", "odbor", "NOUN", 3, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = generate(reading)[0].predication
+    assert "první_předseda" in {r.mention.lemma for r in predication.roles}
+    assert genitive_attributes(reading, predication) == (), (
+        "MEZ: přívlastek se neuvidí, protože hlava se ve čtení jmenuje jinak"
+    )
+    assert "Gen" in surface_roles(predication), (
+        "a důsledek té meze: genitiv se ptá jako role predikace"
+    )
+
+
+def test_a_passive_subject_is_still_asked_about() -> None:
+    """TRPNÝ PODMĚT MEZI OKOLNOSTMI — 19 výskytů, třetí nejčastější tvar.
+
+    Vlastní jméno dostává ZÁMĚRNĚ (I‑2, INV‑11): trpný podmět není
+    konatel a ztotožnit ho s `kdo` by byl dohad. Otázka „co ta role
+    znamená" se ale ptá na něco, co rozbor ŘÍKÁ — v trpném rodě je
+    podmět PATIENS. Změřeno: 18 z 19 vět nemá roli `co`, takže by
+    nekolidovala.
+    """
+    reading = Reading(
+        tokens=(
+            _token(1, "Úmysly", "úmysl", "NOUN", 3, "nsubj:pass", Case="Nom", Gender="Masc", Number="Plur"),
+            _token(2, "byly", "být", "AUX", 3, "aux:pass", Number="Plur", Polarity="Pos"),
+            _token(3, "popsány", "popsaný", "ADJ", 0, "root", Number="Plur", Polarity="Pos", Voice="Pass"),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = generate(reading)[0].predication
+    assert "nsubj:pass" in surface_roles(predication)
+    assert "co" not in {r.name for r in predication.roles}

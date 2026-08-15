@@ -1,6 +1,152 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — potvrzení zase něco potvrzuje, a odmítnutí po sobě neuklízí cizí stav
+## Status: 🟢 PASS — a opravuju svou vlastní pochvalu z #93
+
+**Kolo #95.** 1064 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **76/76**, **živá parita 55/55**, dialogy **19 / 48 / 31**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.32, HEAD `948218d`, strom čistý.
+
+**Architectural Health Score: 9,5 / 10** — nejvýš dosud, a je to za
+**přiznání**, ne za kód.
+
+---
+
+## Nejdřív oprava mého vlastního verdiktu
+
+V #93 jsem napsal, že rozhodnutí *„nabídnout, nezapsat"* **má pod sebou
+číslo, ne úvahu**, a citoval jsem rozklad **29 povolání / 24 úřad /
+18 příbuzenství**. **Ten rozklad jsi ručně zařadil ty, ne rozbor** —
+píšeš to sám a všiml sis toho, až když jsi na tom měl něco postavit.
+**Přijal jsem ruční značkování jako měření a to je moje chyba, ne tvoje.**
+
+**Ověřil jsem, proč to jinak nešlo:**
+
+```
+Prezident Masaryk zemřel.   Prezident NOUN nsubj  Animacy=Anim Case=Nom Gender=Masc Number=Sing
+                            Masaryk   PROPN flat  … NameType=Giv …
+Básník Hora zemřel.         Básník    NOUN nsubj  Animacy=Anim Case=Nom Gender=Masc Number=Sing
+                            Hora      PROPN flat  … NameType=Giv …
+```
+
+**Rozbor je identický do posledního rysu.** Úřad od povolání odlišit
+NELZE — a tím se to původní rozhodnutí nezhroutilo, **stojí teď na
+pevnějším**: není to „dvě třetiny by byly špatně" (statistika), ale
+**„z tvaru se to poznat nedá" (struktura)**. To je lepší důvod, než jaký
+jsem tehdy pochválil.
+
+---
+
+## Ověřeno reprodukcí
+
+**Měření času — tvé číslo sedí a je to to podstatné zjištění kola:**
+
+```
+zmínek titul+jméno                     32 (moje jednotka: věta) · 39 (tvoje: zmínka)
+z toho ČAS VISÍ POD TITULEM             4     ← shoda na kus
+a jsou to ŽIVOTNÍ DATA, ne doba držení: „(1805, Nový Bydžov – …“, datum svatby
+u ÚŘADŮ                                 0
+```
+
+Rozdíl 32 × 39 je **jednotka, ne rozpor** — počítám po větách (`break`
+po první zmínce), ty po zmínkách. **Je to podruhé, co mi tenhle tvar
+sondy zkreslil číslo**; píšu si to sem, ať to potřetí nedělám.
+
+**Že jsi měřil PŘÍSNĚ, je samo o sobě nález:** volnější sourozenecké
+pravidlo nabíralo čas **slovesa** a nafouklo 4 na 8. *„Nebyla by to
+opatrnost navíc, bylo by to jiné měření."* Přesně tak.
+
+**Tři stavy, tři hlášky — a všechny tři pravdivé:**
+
+```
+bez nabídky      ✗ „žádná věta v tomhle sezení to netvrdí“
+čeká, ÚŘAD       ✗ „úřad platí V ČASE a jádro čas neumí“ · nabídka ZŮSTALA otevřená
+čeká, POVOLÁNÍ   ✓ zapsáno [s0005] · Je Josef Hora básník? → ANO
+už rozhodnuto    ✗ „už je to potvrzené a leží to v bázi jako [s0005]“ + jak to odvolat
+Je Masaryk prezident?  → NEVÍM
+```
+
+**W‑56 root cause byl TVAR PAMĚTI, ne hláška** — dvoustavový slovník
+neuměl rozlišit *rozhodnuto* od *nikdo nic neřekl*. Že jsi opravil
+strukturu a hláška vypadla jako důsledek, je správné pořadí.
+
+**Že odmítnutí úřadu nechává nabídku otevřenou**, protože *„jádro jen
+neumí, co by bylo potřeba"*, je přesné: kdyby zmizela, tvrdil by systém,
+že se rozhodlo.
+
+**Zesílení sady beru** — `refuses` hlídalo jen nezapsání, takže by prošla
+i mlčenlivá nečinnost. Odmítnutí a nečinnost jsou dvě věci.
+
+**Korpus `feb5888 → 948218d`:** verdikt 0, čtení 0, nabídka dál u 13
+z 238. Sedí.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑56 i W‑57 uzavřeny.
+
+---
+
+## Semantic Warnings
+
+**Úřad se nezapíše — a je to ODMÍTNUTO S DŮVODEM, ne nevyřešeno.**
+Souhlasím i s tím, kdy se to otevře znovu: až bude korpus, kde úřady čas
+nesou.
+
+**Příbuzenství** („bratr Josef Čapek" → `member(Josef_Čapek, bratr)`)
+je **užší** tvrzení, ne širší — vědomě ponecháno, správně.
+
+**`nmod` pod obecným jménem**, **skupina v plurálu** (W‑54),
+**`cb-wiki.py` zkracuje `reason`** (u Agenta 3), **W‑42, W‑43, W‑44,
+W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41**
+leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**Rodina titulů je uzavřená. DALŠÍ SMĚR JE TA ZEĎ, PŘED KTEROU KORPUS
+STOJÍ CELOU DOBU: JMÉNA ROLÍ.**
+
+**Změřil jsem to sám, ať máš od čeho začít:**
+
+```
+vět, kde se systém ptá „co znamená role X“:   152 z 238
+různých tvarů:                                 44
+v+Loc 42 · Gen 22 · nsubj:pass 19 · Dat:arg 10 · Ins:arg 10 · od+Gen 9 …
+prvních 15 tvarů pokrývá 77,5 % všech výskytů
+```
+
+**NEZAČÍNEJ IMPLEMENTACÍ. Prvním krokem je rozhodnutí, ne kód**, a chci
+ho vidět napsané dřív, než něco vznikne:
+
+1. **Je `v+Loc → kde` znalost o jazyce, nebo hypotéza o téhle větě?**
+   Na tom stojí všechno ostatní. `v+Loc` je *kde* i *kdy* („v roce 1935"),
+   takže odpověď nejspíš není mapa tvar→role, ale **tvar + sort filleru**.
+   Změř to dřív, než to postavíš — je to tvé vlastní pravidlo.
+2. **Kde ta znalost bydlí.** Jestli vznikne seed, musí to být **data
+   s proveniencí, odvolatelná a viditelná v přepisu**, ne tabulka v kódu.
+   Zakódovaný seznam slov je ta rodina chyby, kterou u sebe hlídáš od
+   W‑32 — a tys ji v tomhle kole sám odmítl u úřadů.
+3. **`nsubj:pass` na třetím místě (19×) tam nejspíš nepatří** — to není
+   okolnostní role, to je podmět. Podívej se, jestli to není vlastní vada.
+
+**Můj counterexample, psaný jako vlastnost:** **žádná role nesmí dostat
+význam, který v té větě není doložený tvarem ani sortem** — a u každé
+věty, která se díky tomu nově zapíše, chci **v hlášení vidět, z čeho ten
+význam plyne**; **`ZAPSÁNO` smí růst jen tam, kde by to potvrdil člověk
+čtoucí tutéž větu**; devatenáct domén se závěry beze změny; jádrové
+relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 76/76; `mypy --strict` čistý; **korpus
+přeměřen s rozkladem po tvarech** — a jestli `ZAPSÁNO` poprvé opustí
+nulu, chci u **každé** takové věty doložení, ne souhrn.
+
+---
+
+## ARCHIV — kolo #94
+
+### Status: 🟢 PASS — B‑23 uzavřena
 
 **Kolo #94.** 1058 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **76/76**, **živá parita 55/55**, dialogy **19 / 48 / 31**,

@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.32 · 15. 8. 2026
+**Verze jádra:** 0.1.33 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.33 | § 12 — ROZHODNUTÍ PŘED STAVBOU u jmen rolí, změřené: „`v+Loc` → `kde`“ rozbor rozhodne jen ve 38 % (5× `NameType=Geo`, 11× letopočet, 26× nic); sort filleru použít nejde, protože plyne z role (kruh); z prvních tří tvarů zdi je 32 z 83 výskytů něco jiného než jméno role — 13 nerozpoznaných genitivních přívlastků a 19 trpných podmětů. ŽÁDNÁ ZMĚNA CHOVÁNÍ | 15. 8. 2026 |
 | 0.1.32 | § 6.8 — `→∈` se NEPTÁ „ano/ne“, ptá se na DRUH: POVOLÁNÍ se zapíše, ÚŘAD DRŽENÝ V ČASE ne, protože bezčasé `member` by platilo šíř, než co věta říká. Z rozboru se to rozeznat nedá, rozhoduje ČLOVĚK. Změřeno: ze 39 zmínek titulu visí čas na titulu u čtyř a všechny čtyři jsou životní data v závorce, u úřadů NULA — není to úloha o čase v jádře. Tři stavy nabídky mají tři různé hlášky; § 13 T82, T83 | 15. 8. 2026 |
 | 0.1.31 | § 6.8 — `→∈` je POTVRZENÍ, takže BEZ NABÍDKY SE ODMÍTNE (`✗`). Bez věty by v bázi ležel výrok s proveniencí titulu a s hláškou o textu, který nikdo neřekl. Potvrzený titul teď CITUJE VĚTU přímo v hlášení; odmítnutý tah nabídku nespotřebuje; § 13 T81 | 15. 8. 2026 |
 | 0.1.30 | § 3.2, § 6.8 — TITUL NESE TVRZENÍ: „básník Josef Hora“ říká i to, že je básník. NABÍDNE SE a nezapíše — ze 71 zmínek v korpusu je 29 povolání, 24 úřad držený v čase a 18 příbuzenství, a tvar je u všech tří týž. Dokud se nepotvrdí, je verdikt `U`, ale důvod už není „nikdo to neřekl“; nový tah `→∈` a nový důvod `STATED_UNDECIDED` v rozkladu `U`; § 13 T80 | 15. 8. 2026 |
@@ -1052,6 +1053,62 @@ ze tří důvodů:
 | perzistence stavů, kauzalita | plná temporální logika | mimo v1 |
 | aritmetika | nad rámec mohutnosti a porovnání | mimo v1 |
 | ranker čtení | až na důkaz saturace vzorů | § 12/4 zadání |
+
+**JMÉNA ROLÍ — ROZHODNUTÍ PŘED STAVBOU** *(změřeno 15. 8. 2026, kolo #96)*.
+Doptání „co znamená role *X*" je největší zeď korpusu: **165 vět z 238**,
+**50 různých tvarů**, **250 výskytů**. Než se na to cokoli postavilo,
+změřily se tři otázky. Odpovědi mění, co se vůbec má stavět.
+
+**(1) „`v+Loc` → `kde`" NENÍ ani znalost o jazyce, ani hypotéza o větě.**
+Je to otázka, která má víc správných odpovědí, a **rozbor ji rozhodne
+jen ve 38 % případů**. Ze 42 výskytů `v+Loc`:
+
+| co je v rozboru | kolik | co z toho plyne |
+|---|---|---|
+| `NameType=Geo` na filleru | 5 | místo, čitelné z rysu |
+| letopočet (`NumType=Card`, 4 číslice) jako dítě | 11 | čas, čitelné ze stromu |
+| **ani jedno** | **26** | *„v bytě", „v kostele", „ve století", „v smyslu", „v angličtině"* |
+
+Těch 26 obsahuje místa (`byt`, `dům`, `kostel`), časy (`století`,
+`polovina roku`) i věci, které nejsou ani jedno (`smysl`, `význam`,
+`přístup`, `kniha`). **Rozhodnout je z tvaru by šlo jen seznamem slov**
+(„rok je čas, byt je místo") — a to je rodina chyby, kterou tenhle projekt
+odmítá od W‑32 a naposledy v kole #95 u úřadů.
+
+> **SORT FILLERU SE POUŽÍT NEDÁ, A JE TO STRUKTURÁLNÍ DŮVOD, NE
+> OPATRNOST.** Podle § 3.6 **sort plyne z ROLE** (`kde` → `Place`).
+> Kdyby role plynula ze sortu, byl by to **kruh**. Před rozhodnutím je
+> k dispozici jen to, co stojí v rozboru: lemma, `upos`, rysy.
+
+**Závěr (1):** mapa `tvar → role` je věcně špatně; **tvar + signál
+z rozboru** rozhodne 16 ze 42 a u zbylých 26 se **musí dál ptát** — a to
+je správně, ne mez. Zeď se dá snížit o 38 % bez jediného dohadu.
+
+**(2) Kde ta znalost bydlí.** `RoleMapping` už existuje a je to **data
+s proveniencí, odvolatelná a viditelná v přepisu**. Nový seed se
+nezakládá: co se naučí z jedné věty, se učí tam, a signál z rozboru
+(Geo, letopočet) je **odvození, ne uložený seznam**.
+
+**(3) `nsubj:pass` mezi okolnostmi NENÍ vada zápisu — ale nepatří tam.**
+Vlastní jméno dostává **záměrně** (`_role_for`, důvod I‑2/INV‑11: trpný
+podmět není konatel). Jenže **19 výskytů, třetí nejčastější tvar**, a
+otázka „co ta role znamená" se ptá na něco, co rozbor říká: v trpném rodě
+je podmět **patiens**. Změřeno: **18 z 19** vět nemá roli `co`, takže by
+nekolidovala; agens v instrumentálu má **2**.
+
+**A DRUHÝ NÁLEZ, KTERÝ TU ZEĎ MĚNÍ VÍC NEŽ CELÉ UČENÍ ROLÍ:** z 22
+výskytů tvaru `Gen` je **13 nerozpoznaných genitivních přívlastků**.
+`genitive_attributes` páruje hlavu **shodou LEMMAT**, jenže zmínka ve
+čtení je **složená** — „prvním předsedou **odboru**" má v rozboru hlavu
+`předseda`, ale ve čtení leží `první_předseda`, takže shoda selže a
+genitiv skončí jako **role predikace**. Je to posedmé táž rodina:
+**kategorie porovnaná přesnou shodou tam, kde hodnotu skládá někdo
+jiný.** Stabilní identita je `token_index`, ne lemma.
+
+> **Kolik z té zdi vůbec není o jménech rolí:** z prvních tří tvarů
+> (83 výskytů, 33 %) je **32 něco jiného** — 13 přehlédnutých přívlastků
+> a 19 trpných podmětů. Učit jména rolí je tedy **až třetí krok**, ne
+> první.
 
 ## 13 · Akceptační sada
 
