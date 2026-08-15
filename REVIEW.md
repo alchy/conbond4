@@ -1,6 +1,120 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — patnáctá doména i s přiznanou mezí; a odpovídám na tři otázky před rodinou C
+## Status: 🟢 PASS — rozbor rodiny C vyvrátil MŮJ DŮVOD pro pořadí; opravuji ho
+
+**Kolo #81.** Do jádra **nesáhl** — 979 testů zelených, `mypy --strict`
+čistý na 61 souborech, doložky **70/70**, živá parita **53/53**, dialogy
+15 / 41 / 24, gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá
+stálá regrese zelená. Jádro zůstává 0.1.20.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Čtyři odpovědi, tři z nich mění zadání
+
+Reprodukováno mnou (`nalezy/vnorena_veta.py`):
+
+```
+1 · DEPREL         acl 7 · advcl 5 · xcomp 4 · csubj 2 · ccomp 0  ← ANI JEDNOU
+2 · advcl má mark  pokud 2× · než 2× · aby 1× · protože 1×   bez marku: 0
+3 · průnik s nmod+Gen   4 z 12
+4 · hloubka        0 hran 18 cest · 1 hrana 35 · 2 hrany 7
+```
+
+**(1) `ccomp` v korpusu není ani jednou** — a byla to zrovna ta položka
+mé tabulky, kde jsem si byl nejjistější. Rozhodovací pravidlo, na které
+se nedosáhne, je akademické; dobře, že se to změřilo dřív, než se podle
+něj stavělo.
+
+**(2) `advcl` má spojku ve všech pěti.** Můj předpoklad, že se u něj
+jméno role smí **učit**, protože ho nese tvar, **měřením obstál.** To je
+poprvé za poslední kola, kdy moje hypotéza o češtině prošla — a stojí za
+to říct, že prošla **proto, že se změřila**, ne proto, že zněla rozumně.
+
+**(3) Průnik s `nmod+Gen` je 4 z 12, ne 12 — a tím padá MŮJ DŮVOD pro
+„C před B".** Napsal jsem, že C odblokuje těch dvanáct genitivů, které
+rodina A nedosáhla. **Dosáhne nejvýš na třetinu.** Zbylých osm visí pod
+jménem, které není ve čtení z **jiného** důvodu, a ten nikdo nerozebíral.
+
+**(4) Vnoření jde do druhé úrovně** (7 cest se dvěma hranami), takže
+`DepthExceeded` **není teoretická obava** a musí se s ní počítat od
+začátku, ne až se projeví.
+
+**A hlavní výstup kola, který je jeho, ne můj:** moje odpověď rozdělila
+rodinu C na čtyři rozhodnutí podle deprelu, a měření z nich udělalo
+**dvě stavby (`acl`, `advcl`), jedno ověření (`xcomp` — skládá se do
+přísudku, což systém už dělá) a jedno odložení (`ccomp`)**. To je docela
+jiný rozsah než „vnořená věta" jako celek.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑44 · osm genitivů blokovaných z jiného důvodu než vnořenou větou** —
+nerozebráno, a je to teď nejbližší neznámá.
+
+**W‑45 (nový, z bodu 4) · vnoření do druhé úrovně, 7 cest.** `DepthExceeded`
+je reálná mez, ne pojistka. Zjistit, **kde je práh**, dřív než se staví.
+
+**W‑42, W‑43, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40,
+W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: `advcl`. Tvůj návrh schvaluji a tvůj důvod je
+lepší než můj původní.**
+
+Opravuji sám sebe nahlas: **pořadí „C před B" jsem odůvodnil číslem,
+které neplatí.** `advcl` ale obstojí i bez toho důvodu, a to z toho, co
+jsi změřil:
+
+- **jméno role je čitelné ze spojky** → stavba **bez nové otázky pro
+  člověka**, tedy bez nového tahu i bez nové domény pro tah;
+- je to **role hlavní predikace**, ne nový druh výroku → **jádro se
+  neverzuje ani teoreticky**;
+- a mechanismus na to **existuje** — ověřil jsem si v minulém kole, že
+  `RoleTerm` unese `RelationInstance`.
+
+**Pořadí zbytku se rederivuje po `advcl`**, ne teď a ne z mého
+neplatného důvodu: až bude `advcl` hotové, spočítej **kumulativní
+pokrytí znovu** a porovnej `acl` (7) proti rodině B (11). Rozhodne to
+číslo, ne moje předchozí věta.
+
+**Můj counterexample:** všech **pět** vět s `advcl` se přečte a vedlejší
+věta se stane **rolí hlavní predikace** s jménem odvozeným ze spojky;
+věta s `advcl` **bez** spojky (kdyby taková přišla) se **nedosadí**, ale
+zeptá; **jméno role se učí** — druhá věta s touž spojkou se **neptá**;
+`ccomp`, `acl`, `csubj` i `xcomp` **zůstanou beze změny** a je na to
+kontrola; **vnoření do druhé úrovně** buď projde, nebo padne **na
+`DepthExceeded` s hláškou** — nikdy tiše; patnáct domén se závěry beze
+změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 53/53;
+nula `RECALL_FAILURE`; testy zelené; **jádro zůstává 0.1.20**; korpus
+přeměřen nad čistou revizí a **rodina C klesne o pět vět**.
+
+**A ještě jedna věc, kterou chci vidět dřív než stavbu:** kde je práh
+`DepthExceeded` (W‑45). Je to jedno číslo a rozhoduje o tom, jestli je
+bod „vnoření do druhé úrovně" splnitelný, nebo je to rovnou známá mez.
+
+---
+
+## ARCHIV — kolo #80
+
+### Status: 🟢 PASS — patnáctá doména i s přiznanou mezí; a odpovídám na tři otázky před rodinou C
 
 **Kolo #80.** 979 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **70/70**, živá parita **53/53**, dialogy 15 / 41 / 24, gate

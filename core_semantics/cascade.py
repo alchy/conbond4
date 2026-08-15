@@ -2318,6 +2318,105 @@ def attribute_question(predication: Predication) -> str | None:
     )
 
 
+def subordinate_clauses(reading: Reading) -> tuple[tuple[str, str, int], ...]:
+    """Vedlejší věty jako `(spojka, sloveso, token)` *(W‑45)*.
+
+    Bere se JEN `advcl` pod PŘÍSUDKEM hlavní věty a JEN se spojkou
+    (`mark`). Obojí je stráž, ne zúžení z pohodlí:
+
+    * `advcl` pod jménem („programy, pokud se jedná o psa") není
+      okolnost hlavního děje, ale přívlastek toho jména — jiný vztah,
+      který patří k `acl`, ne sem;
+    * bez spojky není z čeho jméno role přečíst, a hádat ho z pořadí slov
+      by znamenalo vymyslet si význam (INV‑11).
+
+    Vrací se SPOJKA, ne rovnou jméno role: co ta spojka znamená, je
+    naučené a odvolatelné tvrzení v lexikonu. Kdyby to rozhodovala tahle
+    funkce, byl by v interpretu schovaný seznam českých spojek.
+    """
+    head = _predicate_head(reading)
+    if head is None:
+        return ()
+    najdene: list[tuple[str, str, int]] = []
+    for token in reading.tokens:
+        if token.deprel != "advcl" or token.head != head[1].index:
+            continue
+        marks = [
+            t.lemma
+            for t in reading.tokens
+            if t.head == token.index and t.deprel == "mark"
+        ]
+        if not marks:
+            continue
+        najdene.append((marks[0], token.lemma, token.index))
+    return tuple(najdene)
+
+
+def subordinate_tier(lexicon: Lexicon) -> Tier:
+    """Vedlejší věta jako ROLE hlavní predikace *(W‑45)*.
+
+    „Odjel, **protože** pršelo." — vedlejší věta je okolnost hlavního
+    děje, tedy jeho role, a jméno té role nese SPOJKA. Tím se liší od
+    genitivního přívlastku: tam byl směr vlastností VĚTY a nešlo se ho
+    naučit, tady je odpověď v TVARU, takže naučit se smí a druhá věta
+    s touž spojkou se neptá.
+
+    **Fillerem je DĚJ, ne celá vnořená predikace.** Vedlejší věta se
+    reifikuje svým slovesem — `odjet(proč:∃pršet)` — a její vlastní
+    členy zůstávají ztracené, dokud je někdo nepojmenuje. Je to táž
+    volba jako u přívlastku: reifikovat, neřetězit, jádro neverzovat.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        found = subordinate_clauses(reading)
+        if not found:
+            return candidates, None
+        notes: list[str] = []
+        out: list[Candidate] = []
+        for candidate in candidates:
+            roles = list(candidate.predication.roles)
+            taken = {r.name for r in roles}
+            for spojka, sloveso, token_index in found:
+                shape = f"advcl:{spojka}"
+                options = lexicon.role_candidates(shape)
+                name = options[0].canonical if len(options) == 1 else shape
+                if name in taken:
+                    continue
+                taken.add(name)
+                notes.append(
+                    f"[VEDLEJŠÍ VĚTA: „{spojka}“ → role {name}"
+                    + ("" if len(options) == 1 else " — tvar bez významu")
+                    + "]"
+                )
+                roles.append(
+                    RoleReading(
+                        name,
+                        Mention(
+                            lemma=sloveso,
+                            form=sloveso,
+                            token_index=token_index,
+                            upos="VERB",
+                        ),
+                        quantifier=Quantifier.EXISTS,
+                        source=f"vedlejší věta se spojkou „{spojka}“",
+                    )
+                )
+            out.append(
+                Candidate(
+                    replace(
+                        candidate.predication,
+                        roles=tuple(sorted(roles, key=lambda r: r.name)),
+                    ),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
+
+
 def attribute_tier() -> Tier:
     """Genitivní přívlastek jako ČEKAJÍCÍ DRUHÝ VÝROK *(W‑39)*.
 

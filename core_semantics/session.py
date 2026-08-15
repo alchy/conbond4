@@ -74,6 +74,7 @@ from .cascade import (
     anaphora_tier,
     attribute_question,
     attribute_tier,
+    subordinate_tier,
     completeness_tier,
     naming_tier,
     prodrop_tier,
@@ -676,6 +677,10 @@ class Session:
             # Genitivní přívlastek jako čekající DRUHÝ VÝROK. Nic
             # neblokuje: větě chybí přívlastek, ne predikát.
             attribute_tier(),
+            # Vedlejší věta jako role hlavní predikace. Za přívlastkem:
+            # obojí reifikuje, ale tohle přidává ROLI, takže musí běžet
+            # dřív, než se počítají ztracené členy.
+            subordinate_tier(self.lexicon),
             # Uzavření světa až ZA relací: patro jen navrhuje a nikdy nic
             # nedosazuje, takže pořadí nemění čtení — mění jen to, v jakém
             # pořadí se člověk ptá.

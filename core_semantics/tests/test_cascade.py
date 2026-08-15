@@ -885,3 +885,181 @@ def test_the_three_states_are_distinguishable() -> None:
         subject = generate(reading)[0].predication.role(ROLE_SUBJECT)
         assert subject is not None
         assert _coordinated(subject, reading) is ocekavano
+
+
+# --------------------------------------------------------------------------
+# Vedlejší věta jako role hlavní predikace — W‑45
+# --------------------------------------------------------------------------
+#
+# „Odjel, PROTOŽE pršelo." Vedlejší věta je okolnost hlavního děje, tedy
+# jeho ROLE, a jméno té role nese SPOJKA. Tím se liší od genitivního
+# přívlastku: tam byl směr vlastností VĚTY a naučit se nedal, tady je
+# odpověď v TVARU, takže se naučit smí.
+
+
+def _subordinate(mark: str | None, verb: str = "pršet") -> Reading:
+    tokens = [
+        _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+        _token(2, "odjel", "odjet", "VERB", 0, "root", Number="Sing", Gender="Masc"),
+        _token(4, "pršelo", verb, "VERB", 2, "advcl", Number="Sing", Gender="Neut"),
+        _token(5, ".", ".", "PUNCT", 2, "punct"),
+    ]
+    if mark is not None:
+        tokens.insert(2, _token(3, mark, mark, "SCONJ", 4, "mark"))
+    return Reading(tokens=tuple(tokens), provenance="test")
+
+
+def test_a_subordinate_clause_becomes_a_role_of_the_main_predication() -> None:
+    """Vedlejší věta se přestane ztrácet: stane se rolí hlavní predikace,
+    jejímž fillerem je DĚJ té vedlejší věty."""
+    from core_semantics.cascade import subordinate_clauses
+
+    reading = _subordinate("protože")
+    assert subordinate_clauses(reading) == (("protože", "pršet", 4),)
+
+
+def test_without_a_conjunction_nothing_is_substituted() -> None:
+    """Bez spojky není z čeho jméno role přečíst. Hádat ho z pořadí slov
+    by znamenalo vymyslet si význam (INV‑11), takže se nedosadí nic
+    a člen zůstane ztracený — tedy se na něj ZEPTÁ."""
+    from core_semantics.cascade import subordinate_clauses
+
+    assert subordinate_clauses(_subordinate(None)) == ()
+
+
+def test_the_conjunction_is_returned_not_the_role_name() -> None:
+    """Co ta spojka znamená, je NAUČENÉ a odvolatelné tvrzení v lexikonu.
+    Kdyby to rozhodovala tahle funkce, byl by v interpretu schovaný
+    seznam českých spojek — táž vada jako u seznamu kvantifikátorů."""
+    import inspect
+
+    from core_semantics.cascade import subordinate_clauses
+
+    source = inspect.getsource(subordinate_clauses)
+    for spojka in ("protože", "když", "aby", "pokud"):
+        assert f'"{spojka}"' not in source
+
+
+def test_a_clause_under_a_noun_is_not_taken() -> None:
+    """`advcl` pod JMÉNEM není okolnost hlavního děje, ale přívlastek toho
+    jména — jiný vztah, který patří k `acl`, ne sem."""
+    from core_semantics.cascade import subordinate_clauses
+
+    pod_jmenem = Reading(
+        tokens=(
+            _token(1, "programy", "program", "NOUN", 2, "nsubj", Case="Nom", Number="Plur", Gender="Masc"),
+            _token(2, "existují", "existovat", "VERB", 0, "root", Number="Plur"),
+            _token(3, "pokud", "pokud", "SCONJ", 4, "mark"),
+            _token(4, "jedná", "jednat", "VERB", 1, "advcl", Number="Sing", Gender="Neut"),
+            _token(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    assert subordinate_clauses(pod_jmenem) == ()
+
+
+def test_the_other_embedded_relations_are_untouched() -> None:
+    """`acl`, `csubj`, `xcomp` ani `ccomp` tahle větev nechytá — každý
+    z nich je jiné rozhodnutí a míchat je znamená měřit několik věcí
+    naráz."""
+    from core_semantics.cascade import subordinate_clauses
+
+    for deprel in ("acl", "csubj", "xcomp", "ccomp"):
+        jiny = Reading(
+            tokens=(
+                _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+                _token(2, "odjel", "odjet", "VERB", 0, "root", Number="Sing", Gender="Masc"),
+                _token(3, "aby", "aby", "SCONJ", 4, "mark"),
+                _token(4, "pršelo", "pršet", "VERB", 2, deprel, Number="Sing", Gender="Neut"),
+                _token(5, ".", ".", "PUNCT", 2, "punct"),
+            ),
+            provenance="test",
+        )
+        assert subordinate_clauses(jiny) == (), deprel
+
+
+def test_the_second_level_of_nesting_falls_out_loud() -> None:
+    """Vnoření do DRUHÉ úrovně je nad mez `max_depth=1` a padá s hláškou,
+    nikdy tiše. Korpus na tu hloubku dosáhne (7 cest ze 60), takže to
+    není teoretická obava."""
+    import pytest as _pytest
+
+    from core_semantics.ast import (
+        DepthExceeded,
+        Entity,
+        Group,
+        Quantifier,
+        RelationInstance,
+        atom,
+        role,
+    )
+    from core_semantics.storage import KnowledgeBase
+
+    kb = KnowledgeBase()
+    vnitrni = kb.attach(atom("pršet", role("kde", Group("Praha"), Quantifier.SELF)))
+    prvni = kb.attach(
+        atom("odjet", role("kdo", Entity("Petr")), role("proč", RelationInstance(vnitrni)))
+    )
+    with _pytest.raises(DepthExceeded) as chyba:
+        kb.attach(
+            atom("říct", role("kdo", Entity("Jan")), role("co", RelationInstance(prvni)))
+        )
+    assert "hloubku vnoření 2" in str(chyba.value)
+
+
+def test_the_learned_conjunction_stops_asking_on_the_next_sentence() -> None:
+    """PRŮCHOD VEŘEJNÝM VSTUPEM. Dokud spojku nikdo nepojmenoval, zůstane
+    role povrchová (`advcl:protože`) a systém se ptá; po odpovědi je z ní
+    `proč` a DRUHÁ VĚTA S TOUŽ SPOJKOU se už neptá — to je celý rozdíl
+    proti genitivnímu přívlastku, kde se význam učit nesmí."""
+    from core_semantics.lexicon import (
+        LearnedPattern,
+        Operation,
+        PatternStatus,
+        Trigger,
+        czech_seed,
+    )
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session, names_role
+
+    prvni = _subordinate("protože")
+    druha = Reading(
+        tokens=(
+            _token(1, "Jan", "Jan", "PROPN", 2, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, "odjel", "odjet", "VERB", 0, "root", Number="Sing", Gender="Masc"),
+            _token(3, "protože", "protože", "SCONJ", 4, "mark"),
+            _token(4, "sněžilo", "sněžit", "VERB", 2, "advcl", Number="Sing", Gender="Neut"),
+            _token(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+
+    class _Rec:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(
+                text=text, readings=(prvni if "Petr" in text else druha,)
+            )
+
+    lexicon = czech_seed()
+    lexicon.add(
+        LearnedPattern(
+            trigger=Trigger(
+                lemma="", upos="PROPN", number="Sing", case="Nom", deprel="nsubj"
+            ),
+            operation=Operation.SELF,
+            learned_from="test",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    session = Session(lexicon=lexicon)
+    prvni_vysledek = session.utter("Petr odjel, protože pršelo.", _Rec())
+    assert prvni_vysledek.predication is not None
+    assert "advcl:protože" in str(prvni_vysledek.predication)
+
+    session.play(names_role("Je to důvod.", prvni, "advcl:protože", "proč"))
+    druhy = session.utter("Jan odjel, protože sněžilo.", _Rec())
+    assert druhy.predication is not None
+    assert "proč:∃sněžit" in str(druhy.predication)
+    assert "advcl:" not in str(druhy.predication)

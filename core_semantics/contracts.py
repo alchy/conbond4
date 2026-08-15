@@ -1041,6 +1041,36 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="C-10",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "VEDLEJŠÍ VĚTA se spojkou je ROLE hlavní predikace a jméno té "
+            "role nese SPOJKA — „Odjel, PROTOŽE pršelo“ je `proč`. Tím se "
+            "liší od genitivního přívlastku: tam byl směr vlastností VĚTY "
+            "a naučit se nedal, tady je odpověď v TVARU, takže se NAUČIT "
+            "SMÍ a druhá věta s touž spojkou se neptá. Bere se jen `advcl` "
+            "POD PŘÍSUDKEM a jen SE SPOJKOU: `advcl` pod jménem je "
+            "přívlastek toho jména (patří k `acl`), a bez spojky není "
+            "z čeho jméno role přečíst — hádat ho z pořadí slov by "
+            "znamenalo vymyslet si význam (INV‑11). Vrací se SPOJKA, ne "
+            "jméno role: co znamená, je naučené a odvolatelné tvrzení "
+            "v lexikonu, ne seznam schovaný v interpretu. Fillerem je DĚJ, "
+            "ne vnořená predikace — reifikovat, neřetězit, jádro "
+            "neverzovat (W‑45)"
+        ),
+        anchor="core_semantics.cascade:subordinate_clauses",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_subordinate_clause_becomes_a_role_of_the_main_predication",
+            "test_without_a_conjunction_nothing_is_substituted",
+            "test_the_conjunction_is_returned_not_the_role_name",
+            "test_a_clause_under_a_noun_is_not_taken",
+            "test_the_other_embedded_relations_are_untouched",
+            "test_the_second_level_of_nesting_falls_out_loud",
+            "test_the_learned_conjunction_stops_asking_on_the_next_sentence",
+        ),
+    ),
+    Clause(
         id="S-36",
         boundary=SESSION_STORAGE,
         promise=(
