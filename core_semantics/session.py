@@ -70,7 +70,11 @@ from .cascade import (
     has_dropped,
     lexicon_tier,
     lost_question,
+    RoleReading,
     lost_role_tier,
+    mention_of,
+    sharing_tier,
+    share_question,
     open_roles_question,
     quantifier_tier,
     as_relation,
@@ -113,7 +117,7 @@ from .lexicon import (
     Trigger,
     czech_seed,
 )
-from .oracle import OracleUnavailable, ParseOracle, Reading, Utterance
+from .oracle import OracleUnavailable, ParseOracle, Reading, Token, Utterance
 from .presenter import DEFAULT_PROFILE, AuditReport, TemplateProfile, XAIPresenter
 from .storage import KnowledgeBase
 
@@ -222,6 +226,8 @@ class TurnKind(Enum):
     DECIDE_REFERENCE = "→="
     #: ODPOVĚĎ na otázku systému po JMÉNU ROLE ztraceného členu (N‑5).
     NAME_ROLE = "→@"
+    #: „O každém zvlášť, nebo o nich dohromady?" *(W‑73)*.
+    SHARE = "→&"
     #: ODPOVĚĎ na otázku systému po tom, KTEROU JÁDROVOU RELACI stavba
     #: věty tvrdí (N‑2). Vlastní druh tahu, protože se tím nenaučí, jak se
     #: věta ČTE, ale co se z ní zapíše do JÁDRA — a to je jiná váha.
@@ -314,6 +320,9 @@ class Turn:
     reason: str = ""
     variable: str = ""
     pair: tuple[GroupTerm, GroupTerm] | None = None
+    #: ROZDĚLIT VÍC ČLENŮ JEDNÉ ROLE na samostatná tvrzení? *(W‑73)*
+    #: `True` = o každém zvlášť, `False` = o nich dohromady.
+    distributive: bool | None = None
     #: Druhý operand identitních tahů (`!≠`).
     other: Term | None = None
     #: Nová jména při rozdělení uzlu (`!÷`).
@@ -681,6 +690,45 @@ def _pointless_answer(turn: Turn, predication: Predication) -> str | None:
     )
 
 
+def _shared_role(token: Token, holder: RoleReading) -> RoleReading:
+    """Druhý uzel téže role — zmínka z TÉHOŽ stromu *(W‑73)*.
+
+    Kvantifikátor se BERE Z PRVNÍHO konjunktu: je to táž role téže věty,
+    takže ptát se na něj podruhé by byla otázka na rozhodnutí, které
+    padlo. Sort a jméno role jsou z definice tytéž.
+    """
+    return replace(
+        holder,
+        mention=mention_of(token),
+        absorbed=(),
+        source=f"druhý uzel role „{holder.name}“ — rozhodl jsi ty",
+    )
+
+
+def decides_sharing(
+    text: str, predication: Predication, reading: Reading, *, distributive: bool
+) -> Turn:
+    """ODPOVĚĎ na „o každém zvlášť, nebo o nich dohromady?" *(W‑73)*.
+
+    **Rozhodnutí, ne odvození.** „Petr a Jana přišli." platí o každém
+    zvlášť, „Petr a Jana zvedli klavír." o nich dohromady — a rozbor má
+    obě věty IDENTICKÉ. Tenhle tah je jediné místo, kde se to rozhoduje,
+    a rozhoduje to ČLOVĚK.
+
+    **Neučí se.** `→@` naučí tvar pro celou třídu vět, tady by to byla
+    chyba: „zvedli" a „přišli" mají týž tvar a opačnou odpověď, takže
+    naučit ji jako tvar znamená přečíst druhou větu naruby. Je to táž
+    úvaha jako u genitivního přívlastku (W‑39).
+    """
+    return Turn(
+        TurnKind.SHARE,
+        text,
+        predication=predication,
+        reading=reading,
+        distributive=distributive,
+    )
+
+
 def names_role(
     text: str, reading: Reading, shape: str, role_name: str
 ) -> Turn:
@@ -874,6 +922,11 @@ class Session:
             # (`UnquantifiedRole`), takže druhá věta se dřív NEZAKOTVILA
             # a zápis z ní nikdy nevznikl. Chytilo se to až tím, že
             # reviewer chtěl VIDĚT dva výroky z jedné promluvy.
+            # VÍC ČLENŮ V JEDNÉ ROLI *(W‑73)*. Až za kvantifikátorem:
+            # ptá se HOTOVÝCH rolí, které zmínky ve čtení stojí. Před
+            # souřadnou DRUHOU VĚTOU, protože ta se ptá téhož stromu
+            # a odpověď na jednu z nich nesmí druhou přepsat.
+            sharing_tier(),
             coordination_tier(self.lexicon),
             # KONZISTENCE S BÁZÍ JE AŽ TADY, a je to VĚDOMÁ ODCHYLKA od
             # pořadí v § 5.2 („…→ konzistence s bází → naučené vzory…").
@@ -916,6 +969,7 @@ class Session:
             TurnKind.ANSWER_QUANTIFIER: self._answer_quantifier,
             TurnKind.DECIDE_REFERENCE: self._decide_reference,
             TurnKind.NAME_ROLE: self._name_role,
+            TurnKind.SHARE: self._share,
             TurnKind.NAME_RELATION: self._name_relation,
             TurnKind.NAME_RELATION_HERE: self._name_relation_here,
             TurnKind.ANSWER_HERE: self._answer_here,
@@ -1438,6 +1492,10 @@ class Session:
                 # z téhož důvodu: je to výrok vedle věty, takže větu
                 # samotnou nezdržuje a ptá se jako poslední.
                 title_question(predication),
+                # VÍC ČLENŮ V JEDNÉ ROLI *(W‑73)*. Za titulem: je to otázka
+                # na to, co věta TVRDÍ, ne na jméno role, takže se ptá
+                # až po všem, co jména rolí ještě může změnit.
+                share_question(predication),
                 grounded.question,
             )
             if part
@@ -1473,6 +1531,11 @@ class Session:
         # nebylo. Zapsat místo prohlášení jeho slupku je horší než
         # nezapsat nic.
         pending_complete = predication.pending_complete != ""
+        # TÝŽ DŮVOD U VÍC ČLENŮ V JEDNÉ ROLI *(W‑73)*. Zapsat větu teď
+        # znamená rozhodnout za člověka, že platí o prvním konjunktu —
+        # tedy tvrdit něco, co v ní není. Rozdělit ji mlčky na dvě je
+        # táž vada z druhé strany.
+        pending_share = bool(predication.pending_share)
         # TÝŽ DŮVOD U ROLE, KTERÁ ČEKÁ NA JÁDROVÉ JMÉNO *(B‑19)*. Věta
         # s povrchovou rolí z vedlejší věty by se zapsala teď a po
         # odpovědi `→@` ZNOVU — v bázi by ležely dva výroky o téže větě
@@ -1501,6 +1564,7 @@ class Session:
             if stale_ztraceno
             or pending_relation
             or pending_complete
+            or pending_share
             or pending_role_name
             else self._route(index, turn, predication, grounded)
         )
@@ -2044,6 +2108,92 @@ class Session:
             lost=verdict.lost,
             trace=verdict.trace,
         )
+
+    def _share(self, index: int, turn: Turn) -> TurnResult:
+        """`→&` — o každém zvlášť, nebo o nich dohromady *(W‑73)*."""
+        assert turn.predication is not None and turn.reading is not None
+        predication = turn.predication
+        if not predication.pending_share:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=("✗ nerozhodnuto: ta věta víc členů v jedné roli nemá",),
+                error="věta nenese víc členů v jedné roli",
+            )
+        role_name, _, token_index = predication.pending_share[0]
+        token = next(
+            (t for t in turn.reading.tokens if t.index == token_index), None
+        )
+        drzitel = predication.reading(role_name)
+        if token is None or drzitel is None:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=("✗ nerozhodnuto: ten člen ve čtení nestojí",),
+                error="člen mimo čtení",
+            )
+        zbytek = predication.pending_share[1:]
+        if turn.distributive:
+            # KAŽDÝ ZVLÁŠŤ → DRUHÉ TVRZENÍ, ne druhá role. Jádro drží
+            # jeden term na roli; druhý uzel proto dostane vlastní výrok
+            # se SDÍLENÝM PŘÍSUDKEM. Je to zrcadlo `coordination_tier`:
+            # tam se sdílí podmět a liší přísudek, tady naopak.
+            vlastni = _shared_role(token, drzitel)
+            druha = Predication(
+                predicate=predication.predicate,
+                roles=tuple(
+                    sorted(
+                        (
+                            vlastni if r.name == role_name else r
+                            for r in predication.roles
+                        ),
+                        key=lambda r: r.name,
+                    )
+                ),
+                mood=predication.mood,
+                negated=predication.negated,
+            )
+            prefix = [
+                f"✓ rozhodnuto  „{token.form}“ je druhý uzel role "
+                f"„{role_name}“ — platí to o každém zvlášť",
+                "  (druhé tvrzení se sdíleným přísudkem; role se nedělí)",
+            ]
+            resolved = replace(
+                predication, pending_share=zbytek, second=druha
+            )
+        else:
+            # DOHROMADY → JEDNA ZMÍNKA. Není to skupina v jádrovém
+            # smyslu (`complete` se tím netvrdí) — je to jeden uzel,
+            # o kterém věta mluví jako o celku.
+            slozena = replace(
+                drzitel.mention,
+                form=f"{drzitel.mention.form} a {token.form}",
+                lemma=f"{drzitel.mention.lemma}_a_{token.lemma}",
+            )
+            prefix = [
+                f"✓ rozhodnuto  „{drzitel.mention.form}“ a „{token.form}“ "
+                f"jsou v roli „{role_name}“ JEDEN uzel — platí to o nich "
+                f"dohromady",
+                "  (neuzavírá to žádnou skupinu; je to jedna zmínka)",
+            ]
+            resolved = replace(
+                predication,
+                pending_share=zbytek,
+                roles=tuple(
+                    replace(r, mention=slozena, absorbed=(*r.absorbed, token.index))
+                    if r.name == role_name
+                    else r
+                    for r in predication.roles
+                ),
+            )
+        # STOPA, KTERÁ UŽ NEPLATÍ, SE NENESE DÁL. Řádek „čeká se na
+        # rozhodnutí" je po tomhle tahu nepravda o vlastním stavu —
+        # táž třída jako B‑25, jen z opačné strany: tam se ztráta
+        # ztratila, tady by přežila svoje rozhodnutí.
+        stopa = tuple(
+            line for line in self._standing_trace if "VÍC ČLENŮ" not in line
+        )
+        return self._settle(index, turn, resolved, prefix, trace=stopa)
 
     def _name_relation_here(self, index: int, turn: Turn) -> TurnResult:
         """`→⊆1` — jádrová relace pro TUHLE VĚTU. Nic se neučí."""

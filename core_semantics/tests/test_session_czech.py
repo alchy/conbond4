@@ -181,31 +181,34 @@ def test_unfinished_reading_writes_nothing_to_the_base() -> None:
 
 
 def _coordinate_subject() -> Reading:
-    """„Petr a Jana přišli." — souřadný druhý podmět visí jako
-    `nsubj>conj+Nom`, tedy týž tvar jako „zápal plic" v korpusu.
-    ZÁZNAM, ne živý rozbor: sada je hermetická."""
+    """„Petr viděl psa běžícího parkem." — `běžícího` i `parkem` visí
+    pod PŘÍVLASTKOVOU VĚTOU, tedy hlouběji než na přísudku, a do čtení
+    se nedostanou. Souřadný člen se sem NEHODÍ: od W‑73 ztracený není,
+    čeká na rozhodnutí o sdílení role. ZÁZNAM, ne živý rozbor."""
     return Reading(
         tokens=(
-            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
-            _token(2, "a", "a", "CCONJ", 3, "cc"),
-            _token(3, "Jana", "Jana", "PROPN", 1, "conj", Case="Nom", Gender="Fem", Number="Sing"),
-            _token(4, "přišli", "přijít", "VERB", 0, "root", Gender="Masc", Number="Plur", Polarity="Pos"),
-            _token(5, ".", ".", "PUNCT", 4, "punct"),
+            _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "viděl", "vidět", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "psa", "pes", "NOUN", 2, "obj", Case="Acc", Gender="Masc", Number="Sing"),
+            _token(4, "běžícího", "běžet", "ADJ", 3, "acl", Case="Acc", Gender="Masc", Number="Sing"),
+            _token(5, "parkem", "park", "NOUN", 4, "obl", Case="Ins", Gender="Masc", Number="Sing"),
+            _token(6, ".", ".", "PUNCT", 2, "punct"),
         ),
         provenance=STAMP,
     )
 
 
-def _coordinate_session() -> tuple[Session, Reading]:
-    """Sezení, ve kterém věta o dvou podmětech čeká na `→@`."""
+def _coordinate_session() -> tuple[Session, Reading, TurnResult]:
+    """Sezení, ve kterém věta se ztraceným členem čeká na `→@`."""
     from core_semantics.tests import golden
 
-    text = "Petr a Jana přišli."
+    text = "Petr viděl psa běžícího parkem."
     reading = _coordinate_subject()
     oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
     session = Session(lexicon=golden.golden_lexicon())
-    session.utter(text, oracle)
-    return session, reading
+    first = session.utter(text, oracle)
+    assert first.turn.lost, "věta se musí na něco ptát"
+    return session, reading, first
 
 
 def test_an_answer_that_changes_nothing_says_so() -> None:
@@ -215,14 +218,14 @@ def test_an_answer_that_changes_nothing_says_so() -> None:
     že stojí."""
     from core_semantics.session import names_role
 
-    session, reading = _coordinate_session()
+    session, reading, first = _coordinate_session()
     result = session.play(
-        names_role("Je to taky podmět.", reading, "nsubj>conj+Nom", ROLE_SUBJECT)
+        names_role("Je to taky podmět.", reading, first.turn.lost[0][1], ROLE_SUBJECT)
     )
     hlaseni = chr(10).join(result.lines)
     assert "ČTENÍ SE NEZMĚNILO" in hlaseni
     assert "„Petr“" in hlaseni, "musí říct, KDO tu roli drží"
-    assert "„Jana“" in hlaseni, "musí říct, KTERÝ člen zůstal mimo"
+    assert "„běžícího“" in hlaseni, "musí říct, KTERÝ člen zůstal mimo"
     assert "Mapování platí dál" in hlaseni, "naučené se nezahazuje"
 
 
@@ -232,37 +235,25 @@ def test_an_answer_that_works_stays_silent_about_it() -> None:
     tam — mapování je naučené správně pro celou třídu tvarů."""
     from core_semantics.session import names_role
 
-    session, reading = _coordinate_session()
+    session, reading, first = _coordinate_session()
     result = session.play(
-        names_role("Je to okolnost.", reading, "nsubj>conj+Nom", "jak")
+        names_role("Je to okolnost.", reading, first.turn.lost[0][1], "jak")
     )
     hlaseni = chr(10).join(result.lines)
     assert "ČTENÍ SE NEZMĚNILO" not in hlaseni
-    assert "jak:Jana" in hlaseni
+    assert "jak:" in hlaseni and "běžet" in hlaseni
 
 
 def _three_lost_members() -> Reading:
-    """„Petr a Jana viděli psa a kočku." — mimo čtení zůstane souřadný
-    podmět I souřadný předmět, takže se věta ptá na DVA členy najednou."""
-    return Reading(
-        tokens=(
-            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
-            _token(2, "a", "a", "CCONJ", 3, "cc"),
-            _token(3, "Jana", "Jana", "PROPN", 1, "conj", Case="Nom", Gender="Fem", Number="Sing"),
-            _token(4, "viděli", "vidět", "VERB", 0, "root", Gender="Masc", Number="Plur", Polarity="Pos"),
-            _token(5, "psa", "pes", "NOUN", 4, "obj", Case="Acc", Gender="Masc", Number="Sing"),
-            _token(6, "a", "a", "CCONJ", 7, "cc"),
-            _token(7, "kočku", "kočka", "NOUN", 5, "conj", Case="Acc", Gender="Fem", Number="Sing"),
-            _token(8, ".", ".", "PUNCT", 4, "punct"),
-        ),
-        provenance=STAMP,
-    )
+    """„Petr viděl psa běžícího parkem." — mimo čtení zůstanou DVA
+    členy přívlastkové věty, takže se věta ptá na oba najednou."""
+    return _coordinate_subject()
 
 
 def _asked_about_many() -> tuple[Session, Reading, TurnResult]:
     from core_semantics.tests import golden
 
-    text = "Petr a Jana viděli psa a kočku."
+    text = "Petr viděl psa běžícího parkem."
     reading = _three_lost_members()
     oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
     session = Session(lexicon=golden.golden_lexicon())
@@ -334,19 +325,18 @@ def test_a_finished_sentence_still_gets_the_read_mark() -> None:
 
 
 def _coordinate_with_attribute() -> Reading:
-    """„Přidal se zánět ledvin a zápal plic." — souřadný podmět, který
-    má SVŮJ genitivní přívlastek. Přívlastek se smí ohlásit teprve
-    tehdy, až ten člen z odpovědi vznikne."""
+    """„Petr viděl psa běžícího parkem souseda." — ztracený člen
+    `parkem`, který má SVŮJ genitivní přívlastek. Ten se smí ohlásit
+    teprve tehdy, až ta role z odpovědi vznikne."""
     return Reading(
         tokens=(
-            _token(1, "Přidal", "přidat", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
-            _token(2, "se", "se", "PRON", 1, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes"),
-            _token(3, "zánět", "zánět", "NOUN", 1, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
-            _token(4, "ledvin", "ledvina", "NOUN", 3, "nmod", Case="Gen", Gender="Fem", Number="Plur"),
-            _token(5, "a", "a", "CCONJ", 6, "cc"),
-            _token(6, "zápal", "zápal", "NOUN", 3, "conj", Case="Nom", Gender="Masc", Number="Sing"),
-            _token(7, "plic", "plíce", "NOUN", 6, "nmod", Case="Gen", Gender="Fem", Number="Plur"),
-            _token(8, ".", ".", "PUNCT", 1, "punct"),
+            _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "viděl", "vidět", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "psa", "pes", "NOUN", 2, "obj", Case="Acc", Gender="Masc", Number="Sing"),
+            _token(4, "běžícího", "běžet", "ADJ", 3, "acl", Case="Acc", Gender="Masc", Number="Sing"),
+            _token(5, "parkem", "park", "NOUN", 4, "obl", Case="Ins", Gender="Masc", Number="Sing"),
+            _token(6, "souseda", "soused", "NOUN", 5, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(7, ".", ".", "PUNCT", 2, "punct"),
         ),
         provenance=STAMP,
     )
@@ -362,16 +352,16 @@ def test_a_member_named_by_an_answer_gets_its_own_attribute() -> None:
     from core_semantics.session import names_role
     from core_semantics.tests import golden
 
-    text = "Přidal se zánět ledvin a zápal plic."
+    text = "Petr viděl psa běžícího parkem souseda."
     reading = _coordinate_with_attribute()
     oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
     session = Session(lexicon=golden.golden_lexicon())
     first = session.utter(text, oracle)
-    shape = next(sh for form, sh in first.turn.lost if form == "zápal")
-    result = session.play(names_role("Je to okolnost.", reading, shape, "jak"))
-    hlaseni = chr(10).join(result.lines)
-    assert "plíce" in hlaseni, "přívlastek nově pojmenovaného členu musí být vidět"
-    assert "ledvina" in hlaseni, "přívlastek původního členu nesmí zmizet"
+    shape = next(sh for form, sh in first.turn.lost if form == "parkem")
+    result = session.play(names_role("Je to okolnost.", reading, shape, "kudy"))
+    privlastky = [line for line in result.lines if "PŘÍVLASTEK" in line]
+    assert privlastky, "přívlastek nově pojmenovaného členu musí být vidět"
+    assert "soused" in privlastky[0]
 
 
 def test_an_attribute_of_a_member_outside_the_reading_is_not_claimed() -> None:
@@ -379,10 +369,101 @@ def test_an_attribute_of_a_member_outside_the_reading_is_not_claimed() -> None:
     nehlásí — visel by na něčem, o čem věta (zatím) nemluví."""
     from core_semantics.tests import golden
 
-    text = "Přidal se zánět ledvin a zápal plic."
+    text = "Petr viděl psa běžícího parkem souseda."
     reading = _coordinate_with_attribute()
     oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
     session = Session(lexicon=golden.golden_lexicon())
-    hlaseni = chr(10).join(session.utter(text, oracle).lines)
-    assert "ledvina" in hlaseni
-    assert "plíce" not in hlaseni
+    privlastky = [
+        line for line in session.utter(text, oracle).lines if "PŘÍVLASTEK" in line
+    ]
+    assert not privlastky, "dokud ten člen ve čtení není, přívlastek se nehlásí"
+
+
+def _two_in_one_role(predicate: str, lemma: str) -> Reading:
+    """„Petr a Jana <přišli/zvedli>." — dvě jména v roli `kdo`.
+    ROZBOR JE U OBOU TÝŽ; liší se jedině sloveso."""
+    return Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "a", "a", "CCONJ", 3, "cc"),
+            _token(3, "Jana", "Jana", "PROPN", 1, "conj", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(4, predicate, lemma, "VERB", 0, "root", Gender="Masc", Number="Plur", Polarity="Pos"),
+            _token(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def _shared_session(predicate: str, lemma: str) -> tuple[Session, Reading, TurnResult]:
+    from core_semantics.tests import golden
+
+    text = f"Petr a Jana {predicate}."
+    reading = _two_in_one_role(predicate, lemma)
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    return session, reading, session.utter(text, oracle)
+
+
+def test_two_names_in_one_role_are_not_split_silently() -> None:
+    """SPORNÝ PŘÍPAD — TEN, KTERÝ ROZHODUJE O CELÉM MECHANISMU *(W‑73)*.
+
+    „Petr a Jana přišli." platí o každém zvlášť, „Petr a Jana zvedli
+    klavír." o nich dohromady — a ROZBOR MÁ OBĚ VĚTY IDENTICKÉ (`nsubj`
+    + `cc` + `conj`, přísudek v plurálu). Rozdělit to mlčky znamená
+    vyrobit tvrzení, které ve větě není; nerozdělit mlčky taky. Systém
+    se proto PTÁ a do báze zatím nejde nic."""
+    _, _, result = _shared_session("přišli", "přijít")
+    assert "o každém zvlášť, nebo o nich dohromady" in (result.question or "")
+    assert result.statement_id is None, "dokud se nerozhodne, nezapisuje se"
+
+
+def test_the_distributive_answer_writes_two_statements() -> None:
+    """KLADNÝ PŘÍPAD: „o každém zvlášť" → DVĚ tvrzení, ne dvě role.
+    Jádro drží jeden term na roli a to se nemění — druhý uzel dostane
+    vlastní výrok se sdíleným přísudkem."""
+    from core_semantics.session import decides_sharing
+
+    session, reading, first = _shared_session("přišli", "přijít")
+    assert first.predication is not None
+    result = session.play(
+        decides_sharing("Každý zvlášť.", first.predication, reading, distributive=True)
+    )
+    zapsano = [line for line in result.lines if "zapsáno" in line]
+    assert len(zapsano) == 2, "dvě tvrzení o dvou uzlech"
+    assert any("Petr" in line for line in zapsano)
+    assert any("Jana" in line for line in zapsano)
+
+
+def test_the_collective_answer_writes_one_node() -> None:
+    """ZÁPORNÝ PŘÍPAD: „dohromady" → JEDEN uzel a JEDNO tvrzení.
+    Klavír zvedli spolu; dvě tvrzení by byla nepravda."""
+    from core_semantics.session import decides_sharing
+
+    session, reading, first = _shared_session("zvedli", "zvednout")
+    assert first.predication is not None
+    result = session.play(
+        decides_sharing("Dohromady.", first.predication, reading, distributive=False)
+    )
+    zapsano = [line for line in result.lines if "zapsáno" in line]
+    assert len(zapsano) == 1, "jedno tvrzení o jednom uzlu"
+    assert "Petr_a_Jana" in zapsano[0]
+
+
+def test_a_single_filler_asks_nothing_about_sharing() -> None:
+    """PROTIPŘÍKLAD: věta s JEDNÍM členem v roli se na sdílení neptá —
+    otázka nesmí vzniknout tam, kde není co rozdělovat."""
+    from core_semantics.tests import golden
+
+    text = "Petr přišel."
+    reading = Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "přišel", "přijít", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    result = Session(lexicon=golden.golden_lexicon()).utter(text, oracle)
+    assert "dohromady" not in (result.question or "")
+    assert result.statement_id is not None

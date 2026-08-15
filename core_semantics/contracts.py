@@ -1811,6 +1811,40 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-42",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "VÍC ČLENŮ V JEDNÉ ROLI SE NEROZDĚLÍ MLČKY *(W‑73)*. „Petr "
+            "a **Jana** přišli.“ — obě jména jsou `kdo`, ne `kdo` a něco "
+            "jiného; pojmenovat druhý konjunkt jinou rolí je ÚČINNOST "
+            "KOUPENÁ NEPRAVDIVÝM JMÉNEM (změřeno: u 50 z 65 přímých "
+            "souřadných členů je pravdivé jméno role obsazené). Je to "
+            "tedy DRUHÝ UZEL TÉŽE ROLE. JENŽE JESTLI TO PLATÍ O KAŽDÉM "
+            "ZVLÁŠŤ, TO ROZBOR NENESE: „Petr a Jana přišli.“ ano, „Petr "
+            "a Jana zvedli klavír.“ ne — a obě věty mají stavbu "
+            "IDENTICKOU (`nsubj` + `cc` + `conj`, přísudek v plurálu). "
+            "Rozdíl je ve SLOVESE, ne ve stavbě. Rozdělit mlčky vyrobí "
+            "tvrzení, které ve větě není; nerozdělit mlčky taky, jen "
+            "opačné. Systém se proto PTÁ a zápis to BLOKUJE jako "
+            "`pending_relation` (B‑17). Odpověď `→&` je ROZHODNUTÍ, ne "
+            "naučený tvar — „zvedli“ a „přišli“ mají týž tvar a opačnou "
+            "odpověď, takže naučit ji jako tvar znamená přečíst druhou "
+            "větu naruby (táž úvaha jako u genitivního přívlastku, "
+            "W‑39). „Každý zvlášť“ dá DRUHÉ TVRZENÍ se sdíleným "
+            "přísudkem (jádro drží jeden term na roli a to se nemění); "
+            "„dohromady“ dá JEDEN uzel a žádnou skupinu neuzavírá. Věta "
+            "s jedním členem v roli se na sdílení neptá"
+        ),
+        anchor="core_semantics.cascade:sharing_tier",
+        entry=".play(",
+        enforced_by=(
+            "test_two_names_in_one_role_are_not_split_silently",
+            "test_the_distributive_answer_writes_two_statements",
+            "test_the_collective_answer_writes_one_node",
+            "test_a_single_filler_asks_nothing_about_sharing",
+        ),
+    ),
+    Clause(
         id="S-41",
         boundary=SESSION_STORAGE,
         promise=(

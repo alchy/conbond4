@@ -1,6 +1,166 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — B‑25 zavřená u kořene, a moje čísla to potvrdila
+## Status: 🟢 PASS — W‑71 na nule a rozhodnutí o souřadném členu je správné
+
+**Kolo #123.** 1182 zkoušek (+5), `mypy --strict` čistý na 62 souborech,
+doložky **87/87** (nová **S‑41**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`. **Moje baterie 20 ✔ / 0 ✘.**
+
+**Architectural Health Score: 9,8 / 10.**
+
+---
+
+## Moje sonda, tvůj kód — obojí měřeno mnou
+
+```
+                                     #121   #122   #123   podlaha
+vět, které se ptají na víc členů      178    178    178
+  po odpovědi se ptá dál               21    176    176     176+
+  překlop ◐ → ✓ přečteno                9      0      0        0
+  hlášení proti změněné značce          5      0      0        0
+W‑71 — o zbylém členu se MLČÍ                  4      0        0
+```
+
+**Root cause je jedna položka v pořadí pater a to je ta správná
+velikost zásahu**: `attribute_tier` běžel před `lost_role_tier`, takže
+role, která teprve vznikla z odpovědi, svůj přívlastek nikdy nedostala.
+Pravidlo *„co přidává roli, musí předcházet tomu, co role zpracovává"*
+bylo v souboru napsané a jen se nevztáhlo na patro, které roli přidává
+poslední. **Po opravě:** `[PŘÍVLASTEK: „zánět ledvina", „zápal plíce"]`.
+
+**Že jsi našel pátý případ („senátu"), který moje sonda minula, i to,
+že tvoje první sonda hlásila 5 i po opravě, protože porovnávala TVAR
+proti LEMMATU — obojí jsi napsal sám, dřív než jsem se zeptal.** Je to
+táž past, do které jsem spadl dvakrát; **tohle je způsob, jak se čísly
+dá věřit.**
+
+**A opravu #122 jsi vzal bez okolků a bez omáčky.** Přesně tak to má
+vypadat.
+
+---
+
+## Rozklad souřadného členu — přepočítal jsem ho ze své strany
+
+**Nepočítal jsem tvým kritériem, ale svým** (člen z otázky → hlava
+z rozboru přes `conj` → stojí ta hlava ve čtení jako filler? sedí pád?),
+a **schválně dvakrát, volně a přísně**:
+
+```
+                                      volné   přísné   tvoje
+vět se zahozeným konjunktem             122      122     120
+konjunktů celkem                        255      255     248
+  hlava je filler a PÁD SEDÍ             90       74      85
+  hlava je filler, pád jiný              13        9       3
+  hlava rolí NENÍ (visí hlouběji)       152      172     160
+```
+
+**Tvoje číslo leží mezi mými dvěma mezemi, a to je nejlepší, co se
+o cizím měření dá říct.** Rozdíl je jen v tom, co se počítá za „druhý
+filler": moje volná varianta bere i `amod` konjunkty („stoupající" pod
+„malá"), a ty tam nepatří. **Tvar rozkladu — většina visí pod nerolovým
+členem, silná menšina je pravý druhý filler, hrst je šum — potvrzuji.**
+
+**Rozhodnutí „DRUHÝ UZEL TÉŽE ROLE, ne druhá role" je správné** a moje
+čísla z #121 ho podpírají z opačné strany: u **50 z 65** je pravdivé
+jméno obsazené, takže *„pojmenuj to jinak"* není odpověď, je to obcházení.
+
+**A že jsi to v tomhle kole NEPOSTAVIL, je taky správně** — mění to čtení
+u ~85 členů a zaslouží si vlastní předpověď na projev.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑72 · uzel `·Hradec` z „v Hradci Králové" — teď je z toho otázka, ne tvrzení
+
+**Ověřil jsem obojí.** Ty tři případy `PROPN` + genitivní `PROPN` pod
+`nmod` v korpusu opravdu jsou tři a opravdu **nejsou táž věc**:
+
+```
+„Hradci Králové“        jméno města
+„Čapka Josefa“          obrácené pořadí jména, šum rozboru
+„Ludvíku Rittersberka“  totéž
+```
+
+**Že jsi je nesloučil, je použití mého vlastního pravidla a beru to** —
+jméno koupené domněnkou je táž vada jako účinnost koupená nepravdivým
+jménem. **A hlavní věc se změnila:**
+
+```
+◐ přečteno, neúplné  studovat(jak:·Hradec, …)
+  [PŘÍVLASTEK: „Hradec Králové“ — vztah vedle věty, čeká se na jméno role]
+```
+
+**Ze ztraceného členu se stala otevřená otázka.** To je správný
+epistemický tvar.
+
+**Co zůstává a proč to píšu jako varování:** ten uzel se pořád jmenuje
+`·Hradec`, tedy vlastním jménem, které v textu takhle nestojí.
+**Dokud je otázka otevřená, věta se nezapíše, takže do báze se nepravda
+nedostane** — ale **až se ty otázky jednou zodpovědí, nechci vidět
+zapsané `·Hradec`.** Až budeš stavět druhý uzel, chci u toho vidět
+doložené, co se stane s **vícslovným jménem**, ne jen s vícečlennou rolí.
+
+**Otevřené beze změny:** zvratné `si` jako role (5 vět), prázdný `reason`
+u `ZAPSÁNO` (u Agenta 3), vnořené datum pod nerolovou hlavou (3),
+množství slovem (14), počet číslicí (11), kolize (10 z 12), 26 ze 42
+`v+Loc`, úřad, příbuzenství, `nmod` pod obecným jménem, W‑54, W‑60,
+W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36 – W‑38, W‑40, W‑41.
+Otázka *„co JE uzel »vše«"* zůstává otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**Ano — postav ten druhý uzel.** Rozhodnutí je doložené, forma (druhá
+predikace se sdíleným přísudkem, zrcadlo k `coordination_tier`) nesahá
+na jádrové pravidlo „jeden term na roli", a to je přesně důvod, proč ji
+schvaluju.
+
+**Ale nese to jednu past a chci ji vidět ošetřenou dřív, než uvidím
+čísla. SOUŘADNÝ PODMĚT NEMUSÍ ZNAMENAT, ŽE TO PLATÍ O KAŽDÉM ZVLÁŠŤ:**
+
+```
+Petr a Jana přišli.              → dvě predikace jsou PRAVDA
+Petr a Jana zvedli klavír.       → dvě predikace jsou NEPRAVDA (zvedli ho spolu)
+Novákovi a Dvořákovi si rozdělili náklady.  → dohromady, ne každý zvlášť
+```
+
+**Dvě predikace = distributivní čtení.** Když ho systém udělá mlčky,
+vyrobí tvrzení, které ve větě není — a to je táž třída, kterou jsem
+tady zavíral tři kola po sobě. **Nechci, abys to uhodl; chci, aby se
+systém zeptal, nebo aby to nechal jako jeden nerozdělený uzel a řekl,
+že neví.** Podle mého stálého pravidla k novému mechanismu **doložíš
+případ kladný, sporný a záporný** — ty tři věty výše se na to hodí.
+
+**Předpověď na projev, ne na čísla — chci ji PŘED kódem:** kolik z těch
+~85 členů je u sloves, kde distributivní čtení sedí, a kolik ne. **Když
+to nejde rozhodnout z rozboru, řekni to** — a pak se ptá.
+
+**Podlaha, kterou nechci vidět jinak:** 178 / **176 se ptá dál** /
+**0 překlopení** / **0 hlášení proti změněné značce** / **W‑71 = 0**,
+21 domén, `standing_metrics()` 21/107/51/33/26, relace 9/9, gate
+*Farmaka*, parita ≥ 55/55, doložky ≥ 87/87, nula `RECALL_FAILURE`,
+`mypy --strict` čistý, **celý korpus bez pádu, běh před předávkou, každý
+✔ doložený výpisem**.
+
+**A ještě jedno číslo chci vidět jmenovitě:** kolik vět se po téhle
+změně **zapíše** (dnes 1 z 238). **Jestli se to nezmění, chci vědět, co
+je drží** — a jestli se to zvedne, chci u každé nové vidět, že v ní není
+tvrzení navíc.
+
+---
+
+## ARCHIV — kolo #122
+
+### Status: 🟢 PASS — B‑25 zavřená u kořene, a moje čísla to potvrdila
 
 **Kolo #122.** 1177 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
 doložky **86/86** (nová **S‑40**), `standing_metrics()` =

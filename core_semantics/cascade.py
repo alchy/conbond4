@@ -221,6 +221,19 @@ class Predication:
     #: je to druhý výrok VEDLE věty, ne chybějící role. Věta „Nad hrobem
     #: promluvil básník Josef Hora.“ je celá i bez něj.
     pending_title: tuple[tuple[str, str, int], ...] = ()
+    #: SOUŘADNÝ DRUHÝ FILLER, o kterém se ČEKÁ ROZHODNUTÍ *(W‑73)*, jako
+    #: `(role, tvar, token)`. „Petr a **Jana** přišli." — obě jména jsou
+    #: `kdo`, ne `kdo` a něco jiného; pojmenovat druhý konjunkt jinou rolí
+    #: je účinnost koupená nepravdivým jménem.
+    #:
+    #: ČEKÁ SE, PROTOŽE Z ROZBORU TO NEJDE POZNAT. „Petr a Jana přišli."
+    #: platí o každém zvlášť, „Petr a Jana zvedli klavír." o nich
+    #: dohromady — a rozbor má obě věty IDENTICKÉ (`nsubj` + `cc` +
+    #: `conj`, přísudek v plurálu). Rozdíl je ve slovese, ne ve stavbě.
+    #: Rozdělit to mlčky znamená vyrobit tvrzení, které ve větě není;
+    #: nerozdělit mlčky taky. Zápis to proto BLOKUJE jako
+    #: `pending_relation` (B‑17).
+    pending_share: tuple[tuple[str, str, int], ...] = ()
     #: DRUHÁ PREDIKACE téže promluvy *(W‑71)*. „Jeho stav se zlepšil, ale
     #: musel ulehnout." jsou DVĚ VĚTY; první nese druhou, protože si ji
     #: druhá půjčuje o jedinou věc — PODMĚT. Vlastní pole, ne druhý
@@ -322,6 +335,11 @@ class Verdict:
 # --------------------------------------------------------------------------
 # Generátor kandidátních čtení
 # --------------------------------------------------------------------------
+
+
+def mention_of(token: Token) -> Mention:
+    """Zmínka z tokenu — jedno místo, odkud ji berou i patra mimo modul."""
+    return _mention(token)
 
 
 def _mention(token: Token) -> Mention:
@@ -3076,6 +3094,11 @@ def dropped_tokens(reading: Reading, predication: Predication) -> tuple[Token, .
         inner = complex_predicate(reading, head[1])
         if inner is not None:
             used.add(inner.index)
+    # ČLEN, O KTERÉM SE ČEKÁ ROZHODNUTÍ, ZTRACENÝ NENÍ *(W‑73)*. Systém
+    # o něm ví, umí říct, čí je to konjunkt, a ptá se na něj VLASTNÍ
+    # otázkou. Hlásit ho k tomu ještě jako ztrátu by znamenalo ptát se
+    # dvakrát na dvě různé věci o jednom slově.
+    used |= {token for _, _, token in predication.pending_share}
     return tuple(
         token
         for token in reading.tokens
@@ -3519,6 +3542,89 @@ def _own_subject(token: Token, reading: Reading) -> bool:
         and base_deprel(child.deprel) in SUBJECT_DEPRELS
         for child in reading.tokens
     )
+
+
+def shared_fillers(
+    reading: Reading, predication: Predication
+) -> tuple[tuple[str, str, int], ...]:
+    """SOUŘADNÝ DRUHÝ FILLER jako `(role, tvar, token)` *(W‑73)*.
+
+    „Příklady zahrnují filodendrony a **lilie**." — `lilie` je `conj` pod
+    zmínkou, která ve čtení stojí jako role, a má TÝŽ PÁD. Je to tedy
+    druhý uzel TÉŽE role, ne role druhá: obě jména jsou `co`.
+
+    **Pád rozhoduje, spojka ne.** `conj` v jiném pádě není druhý filler
+    (souřadná věta, šum rozboru) a nesmí sem — změřeno: 85 konjunktů
+    s týmž pádem proti 3 s jiným.
+    """
+    ve_cteni = {
+        role.mention.token_index: role.name for role in predication.roles
+    }
+    najdene: list[tuple[str, str, int]] = []
+    for token in reading.tokens:
+        if base_deprel(token.deprel) != "conj":
+            continue
+        head = _token_at(token.head, reading)
+        if head is None or head.index not in ve_cteni:
+            continue
+        if dict(token.feats).get("Case") != dict(head.feats).get("Case"):
+            continue
+        najdene.append((ve_cteni[head.index], token.form, token.index))
+    return tuple(najdene)
+
+
+def share_question(predication: Predication) -> str | None:
+    """Otázka „o každém zvlášť, nebo o nich dohromady?" *(W‑73)*.
+
+    **Neptá se na jméno role** — to se ví, je to táž role jako u prvního
+    konjunktu. Ptá se na jedinou věc, kterou rozbor nenese: jestli to,
+    co věta tvrdí, platí o každém z nich samostatně.
+    """
+    if not predication.pending_share:
+        return None
+    parts = ", ".join(f"„{tvar}“" for _, tvar, _ in predication.pending_share)
+    role = predication.pending_share[0][0]
+    return (
+        f"Věta jmenuje víc členů v roli „{role}“ — {parts}. Platí to "
+        f"o každém zvlášť, nebo o nich dohromady? Z rozboru to poznat "
+        f"nejde: „Petr a Jana přišli.“ a „Petr a Jana zvedli klavír.“ "
+        f"mají touž stavbu."
+    )
+
+
+def sharing_tier() -> Tier:
+    """Patro, které souřadný druhý filler POJMENUJE a NEROZHODNE *(W‑73)*.
+
+    Běží AŽ ZA kvantifikátorem, protože se ptá HOTOVÝCH rolí, které
+    zmínky ve čtení stojí. Nic nedosazuje: rozdělit větu na dvě tvrzení
+    je rozhodnutí o tom, co text říká, a to se z `conj` přečíst nedá.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        out: list[Candidate] = []
+        for candidate in candidates:
+            found = shared_fillers(reading, candidate.predication)
+            if not found:
+                out.append(candidate)
+                continue
+            notes.append(
+                "[VÍC ČLENŮ V JEDNÉ ROLI: "
+                + ", ".join(f"„{tvar}“ ({role})" for role, tvar, _ in found)
+                + " — čeká se na rozhodnutí, jestli to platí o každém "
+                "zvlášť, nebo o nich dohromady]"
+            )
+            out.append(
+                Candidate(
+                    replace(candidate.predication, pending_share=found),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
 
 
 def coordination_tier(lexicon: Lexicon) -> Tier:
