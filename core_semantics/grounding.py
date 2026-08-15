@@ -62,6 +62,7 @@ from .ast import (
 )
 from .cascade import (
     AWAITING_QUANTIFIER,
+    feature_values,
     ROLE_SUBJECT,
     AWAITING_REFERENCE,
     Mention,
@@ -200,24 +201,12 @@ class Discourse:
             if any(
                 key in want
                 and key in feats
-                and not (_values(want[key]) & _values(feats[key]))
+                and not (feature_values(want[key]) & feature_values(feats[key]))
                 for key in ("Gender", "Number")
             ):
                 continue
             found.append((mention, term))
         return tuple(found)
-
-
-def _values(feature: str) -> frozenset[str]:
-    """Hodnoty jednoho rysu. UD je píše i jako výčet — „Narodila" nese
-    `Gender=Fem,Neut`, protože tvar je pro obojí týž.
-
-    Porovnává se PRŮNIKEM, ne rovností: prázdný průnik znamená, že se ty
-    dva tvary shodnout NEMOHOU, a jen tehdy kandidát vypadne. Rovnost by
-    zahodila kandidáta, který se shodnout může — a to by z vodítka udělalo
-    filtr, který rozhoduje.
-    """
-    return frozenset(feature.split(","))
 
 
 #: Zájmena, která odkazují do PŘEDCHOZÍHO textu. Osobní a přivlastňovací

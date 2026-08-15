@@ -17,6 +17,7 @@ from core_semantics.cascade import (
     ROLE_OBJECT,
     ROLE_SUBJECT,
     agreement_tier,
+    feature_values,
     base_consistency_tier,
     cascade,
     case_tier,
@@ -542,3 +543,82 @@ def test_a_real_indirect_object_keeps_its_own_shape() -> None:
     verdict = cascade(dative)
     assert verdict.decided is not None
     assert "Dat:arg" in [r.name for r in verdict.decided.predication.roles]
+
+
+# --------------------------------------------------------------------------
+# Shoda se porovnává PRŮNIKEM hodnot — W‑32
+# --------------------------------------------------------------------------
+#
+# UD píše víceznačný tvar výčtem: „sbírala" nese `Gender=Fem,Neut`
+# a `Number=Plur,Sing`, protože týž tvar je ženský jednotný („matka
+# sbírala") i střední množný („děvčata sbírala"). Není to konjunkce dvou
+# tvrzení, je to PŘIZNANÁ VÍCEZNAČNOST — a porovnávat ji rovností znamená
+# žádat, aby byl podmět stejně víceznačný jako přísudek.
+#
+# Odmítnutí bylo hlasité, takže to nebyla vada bezpečnosti. Bylo to
+# FALEŠNĚ NEGATIVNÍ ČTENÍ: dobrá věta zahozená ze špatného důvodu. Na
+# encyklopedickém korpusu (238 vět) blokovala tahle jediná záměna 29 vět,
+# ve všech jako JEDINÝ blokátor.
+
+
+def _clause(subject: str, subject_feats: dict[str, str], verb: str,
+            verb_feats: dict[str, str]) -> Reading:
+    return Reading(
+        tokens=(
+            _token(1, subject, subject.lower(), "NOUN", 2, "nsubj", Case="Nom", **subject_feats),
+            _token(2, verb, verb.lower(), "VERB", 0, "root", **verb_feats),
+            _token(3, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_homonymous_predicate_no_longer_rejects_an_unambiguous_subject() -> None:
+    """„Matka sbírala." — podmět je jednoznačně `Sing`, přísudek přiznává
+    `Plur,Sing`. Průnik je neprázdný, takže se shodnout MOHOU a věta
+    projde."""
+    reading = _clause(
+        "Matka", {"Number": "Sing", "Gender": "Fem"},
+        "sbírala", {"Number": "Plur,Sing", "Gender": "Fem,Neut"},
+    )
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors, why
+
+
+def test_an_impossible_agreement_is_still_rejected_out_loud() -> None:
+    """„Psi byla." — na ČÍSLE je průnik neprázdný (`Plur` × `Plur,Sing`),
+    takže samotné číslo by tu větu pustilo. Zahodí ji až ROD: `Masc`
+    proti `Fem,Neut` se shodnout nemůže. Bez kontroly rodu by přechod na
+    průnik tuhle větu propustil — proto rod patro nezpřísňuje nad rámec
+    toho, co dělalo, jen nahrazuje práci, kterou dřív odváděla rovnost."""
+    reading = _clause(
+        "Psi", {"Number": "Plur", "Gender": "Masc"},
+        "byla", {"Number": "Plur,Sing", "Gender": "Fem,Neut"},
+    )
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors == ()
+    assert why is not None and "shoda rodu" in why
+
+
+def test_a_missing_feature_never_breaks_the_agreement() -> None:
+    """Co se neříká, se nedá popřít. Přísudek bez rodu (přítomný čas)
+    o rodu podmětu netvrdí nic, takže na něm shoda padnout nesmí."""
+    reading = _clause(
+        "Citron", {"Number": "Sing", "Gender": "Masc"},
+        "obsahuje", {"Number": "Sing"},
+    )
+    survivors, _ = agreement_tier(generate(reading), reading)
+    assert survivors
+
+
+def test_the_intersection_is_computed_from_one_shared_helper() -> None:
+    """Táž úvaha rozhoduje o kandidátovi na antecedent i o zahození
+    čtení. Dvě kopie by se rozešly a jedna z nich by dřív nebo později
+    začala trestat víceznačnost znovu."""
+    import inspect
+
+    from core_semantics import grounding
+
+    assert feature_values("Fem,Neut") == {"Fem", "Neut"}
+    assert not (feature_values("Masc") & feature_values("Fem,Neut"))
+    assert "feature_values" in inspect.getsource(grounding.Discourse.candidates)

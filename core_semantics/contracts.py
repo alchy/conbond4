@@ -949,6 +949,35 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-8",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "MORFOLOGICKÝ RYS SE POROVNÁVÁ PRŮNIKEM HODNOT, ne rovností "
+            "řetězce. UD píše víceznačný tvar výčtem („sbírala“ nese "
+            "`Gender=Fem,Neut`, `Number=Plur,Sing“), a to je PŘIZNANÁ "
+            "VÍCEZNAČNOST, ne konjunkce dvou tvrzení; rovnost by žádala, "
+            "aby byl podmět stejně víceznačný jako přísudek, a zahodila "
+            "by každou větu s homonymním tvarem a jednoznačným podmětem — "
+            "v češtině běžný případ. Chybějící rys shodu NERUŠÍ (co se "
+            "neříká, nedá se popřít). Shoda se kontroluje v ČÍSLE i "
+            "RODĚ: bez rodu by po přechodu na průnik prošlo „Psi byla“, "
+            "protože na čísle je průnik neprázdný. Táž funkce rozhoduje "
+            "i o kandidátovi na antecedent — dvě kopie by se rozešly "
+            "(W‑32)"
+        ),
+        anchor="core_semantics.cascade:feature_values",
+        # Průchod je patro, ne funkce: co se doopravdy zahodí, se na
+        # porovnání dvou množin nepozná.
+        entry="agreement_tier(",
+        enforced_by=(
+            "test_a_homonymous_predicate_no_longer_rejects_an_unambiguous_subject",
+            "test_an_impossible_agreement_is_still_rejected_out_loud",
+            "test_a_missing_feature_never_breaks_the_agreement",
+            "test_the_intersection_is_computed_from_one_shared_helper",
+            "test_agreement_decides_the_motivating_case_without_learning",
+        ),
+    ),
+    Clause(
         id="S-35",
         boundary=CASCADE_SESSION,
         promise=(

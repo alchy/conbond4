@@ -1,6 +1,148 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — zájmeno se ptá, nedosazuje; kontext textu je v jádře, ne v předzpracování
+## Status: 🟢 PASS — dekapitovaná věta se přestala zapisovat; a táž oprava chybí o patro níž
+
+**Kolo #72.** 940 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **66/66**, živá parita **51/51**, dialogy 14 / 37 / 24, gate
+*Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá regrese zelená.
+**Třináct starých domén se závěry beze změny.** Jádro 0.1.17.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Nález, který Builder udělal sám, je vážnější než zadání
+
+**Věta bez podmětu se ZAPISOVALA.** Po „Jan je učitel." dala „Narodil se
+v Praze." rovnou `✓ zapsáno narodit(kde:Praha)`. To není „neumíme
+pro‑drop" — to je **fakt o nikom, uložený tiše**. V encyklopedické próze
+by se takové věty ukládaly jedna za druhou a nepoznalo by se to.
+
+Že to našel **před** jakoukoli změnou a ohlásil jako první věc kola, je
+přesně ta disciplína, kterou tenhle projekt drží.
+
+**Po opravě, měřeno mnou:**
+
+```
+» Narodila se v Praze.       ◐ NEZAPSÁNO, NIKDO NENABÍDNUT
+     Věta nemá podmět — „Narodila“ ho nevyslovil. V předchozí větě nikdo
+     takový nestojí …
+» Narodil se v Petrovicích.  ◐ NEZAPSÁNO, nabídne Jana
+» Prší.                      → NEVÍM, jak to čtu
+     ? přísudek „Prší“ nemá ani jeden člen, který bych uměl pojmenovat
+» Narodil se Jan v Plzni?    → ANO   [doloženo: s0002, s0006]
+```
+
+**Zmínkou role je sám přísudek** (`kdo:narodit`) a je to schválně — do
+textu se nepřidávají slova, která tam nejsou, a rod s číslem jsou právě
+na něm. **Nabídku dělá táž funkce jako u zájmena**; dvě kopie by se
+rozešly a jedna z nich by dřív nebo později začala hádat.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Critical Blockers
+
+**Žádné pro tohle kolo.** Následující nález je **starší než kolo #72**
+a nic z akceptační sady neporušuje — ale je to dnes nejdražší otevřená
+věc v repozitáři a jde do dalšího směru.
+
+---
+
+## Semantic Warnings
+
+### W‑32 · Táž oprava shody chybí v tvrdém patře — a Builder si ji sám odůvodnil
+
+Kolo #72 muselo opravit porovnání rodu a čísla u **kandidáta na
+antecedent**, a odůvodnil to takhle:
+
+> UD u „Narodila" dává `Gender=Fem,Neut` a `Number=Plur,Sing`, protože
+> tvar je pro všechny ty možnosti týž. **Rovnost by takového kandidáta
+> zahodila vždycky** — porovnává se proto **PRŮNIKEM** a kandidát vypadne
+> jen tehdy, když se shodnout **nemůže**.
+
+**To je správně a platí to o patro níž taky — jenže tam se pořád
+porovnává rovností.** Změřeno:
+
+```
+» Matka sbírala folklor.    → NEVÍM, jak to čtu
+     [PROČ: shoda čísla — přísudek Plur,Sing, podmět musí být týž]
+» Povodeň zasáhla dům.      → totéž
+» Přednáška byla v pondělí. → totéž
+```
+
+**Všechny tři jsou bezvadná čeština.** `sbírala` je `Fem Sing` **i**
+`Neut Plur` („děvčata sbírala"), takže `Plur,Sing` **není tvrzení**, že
+přísudek je zároveň množný a jednotný — je to **přiznaná
+víceznačnost UD**. Podmět `Matka` je `Sing`, průnik je neprázdný, shoda
+platí. Patro ji zahazuje, protože žádá, aby byl podmět **stejně
+víceznačný**.
+
+**Rozsah je změřený, ne odhadnutý** — `conbond4-utils`, 238 vět ze čtyř
+encyklopedických témat:
+
+```
+morfologie   29 vět (12.2 %)   a ve VŠECH 29 je JEDINÝM blokátorem
+```
+
+Je to největší třída, kterou by jedna oprava uvolnila celou. **Odmítnutí
+je hlasité, ne tiché** — systém řekne, že neví — takže to není vada
+bezpečnosti, ale **falešně negativní čtení**: dobrá věta, zahozená ze
+špatného důvodu. A zamítnout gramatickou českou větu je pro systém,
+který má číst psaný text nativně, drahá chyba.
+
+**Nehotové, které Builder hlásí sám (a je to správně):** kandidát se
+bere jen z **jedné** předchozí věty, ne z odstavce; neumí vynechaný
+podmět se shodou s předmětem ani víc kandidátů téhož rodu.
+
+**W‑23, W‑25, W‑26, W‑30, W‑31** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: shoda se porovnává PRŮNIKEM i v tvrdém patře.**
+
+**Obecný problém, ne jedna věta:** rys, který UD uvede jako **množinu**
+(`Plur,Sing`, `Fem,Neut`), je **přiznaná víceznačnost tvaru**, ne
+konjunkce dvou tvrzení. Porovnávat ho rovností znamená zahodit každou
+větu, kde je tvar homonymní a podmět jednoznačný — a to je v češtině
+běžné, ne okrajové.
+
+**Architektonická příčina:** patro shody porovnává řetězec rysu, ne
+množinu hodnot. Táž vada byla v kandidátovi na antecedent a **už je
+opravená** — zbývá ji dotáhnout tam, kde rozhoduje o zahození čtení.
+
+**Nejmenší změna:** rys se rozloží na množinu hodnot a shoda platí při
+**neprázdném průniku**. Patro tím **nepovoluje víc**, jen přestává
+trestat víceznačnost: kde se shodnout **nemůže** (`Psi` × `byla` bez
+společné hodnoty), zahodí čtení dál.
+
+**Můj counterexample — bez něj neschválím:** „Matka sbírala folklor.",
+„Povodeň zasáhla dům." i „Přednáška byla v pondělí." se **přečtou**;
+věta, kde je průnik **prázdný**, se **dál zahodí** a řekne proč
+(*„Psi byla v pondělí."*); „Obsahuje citron vitamíny?" se filtrem
+**pořád zužuje** na jedno čtení; čtrnáct domén se závěry beze změny
+(a když se některý změní, **napiš to**); devět z devíti jádrových
+relací dál píše česká věta; gate *Farmaka* `N`/`s0005`; parita ≥ 51/51;
+nula `RECALL_FAILURE`; testy zelené; **a znovu se pustí měření na
+`conbond4-utils`** — třída `morfologie` musí klesnout a **žádná jiná
+třída nesmí narůst**.
+
+**K tvému návrhu změřit korpus znovu: ano, a je to teď dvojnásob na
+místě** — po téhle opravě to bude poprvé, co může být `ZAPSÁNO`
+nenulové, a rozklad po třídách řekne víc než další doména.
+
+---
+
+## ARCHIV — kolo #71
+
+### Status: 🟢 PASS — zájmeno se ptá, nedosazuje; kontext textu je v jádře, ne v předzpracování
 
 **Kolo #71.** 924 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **65/65**, živá parita **48/48**, dialogy 13 / 34 / 23, gate

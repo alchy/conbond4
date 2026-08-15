@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.17 · 15. 8. 2026
+**Verze jádra:** 0.1.18 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.18 | § 5.2 — SHODA SE POROVNÁVÁ PRŮNIKEM HODNOT, ne rovností řetězce: rys, který UD uvede jako množinu (`Plur,Sing`), je přiznaná víceznačnost tvaru, ne konjunkce dvou tvrzení. Kontroluje se číslo I ROD — bez rodu by průnik propustil „Psi byla“. Na encyklopedickém korpusu klesla třída morfologie z 29/238 na 10/238; § 13 T68 | 15. 8. 2026 |
 | 0.1.17 | § 3.2 — VĚTA BEZ PODMĚTU se nezapíše DEKAPITOVANÁ: podmět v predikaci vznikne a ČEKÁ, zmínkou je sám přísudek (rod a číslo jsou na něm) a kandidát se navrhuje z předchozí zakotvené věty. Rys s víc hodnotami (`Gender=Fem,Neut`) se porovnává PRŮNIKEM, ne rovností — vodítko kandidáty zužuje, nerozhoduje; § 13 T67 | 15. 8. 2026 |
 | 0.1.16 | § 3.2 — KONTEXT TEXTU: sezení si pamatuje, co bylo zakotveno ve větě PŘEDTÍM, a z toho NAVRHUJE antecedenty zájmen. Je to nová INFORMACE, ne nová inference — shoda rodu a čísla kandidáty jen zužuje a systém se ptá i tehdy, když je kandidát jediný (I‑13). Dokud rozhodnutí nepadne, nezapisuje se nic; § 13 T66 | 15. 8. 2026 |
 | 0.1.15 | § 8 — CITACE SAHÁ I NA ZAKOTVENÍ: odpověď, která se na uzel dostala přes JMÉNO, cituje i výrok, kterým je to jméno navázané. Zakotvení není premisa důkazu, ale bez něj by se dotaz netrefil, takže „odpověď o Honzovi doložená faktem o Janovi“ nechává spojnici jen v hlavě systému. K tomu `name` z české věty („X se jmenuje Y“) se stranami z DEPRELŮ a `ROLE_SORTS` pro relace, jejichž strany nejsou na téže ose; § 13 T65 | 15. 8. 2026 |
@@ -1053,6 +1054,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T68 | shoda průnikem, ne rovností | „Matka sbírala folklor.“, „Povodeň zasáhla dům.“ i „Přednáška byla v pondělí.“ se PŘEČTOU; „Psi byla v pondělí.“ se dál zahodí a řekne proč (rod); „Obsahuje citron vitamíny?“ se pořád zužuje na jedno čtení; chybějící rys shodu neruší |
 | T67 | věta bez podmětu | „Narodil se v Petrovicích.“ po „Jan je učitel.“ NEZAPÍŠE nic a nabídne Jana; po `→=` zapsáno na týž uzel; „Narodil se Jan v Plzni?“ dá `A` s citací obou zápisů; „Narodila se …“ po téže větě nenabídne nikoho; přísudek bez rodu a čísla nenabídne nikoho |
 | T66 | zájmeno odkazuje do předchozí věty | „Jan je učitel. On bydlí v Petrovicích.“ NEZAPÍŠE nic a nabídne Jana; po `→=` zapsáno na TÝŽ uzel; „Bydlí Jan v Plzni?“ dá `A` s citací obou zápisů; „Ona …“ po téže větě nenabídne nikoho; skupina se nenabídne nikdy |
 | T65 | pojmenování z české věty | „Jan se jmenuje taky Honza.“ zapíše `name(of:Jan, value:Honza)`, strany podle DEPRELŮ (dvě čtení, jeden výsledek); „Je Honza učitel?“ dá před tím `U` a po něm `A` s citací faktu I výroku o jménu; bez zvratného „se“ to pojmenování není; odvolání jména vrátí `U` |

@@ -694,32 +694,89 @@ def generate(reading: Reading, *, mood: Mood = Mood.UNKNOWN) -> tuple[Candidate,
 Tier = Callable[[tuple[Candidate, ...], Reading], tuple[tuple[Candidate, ...], str | None]]
 
 
+def feature_values(feature: str) -> frozenset[str]:
+    """Hodnoty jednoho morfologického rysu jako MNOŽINA *(W‑32)*.
+
+    UD píše víceznačný tvar výčtem: „sbírala" nese `Gender=Fem,Neut` a
+    `Number=Plur,Sing`, protože týž tvar je ženský jednotný („matka
+    sbírala") i střední množný („děvčata sbírala"). **Není to konjunkce
+    dvou tvrzení, je to PŘIZNANÁ VÍCEZNAČNOST.**
+
+    Proto se rysy porovnávají PRŮNIKEM, ne rovností. Rovnost žádá, aby byl
+    podmět stejně víceznačný jako přísudek — a tím zahodí každou větu,
+    kde je tvar homonymní a podmět jednoznačný. To je v češtině běžné,
+    ne okrajové.
+
+    **Jedna funkce pro obě vrstvy.** Táž úvaha rozhoduje o kandidátovi na
+    antecedent i o zahození čtení; dvě kopie by se rozešly a jedna z nich
+    by dřív nebo později začala trestat víceznačnost znovu.
+    """
+    return frozenset(feature.split(","))
+
+
+def agrees(left: str | None, right: str | None) -> bool:
+    """Shodnou se ty dva tvary v jednom rysu?
+
+    Chybějící rys shodu NERUŠÍ: co se neříká, se nedá popřít (I‑21 v malém).
+    Rozhodne až NEPRÁZDNÝ PRŮNIK — tvary se vylučují jen tehdy, když se
+    shodnout NEMOHOU.
+    """
+    if left is None or right is None:
+        return True
+    return bool(feature_values(left) & feature_values(right))
+
+
 def agreement_tier(
     candidates: tuple[Candidate, ...], reading: Reading
 ) -> tuple[tuple[Candidate, ...], str | None]:
-    """Tvrdý filtr: shoda podmětu s přísudkem v čísle.
+    """Tvrdý filtr: shoda podmětu s přísudkem v ČÍSLE a RODĚ.
 
     Tohle je patro, které rozhodne motivační případ **bez jakéhokoli
     učení** — „obsahuje" je singulár, „vitamíny" plurál, takže vitamíny
     podmět být nemohou.
+
+    **Porovnává se průnikem hodnot, ne rovností řetězců** *(W‑32)*. Dokud
+    se porovnávala rovnost, patro zahazovalo bezvadné české věty:
+    „Matka sbírala folklor." padla na tom, že „sbírala" je `Plur,Sing`
+    a „matka" jen `Sing`. Odmítnutí bylo hlasité, takže to nebyla vada
+    bezpečnosti — ale FALEŠNĚ NEGATIVNÍ ČTENÍ, tedy dobrá věta zahozená
+    ze špatného důvodu, a pro systém, který má číst psaný text nativně,
+    je to drahá chyba.
+
+    **Rod se kontroluje spolu s číslem, a je to nutné.** Bez něj by po
+    přechodu na průnik prošlo „Psi byla v pondělí.": `Psi` je `Plur`
+    a `byla` je `Plur,Sing`, takže na čísle je průnik neprázdný.
+    Zahazuje to až rod — `Masc` proti `Fem,Neut`. Přidat rod tedy patro
+    nezpřísňuje nad rámec toho, co dělalo; nahrazuje jím tu část práce,
+    kterou dřív náhodou odváděla rovnost na čísle.
     """
     head = _predicate_head(reading)
     if head is None:
         return candidates, None
     verb_number = head[0].feat("Number")
-    if verb_number is None:
+    verb_gender = head[0].feat("Gender")
+    if verb_number is None and verb_gender is None:
         return candidates, None
     survivors = []
+    mismatched: list[str] = []
     for candidate in candidates:
         subject = candidate.predication.role(ROLE_SUBJECT)
-        number = subject.feat("Number") if subject is not None else None
-        if number is None or number == verb_number or _presentational(subject):
+        if subject is None or _presentational(subject):
             survivors.append(candidate)
+            continue
+        number_ok = agrees(subject.feat("Number"), verb_number)
+        gender_ok = agrees(subject.feat("Gender"), verb_gender)
+        if number_ok and gender_ok:
+            survivors.append(candidate)
+            continue
+        mismatched.append("čísla" if not number_ok else "rodu")
     if len(survivors) == len(candidates):
         return candidates, None
+    what = "čísla" if "čísla" in mismatched else "rodu"
+    shown = verb_number if what == "čísla" else verb_gender
     return tuple(survivors), (
-        f"[PROČ: shoda čísla — přísudek {verb_number}, "
-        f"podmět musí být týž]"
+        f"[PROČ: shoda {what} — přísudek {shown}, "
+        f"podmět se s ním shodnout nemůže]"
     )
 
 
