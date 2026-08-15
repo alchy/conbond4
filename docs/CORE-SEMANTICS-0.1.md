@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.53 · 15. 8. 2026
+**Verze jádra:** 0.1.54 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.54 | § 12 — ODSTAVEC PŘEMĚŘEN (7 tahů / 3 bez tahu, bylo 7/6): tři překážky z #105 zavřené, dvacátá druhá doména se přesto NEPÍŠE. Nový nález: `si` zůstává rolí s uzlem „se“, takže věta neprojde zakotvením ani po odpovědi na všechno |
 | 0.1.53 | § 5.2 — NA OTÁZKU „JE TOHLE SPONA?“ ODPOVÍDÁ JEDNO MÍSTO: čtyři porovnání `cop` přesným řetězcem svedena do `is_copula`. Projev 0 (61 spon, 0 podtypů) — oprava RIZIKA, ne chování; § 13 T104 |
 | 0.1.52 | § 5.2 — KVANTIFIKÁTOROVÉ ZÁJMENO KVANTIFIKUJE, NEODKAZUJE: „vše“ dostávalo otázku „na koho odkazuje“, která o něm tvrdila nepravdu. `PronType` z rozboru: `Tot`→`∀`, `Ind`→`∃`, `Neg` je pojmenovaná mez; § 13 T103 |
 | 0.1.51 | § 5.2 — KONATEL TRPNÉ VĚTY DOSTANE JMÉNO: holý `Ins:arg` pod `Voice=Pass` je `kdo`. Rozhodují DVĚ značky naráz, protože instrumentál je taky NÁSTROJ; § 12, § 13 T102 |
@@ -1208,6 +1209,36 @@ v jednom sezení. **Výsledek není číslo, je to `NE`:**
 > odpovědí na otázku, kterou systém sám položil. Kroky, které by tam
 > byly „aby to vyšlo", by z akceptační sady udělaly zkoušku napsanou
 > podle výsledku — a to je přesně to, čemu má ta sada bránit.
+
+**PŘEMĚŘENO PO PATNÁCTI KOLECH — POŘÁD `NE`, ALE Z JINÝCH DŮVODŮ**
+*(kolo #120, 15. 8. 2026)*. Tři překážky z #105 jsou zavřené: souřadný
+druhý přísudek (W‑70/71/73), časový údaj (W‑74/75/77) i zvratné zájmeno
+(W‑68). Číslo se proto pohnulo — a pořád není nula:
+
+| co | #105 | #120 |
+|---|---|---|
+| otázek, které TAH MAJÍ | 7 | 7 |
+| otázek BEZ TAHU | 6 | **3** |
+| vět zapsaných | 0 | **0** |
+
+**Zbyly dva důvody a druhý je nový:**
+
+1. **Tři otázky tah nemají** a obě příčiny jsou pojmenované meze:
+   souřadné JMÉNO („zápal plic") a `nmod` pod obecným jménem („v Praze"
+   pod „hřbitově"). U obou `names_role` tah PŘIJME — ohlásí
+   *„✓ naučeno"* — ale **ČTENÍ SE NEZMĚNÍ**. To je horší než chybějící
+   tah: vypadá to jako odpověď.
+2. **Odstavec se nezapíše, ani když se odpoví na všechno.** První věta
+   projde na *„✓ přečteno"* a skončí na *„(zakotvení neproběhlo — do
+   báze nejde nic)"*: `si` se stane rolí s fillerem a ta role dostane za
+   uzel „se". Zvratné zájmeno ale ÚČASTNÍK NENÍ — je to část tvaru
+   slovesa („přivodit si"). W‑68 odstranila nepravdivou OTÁZKU; ROLE
+   ZŮSTALA.
+
+> **Doména se proto nepíše ani teď** — a je to táž úvaha jako v #105,
+> jen podložená novým měřením. Doména, ve které by bylo `writes` všude
+> prázdné, nedokládá nic; a kroky, které by ji k zápisu dotlačily, tam
+> nesmějí být.
 
 ## 13 · Akceptační sada
 

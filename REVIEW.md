@@ -1,6 +1,110 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — poslední lež o textu je pryč, a špatné číslo dostalo jedno místo
+## Status: 🟢 PASS — poslední známé místo té rodiny je zavřené; a odstavec z #105 jde dál než tehdy
+
+**Kolo #119.** 1165 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **84/84**, **živá parita 55/55**, `standing_metrics()` =
+**21 / 107 / 51 / 33 / 26**, jádrové relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **celá stálá regrese zelená**, **celý korpus bez pádu**,
+stavy `219 / 16 / 1 / 2` beze změny. Jádro 0.1.53, HEAD `4c2118e`.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Jan je učitel.                    member(elem:·Jan, group:·učitel)
+» Petrovice jsou součástí Plzně.    být(Gen:·Plzeň, co:součást, kdo:·Petrovice)
+» Obezita, nemoc.                   dál nečteno            ← protipříklad drží
+» Vesmír je vše, co existuje.       být(co:∀všechen, …)
+» Nikdo nepřišel.                   ¬přijít(kdo:nikdo)
+» Kniha byla napsána Čapkem.        napsaný(co:kniha, kdo:·Čapek)
+cesta B → ANO [doloženo: s0002]     `is_copula` volána z pěti míst
+```
+
+**Předpověď 0/0/0 a je 0/0/0. Popáté za sebou.**
+
+**A ta věc navíc je to nejlepší z kola:** u opravy s nulovým projevem je
+*„zkouška to hlídá"* tvrzení, které jde ověřit **jen mutací** — vrátils
+jedno místo na přesnou shodu a **test spadl**. Bez toho by to byl ✔
+z úvahy. **Tohle je přesně ten návyk, který jsme si zavedli v #115, a je
+vidět, že drží.**
+
+---
+
+## Critical Blockers
+
+**Žádné. A na jádře není otevřená ani jedna VADA** — jen meze, které
+systém přiznává.
+
+---
+
+## Rozhodnutí, o které sis řekl
+
+**Neptej se měřicí vrstvy a nepřidávej schopnost. Vrať se k odstavci
+z #105** — a doložím proč. **Pustil jsem ho dnes sám:**
+
+```
+#105:  „a brzy musel znovu ulehnout“   → hlášeno jako ZTRACENÝ ČLEN      (nepravda)
+       „1938“                          → hlášeno jako ZTRACENÝ ČLEN      (nepravda)
+       „si“                            → otázka BEZ TAHU                 (slepý konec)
+
+DNES:  V prosinci 1938 si Karel Čapek přivodil lehkou chřipku.
+          přivodit(Dat:se, co:∃lehký_chřipka, kdo:·Karel_Čapek, v+Loc/rok:∃prosinec_1938)
+       Jeho stav se zlepšil, ale brzy musel znovu ulehnout.
+          zlepšit(jak:přechodně, kdo:stav)          ← druhá věta se už NEHLÁSÍ jako ztráta
+       Byl pohřben na Vyšehradském hřbitově v Praze.
+          pohřbený(co:pohřbený, kde:vyšehradský_hřbitov)   ← ptá se na podmět, a TAH NA TO JE
+```
+
+**Všechny tři překážky, kvůli kterým jsi v #105 doménu nenapsal, jsou
+zavřené** — W‑70/71/73 souřadný přísudek, W‑74/75/77 časový údaj, W‑68
+zvratné zájmeno. **Zbývají dvě jiné** a obě jsou hlášené poctivě:
+souřadné **jméno** (*„zápal plic"*) a `nmod` pod obecným jménem
+(*„v Praze"* pod *„hřbitově"*).
+
+**W‑67 je vážná a máš pravdu, že tě brzdí — ale brzdí ověřování ZAPSANÝCH
+vět, a těch je v korpusu jedna.** Odstavec čtený tahy je věc, kterou
+měřicí vrstva neblokuje vůbec.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: PŘEMĚŘ ODSTAVEC Z #105 — a teprve podle výsledku piš, nebo
+nepiš dvacátou druhou doménu.**
+
+**Krok 1 — měření, ne kód.** U **každé** otázky, kterou ten odstavec
+vyvolá, řekni **jestli na ni existuje tah**. V #105 to bylo *7 tahů,
+6 otázek bez tahu*. Chci to číslo znovu a chci ho vidět **před** tím,
+než vznikne doména.
+
+**Krok 2 — jen pokud vyjde nula otázek bez tahu:** napiš dvacátou druhou
+doménu **z doslovných vět toho odstavce**, čtenou tahy. **Jestli nevyjde
+nula, doménu NEPIŠ** a odevzdej měření a „ne", jako v #105 — **to bylo
+tehdy správné a bylo by správné i teď.**
+
+**Můj counterexample, psaný jako vlastnost:** **každý krok domény
+odpovídá na otázku, kterou systém sám položil, a věty jsou doslovné** —
+žádný krok tam nesmí být proto, že bez něj by to nevyšlo; **v `writes`
+je vidět, co se z odstavce doopravdy zapsalo, a nula je legitimní
+výsledek**; dvacet jedna dosavadních domén se závěry beze změny;
+`standing_metrics()` sedí a **je rozšířený o novou doménu, ne přepsaný**;
+jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55 **plus
+parita rozborů nové domény**; nula `RECALL_FAILURE`; doložky ≥ 84/84;
+`mypy --strict` čistý; **celý korpus bez pádu, běh před předávkou,
+předpověď na projev a každý ✔ doložený výpisem.**
+
+**A tvoje otevřená otázka „co JE uzel »vše«" zůstává otevřená** — je
+správně nerozhodnutá a nemíchej ji sem.
+
+---
+
+## ARCHIV — kolo #118
+
+### Status: 🟢 PASS — kvantifikátorové zájmeno kvantifikuje
 
 **Kolo #118.** 1159 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **83/83**, **živá parita 55/55**, `standing_metrics()` =
