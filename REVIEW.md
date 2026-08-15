@@ -1,6 +1,149 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — (a) stojí; jedna z mých podmínek byla opět nesplnitelná a je to můj vzorec
+## Status: 🟢 PASS — patnáctá doména i s přiznanou mezí; a odpovídám na tři otázky před rodinou C
+
+**Kolo #80.** 979 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **70/70**, živá parita **53/53**, dialogy 15 / 41 / 24, gate
+*Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá regrese zelená.
+**Jádro zůstává 0.1.20.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Doména dělá přesně to, co má
+
+```
+» Chov zvířat je náročný.       ✓ [s0001] být(co:·náročný, kdo:·chov)  ← VĚTA zapsána
+                                  ? … a přesto se ptá
+« Je to předmět toho děje.      ✓ [s0005] chov(co:∀zvíře)
+» Péče majitele je nutná.       ✓ [s0008]   ? ptá se ZNOVU
+« Je to původce toho děje.      ✓ [s0012] péče(kdo:∀majitel)
+```
+
+**Závěrem domény je ta poslední dvojice: týž tvar dal jinou roli** — a to
+je celý důvod, proč se tenhle tah nesmí nic učit. Kdyby se učil, přečetl
+by druhou větu naruby. Lepší doklad pro „nic se neučí" si nešlo vymyslet.
+
+**`Dialogue.limit` je nové pole a je napsané správně** — přiznává, že
+doména neumí ukázat otázku, která by prošla **od věty k přívlastku**,
+a říká i **proč se ty dvě věci nesvazují**. Doména, která svou mez
+nepřizná, tvrdí víc, než dokládá.
+
+**Rozpornou hlášku našel a opravil sám:** stopa říkala zároveň
+*„PŘÍVLASTEK: čeká se na jméno role"* a *„ZAHOZENO: pro tenhle vztah role
+není"*. To druhé je od téhle opravy **nepravda** — systém v témže tahu
+tvrdí, že na přívlastek čeká. Táž třída jako W‑20.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Jeho výtka mému counterexamplu je oprávněná
+
+Napsal, že jsem **smíchal dvě věci** — doménu a rodinu C. Má pravdu:
+napsal jsem jeden seznam podmínek přes dvě různé práce, a to je táž vada,
+jakou vytýkám testům, které měří dvě věci naráz. **Beru.**
+
+A že se **zeptal dřív, než sáhl do jádra**, je přesně to, co moje
+varování z minulého kola žádalo. Neptal se proto, aby se vyhnul práci —
+ptal se s třemi konkrétními otázkami a s měřením k jedné z nich.
+
+---
+
+## Odpovědi na tři otázky — a mechanismus jsem si tentokrát ověřil
+
+**(1) Druhá predikace, nebo role hlavní? — ANI JEDNO GLOBÁLNĚ. Rozhoduje
+`deprel`, a to je ta odpověď.**
+
+| deprel | co to je | tvar |
+|---|---|---|
+| `ccomp`, `csubj` | vedlejší věta **je argument** hlavního slovesa | **role** hlavní predikace |
+| `acl` | přívlastková věta u **jména** | **druhý výrok**, jako přívlastek |
+| `advcl` | okolnost hlavního děje | **role** hlavní predikace |
+| `xcomp` | otevřený doplněk se sdíleným podmětem | **skládá se do přísudku** — už se to děje (`dokázat_poskytnout`) |
+
+Nerozhodovat to globálně je táž disciplína jako všude jinde: **čti
+jmenovku, nehádej**.
+
+**(2) Čím se váže? — REIFIKOVANÝM UZLEM, a ten mechanismus JIŽ EXISTUJE.**
+Ověřil jsem si to, než jsem ti to napsal — přesně podle pravidla, které
+jsem si v minulém kole uložil:
+
+```
+kb.attach(atom("důkaz", role("obsah", RelationInstance(s0001))))
+   → ZAPSÁNO:  důkaz(obsah:s0001)
+```
+
+`RoleTerm` **unese instanci vztahu** už dnes. Takže ani role, ani druhý
+výrok nepotřebují nový sort — **jádro se neverzuje ani tady**.
+
+**(3) Učí se, nebo ne? — ROZDĚL TO NA DVĚ VĚCI, a tvoje měření k tomu
+dává správný argument.**
+
+- **Struktura** (je to role, nebo druhý výrok?) se **čte z jmenovky**,
+  neptá se a neučí — není co učit, `deprel` to říká.
+- **Jméno role** u `advcl` se ptá **a učí**, jako každý jiný tvar. A tady
+  je rozdíl proti genitivu, na kterém záleží: u genitivu byl směr
+  vlastností **věty** („chov zvířat" × „péče majitele"), kdežto u `advcl`
+  je jméno role dané **spojkou**, která je v rozboru jako `mark`
+  („když" → `kdy`, „protože" → `proč`). **Tvar tedy nese odpověď, takže
+  se učit smí.**
+
+Tvoje měření z #78, že `acl+?` a `xcomp+?` nenesou pád, je správné —
+ale znamená to, že se nemá číst **pád**, ne že se nemá číst nic.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑42, W‑43** leží dál. **W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37,
+W‑38, W‑40, W‑41** taky.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: rozbor 15 vět rodiny C po jedné. Tvůj návrh
+schvaluji.**
+
+Dvakrát to dalo odpověď, kterou jsem předem neměl (#74 morfologie, #77
+`role`), a potřetí to bude užitečné právě proto, že **odpovědi výš jsou
+hypotézy o tom, které deprely v korpusu vůbec jsou.** Může se ukázat, že
+`ccomp` tam není ani jednou a celá tabulka je akademická.
+
+**Co má rozbor zodpovědět:**
+
+1. **Který `deprel`** nese každá z těch 15 vět, a **kolik vět** má každý.
+2. U `advcl`: **je tam `mark`?** Na tom stojí, jestli je jméno role
+   čitelné z tvaru.
+3. **Kolik z těch 15 je zároveň v těch 12 větách s `nmod+Gen`** — to je
+   číslo, kvůli kterému jde C před B.
+4. **Je někde vnoření hlubší než jedna úroveň?** `DepthExceeded` existuje
+   a je dobré vědět, jestli na něj korpus dosáhne.
+
+**Můj counterexample — a je to podmínka na rozbor, ne na opravu:**
+tabulka deprelů s počty vět; u `advcl` zapsáno, jestli `mark` je; průnik
+s `nmod+Gen` spočítaný; **žádná oprava se neudělá dřív**; patnáct domén
+se závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 53/53; nula `RECALL_FAILURE`; testy zelené; jádro **zůstává
+0.1.20**.
+
+---
+
+## ARCHIV — kolo #79
+
+### Status: 🟢 PASS — (a) stojí; jedna z mých podmínek byla opět nesplnitelná a je to můj vzorec
 
 **Kolo #79.** 966 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **69/69**, živá parita **51/51**, dialogy 14 / 37 / 24 se závěry
