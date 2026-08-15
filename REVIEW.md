@@ -1,6 +1,119 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — směr opuštěn měřením, ne únavou; a to je nejtěžší kolo, jaké se dá odevzdat
+## Status: 🟢 PASS — odevzdal jsi měření a „ne", ne doménu ze čtyř hezkých vět
+
+**Kolo #105.** 1111 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.40 **beze změny**, HEAD `0eb2a5a`, strom čistý.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## Ověřeno reprodukcí — pustil jsem ten odstavec sám
+
+```
+V prosinci 1938 si Karel Čapek přivodil lehkou chřipku.      zapsáno None
+Ke chřipce se přidal zánět ledvin a zápal plic.              zapsáno None
+Jeho stav se přechodně zlepšil, ale brzy musel znovu ulehnout. zapsáno None
+Byl pohřben na Vyšehradském hřbitově v Praze.                zapsáno None
+                                                    BÁZE: 0 výroků
+```
+
+**Tvůj závěr platí a je doložený**: odstavec se dnes do konce přečíst
+nedá, a poslední věta nemá o kom mluvit, protože předchozí tři se
+nezapsaly. **Rozdělení 7 tahů × 6 otázek bez tahu jsem nepřepočítával** —
+beru je jako tvé měření, ne jako ověřené číslo.
+
+**A rozhodnutí nepsat doménu je správné z mého vlastního counterexamplu.**
+Napsal jsem *„každý tah odpovídá na otázku, kterou systém sám položil"*
+a *„věty jsou doslovné"*. Obojí dnes zároveň nejde. **Sada napsaná podle
+výsledku je přesně to, čemu má ta sada bránit** — a žes to řekl místo
+abys to obešel, je důvod, proč je score 9,7.
+
+---
+
+## Nález (2) ověřen a je ostřejší, než ho popisuješ
+
+**Doslovný výstup, jedna věta, čerstvé sezení:**
+
+```
+» V prosinci 1938 si Karel Čapek přivodil lehkou chřipku.
+   ? … „Na koho odkazuje „si“? Tohle zájmeno neumím navázat — odkazuje mimo
+       text, ne do něj. ŘEKNI TO PROSÍM JMÉNEM.“
+   role 'Dat'  awaiting='kvantifikátor'   ← ani jedna role nečeká na ODKAZ
+   decides_reference(…) → ✗ nerozhodnuto: role na odkaz nečeká, není co rozhodovat
+```
+
+**Systém si řekne o odpověď, kterou pak nemá kam přijmout.** Není to
+nepravda o textu — `si` tam je — ale je to **otázka bez tahu**, a to je
+v tomhle projektu nově dražší než dřív: po #104 je dialog **jediný kanál
+významu**, takže otázka, na kterou nejde odpovědět, je slepý konec
+jediné cesty vpřed.
+
+**Ověřil jsem i protiklad**, aby to nebyla obecná vada: u *„Byl pohřben
+na Vyšehradském hřbitově v Praze."* role `kdo` **na odkaz čeká**
+(`awaiting='odkaz'`) a tah tam smysl má. Vada je tedy **úzká
+a lokalizovaná** — u zvratného zájmena, kde role čeká na kvantifikátor.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑68 · otázka na odkaz u zvratného zájmena nemá tah, který by ji
+přijal.** Úzká, doložená, a **po #104 je to nejdražší druh vady**, jaký
+může vzniknout: dialog je jediný způsob, jak se do báze dostane význam.
+
+**Otevřené beze změny:** W‑66, W‑67 (u Agenta 3, spolu s dvojím textem
+a zkráceným `reason`), 10 z 12 kolizí, 26 ze 42 `v+Loc`, číslovka v čase,
+souřadný druhý přísudek, W‑60, agens, úřad, příbuzenství, `nmod` pod
+obecným jménem, W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30,
+W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: W‑68 — tvá vlastní nabídka (c), a beru ji přesně z toho
+důvodu, který jsi uvedl: je malá.** Ne proto, že by byla nejdůležitější
+z toho seznamu, ale protože je to **jediná ze tří překážek, která je
+VADA** — (a) souřadný druhý přísudek a (b) číslovka v časovém údaji jsou
+chybějící schopnosti, a ty se do malého kola nevejdou.
+
+**Rozhoduješ jednu věc: co má být pravda — otázka, nebo stav.** Buď se
+role u zvratného zájmena **má** ptát na odkaz (a pak na ni musí čekat),
+nebo **nemá** (a pak ta věta z otázky zmizí). **Nevybírám za tebe, ale
+změř předem, kolika vět korpusu se to týká** — jestli jedné, je to
+oprava hlášení; jestli dvaceti, je to schopnost.
+
+**Můj counterexample, psaný jako vlastnost:** **na každou otázku, kterou
+systém položí, existuje tah, který ji přijme** — konkrétně u *„V prosinci
+1938 si Karel Čapek přivodil lehkou chřipku."* buď `decides_reference`
+projde, nebo se na odkaz neptá; *„Byl pohřben na Vyšehradském hřbitově
+v Praze."* se **nezmění** (tam ten tah smysl má a musí dál fungovat);
+`ZAPSÁNO` zůstává na nule; dvacet jedna domén se závěry beze změny;
+jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 79/79; `mypy --strict` čistý; **korpus
+přeměřen** — a jestli se změní víc než ty věty se zvratným zájmenem,
+chci vědět které a proč.
+
+**Až bude W‑68 hotová, další na řadě je (a) souřadný druhý přísudek** —
+ne kvůli odstavci, ale protože *„a brzy musel znovu ulehnout"* je
+**druhá věta hlášená jako ztracený člen**, a to je nepravda o tom, co ta
+část textu je.
+
+---
+
+## ARCHIV — kolo #104
+
+### Status: 🟢 PASS — směr `rozbor` opuštěn měřením
 
 **Kolo #104.** 1111 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

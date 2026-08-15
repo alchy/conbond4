@@ -1396,6 +1396,32 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="G-9",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "ZVRATNÉ ZÁJMENO NEODKAZUJE VEN Z VĚTY *(W‑68)*. „V prosinci "
+            "1938 **si** Karel Čapek přivodil chřipku.“ — `si` míří na "
+            "podmět TÉŽE věty. Systém se přesto ptal „Na koho odkazuje? "
+            "Řekni to prosím jménem“ a pak tu odpověď NEMĚL KAM PŘIJMOUT: "
+            "role čeká na KVANTIFIKÁTOR, takže `→=` vrátí „role na odkaz "
+            "nečeká, není co rozhodovat“. OTÁZKA, NA KTEROU NEEXISTUJE "
+            "TAH, JE HORŠÍ NEŽ MLČENÍ — a když je dialog jediný kanál "
+            "významu, je to slepý konec jediné cesty vpřed. Táž úvaha "
+            "jako u prezentačního „to“ (W‑29), jen tady DOLOŽENÁ tím, že "
+            "tah odpověď odmítá. Rozhoduje RYS Z ROZBORU (`Reflex=Yes`), "
+            "ne výčet tvarů — ten by byl druhý slovník vedle parserova. "
+            "Kvantifikátorovou otázku klade dál kaskáda a ta tah MÁ; "
+            "obyčejné zájmeno se dál ptá"
+        ),
+        anchor="core_semantics.grounding:_reflexive",
+        entry="ground(",
+        enforced_by=(
+            "test_a_reflexive_is_not_asked_about_as_an_anaphor",
+            "test_a_plain_pronoun_is_still_asked_about",
+            "test_the_reflexive_sentence_asks_only_what_it_can_answer",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(

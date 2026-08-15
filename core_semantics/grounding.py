@@ -279,6 +279,27 @@ def _presentational_subject(reading: RoleReading) -> bool:
     )
 
 
+def _reflexive(reading: RoleReading) -> bool:
+    """Zvratné zájmeno — NEODKAZUJE VEN Z VĚTY *(W‑68)*.
+
+    „V prosinci 1938 **si** Karel Čapek přivodil chřipku." — `si` míří na
+    podmět TÉŽE věty, ne do předchozího textu. Systém se přesto ptal
+    „Na koho odkazuje „si“? Řekni to prosím jménem" — a pak tu odpověď
+    NEMĚL KAM PŘIJMOUT: role čeká na KVANTIFIKÁTOR, takže `→=` vrátí
+    „role na odkaz nečeká, není co rozhodovat".
+
+    **Otázka, na kterou neexistuje tah, je horší než mlčení**, a po #104
+    dvojnásob: dialog je jediný kanál významu, takže slepý konec je
+    slepým koncem jediné cesty vpřed. Je to táž úvaha jako u
+    prezentačního „to" (W‑29) — a tady je navíc doložená tím, že tah
+    odpověď odmítá.
+
+    **Rys z ROZBORU, ne seznam slov.** `Reflex=Yes` dává parser; výčet
+    tvarů („se", „si", „sebe") by byl druhý slovník vedle jeho.
+    """
+    return dict(reading.mention.feats).get("Reflex") == "Yes"
+
+
 def _resolve_anaphor(reading: RoleReading, discourse: Discourse) -> _Resolution:
     """Zájmeno na antecedent z PŘEDCHOZÍ věty — NÁVRH, nikdy dosazení.
 
@@ -378,6 +399,13 @@ def _ground_role(
         # ať člověk odpoví cokoli, žádný uzel z toho nevznikne a věta se
         # tím nedokončí. Otázka, na kterou neexistuje správná odpověď, je
         # horší než mlčení: říká člověku, že něco chybí, a přitom nechybí.
+        return _UNRESOLVED
+
+    if _reflexive(reading):
+        # W‑68. Zvratné zájmeno míří na podmět TÉŽE věty. Otázka na odkaz
+        # u něj neměla tah, který by ji přijal — a kvantifikátorovou
+        # otázku klade kaskáda, takže tady se mlčí, ne aby se zamlčelo,
+        # ale aby se neptalo dvakrát na dvě různé věci.
         return _UNRESOLVED
 
     if reading.dropped or mention.upos in UNSUPPORTED_UPOS:

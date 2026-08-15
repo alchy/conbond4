@@ -418,3 +418,65 @@ def test_grounding_transcript_prints() -> None:
         for line in session.utter(label, oracle).lines:
             echo(f"   {line}")
     echo("\n" + "=" * 72)
+
+
+# --------------------------------------------------------------------------
+# ZVRATNÉ ZÁJMENO neodkazuje ven z věty *(W‑68)*
+# --------------------------------------------------------------------------
+
+
+def _reflexive_reading(*, reflex: bool):  # type: ignore[no-untyped-def]
+    from core_semantics.cascade import AWAITING_QUANTIFIER, Mention, RoleReading
+
+    feats: tuple[tuple[str, str], ...] = (("Case", "Dat"), ("PronType", "Prs"))
+    if reflex:
+        feats = feats + (("Reflex", "Yes"),)
+    return RoleReading(
+        "Dat",
+        Mention(lemma="se", form="si", token_index=3, upos="PRON", feats=feats),
+        awaiting=AWAITING_QUANTIFIER,
+    )
+
+
+def test_a_reflexive_is_not_asked_about_as_an_anaphor() -> None:
+    """„V prosinci 1938 **si** Karel Čapek přivodil chřipku." — `si` míří
+    na podmět TÉŽE věty. Systém se přesto ptal „Na koho odkazuje?" a pak
+    tu odpověď NEMĚL KAM PŘIJMOUT: role čeká na KVANTIFIKÁTOR, takže
+    `→=` vrátí „role na odkaz nečeká".
+
+    **Otázka, na kterou neexistuje tah, je horší než mlčení** — táž
+    úvaha jako u prezentačního „to" (W‑29), jen tady doložená tím, že
+    tah tu odpověď odmítá."""
+    from core_semantics.grounding import _reflexive
+
+    assert _reflexive(_reflexive_reading(reflex=True))
+
+
+def test_a_plain_pronoun_is_still_asked_about() -> None:
+    """PROTIPŘÍKLAD: bez `Reflex=Yes` je to obyčejné zájmeno a doptat se
+    na ně je správné. Rozhoduje RYS Z ROZBORU, ne výčet tvarů („se",
+    „si", „sebe") — ten by byl druhý slovník vedle parserova."""
+    from core_semantics.grounding import _reflexive
+
+    assert not _reflexive(_reflexive_reading(reflex=False))
+
+
+def test_the_reflexive_sentence_asks_only_what_it_can_answer() -> None:
+    """CELOU CESTOU: po opravě zbude JEN otázka na kvantifikátor — a ta
+    tah má."""
+    from core_semantics.cascade import generate
+    from core_semantics.grounding import ground
+    from core_semantics.storage import KnowledgeBase
+
+    reading = Reading(
+        tokens=(
+            tok(1, "Jan", "Jan", "PROPN", 3, "nsubj", Case="Nom", Number="Sing"),
+            tok(2, "si", "se", "PRON", 3, "obl", Case="Dat", PronType="Prs", Reflex="Yes"),
+            tok(3, "přivodil", "přivodit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            tok(4, "chřipku", "chřipka", "NOUN", 3, "obj", Case="Acc", Gender="Fem", Number="Sing"),
+            tok(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    grounded = ground(generate(reading)[0].predication, KnowledgeBase().view())
+    assert "odkazuje mimo text" not in (grounded.question or "")
