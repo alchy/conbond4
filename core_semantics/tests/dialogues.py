@@ -99,6 +99,10 @@ class Step:
     #: stavba věty tvrdí (N‑2). Tvar konstrukce se dopočítá z předchozího
     #: kroku, neopisuje se.
     answers_relation: Operation | None = None
+    #: Operace — krok je ODPOVĚĎ `→⊆1`, tedy jádrová relace JEN PRO TU
+    #: JEDNU VĚTU. Tvar se tím neučí: „Praha je součástí Česka." a
+    #: „Pondělí je součástí týdne." mají týž tvar a různé relace (N‑11).
+    answers_relation_here: Operation | None = None
     #: Věc, která je na tomhle kroku VĚCNĚ ŠPATNĚ a ví se proč. Zapsaná
     #: mez není totéž co selhání: krok projde, ale nepředstírá se, že je
     #: v pořádku všechno.

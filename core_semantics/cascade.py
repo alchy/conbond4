@@ -36,6 +36,7 @@ from typing import Callable, Sequence
 
 from .ast import UNQUANTIFIED_ROLES, Quantifier
 from .lexicon import (
+    RELATIONAL,
     Lexicon,
     Mood,
     Operation,
@@ -62,11 +63,15 @@ RELATION_ROLES: dict[Operation, tuple[str, str]] = {
     Operation.DISJOINT: ("a", "b"),
     Operation.BEFORE: ("earlier", "later"),
     Operation.SAME_AS: ("left", "right"),
+    Operation.CONTAINS: ("part", "whole"),
+    Operation.WITHIN: ("part", "whole"),
 }
 
 #: Relace, jejichž fillery NEJSOU skupiny, takže kvantifikátor nenesou
 #: (§ 3.6). `RoleTerm` by ho u nich ani nepřipustil.
-UNQUANTIFIED_RELATIONS: frozenset[Operation] = frozenset({Operation.BEFORE})
+UNQUANTIFIED_RELATIONS: frozenset[Operation] = frozenset(
+    {Operation.BEFORE, Operation.CONTAINS, Operation.WITHIN}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1148,6 +1153,11 @@ class Construction:
     shape: str
     left: str
     right: str
+    #: Rodina, která se ptá JEN KDYŽ tvar někdo pojmenoval *(N‑11)*.
+    #: Předložková spona je většinou obyčejný lokativní fakt („Petr byl
+    #: v Česku."), ne vztah dvou tříd; ptát se u každé by byl výslech
+    #: a nabídka by u většiny z nich neměla správnou odpověď.
+    only_if_known: bool = False
     #: Tokeny, které konstrukce POHLTILA — nejsou ztracené členy (N‑5),
     #: protože se do významu dostaly, jen ne vlastní rolí.
     absorbed: tuple[int, ...] = ()
@@ -1231,6 +1241,7 @@ def relation_shape(
             shape=f"cop:{preposition.lemma}+{case}",
             left=subject.name,
             right=other.name,
+            only_if_known=True,
         )
 
     genitive = [
@@ -1335,18 +1346,24 @@ def _propose_relation(
             + f" — {RELATION_QUESTION_MARK}{shape}]"
         )
     if not matches:
+        if found.only_if_known:
+            # Tvar, který nikdo nepojmenoval, a rodina, kde je to
+            # NORMÁLNÍ. Ptát se tu by znamenalo nabízet menu, ve kterém
+            # správná odpověď není: „Petr byl v Česku." není vztah dvou
+            # tříd, je to fakt o Petrovi.
+            return predication, None
         return predication, (
             f"[CHYBÍ: co ta stavba tvrdí — tvar {shape} "
             f"{RELATION_QUESTION_MARK}{shape}]"
         )
     operation = matches[0].operation
     return (
-        _as_relation(predication, operation, found),
+        as_relation(predication, operation, found),
         f"[STAVBA: tvar {shape} → jádrová relace {operation.value}]",
     )
 
 
-def _as_relation(
+def as_relation(
     predication: Predication, operation: Operation, found: Construction
 ) -> Predication:
     """Přepíše čtení na jádrovou relaci s JÁDROVÝMI jmény rolí.
@@ -1424,10 +1441,14 @@ def relation_question(trace: Sequence[str]) -> str | None:
             # připsala svoje „→ zbývá N". Číst do konce řádku by do otázky
             # vtáhlo cizí text.
             shape = step.split(RELATION_QUESTION_MARK, 1)[1].split("]", 1)[0]
+            # Nabídka se skládá z `RELATIONAL`, ne z ručního výčtu: ručně
+            # psaný seznam by po přidání relace zůstal starý a systém by
+            # se ptal na míň, než umí — a nikdo by si toho nevšiml,
+            # protože otázka by pořád dávala smysl.
+            menu = ", ".join(sorted(op.value for op in RELATIONAL))
             return (
                 f"Co ta věta tvrdí o vztahu těch dvou? Tvar je {shape} — "
-                f"členství (member), podmnožina (subset), nebo oddělenost "
-                f"skupin (disjoint)?"
+                f"{menu}?"
             )
     return None
 

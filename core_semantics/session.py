@@ -68,7 +68,9 @@ from .cascade import (
     lost_role_tier,
     open_roles_question,
     quantifier_tier,
+    as_relation,
     relation_question,
+    relation_shape,
     relation_tier,
     role_question,
     role_mapping_tier,
@@ -203,6 +205,11 @@ class TurnKind(Enum):
     #: proti `→∀`. Jsou to dvě různé otázky: „jak se čte tenhle tvar"
     #: a „jak se čte tahle věta".
     ANSWER_HERE = "→∀1"
+    #: ODPOVĚĎ na otázku po jádrové relaci JEDNÉ VĚTY, ne tvaru (N‑11).
+    #: Táž úvaha jako u `→∀1`: „Praha je součástí Česka." a „Pondělí je
+    #: součástí týdne." mají TÝŽ tvar a různé relace, protože jedno je
+    #: místo a druhé čas — a to čeština neříká.
+    NAME_RELATION_HERE = "→⊆1"
     #: ODPOVĚĎ na otázku, KOHO označuje přivlastňovací přívlastek (N‑7).
     #: Vlastní druh tahu, protože zapisuje DVA výroky: větu a k ní vztah
     #: vlastnictví. Ani `→=`, ani `→@` to nejsou — první rozhoduje odkaz
@@ -379,6 +386,32 @@ def answers_here(
         text,
         predication=predication,
         role_name=role_name,
+        operation=operation,
+    )
+
+
+def names_relation_here(
+    text: str, predication: Predication, reading: Reading, operation: Operation
+) -> Turn:
+    """ODPOVĚĎ na jádrovou relaci JEDNÉ VĚTY — N‑11.
+
+    **Proč to nemůže dělat `→⊆`.** Ten učí KONSTRUKCI, takže jedna
+    odpověď zavře celou třídu vět. U zahrnutí to nejde: „Praha je
+    součástí Česka." je `contains` (místo), „Pondělí je součástí týdne."
+    je `within` (čas), a tvar je v obou `cop:součást+Gen`. Rozdíl je
+    v SORTU filleru, a ten čeština neříká — jméno „týden" o sobě
+    neprozradí, že je to čas.
+
+    **Tenhle tah se proto nic neučí.** Není to náhrada `→⊆`, je to jiná
+    otázka — a obě se ptají právem: konstrukce má většinou jeden význam
+    a je hloupé se na něj ptát pokaždé, ale výjimky existují a tichý
+    default by je přejel.
+    """
+    return Turn(
+        TurnKind.NAME_RELATION_HERE,
+        text,
+        predication=predication,
+        reading=reading,
         operation=operation,
     )
 
@@ -599,6 +632,7 @@ class Session:
             TurnKind.DECIDE_REFERENCE: self._decide_reference,
             TurnKind.NAME_ROLE: self._name_role,
             TurnKind.NAME_RELATION: self._name_relation,
+            TurnKind.NAME_RELATION_HERE: self._name_relation_here,
             TurnKind.ANSWER_HERE: self._answer_here,
             TurnKind.NAME_OWNER: self._name_owner,
             TurnKind.REVOKE: self._revoke,
@@ -1244,6 +1278,32 @@ class Session:
                 trace=verdict.trace,
             )
         return self._settle(index, turn, verdict.decided.predication, prefix)
+
+    def _name_relation_here(self, index: int, turn: Turn) -> TurnResult:
+        """`→⊆1` — jádrová relace pro TUHLE VĚTU. Nic se neučí."""
+        assert turn.predication is not None and turn.operation is not None
+        found = relation_shape(turn.predication, turn.reading) if turn.reading else None
+        if found is None:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=("✗ nerozhodnuto: ta věta žádnou konstrukci nenese",),
+                error="věta nenese konstrukci",
+            )
+        try:
+            resolved = as_relation(turn.predication, turn.operation, found)
+        except KeyError:
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(f"✗ nenaučeno: {turn.operation.value} není jádrová relace",),
+                error="operace mimo menu",
+            )
+        prefix = [
+            f"✓ rozhodnuto pro TUHLE VĚTU  stavba → {turn.operation.value}",
+            "  (tvar se tím NEUČÍ — jiná věta se zeptá znovu)",
+        ]
+        return self._settle(index, turn, resolved, prefix)
 
     def _name_relation(self, index: int, turn: Turn) -> TurnResult:
         """`→⊆` — člověk řekl, co ta stavba tvrdí, a věta se čte znovu."""

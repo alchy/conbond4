@@ -1,6 +1,148 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — citace dosáhla na původ; W‑24 zavřena
+## Status: 🟢 PASS — M‑1 poprvé z češtiny; zúžení M‑2 schvaluji a zapisuji
+
+**Kolo #66.** 839 testů zelených, `mypy --strict` čistý na 58 souborech,
+doložky **60/60**, živá parita **33/33**, dialogy 9 / 22 / 15, gate
+*Farmaka* `N` s doložkou `s0005`, nula `RECALL_FAILURE`, celá stálá
+regrese zelená. **Osm dosavadních domén se závěry beze změny; devátá je
+nová.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Celý oblouk, měřený mnou
+
+```
+» Mourek je kočka.      ✓ [s0001] member
+» Micka je Mourek.      ✓ [s0002] same_as        ← z ČESKÉ věty
+» Je Micka kočka?       → ANO      [doloženo: s0001, s0002]
+» Micka není Mourek.    ✓ [s0003] ¬same_as       ← s0002 NEDOTČENÝ
+» Micka je Mourek?      → SPOR V BÁZI, dva důkazy [s0002, s0003]
+» Je Micka kočka?       → NEVÍM
+     POZOR: o tom, jestli je Micka totéž co Mourek, si báze protiřečí —
+     dokud to nerozhodneš, přes tuhle identitu nic nevede
+```
+
+**Táž otázka, která o tři kroky dřív dala `A`, padá na `U` — a na `U`,
+ne na `N`.** Nikdo neřekl, že Micka kočka není; jen se přestalo vědět,
+že je. To je **M‑1 z češtiny, poprvé**, a byla to jediná položka mé
+stálé regrese, která se nikdy neměřila jinak než na formulích.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓
+ireflex ✓ · opačná ✓ · W-19 ✓ · W-24 ✓
+jádrové krokem: before, disjoint, member, same_as, subset  (5 z 9)
+```
+
+---
+
+## Zúžení M‑2: SCHVALUJI a beru za své
+
+Builder si vyžádal potvrzení. **Souhlasím s ním, ověřil jsem obě strany
+a zapisuji to sem, protože M‑2 je můj dodatek.**
+
+**Co se změnilo:** podmínka B odmítala zakotvit zmínku, jejíž uzel je ve
+sporu **s čímkoli**. Nově odmítá jen spor mezi uzly **téhož jména**.
+
+**Proč je to správně, a je to argument, ne souhlas:** spor s uzlem
+**jiného** jména nezpochybňuje, **který** uzel se míní — zpochybňuje
+jejich **totožnost**. To je práce evaluátoru a M‑1 na ni **slibuje
+verdikt**. Do zúžení skončila i přímá otázka doptáním „kdo je kdo",
+takže se člověk **verdikt nikdy nedozvěděl** — a otázka je míň než
+verdikt.
+
+**Změřil jsem obě strany sám:**
+
+```
+spor TÉHOŽ jména   → nezapíše se, ptá se „Kterého Filipa myslíš?"   ✓
+spor JINÉHO jména  → zakotví a zapíše [s0007], neptá se            ✓
+                     a přímá otázka na identitu dá CONFLICT/2       ✓
+```
+
+**Jádro se neverzuje a je to podle mého vlastního měřítka z kola #62:**
+tam jsem verzoval, protože se změnila **množina legálních bází**. Tady
+se mění, **který uzel jazyk navrhne** — a I‑2 to výslovně staví mimo
+jádro. Zapsáno tedy sem, s datem, jako změna dodatku M.
+
+**Test podmínky B nepřepsal na slabší tvrzení, ale rozdělil na dva.**
+Přesně tak se to dělá.
+
+---
+
+## Co chytila parita a je to nejužitečnější věc na kole
+
+Builder **opsal** rozbor „Je Micka kočka?" ze sousední věty a **živá
+služba to odmítla**: v „Micka je Mourek." čte parser *Micku* jako
+**maskulinum** (táhne ji následující mužské jméno), samostatně jako
+femininum. Opsaná nahrávka by fixovala rozbor, **který na živém vstupu
+nenastane**. Táž třída jako chybějící `Poss=Yes` z kola #47 — jen to
+tentokrát zachytil stroj, ne my dva.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑26 (drobný) · test zúžení měří sousedа, ne tvrzení.**
+`test_a_dispute_with_another_name_gets_a_verdict_not_a_question` tvrdí
+**verdikt evaluátoru**, ale ne to, že zakotvení **projde** — a přitom
+právě to je ta změněná věc. Změřil jsem si to sám (zapsáno `s0007`,
+neptá se), takže substance drží; test by to měl tvrdit taky, jinak
+zúžení hlídá jen jméno testu.
+
+**Přiznaná mez v doméně je zapsaná správně:** otázka na identitu se ptá
+bez inverze („Micka je Mourek?"), protože dvě vlastní jména za sebou čte
+parser jako **jedno složené jméno** (`flat`). Mez rozboru, ne kaskády.
+
+**W‑20, W‑23, W‑25** leží dál podle dohody.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: `contains` a `within` z české věty — místo a čas
+jedním dialogem.**
+
+**Gate:** sada zapisuje krokem **pět z devíti**; zbývá `complete`,
+`contains`, `name`, `within`.
+
+**Proč právě ty dvě spolu:** jsou to **jediné dvě relace, které dnes
+figurují v důkazech a v mezerách, ale žádný krok je nezapisuje** —
+změřeno: `contains(part:Praha, whole:Plzeň)` se nabízí u *Čas a prostor*
+a `within` u *Pořadí dnů*. Systém tedy **žádá článek, který si člověk
+česky nemá jak říct**. To je táž třída jako W‑19, jen o patro výš: tam
+šlo o článek, který **evaluátor** neumí použít, tady o článek, který
+**jazyk** neumí vyrobit.
+
+**Druhý důvod:** obě mají v `_compat` vlastní větev (`contains_proof`,
+`within_proof`), obě jsou v mých sortových stráží, a ani jedna nemá
+českou cestu — tedy přesně vzorec, který v posledních šesti kolech
+vyrobil B‑10, B‑11, B‑13 a W‑19.
+
+**Můj counterexample — bez něj neschválím:** nová doména zapíše
+`contains` **i** `within` z české věty; otázka, která potřebuje
+**oba** druhy zahrnutí, dá `A` s důkazem citujícím oba zápisy; otázka
+opačným směrem dá `U`, ne `N`; **a** dosavadní nabídka u *Čas a prostor*
+(`? platí contains(part:Praha, whole:Plzeň)?`) se po zapsání té věty
+**česky** promění v `A` — tím se zavře smyčka, kterou W‑19 otevřela;
+devět domén se závěry beze změny (a když se některý změní, **napiš
+to**); gate *Farmaka* `N` s doložkou `s0005`; parita ≥ 33/33; nula
+`RECALL_FAILURE`; testy zelené; „Pondělí je před pondělím." se pořád
+nezapíše.
+
+---
+
+## ARCHIV — kolo #65
+
+### Status: 🟢 PASS — citace dosáhla na původ; W‑24 zavřena
 
 **Kolo #65.** 828 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **59/59**, živá parita **29/29**, dialogy 8 / 19 / 12 se závěry

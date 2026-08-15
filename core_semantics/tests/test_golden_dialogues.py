@@ -20,6 +20,7 @@ from core_semantics.session import (
     answers_here,
     answers_quantifier,
     names_relation,
+    names_relation_here,
 )
 from core_semantics.tests._console import echo
 from core_semantics.tests.dialogues import DIALOGUES, Dialogue, Step
@@ -61,6 +62,7 @@ def _is_turn(step: Step) -> bool:
         step.answers_quantifier is not None
         or step.answers_here is not None
         or step.answers_relation is not None
+        or step.answers_relation_here is not None
     )
 
 
@@ -74,6 +76,18 @@ def _answer(
     hlídala shodu dvou zápisů místo chování."""
     assert done, "tah bez předchozí věty nemá na co odpovídat"
     previous, result = done[-1]
+    if step.answers_relation_here is not None:
+        # ODPOVĚĎ NA VĚTU (`→⊆1`), ne na tvar — týž tvar znamená v jedné
+        # větě `contains` a v druhé `within`.
+        assert previous.reading is not None and result.predication is not None
+        return session.play(
+            names_relation_here(
+                step.text,
+                result.predication,
+                previous.reading,
+                step.answers_relation_here,
+            )
+        )
     if step.answers_relation is not None:
         # ODPOVĚĎ NA STAVBU (`→⊆`). Tvar konstrukce se DOPOČÍTÁ z toho, co
         # předchozí krok přečetl — opsaný tvar by se mohl rozejít s tím,

@@ -66,6 +66,11 @@ class Operation(Enum):
     #: Uspořádání na časové ose (§ 5.1). Do menu přibylo, až když k němu
     #: vedla česká věta — dřív by to byla položka, kterou nikdo nedosáhne.
     BEFORE = "before"
+    #: Zahrnutí MÍSTA a zahrnutí ČASU. Čeština je jedním tvarem nerozliší
+    #: („Praha je součástí Česka." × „Pondělí je součástí týdne."), takže
+    #: v menu musí být obě a rozhodne se VĚTA po větě.
+    CONTAINS = "contains"
+    WITHIN = "within"
     # epistemická vrstva (§ 4) — druhá tvář „nebo"
     ALTERNATIVE = "alt"
     NEGATION = "negation"
@@ -91,6 +96,8 @@ MENU: tuple[tuple[Operation, str], ...] = (
     (Operation.SAME_AS, "je to týž uzel pod jiným jménem"),
     (Operation.COMPLETE, "to jsou všichni, které skupina má"),
     (Operation.BEFORE, "to první je na časové ose dřív"),
+    (Operation.CONTAINS, "to druhé zahrnuje to první jako MÍSTO"),
+    (Operation.WITHIN, "to druhé zahrnuje to první jako ČAS"),
     (Operation.ALTERNATIVE, "otázka, který z členů platí"),
     (Operation.NEGATION, "doložené popření, ne pouhá nevědomost"),
 )
@@ -364,6 +371,8 @@ RELATIONAL: frozenset["Operation"] = frozenset(
         Operation.DISJOINT,
         Operation.BEFORE,
         Operation.SAME_AS,
+        Operation.CONTAINS,
+        Operation.WITHIN,
     }
 )
 
