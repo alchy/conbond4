@@ -1685,3 +1685,150 @@ def test_a_prepositional_genitive_does_not_hide_the_construction() -> None:
     predication = generate(reading)[0].predication
     found = relation_shape(predication, reading)
     assert found is not None and found.shape == "cop:součást+Gen"
+
+
+# --------------------------------------------------------------------------
+# TRPNÝ PODMĚT je PATIENS *(W‑59)*
+# --------------------------------------------------------------------------
+
+
+def _passive(*, with_object: bool = False) -> Reading:
+    tokens = [
+        _token(1, "Úmysly", "úmysl", "NOUN", 3, "nsubj:pass", Case="Nom", Gender="Masc", Number="Plur"),
+        _token(2, "byly", "být", "AUX", 3, "aux:pass", Number="Plur", Polarity="Pos"),
+        _token(3, "popsány", "popsaný", "ADJ", 0, "root", Number="Plur", Polarity="Pos", Voice="Pass"),
+    ]
+    if with_object:
+        tokens.append(
+            _token(4, "změnu", "změna", "NOUN", 3, "obj", Case="Acc", Gender="Fem", Number="Sing")
+        )
+    tokens.append(_token(len(tokens) + 1, ".", ".", "PUNCT", 3, "punct"))
+    return Reading(tokens=tuple(tokens), provenance="test")
+
+
+def test_a_passive_subject_is_the_patient() -> None:
+    """„Úmysly byly popsány." — úmysly nic nepopisují, jsou to ty
+    POPISOVANÉ. Bylo to TŘETÍ NEJČASTĚJŠÍ „co znamená role X" v korpusu
+    (19 z 250) a přitom to nikdy nebyla otázka o významu."""
+    from core_semantics.cascade import passive_tier
+
+    verdict = cascade(_passive(), tiers=(*HARD_TIERS, passive_tier()))
+    predication = verdict.survivors[0].predication
+    assert {r.name for r in predication.roles} == {ROLE_OBJECT}
+    assert "nsubj:pass" not in surface_roles(predication)
+
+
+def test_the_passive_role_comes_from_the_subtype_not_from_learning() -> None:
+    """V HLÁŠENÍ MUSÍ BÝT VIDĚT, ODKUD to plyne. Kdyby to vypadalo jako
+    naučený vzor, čekal by člověk, že to jde odvolat — a nejde, protože
+    `:pass` je vlastnost ROZBORU, ne lexikonu."""
+    from core_semantics.cascade import passive_tier
+
+    verdict = cascade(_passive(), tiers=(*HARD_TIERS, passive_tier()))
+    stopa = "\n".join(verdict.trace)
+    assert "nsubj:pass" in stopa and "PODTYPU" in stopa
+    role = verdict.survivors[0].predication.reading(ROLE_OBJECT)
+    assert role is not None and "podtyp" in role.source
+
+
+def test_a_taken_object_makes_the_passive_ask() -> None:
+    """JEDINÁ KOLIZE, a je změřená: 18 z 19 vět korpusu roli `co` volnou
+    má, u devatenácté („Celá kolekce se označuje mnohovesmír.") jsou obě
+    strany VYSLOVENÉ. Dosadit `co` z `:pass` by znamenalo zahodit člen,
+    který ve větě stojí — a poznat by to nešlo, protože obě jsou `co`."""
+    from core_semantics.cascade import passive_question, passive_tier
+
+    verdict = cascade(
+        _passive(with_object=True), tiers=(*HARD_TIERS, passive_tier())
+    )
+    predication = verdict.survivors[0].predication
+    assert {r.name for r in predication.roles} == {ROLE_OBJECT, "nsubj:pass"}
+    otazka = passive_question(predication)
+    assert otazka is not None and "Která z nich" in otazka
+    assert "nsubj:pass" not in surface_roles(predication), (
+        "„co znamená nsubj:pass“ systém VÍ — ptát se na to je nepravda "
+        "o vlastním stavu (W‑20)"
+    )
+
+
+def test_a_collided_passive_does_not_write() -> None:
+    """Zápis se ZASTAVÍ (B‑19): jinak by se věta zapsala s povrchovým
+    jménem role a po rozhodnutí podruhé — a ten první výrok by nikdo
+    neodvolal."""
+    from core_semantics.cascade import AWAITING_ROLE_NAME, passive_tier
+
+    verdict = cascade(
+        _passive(with_object=True), tiers=(*HARD_TIERS, passive_tier())
+    )
+    predication = verdict.survivors[0].predication
+    assert any(r.awaiting == AWAITING_ROLE_NAME for r in predication.roles)
+
+
+def test_a_passive_without_a_subject_still_asks_for_one() -> None:
+    """PROTIPŘÍKLAD PROTI REGRESI W‑48. „Byl pohřben na Vyšehradě." nemá
+    `nsubj:pass` vůbec — patro trpného rodu nemá co přejmenovat a věta se
+    dál ptá, o KOM to platí."""
+    from core_semantics.cascade import passive_tier
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Byl", "být", "AUX", 2, "aux:pass", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "pohřben", "pohřbený", "ADJ", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos", Voice="Pass"),
+            _token(3, "na", "na", "ADP", 4, "case", Case="Loc"),
+            _token(4, "Vyšehradě", "Vyšehrad", "PROPN", 2, "obl", Case="Loc", Gender="Masc", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    verdict = cascade(
+        reading, tiers=(*HARD_TIERS, passive_tier(), prodrop_tier())
+    )
+    predication = verdict.survivors[0].predication
+    assert predication.role(ROLE_OBJECT) is None
+    assert "BEZ PODMĚTU" in "\n".join(verdict.trace)
+
+
+def test_a_passive_sentence_goes_all_the_way_into_the_base() -> None:
+    """CELOU CESTOU PŘES `.utter(`, ne přes patro *(W‑59)*. Bez toho by
+    doložka měla vynucení jen nad vnitřní funkcí a nikdo by neověřil, že
+    se ta role dostane až do BÁZE — tam, kde na ní stojí odpověď."""
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session
+    from core_semantics.ast import QueryStatus
+
+    veta = _passive()
+    otazka = Reading(
+        tokens=(
+            _token(1, "Byly", "být", "AUX", 3, "aux:pass", Number="Plur", Polarity="Pos"),
+            _token(2, "úmysly", "úmysl", "NOUN", 3, "nsubj:pass", Case="Nom", Gender="Masc", Number="Plur"),
+            _token(3, "popsány", "popsaný", "ADJ", 0, "root", Number="Plur", Polarity="Pos", Voice="Pass"),
+            _token(4, "?", "?", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+
+    class _Recorded:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(
+                text=text, readings=(otazka if text.endswith("?") else veta,)
+            )
+
+    lexicon = czech_seed()
+    lexicon.add(
+        LearnedPattern(
+            trigger=Trigger(
+                lemma="", upos="NOUN", number="Plur", case="Nom", deprel="nsubj:pass"
+            ),
+            operation=Operation.FOR_ALL,
+            learned_from="test W‑59",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    session = Session(lexicon=lexicon)
+    zapsano = session.utter("Úmysly byly popsány.", _Recorded())
+    assert zapsano.statement_id is not None
+    assert session.utter("Byly úmysly popsány?", _Recorded()).status is (
+        QueryStatus.PROVEN_TRUE
+    ), "role z `:pass` musí dojít až do báze, jinak se na ni nedá odpovědět"

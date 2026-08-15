@@ -87,6 +87,8 @@ from .cascade import (
     relation_tier,
     role_question,
     role_mapping_tier,
+    passive_tier,
+    passive_question,
 )
 from .engine import Engine
 from .epistemics import BoundResult, query_bound
@@ -755,6 +757,12 @@ class Session:
         return (
             *HARD_TIERS,
             lexicon_tier(self.lexicon),
+            # Trpný podmět PŘED mapováním rolí (W‑59). Pořadí je věcné,
+            # ne kosmetické: `role_mapping_tier` hlásí „[CHYBÍ: co znamená
+            # role nsubj:pass]“, a kdyby běželo dřív, systém by o téže
+            # roli na dvou řádcích řekl, že ji nezná a že ji zná. `:pass`
+            # STOJÍ V ROZBORU — není se o něm co učit.
+            passive_tier(),
             role_mapping_tier(self.lexicon),
             # Jádrová relace ze stavby (N‑2) PŘED kvantifikátorem: relace
             # své role přejmenuje na jádrové a označí je jako třídy, takže
@@ -1313,6 +1321,10 @@ class Session:
                 # z HOTOVÉ predikace, ne ze stopy — jinak by se ptala na
                 # tvary, které pozdější patro spotřebovalo.
                 role_question(predication),
+                # Srážka dvou patiensů (W‑59). Hned za povrchovou rolí:
+                # je to taky otázka na jméno role, jen ta odpověď není
+                # v lexikonu, ale ve větě.
+                passive_question(predication),
                 # Otázka na to, co stavba tvrdí (N‑2). Čte se ze STOPY,
                 # protože v predikaci po sobě nerozhodnutá relace nic
                 # nenechá — čtení zůstane obyčejným vztahem a nedalo by

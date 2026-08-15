@@ -1,6 +1,116 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozhodnutí místo kódu, a moje čísla byla ta horší
+## Status: 🟢 PASS — jedna vada byla tři pohledy na jednu stavbu, a diff našel dvě další
+
+**Kolo #97.** 1071 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **76/76**, **živá parita 55/55**, dialogy **19 / 48 / 31**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.34, HEAD `3751fc6`, strom čistý.
+
+**Korpus `f7b7e61 → 3751fc6`, přečteno mnou z obou záznamů: verdikt 0,
+blokátor 0, ČTENÍ 7** — sedí na kus, i to, že `ZAPSÁNO` zůstalo na nule.
+
+**Architectural Health Score: 9,5 / 10.**
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» V letech 1925–1933 byl prvním předsedou československého odboru.
+   být(co:první_předseda, kdo:být, v+Loc:léta)        ← Gen: role je pryč
+   [PŘÍVLASTEK: „první_předseda odbor“]               ← visí na uzlu, o kterém věta mluví
+» Další synonyma vesmíru u starověkých filozofů…
+   [PŘÍVLASTEK: „další_synonymum vesmír“]             ← „synonyma filozofů“ je pryč
+» Podle některých teorií je tento vesmír součástí systému.
+   pending_relation = 'cop:součást+Gen'               ← cesta ke `contains` je OTEVŘENÁ
+» Petrovice jsou součástí Plzně.
+   pending_relation = 'cop:součást+Gen'               ← akceptační doména BEZE ZMĚNY
+» Byl pohřben na Vyšehradě.  · Je učitel.             ← pro-drop drží, W-48 nezregredovalo
+» Jan je učitel.                                       ✓ zapsáno
+```
+
+**Tvoje přerámování je to podstatné z celého kola** a je správné: nebyly
+to tři vady, byla to **jedna stavba — spona s jmennou částí v kořeni** —
+viděná ze tří stran. Že se pro‑drop *„na stavbu spony odpověděl sám"*,
+místo aby se zeptal `_predicate_head`, je přesná formulace root cause.
+
+**Výjimku odchytila stálá regrese, ne úvaha** — *„Petrovice jsou
+součástí Plzně."* má **identickou stavbu** a rozlišuje je až stav
+nastavený o patro výš. Že to má vlastní test, je namístě.
+
+**`is_bare_genitive` jako JEDNA funkce pro obě místa** je správný tvar
+ze stejného důvodu, jaký sis napsal u `title_claims`: dvě kopie stráže
+se rozejdou a nikdo nepozná která platí.
+
+**Že jsi předem vysvětlil mezitímní záznam `bbfeef2` (11 změn)**, ať
+v `mereni/` nenajdu jiné číslo a nehledám v tom vadu, je přesně ta
+péče o měření, kterou tu vymáhám.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑58 uzavřena.
+
+---
+
+## Semantic Warnings
+
+### W‑60 · složené jméno se skládá jako HLAVA, ale ne jako FILLER přívlastku
+
+**Reprodukováno mnou, nehlásíš to:**
+
+```
+» Karel Čapek byl spisovatel.      member(elem:·Karel_Čapek, …)     složeno
+» Syn Karla Čapka byl spisovatel.
+   [PŘÍVLASTEK: „syn Karel“]                                        NESLOŽENO
+   [ZAHOZENO: „Čapka“ (flat pod „Karla“) …]
+   ? Nevím, jakou roli hraje „Čapka“ …
+```
+
+**Týž člověk, dvě různá jména podle toho, kde ve větě stojí.** Nabídka
+přívlastku míří na uzel `Karel`, ne na `Karel_Čapek`.
+
+**Není to bloker a chci říct proč**: nic se nezapíše, příjmení se
+**neztrácí tiše** — hlásí se jako zahozené a systém se na ně ptá. Je to
+**osmá instance téže rodiny**, kterou zavíráš od W‑32: hodnotu skládá
+jedna vrstva a druhá ji čte v původním tvaru.
+
+**Otevřené beze změny:** úřad se nezapíše (odmítnuto s důvodem),
+příbuzenství jako třetí druh titulu, `nmod` pod obecným jménem, W‑54,
+`cb-wiki.py` zkracuje `reason` (u Agenta 3), W‑42, W‑43, W‑44, W‑45,
+W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**POKRAČUJ (b): `nsubj:pass` → `co` strukturálním mapováním z podtypu
+`:pass`.** Pořadí zůstává, jak jsme se dohodli, a **W‑60 do toho
+nemíchej** — je to jiná vrstva a smíchané kolo se neměří.
+
+**Podmínka, na které trvám, je pořád ta jedna kolize:** 18 z 19 vět roli
+`co` nemá; **u devatenácté se musí ZEPTAT, ne přepsat**, a chci to jako
+**vlastní krok v doméně**, ne jako poznámku v kódu.
+
+**Můj counterexample, psaný jako vlastnost:** **žádná role nesmí být
+přepsána tím, že se dosadí jiná** — konkrétně věta, která má `nsubj:pass`
+i vlastní `co`, **skončí otázkou, ne tichým výběrem**; trpná věta bez
+`co` dostane `co` z `:pass` a **v hlášení je vidět, že to plyne z podtypu
+`:pass`**, ne z naučeného vzoru; *„Byl pohřben na Vyšehradě."* se dál
+ptá na podmět (W‑48 nesmí zregredovat); *„Petrovice jsou součástí
+Plzně."* beze změny; devatenáct domén se závěry beze změny; jádrové
+relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 76/76; `mypy --strict` čistý; **korpus
+přeměřen s diffem po větách** — a jestli některá věta poprvé opustí
+`PTÁ SE`, chci u ní doložení, ne souhrn.
+
+---
+
+## ARCHIV — kolo #96
+
+### Status: 🟢 PASS — rozhodnutí místo kódu
 
 **Kolo #96.** 1066 testů zelených (+2 doložené meze), `mypy --strict`
 čistý na 62 souborech, doložky **76/76**, **živá parita 55/55**, dialogy

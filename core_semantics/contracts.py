@@ -1263,6 +1263,40 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-14",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "TRPNÝ PODMĚT JE PATIENS a role `co` z něj plyne "
+            "STRUKTURÁLNĚ, z podtypu `nsubj:pass`, ne z naučeného vzoru: "
+            "`:pass` STOJÍ V ROZBORU a říká, že podmět té věty NENÍ "
+            "konatel („Úmysly byly popsány.“ — úmysly nic nepopisují). "
+            "Ptát se „co znamená role nsubj:pass“ znamenalo ptát se na "
+            "něco, co rozbor právě řekl, a byla to TŘETÍ NEJČASTĚJŠÍ "
+            "otázka korpusu (19 z 250). Vlastní jméno té role bylo "
+            "ZAPSANÉ ROZHODNUTÍ (I‑2, INV‑11), ne vada — patro ten důvod "
+            "neruší, dosazuje OPAČNOU stranu. KDYŽ JE `co` OBSAZENÉ, "
+            "PATRO SE ZEPTÁ, NEPŘEPÍŠE: obě strany jsou vyslovené a "
+            "zahodit jednu znamená zahodit člen, který ve větě stojí "
+            "(změřeno: 1 věta z 19). Ta srážka MLČÍ K FALEŠNÉ OTÁZCE "
+            "(`collided`, W‑20 — význam se ví) a ZASTAVUJE ZÁPIS "
+            "(`AWAITING_ROLE_NAME`, B‑19 — jinak by se věta zapsala "
+            "s povrchovým jménem a po rozhodnutí podruhé); ptá se "
+            "VLASTNÍ otázkou, která se ptá KTERÁ ZE DVOU STRAN, ne co "
+            "ten tvar znamená. AGENS se rolí NESTÁVÁ — „Auto bylo "
+            "koupeno Filipem.“ je vlastní rodina (W‑59)"
+        ),
+        anchor="core_semantics.cascade:passive_tier",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_passive_subject_is_the_patient",
+            "test_the_passive_role_comes_from_the_subtype_not_from_learning",
+            "test_a_taken_object_makes_the_passive_ask",
+            "test_a_collided_passive_does_not_write",
+            "test_a_passive_without_a_subject_still_asks_for_one",
+            "test_a_passive_sentence_goes_all_the_way_into_the_base",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(

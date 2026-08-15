@@ -2354,6 +2354,118 @@ TITLE_CLAIM = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 20 · Trpný rod — podmět, který nic nedělá
+# --------------------------------------------------------------------------
+
+PASSIVE = Dialogue(
+    name="Trpný rod",
+    source="„Úmysly byly popsány. … Kolekce se označuje mnohovesmír.“",
+    shapes=(
+        ("NOUN", "Plur", "Nom", "nsubj:pass", Operation.FOR_ALL),
+        ("NOUN", "Sing", "Nom", "nsubj:pass", Operation.SELF),
+        ("NOUN", "Sing", "Nom", "obj", Operation.SELF),
+        ("PROPN", "Sing", "Loc", "obl", Operation.SELF),
+    ),
+    roles=(("na+Loc", "kde"),),
+    steps=(
+        Step(
+            text="Úmysly byly popsány.",
+            reading=sentence(
+                w("Úmysly", "úmysl", "NOUN", 3, "nsubj:pass", Animacy="Inan", Case="Nom", Gender="Masc", Number="Plur"),
+                w("byly", "být", "AUX", 3, "aux:pass", Animacy="Inan", Aspect="Imp", Gender="Fem,Masc", Number="Plur", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("popsány", "popsaný", "ADJ", 0, "root", Animacy="Inan", Aspect="Perf", Degree="Pos", Gender="Fem,Masc", Number="Plur", Polarity="Pos", Variant="Short", VerbForm="Part", Voice="Pass"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="popsaný(co:∀úmysl)",
+            writes="popsaný(co:∀úmysl)",
+            point=(
+                "PODMĚT, KTERÝ NIC NEDĚLÁ. „Úmysly“ nic nepopisují — jsou "
+                "to ty POPISOVANÉ, tedy `co`. Neplyne to z naučeného "
+                "vzoru, ale z PODTYPU `:pass`, který STOJÍ V ROZBORU; "
+                "ptát se „co znamená role nsubj:pass“ znamenalo ptát se "
+                "na něco, co rozbor právě řekl, a byla to TŘETÍ "
+                "NEJČASTĚJŠÍ otázka korpusu"
+            ),
+        ),
+        Step(
+            text="Byly úmysly popsány?",
+            reading=sentence(
+                w("Byly", "být", "AUX", 3, "aux:pass", Animacy="Inan", Aspect="Imp", Gender="Fem,Masc", Number="Plur", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("úmysly", "úmysl", "NOUN", 3, "nsubj:pass", Animacy="Inan", Case="Nom", Gender="Masc", Number="Plur"),
+                w("popsány", "popsaný", "ADJ", 0, "root", Animacy="Inan", Aspect="Perf", Degree="Pos", Gender="Fem,Masc", Number="Plur", Polarity="Pos", Variant="Short", VerbForm="Part", Voice="Pass"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="popsaný(co:∀úmysl)",
+            answers="A",
+            point=(
+                "OTÁZKA SE TREFÍ NA TÝŽ VÝROK — mapování běží v patře, "
+                "tedy JEDNOU PRO VĚTU I PRO DOTAZ. Kdyby se dosazovalo "
+                "jen u oznamovací věty, otázka by se ptala na jinou roli "
+                "a odpověď by byla `U` u něčeho, co v bázi leží"
+            ),
+        ),
+        Step(
+            text="Kolekce se označuje mnohovesmír.",
+            reading=sentence(
+                w("Kolekce", "kolekce", "NOUN", 3, "nsubj:pass", Case="Nom", Gender="Fem", Number="Sing"),
+                w("se", "se", "PRON", 3, "expl:pass", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+                w("označuje", "označovat", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("mnohovesmír", "mnohovesmír", "NOUN", 3, "obj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="označovat(co:·mnohovesmír, nsubj:pass:·kolekce)",
+            asks="nsubj:pass",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA: obě strany jsou "
+                "VYSLOVENÉ a systém se ZEPTÁ, nepřepíše. Dosadit `co` "
+                "z `:pass` by znamenalo zahodit člen, který ve větě "
+                "stojí — a poznat by to nešlo, protože obě jsou `co`. "
+                "Změřeno: v korpusu je to 1 věta z 19, zbylých 18 má `co` "
+                "volné"
+            ),
+        ),
+        Step(
+            text="Byl pohřben na Vyšehradě.",
+            reading=sentence(
+                w("Byl", "být", "AUX", 2, "aux:pass", Aspect="Imp", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("pohřben", "pohřbený", "ADJ", 0, "root", Aspect="Perf", Degree="Pos", Gender="Masc", Number="Sing", Polarity="Pos", Variant="Short", VerbForm="Part", Voice="Pass"),
+                w("na", "na", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Vyšehradě", "Vyšehrad", "PROPN", 2, "obl", Animacy="Inan", Case="Loc", Gender="Masc", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            reads="pohřbený(kde:Vyšehrad, kdo:pohřbený)",
+            asks="podmět",
+            point=(
+                "PROTIPŘÍKLAD PROTI REGRESI W‑48: trpná věta BEZ "
+                "vysloveného podmětu se dál ptá, o KOM to platí. Patro "
+                "trpného rodu se jí nedotýká — nemá co přejmenovat, "
+                "`nsubj:pass` v ní není"
+            ),
+            limit=(
+                "Krok je ZÁMĚRNĚ POSLEDNÍ: nechává otevřenou otázku po "
+                "podmětu a další věta by se četla jako odpověď na ni"
+            ),
+        ),
+    ),
+    note=(
+        "Dvacátý akceptační dialog. `nsubj:pass` byl TŘETÍ NEJČASTĚJŠÍ "
+        "tvar, na který se systém ptal „co znamená“ (19 výskytů z 250) — "
+        "a přitom to nikdy nebyla otázka o významu: podtyp `:pass` je "
+        "V ROZBORU a říká, že podmět té věty NENÍ konatel. Vlastní jméno "
+        "té role bylo ZAPSANÉ ROZHODNUTÍ (I‑2, INV‑11), ne vada; tohle "
+        "patro ten důvod neruší, jen dosazuje OPAČNOU stranu, tu, kterou "
+        "`:pass` doopravdy říká."
+    ),
+    limit=(
+        "CO SE TÍM NEŘEŠÍ: AGENS. „Auto bylo koupeno Filipem.“ — kdo to "
+        "udělal, stojí v instrumentálu a rolí se nestává. V korpusu má "
+        "instrumentál pod přísudkem 2 z 19 trpných vět, takže to není "
+        "okrajové ani časté; je to vlastní rodina a nemíchá se sem."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -2374,4 +2486,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     FULL_NAME,
     TITLED_NAME,
     TITLE_CLAIM,
+    PASSIVE,
 )

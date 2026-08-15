@@ -1473,6 +1473,15 @@ def role_mapping_tier(lexicon: Lexicon) -> Tier:
                     )
                     roles.append(replace(role, collided=True))
                     continue
+                if role.collided:
+                    # ZNÁMÁ role, která se srazila UŽ DŘÍV — dnes ji tak
+                    # označí patro trpného rodu *(W‑59)*. Hlásit u ní
+                    # „[CHYBÍ: co znamená]“ je nepravda: systém odpověď
+                    # zná a důvod, proč se nedosadila, právě řekl. Je to
+                    # táž úvaha jako o pár řádků výš u kolize naučeného
+                    # mapování (W‑20) — jen ta kolize vznikla jinde.
+                    roles.append(role)
+                    continue
                 if role.name not in CANONICAL_ROLES:
                     # Tvar, který nikdo nepojmenoval. Mlčet by znamenalo
                     # nechat větu nezakotvenou bez jediného vodítka, co
@@ -1497,6 +1506,138 @@ def role_mapping_tier(lexicon: Lexicon) -> Tier:
         return tuple(renamed), "; ".join(notes) if notes else None
 
     return tier
+
+
+#: Podtyp, kterým UD označuje TRPNÝ PODMĚT. Pojmenovaná konstanta se
+#: zdůvodněním vedle *(W‑59)*: `:pass` není nálepka navíc, je to jediné
+#: místo, kde rozbor říká, že podmět té věty NENÍ konatel.
+PASSIVE_SUBJECT = "nsubj:pass"
+
+
+def passive_tier() -> Tier:
+    """Trpný podmět je PATIENS — přejmenuje `nsubj:pass` na `co` *(W‑59)*.
+
+    **Není to naučený vzor a nesmí jím být.** `:pass` STOJÍ V ROZBORU:
+    „Úmysly byly popsány." má podmět, který nic nepopisuje — je to to
+    POPISOVANÉ. Ptát se „co znamená role `nsubj:pass`" znamená ptát se na
+    něco, co rozbor právě řekl, a byla to třetí nejčastější otázka
+    korpusu (19 výskytů). Je to táž cesta jako u W‑47 a W‑48: co je
+    v rozboru, se nečte jako neznámé.
+
+    **Vlastní jméno té role bylo ZAPSANÉ ROZHODNUTÍ, ne vada** *(I‑2,
+    INV‑11)*: ztotožnit trpný podmět s `kdo` by byl dohad o významu,
+    protože konatel to není. Tohle patro ten důvod neruší — dosazuje
+    OPAČNOU stranu, tu, kterou `:pass` doopravdy říká.
+
+    **KDYŽ JE `co` OBSAZENÉ, PATRO SE ZEPTÁ, NEPŘEPÍŠE.** „Celá kolekce
+    těchto oddělených prostorů se označuje mnohovesmír." má obojí a
+    vybrat tiše by znamenalo zahodit roli, kterou věta vyslovila. Změřeno,
+    ne odhadnuto: v korpusu je to 1 věta z 19, zbylých 18 `co` volné má.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        out: list[Candidate] = []
+        for candidate in candidates:
+            roles = candidate.predication.roles
+            passive = next((r for r in roles if r.name == PASSIVE_SUBJECT), None)
+            if passive is None:
+                out.append(candidate)
+                continue
+            if any(r.name == ROLE_OBJECT for r in roles):
+                # OBĚ STRANY VYSLOVENÉ. Přepsat jednu druhou znamená
+                # zahodit člen, který ve větě stojí — a poznat by to
+                # nešlo, protože obě jsou `co`.
+                notes.append(
+                    f"[KOLIZE: „{PASSIVE_SUBJECT}“ je trpný podmět, tedy "
+                    f"„{ROLE_OBJECT}“, ale „{ROLE_OBJECT}“ už v téhle "
+                    f"větě někdo zabral — která z těch dvou je která, "
+                    f"z tvaru nepoznám]"
+                )
+                out.append(
+                    Candidate(
+                        replace(
+                            candidate.predication,
+                            roles=tuple(
+                                # `collided` UMLČÍ FALEŠNOU OTÁZKU (W‑20):
+                                # „co znamená nsubj:pass“ systém ví.
+                                # `AWAITING_ROLE_NAME` ZASTAVÍ ZÁPIS
+                                # (B‑19): dokud se neví, která ze dvou
+                                # stran je `co`, zapsat větu znamená
+                                # zapsat roli s povrchovým jménem a po
+                                # rozhodnutí ji zapsat podruhé.
+                                replace(
+                                    r, collided=True, awaiting=AWAITING_ROLE_NAME
+                                )
+                                if r is passive
+                                else r
+                                for r in roles
+                            ),
+                        ),
+                        origin=candidate.origin,
+                    )
+                )
+                continue
+            notes.append(
+                f"[TRPNÝ ROD: „{passive.mention.form}“ je `{PASSIVE_SUBJECT}`, "
+                f"tedy PATIENS — role „{ROLE_OBJECT}“ plyne z PODTYPU "
+                f"rozboru, ne z naučeného vzoru]"
+            )
+            out.append(
+                Candidate(
+                    replace(
+                        candidate.predication,
+                        roles=tuple(
+                            sorted(
+                                (
+                                    replace(
+                                        r,
+                                        name=ROLE_OBJECT,
+                                        source=f"trpný rod — podtyp `{PASSIVE_SUBJECT}`",
+                                    )
+                                    if r is passive
+                                    else r
+                                    for r in roles
+                                ),
+                                key=lambda r: r.name,
+                            )
+                        ),
+                    ),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
+
+
+def passive_question(predication: Predication) -> str | None:
+    """Otázka u SRÁŽKY dvou patiensů *(W‑59)*.
+
+    Vlastní otázka, ne „co znamená role `nsubj:pass`“: TO SYSTÉM VÍ a
+    ptát se na to je nepravda o vlastním stavu (W‑20). Neví se něco
+    jiného — KTERÁ ZE DVOU VYSLOVENÝCH STRAN je ta popisovaná.
+    """
+    srazky = [
+        role
+        for role in predication.roles
+        if role.name == PASSIVE_SUBJECT and role.collided
+    ]
+    if not srazky:
+        return None
+    druhy = next(
+        (r.mention.form for r in predication.roles if r.name == ROLE_OBJECT), "?"
+    )
+    prvni = srazky[0].mention.form
+    return (
+        f"Ta věta má DVĚ strany, které obě vypadají jako „{ROLE_OBJECT}“ — "
+        f"„{prvni}“ je trpný podmět (`{PASSIVE_SUBJECT}`) a „{druhy}“ stojí "
+        f"jako předmět. Která z nich je ta popisovaná? Vybrat sám nemůžu: "
+        f"z tvaru se to nepozná a zahodit jednu znamená zahodit člen, "
+        f"který ve větě stojí."
+    )
 
 
 #: Na co otevřená role čeká.
