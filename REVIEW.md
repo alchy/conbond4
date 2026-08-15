@@ -1,6 +1,128 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — poslední známé místo té rodiny je zavřené; a odstavec z #105 jde dál než tehdy
+## Status: 🟢 PASS — druhé „ne" v řadě, a lepší než to první
+
+**Kolo #120.** 1165 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **84/84**, **živá parita 55/55**, `standing_metrics()` =
+**21 / 107 / 51 / 33 / 26** (nerozšířeno — doména nevznikla), jádrové
+relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese zelená**,
+**celý korpus bez pádu**, stavy `219 / 16 / 1 / 2`. Jádro 0.1.54,
+HEAD `056dc61`. **V kódu se nezměnil ani řádek.**
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Odstavec: 7 tahů, 3 bez tahu — a doména se nepíše
+
+**Ověřil jsem obojí sám.** Tři překážky z #105 jsou opravdu zavřené:
+datum se skládá, druhá věta se nehlásí jako ztráta, otázka na `si`
+zmizela. **6 otázek bez tahu → 3.**
+
+**A žes nenapsal doménu, ve které by bylo `writes` všude prázdné, je
+správně** — a je správné i to, žes `standing_metrics()` nerozšířil
+a **řekl proč**: doména nevznikla, ne že by se zapomněla.
+
+---
+
+## Dva nálezy, a oba jsou lepší než ta doména by byla
+
+### N‑1 · tah se přijme, řekne „✓ naučeno" a čtení se nezmění
+
+**Reprodukováno:**
+
+```
+» Ke chřipce se přidal zánět ledvin a zápal plic.
+   před:  přidat(k+Dat:chřipka, kdo:∀zánět)
+   →@ „zápal“ je kdo   →  ✓ naučeno  role nsubj>conj+Nom ~ kdo [hypothesis, tah 2]
+   po:    přidat(k+Dat:chřipka, kdo:∀zánět)          ← BEZE ZMĚNY
+```
+
+**Vypadá to jako odpověď a není.** Tvoje formulace *„táž rodina jako
+otázka bez tahu, jen o krok dál"* je přesná — a **o krok horší**:
+u chybějícího tahu člověk ví, že stojí; tady si myslí, že postoupil.
+
+### N‑2 · zvratné `si` zůstalo rolí a věta se nezakotví ani po odpovědi na všechno
+
+```
+» V prosinci 1938 si Karel Čapek přivodil lehkou chřipku.
+   po →@ kdy a →@ komu:
+   ◐ přivodit(co:∃lehký_chřipka, kdo:·Karel_Čapek, kdy:prosinec_1938, komu:se)
+   [NEZAKOTVENO: role komu]        BÁZE: prázdná
+```
+
+**W‑68 odstranila nepravdivou otázku; role zůstala.** `si` v *„přivodit
+si"* není účastník, je to část tvaru slovesa — a dokud je rolí, ta věta
+se nezapíše, ať člověk odpoví cokoli.
+
+**Žes to nezavřel bez zadání, je správné.** Měřit a hlásit bylo zadání;
+stavět nebylo.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Změřil jsem obě rodiny, ať je vidět, co je velké a co ne:**
+
+```
+věty se zvratným zájmenem (expl*)      72 z 238   ← ale rolí se `se` stane jen v 5
+věty se ZAHOZENÝM souřadným členem    123 z 238   ← většina korpusu
+```
+
+**N‑2 je 5 vět. Souřadný člen je 123** — **přes polovinu korpusu
+a největší jediná věc, která v něm zbývá.**
+
+**Otevřené beze změny:** W‑67 (u Agenta 3), vnořené datum pod nerolovou
+hlavou (3), množství slovem (14), počet číslicí (11), kolize (10 z 12),
+26 ze 42 `v+Loc`, W‑60, úřad, příbuzenství, `nmod` pod obecným jménem,
+W‑54, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36 – W‑38, W‑40,
+W‑41. Otázka *„co JE uzel »vše«"* zůstává otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: N‑1 — tah, který se přijme a nic neudělá.** Bereš ho před
+vším ostatním, i před těmi 123 větami, a důvod je hierarchie, ne
+velikost: **je to nepravda o vlastním stavu na jediném kanálu, kterým
+do systému vstupuje význam.** Souřadný člen je chybějící schopnost;
+tohle je vada.
+
+**Rozhoduješ jednu věc: co se stane, když odpověď nemá kam jít.** Buď se
+tah **odmítne** (`✗`) s důvodem — tak jako `→∈` bez nabídky v B‑23 —
+nebo se **přijme a řekne, že se čtení nezměnilo a proč**. **Mlčky
+potvrdit je jediná odpověď, která nepřipadá v úvahu.**
+
+**Změř předem a na projev:** kolik tvarů, na které se dnes systém ptá,
+je takových, že by odpověď nikam nešla. **Jestli je to jen souřadný člen
+a `nmod` pod obecným jménem, je to malá oprava; jestli je to obecnější,
+chci to vědět dřív než kód.**
+
+**Můj counterexample, psaný jako vlastnost:** **žádný tah nepotvrdí, že
+se něco naučilo, aniž by řekl, co se tím ve větě změnilo** — konkrétně
+`→@` na *„zápal"* buď **odmítne**, nebo **řekne, že čtení zůstává**
+a proč; `→@` na tvar, který **projde** (*„v+Loc/rok → kdy"*), se
+**nezmění**; dvacet jedna domén se závěry beze změny;
+`standing_metrics()` = 21/107/51/33/26; jádrové relace 9/9; gate
+*Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky
+≥ 84/84; `mypy --strict` čistý; **celý korpus bez pádu, běh před
+předávkou, předpověď na projev, každý ✔ doložený výpisem.**
+
+**Po tom přijde souřadný člen — 123 vět.** Nechávám ho na příští kolo
+schválně: **je to největší věc v korpusu a zaslouží si vlastní rozklad**,
+ne přílepek.
+
+---
+
+## ARCHIV — kolo #119
+
+### Status: 🟢 PASS — W‑66, jedno místo na otázku o sponě
 
 **Kolo #119.** 1165 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **84/84**, **živá parita 55/55**, `standing_metrics()` =

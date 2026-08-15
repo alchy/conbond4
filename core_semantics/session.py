@@ -56,6 +56,8 @@ from .ast import (
 )
 from .cascade import (
     AWAITING_REFERENCE,
+    dropped_tokens,
+    lost_shape,
     AWAITING_ROLE_NAME,
     HARD_TIERS,
     QUANTIFIER_OF,
@@ -629,6 +631,53 @@ def decides_reference(
         predication=predication,
         role_name=role_name,
         node_id=node_id,
+    )
+
+
+def _pointless_answer(turn: Turn, predication: Predication) -> str | None:
+    """ŽÁDNÝ TAH NEPOTVRDÍ UČENÍ, ANIŽ ŘEKNE, CO SE VE VĚTĚ ZMĚNILO *(N‑1)*.
+
+    „Ke chřipce se přidal zánět ledvin a **zápal** plic." — na `zápal` se
+    systém ptá, člověk odpoví „podmět", tah ohlásí *„✓ naučeno role
+    nsubj>conj+Nom ~ kdo"* — a ČTENÍ ZŮSTANE `přidat(k+Dat:chřipka,
+    kdo:∀zánět)`. Odpověď se přijala a neudělala nic.
+
+    **Je to horší než otázka bez tahu**: u chybějícího tahu člověk ví, že
+    stojí; tady si myslí, že postoupil. A je to nepravda o VLASTNÍM
+    STAVU na jediném kanálu, kterým do systému vstupuje význam.
+
+    **Tah se ale NEODMÍTÁ**, a to je to rozhodnutí. Mapování je naučené
+    správně a pro CELOU TŘÍDU tvarů — v každé větě, kde ta role volná
+    je, zabere. Odmítnout ho kvůli jedné větě znamená zahodit platné
+    zobecnění. Změřeno: ze 1388 ztracených členů korpusu neudělá
+    odpověď nic v 212 případech, když se role jmenuje `jak` napevno, a
+    v NULE, když se pro každou větu vezme jméno, které v ní volné je.
+    Jediná příčina je tedy SRÁŽKA — a jediná vada je, že se mlčela.
+    """
+    if turn.reading is None or turn.shape_name is None:
+        return None
+    ztraceny = next(
+        (
+            token
+            for token in dropped_tokens(turn.reading, predication)
+            if lost_shape(token, turn.reading) == turn.shape_name
+        ),
+        None,
+    )
+    if ztraceny is None:
+        return None  # člen se do čtení dostal — tah zabral
+    drzi = next(
+        (role for role in predication.roles if role.name == turn.role_name), None
+    )
+    if drzi is not None:
+        return (
+            f"  ale ČTENÍ SE NEZMĚNILO: roli „{turn.role_name}“ v téhle větě "
+            f"drží „{drzi.mention.form}“, takže „{ztraceny.form}“ zůstává mimo "
+            f"čtení. Mapování platí dál — zabere tam, kde ta role volná je"
+        )
+    return (
+        f"  ale ČTENÍ SE NEZMĚNILO: „{ztraceny.form}“ se do něj nedostalo a "
+        f"neumím říct proč — role „{turn.role_name}“ přitom obsazená není"
     )
 
 
@@ -1947,6 +1996,9 @@ class Session:
                 lines=(*prefix, "→ větu se ani tak přečíst nepodařilo"),
                 trace=verdict.trace,
             )
+        marne = _pointless_answer(turn, verdict.decided.predication)
+        if marne is not None:
+            prefix.append(marne)
         return self._settle(index, turn, verdict.decided.predication, prefix)
 
     def _name_relation_here(self, index: int, turn: Turn) -> TurnResult:

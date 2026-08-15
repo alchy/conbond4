@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.54 · 15. 8. 2026
+**Verze jádra:** 0.1.55 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.55 | § 5.2 — ŽÁDNÝ TAH NEPOTVRDÍ UČENÍ, ANIŽ ŘEKNE, CO SE VE VĚTĚ ZMĚNILO: `→@` se přijímal s „✓ naučeno“ i tam, kde čtení zůstalo beze změny. Příčina je jediná a změřená — SRÁŽKA s obsazenou rolí; § 13 T105 |
 | 0.1.54 | § 12 — ODSTAVEC PŘEMĚŘEN (7 tahů / 3 bez tahu, bylo 7/6): tři překážky z #105 zavřené, dvacátá druhá doména se přesto NEPÍŠE. Nový nález: `si` zůstává rolí s uzlem „se“, takže věta neprojde zakotvením ani po odpovědi na všechno |
 | 0.1.53 | § 5.2 — NA OTÁZKU „JE TOHLE SPONA?“ ODPOVÍDÁ JEDNO MÍSTO: čtyři porovnání `cop` přesným řetězcem svedena do `is_copula`. Projev 0 (61 spon, 0 podtypů) — oprava RIZIKA, ne chování; § 13 T104 |
 | 0.1.52 | § 5.2 — KVANTIFIKÁTOROVÉ ZÁJMENO KVANTIFIKUJE, NEODKAZUJE: „vše“ dostávalo otázku „na koho odkazuje“, která o něm tvrdila nepravdu. `PronType` z rozboru: `Tot`→`∀`, `Ind`→`∃`, `Neg` je pojmenovaná mez; § 13 T103 |
@@ -1280,6 +1281,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T105 | odpověď, která nic neudělá, to řekne | `→@` „nsubj>conj+Nom → kdo“ v „Petr a Jana přišli.“ ohlásí, že roli `kdo` drží „Petr“, že „Jana“ zůstává mimo čtení a že mapování platí dál; `→@` na `jak` zabere a o nezměněném čtení MLČÍ |
 | T104 | spona s podtypem je spona | „Jan je učitel.“ se sponou `cop:expl` dá TOTÉŽ čtení jako s `cop`; `aux` ani `copula` sponou nejsou |
 | T103 | kvantifikátorové zájmeno neodkazuje | „Vesmír je vše, co existuje.“ dá `co:∀všechen` a NEŘEKNE „odkazuje mimo text“; „Něco spadlo.“ dá `∃něco`; „Nikdo nepřišel.“ dá `¬přijít(kdo:nikdo)` bez kvantifikátoru a taky bez té věty; „On bydlí v Praze.“ se dál ptá na odkaz |
 | T102 | konatel trpné věty | „Kniha byla napsána Čapkem.“ dá `kdo:·Čapek`; „Kniha byla napsána perem.“ dál `čím`; „Je spojována s emancipačními snahami.“ se nemění; činný `Ins:arg` („stal se redaktorem“) se nemění |

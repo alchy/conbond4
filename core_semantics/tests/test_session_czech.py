@@ -178,3 +178,64 @@ def test_unfinished_reading_writes_nothing_to_the_base() -> None:
     joined = "\n".join(session.results[0].lines)
     assert "NEZAKOTVENO" in joined
     assert session.results[0].statement_id is None
+
+
+def _coordinate_subject() -> Reading:
+    """„Petr a Jana přišli." — souřadný druhý podmět visí jako
+    `nsubj>conj+Nom`, tedy týž tvar jako „zápal plic" v korpusu.
+    ZÁZNAM, ne živý rozbor: sada je hermetická."""
+    return Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "a", "a", "CCONJ", 3, "cc"),
+            _token(3, "Jana", "Jana", "PROPN", 1, "conj", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(4, "přišli", "přijít", "VERB", 0, "root", Gender="Masc", Number="Plur", Polarity="Pos"),
+            _token(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def _coordinate_session() -> tuple[Session, Reading]:
+    """Sezení, ve kterém věta o dvou podmětech čeká na `→@`."""
+    from core_semantics.tests import golden
+
+    text = "Petr a Jana přišli."
+    reading = _coordinate_subject()
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    session.utter(text, oracle)
+    return session, reading
+
+
+def test_an_answer_that_changes_nothing_says_so() -> None:
+    """ŽÁDNÝ TAH NEPOTVRDÍ UČENÍ, ANIŽ ŘEKNE, CO SE VE VĚTĚ ZMĚNILO
+    *(N‑1)*. Tah ohlásil „✓ naučeno" a čtení zůstalo beze změny — člověk
+    si myslel, že postoupil. Je to horší než otázka bez tahu: u té ví,
+    že stojí."""
+    from core_semantics.session import names_role
+
+    session, reading = _coordinate_session()
+    result = session.play(
+        names_role("Je to taky podmět.", reading, "nsubj>conj+Nom", ROLE_SUBJECT)
+    )
+    hlaseni = chr(10).join(result.lines)
+    assert "ČTENÍ SE NEZMĚNILO" in hlaseni
+    assert "„Petr“" in hlaseni, "musí říct, KDO tu roli drží"
+    assert "„Jana“" in hlaseni, "musí říct, KTERÝ člen zůstal mimo"
+    assert "Mapování platí dál" in hlaseni, "naučené se nezahazuje"
+
+
+def test_an_answer_that_works_stays_silent_about_it() -> None:
+    """PROTIPŘÍKLAD: když role volná JE, člen do čtení vstoupí a žádná
+    věta o nezměněném čtení se nepíše. Tah se NEODMÍTÁ ani tady, ani
+    tam — mapování je naučené správně pro celou třídu tvarů."""
+    from core_semantics.session import names_role
+
+    session, reading = _coordinate_session()
+    result = session.play(
+        names_role("Je to okolnost.", reading, "nsubj>conj+Nom", "jak")
+    )
+    hlaseni = chr(10).join(result.lines)
+    assert "ČTENÍ SE NEZMĚNILO" not in hlaseni
+    assert "jak:Jana" in hlaseni

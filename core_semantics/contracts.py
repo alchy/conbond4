@@ -1811,6 +1811,39 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-39",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "ŽÁDNÝ TAH NEPOTVRDÍ, ŽE SE NĚCO NAUČILO, ANIŽ ŘEKNE, CO SE "
+            "TÍM VE VĚTĚ ZMĚNILO *(N‑1)*. „Ke chřipce se přidal zánět "
+            "ledvin a **zápal** plic.“ — systém se na `zápal` ptá, člověk "
+            "odpoví „podmět“, tah ohlásí „✓ naučeno role nsubj>conj+Nom ~ "
+            "kdo“ a ČTENÍ ZŮSTANE `přidat(k+Dat:chřipka, kdo:∀zánět)`. "
+            "Odpověď se přijala a neudělala NIC. Je to horší než otázka "
+            "bez tahu: u chybějícího tahu člověk ví, že stojí — tady si "
+            "myslí, že postoupil, a je to nepravda o VLASTNÍM STAVU na "
+            "jediném kanálu, kterým do systému vstupuje význam. TAH SE "
+            "NEODMÍTÁ, a to je to rozhodnutí: mapování je naučené správně "
+            "pro CELOU TŘÍDU tvarů a v každé větě, kde je ta role volná, "
+            "zabere — odmítnout ho kvůli jedné větě znamená zahodit "
+            "platné zobecnění, což `→∈` bez nabídky (B‑23) nedělá, "
+            "protože tam se učit nemá co. PŘÍČINA JE JEDINÁ A ZMĚŘENÁ: "
+            "SRÁŽKA. Ze 1388 ztracených členů korpusu neudělá odpověď nic "
+            "ve 212 případech, když se role pojmenuje `jak` napevno, a "
+            "v NULE, vezme‑li se pro každou větu jméno, které v ní volné "
+            "je. Hlášení proto jmenuje OBOJE — kdo tu roli drží i který "
+            "člen zůstal mimo — a dodá, že mapování platí dál; kdyby "
+            "člen chyběl z JINÉHO důvodu, řekne se i to, že se neví "
+            "proč. Tah, který zabral, o nezměněném čtení MLČÍ"
+        ),
+        anchor="core_semantics.session:_pointless_answer",
+        entry=".play(",
+        enforced_by=(
+            "test_an_answer_that_changes_nothing_says_so",
+            "test_an_answer_that_works_stays_silent_about_it",
+        ),
+    ),
+    Clause(
         id="S-30",
         boundary=SESSION_STORAGE,
         promise=(
