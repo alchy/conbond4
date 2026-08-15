@@ -421,11 +421,25 @@ def titled_name_of(token: Token, reading: Reading) -> tuple[Token, ...]:
 
     **A NENÍ TO SLOŽENINA.** `básník_Josef_Hora` by byla třída, která
     není ani básník, ani Hora — přesně jako `město_Praha`.
+
+    **JEN JEDNOTNÉ ČÍSLO, a je to nalezené měřením, ne opatrností.**
+    „bratří **Čapků**" má touž stavbu, ale nejsou to jedni bratři jménem
+    Čapka — je to SKUPINA dvou lidí, kteří to příjmení nesou. Bez téhle
+    stráže by z toho vyšel uzel `·Čapka`, tedy jeden člověk, který
+    neexistuje: vada by se jen vyměnila za jinou. Skupinu systém dnes
+    z téhle stavby vyrobit neumí, a než ji vyrobí špatně, je lepší, aby
+    ji nevyráběl (W‑54). V měřeném korpusu je to 3 zmínky ze 74 a
+    VŠECHNY tři jsou „bratří Čapků"; `Number` na hlavě přitom nechyběl
+    ani jednou, takže se stráž o nic nedohaduje.
     """
     # Titul je OBECNÉ jméno — `NOUN`. Na `PROPN` se ta stavba nevztahuje:
     # tam už jde o víceslovné jméno („Karel Čapek") a to skládá
     # `name_parts_of`. Zájmeno ani sloveso titul nést nemůže.
-    if token.upos == "NOUN":
+    cislo = token.feat("Number")
+    # Průnikem, ne rovností (W‑32): `Number=Plur,Sing` je PŘIZNANÁ
+    # VÍCEZNAČNOST, ne dvě tvrzení. Chybějící rys stráž nespustí — o čísle
+    # se pak neví nic a vyrobit z toho jednoho člověka by byl tichý default.
+    if token.upos == "NOUN" and cislo is not None and "Sing" in feature_values(cislo):
         jmena = tuple(
             child
             for child in reading.children(token.index)

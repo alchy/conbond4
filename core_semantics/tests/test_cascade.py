@@ -1422,3 +1422,52 @@ def test_the_quantifier_moves_with_the_identity() -> None:
     assert session.utter("Promluvil básník?", _Recorded()).status is (
         QueryStatus.UNKNOWN
     ), "věta o jednom člověku nesmí doložit tvrzení o všech básnících"
+
+
+def test_a_plural_title_is_not_one_person() -> None:
+    """„bratří **Čapků**" má touž stavbu, ale nejsou to jedni bratři
+    jménem Čapka — je to SKUPINA dvou lidí, kteří to příjmení nesou.
+    Uzel `·Čapka` by byl člověk, který neexistuje: vada vyměněná za
+    jinou. Skupinu z téhle stavby systém dnes vyrobit neumí, a než ji
+    vyrobí špatně, je lepší, aby ji nevyráběl (W‑54).
+
+    NALEZENO MĚŘENÍM, ne opatrností: v korpusu jsou to 3 zmínky ze 74
+    a všechny tři jsou „bratří Čapků“."""
+    from core_semantics.cascade import titled_name_of
+
+    hlava = _token(
+        1, "bratří", "bratr", "NOUN", 3, "nsubj",
+        Case="Nom", Number="Plur", Gender="Masc", Animacy="Anim",
+    )
+    reading = Reading(
+        tokens=(
+            hlava,
+            _token(2, "Čapků", "Čapka", "PROPN", 1, "flat", Case="Gen", Number="Plur", Gender="Masc"),
+            _token(3, "patřili", "patřit", "VERB", 0, "root", Number="Plur", Gender="Masc"),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    assert titled_name_of(hlava, reading) == ()
+
+
+def test_an_ambiguous_number_still_counts_as_singular() -> None:
+    """W‑32 znovu, a je to důvod, proč se rys čte PRŮNIKEM: UD píše
+    homonymní tvar výčtem (`Number=Plur,Sing`). Kdyby se porovnávala
+    rovnost, spadla by pod stráž každá věta s víceznačným tvarem — a to
+    je v češtině běžné, ne okrajové."""
+    from core_semantics.cascade import titled_name_of
+
+    hlava = _token(
+        1, "matka", "matka", "NOUN", 3, "nsubj", Case="Nom", Number="Plur,Sing", Gender="Fem",
+    )
+    reading = Reading(
+        tokens=(
+            hlava,
+            _token(2, "Božena", "Božena", "PROPN", 1, "flat", Case="Nom", Number="Sing", Gender="Fem"),
+            _token(3, "sbírala", "sbírat", "VERB", 0, "root", Number="Sing", Gender="Fem"),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    assert [t.form for t in titled_name_of(hlava, reading)] == ["Božena"]

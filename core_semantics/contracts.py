@@ -1153,7 +1153,12 @@ CONTRACTS: tuple[Clause, ...] = (
             "do rozboru zůstávají HLAVĚ: tu pozici ve větě drží ona. "
             "PROTIPŘÍKLAD JE V ROZBORU, ne ve stráži: „Město Praha“ má "
             "`nmod`, ne `flat`, takže se tím nemění a dál se ptá, jakou "
-            "roli „Praha“ hraje (W‑53)"
+            "roli „Praha“ hraje (W‑53). JEN JEDNOTNÉ ČÍSLO na titulu: „bratří "
+            "**Čapků**“ má touž stavbu, ale je to SKUPINA dvou lidí, ne "
+            "jedni bratři jménem Čapka — a `·Čapka` by byla vada vyměněná "
+            "za jinou. Skupinu z téhle stavby systém neumí, a než ji "
+            "vyrobí špatně, nevyrobí ji (W‑54). Rys se čte PRŮNIKEM, ne "
+            "rovností (W‑32), a když chybí, stráž nespustí"
         ),
         anchor="core_semantics.cascade:titled_name_of",
         entry=".utter(",
@@ -1163,6 +1168,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_modifier_name_is_left_alone",
             "test_the_title_is_absorbed_not_dropped",
             "test_the_quantifier_moves_with_the_identity",
+            "test_a_plural_title_is_not_one_person",
+            "test_an_ambiguous_number_still_counts_as_singular",
         ),
     ),
     Clause(
