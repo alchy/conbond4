@@ -726,6 +726,24 @@ def agrees(left: str | None, right: str | None) -> bool:
     return bool(feature_values(left) & feature_values(right))
 
 
+def _quantified(subject: "Mention", reading: Reading) -> bool:
+    """Je podmět řízený KVANTIFIKÁTOREM? *(W‑33)*
+
+    „Několik měření … podpořilo." — čeština má u počitatelných výrazů
+    přísudek v neutru singuláru a jméno v genitivu plurálu. Řídícím členem
+    shody je ten kvantifikátor, ne to jméno.
+
+    **Rozhoduje jmenovka rozboru, ne slovník.** UD dává `det:numgov`
+    právě proto, že ten determinátor ŘÍDÍ PÁD své hlavy — parser to tedy
+    neskrývá a není co hádat. Seznam slov („několik", „mnoho", „pět") by
+    byl druhé místo, kde se to rozhoduje, a rozešel by se s parserem.
+    """
+    return any(
+        token.head == subject.token_index and token.deprel.startswith("det:numgov")
+        for token in reading.tokens
+    )
+
+
 def agreement_tier(
     candidates: tuple[Candidate, ...], reading: Reading
 ) -> tuple[tuple[Candidate, ...], str | None]:
@@ -749,6 +767,14 @@ def agreement_tier(
     Zahazuje to až rod — `Masc` proti `Fem,Neut`. Přidat rod tedy patro
     nezpřísňuje nad rámec toho, co dělalo; nahrazuje jím tu část práce,
     kterou dřív náhodou odváděla rovnost na čísle.
+
+    **U kvantifikovaného podmětu se shoda POČÍTÁ PROTI JINÉMU ČLENU, ne
+    přeskakuje** *(W‑33)*. „Několik měření … podpořilo." má přísudek
+    v neutru singuláru a jméno v genitivu plurálu; řídícím členem je
+    kvantifikátor. Kdyby patro u `det:numgov` shodu jen VYPNULO, byla by
+    to díra — prošlo by i „Několik hostů přišli.". Pravidlo je proto
+    kladné: ověřuje se, že přísudek odpovídá tomu, co ta konstrukce
+    v češtině žádá.
     """
     head = _predicate_head(reading)
     if head is None:
@@ -764,14 +790,30 @@ def agreement_tier(
         if subject is None or _presentational(subject):
             survivors.append(candidate)
             continue
-        number_ok = agrees(subject.feat("Number"), verb_number)
-        gender_ok = agrees(subject.feat("Gender"), verb_gender)
+        if _quantified(subject, reading):
+            # KVANTIFIKOVANÝ PODMĚT. Řídícím členem shody je kvantifikátor,
+            # ne to jméno — a žádá STŘEDNÍ JEDNOTNÉ. Není to výjimka ze
+            # shody, je to shoda proti SPRÁVNÉMU členu.
+            number_ok = agrees("Sing", verb_number)
+            gender_ok = agrees("Neut", verb_gender)
+            if not (number_ok and gender_ok):
+                mismatched.append("kvantifikovaného podmětu")
+                continue
+        else:
+            number_ok = agrees(subject.feat("Number"), verb_number)
+            gender_ok = agrees(subject.feat("Gender"), verb_gender)
         if number_ok and gender_ok:
             survivors.append(candidate)
             continue
         mismatched.append("čísla" if not number_ok else "rodu")
     if len(survivors) == len(candidates):
         return candidates, None
+    if "kvantifikovaného podmětu" in mismatched:
+        return tuple(survivors), (
+            f"[PROČ: kvantifikovaný podmět žádá přísudek ve STŘEDNÍM "
+            f"JEDNOTNÉM (řídí ho kvantifikátor, ne to jméno), a tenhle je "
+            f"{verb_gender or '?'}/{verb_number or '?'}]"
+        )
     what = "čísla" if "čísla" in mismatched else "rodu"
     shown = verb_number if what == "čísla" else verb_gender
     return tuple(survivors), (

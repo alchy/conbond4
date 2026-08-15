@@ -622,3 +622,81 @@ def test_the_intersection_is_computed_from_one_shared_helper() -> None:
     assert feature_values("Fem,Neut") == {"Fem", "Neut"}
     assert not (feature_values("Masc") & feature_values("Fem,Neut"))
     assert "feature_values" in inspect.getsource(grounding.Discourse.candidates)
+
+
+# --------------------------------------------------------------------------
+# Kvantifikovaný podmět — W‑33
+# --------------------------------------------------------------------------
+#
+# „Několik měření … podpořilo." Čeština má u počitatelných výrazů přísudek
+# v NEUTRU SINGULÁRU a jméno v genitivu plurálu; řídícím členem shody je
+# ten kvantifikátor, ne to jméno.
+#
+# **Pravidlo je KLADNÉ, ne výjimka.** Kdyby patro u `det:numgov` shodu jen
+# vyplo, byla by to díra: prošlo by i „Několik hostů přišli." Ověřuje se
+# proto, že přísudek odpovídá tomu, co ta konstrukce žádá — a věta, která
+# to poruší, padne dál.
+
+
+def _quantified_clause(verb: str, verb_feats: dict[str, str]) -> Reading:
+    """„Několik hostů <sloveso>." — podmět v genitivu, řízený `det:numgov`."""
+    return Reading(
+        tokens=(
+            _token(1, "Několik", "několik", "DET", 2, "det:numgov", Case="Nom"),
+            _token(2, "hostů", "host", "NOUN", 3, "nsubj", Case="Gen", Number="Plur", Gender="Masc"),
+            _token(3, verb, verb.lower(), "VERB", 0, "root", **verb_feats),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_quantified_subject_no_longer_blocks_the_reading() -> None:
+    """Podmět je `Plur`, přísudek `Sing` — a přesto je to bezvadná čeština,
+    protože shodu řídí kvantifikátor. Dokud se počítala proti tomu jménu,
+    padla každá věta typu „několik / mnoho / pět"."""
+    reading = _quantified_clause("přišlo", {"Number": "Sing", "Gender": "Neut"})
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors, why
+
+
+def test_a_quantified_subject_with_a_plural_predicate_still_falls() -> None:
+    """PROTIPŘÍKLAD, a je to celý rozdíl mezi opravou a dírou. Kdyby se
+    u `det:numgov` shoda jen VYPNULA, prošlo by „Několik hostů přišli."
+    Pravidlo je kladné: ověřuje se, co konstrukce v češtině ŽÁDÁ."""
+    reading = _quantified_clause("přišli", {"Number": "Plur", "Gender": "Masc"})
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors == ()
+    assert why is not None and "STŘEDNÍM JEDNOTNÉM" in why
+
+
+def test_the_controller_is_read_from_the_parse_label_not_from_a_word_list() -> None:
+    """`det:numgov` dává UD právě proto, že ten determinátor ŘÍDÍ PÁD své
+    hlavy — parser nic neskrývá. Seznam slov („několik", „mnoho", „pět")
+    by byl druhé místo, kde se to rozhoduje, a rozešel by se s parserem."""
+    import inspect
+
+    from core_semantics.cascade import _quantified
+
+    source = inspect.getsource(_quantified)
+    assert "det:numgov" in source
+    for word in ("několik", "mnoho", "pět"):
+        assert f'"{word}"' not in source
+
+
+def test_a_coordinated_subject_is_left_alone() -> None:
+    """Třída B (koordinovaný podmět) se v tomhle kole NEOPRAVUJE — a nesmí
+    se ani náhodou spravit. Kdyby ji `det:numgov` větev chytila, přestalo
+    by jít měřit, co která oprava udělala."""
+    reading = Reading(
+        tokens=(
+            _token(1, "Karel", "Karel", "PROPN", 3, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, "Josef", "Josef", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(3, "přišli", "přijít", "VERB", 0, "root", Number="Plur", Gender="Masc"),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors == (), "koordinace pořád padá — je to W‑35, ne tohle kolo"
+    assert why is not None and "shoda čísla" in why

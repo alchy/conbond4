@@ -978,6 +978,32 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-9",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "u KVANTIFIKOVANÉHO PODMĚTU se shoda počítá proti "
+            "KVANTIFIKÁTORU, ne proti tomu jménu: „několik měření … "
+            "podpořilo“ má přísudek ve STŘEDNÍM JEDNOTNÉM a jméno "
+            "v genitivu plurálu. Pravidlo je KLADNÉ, ne výjimka — kdyby "
+            "patro u `det:numgov` shodu jen vyplo, byla by to díra "
+            "a prošlo by i „Několik hostů přišli.“; ověřuje se, co ta "
+            "konstrukce v češtině ŽÁDÁ, takže věta, která to poruší, PADNE "
+            "DÁL. Řídící člen se čte z JMENOVKY ROZBORU (`det:numgov` — UD "
+            "jím říká, že determinátor řídí pád své hlavy), ne ze seznamu "
+            "slov: seznam by byl druhé místo, kde se to rozhoduje, a "
+            "rozešel by se s parserem. KOORDINOVANÝ podmět tahle větev "
+            "nechytá a padá dál (W‑35, měří se zvlášť)"
+        ),
+        anchor="core_semantics.cascade:_quantified",
+        entry="agreement_tier(",
+        enforced_by=(
+            "test_a_quantified_subject_no_longer_blocks_the_reading",
+            "test_a_quantified_subject_with_a_plural_predicate_still_falls",
+            "test_the_controller_is_read_from_the_parse_label_not_from_a_word_list",
+            "test_a_coordinated_subject_is_left_alone",
+        ),
+    ),
+    Clause(
         id="S-35",
         boundary=CASCADE_SESSION,
         promise=(

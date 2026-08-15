@@ -1,6 +1,117 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — shoda průnikem; a jedna „zhoršená" věta je nejlepší nález kola
+## Status: 🟢 PASS — rozbor bez opravy, dvě třídy, nula vad rozboru
+
+**Kolo #74.** Do jádra **nesáhl vůbec** — `git status` hlásí jen
+`REVIEW.md`, což je můj soubor. 947 testů zelených, `mypy --strict`
+čistý na 61 souborech, doložky **67/67**, živá parita **51/51**, dialogy
+14 / 37 / 24, gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá
+stálá regrese zelená. Jádro zůstává 0.1.18.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Zadání bylo „rozeber, neopravuj" — a přesně to udělal
+
+To si zaslouží být řečeno nahlas, protože je to těžší než opravovat.
+Deset vět, dvě třídy, **nula vad rozboru**:
+
+```
+B · koordinovaný podmět     6 vět
+    „Karel Čapek a jeho bratr Josef byli aktéry…“
+    signál: podmět v Nom s potomky conj
+    jádro:  [PROČ: shoda čísla — přísudek Plur, podmět se nemůže shodnout]
+
+C · kvantifikovaný podmět   4 věty
+    „Několik nezávislých měření … podpořilo.“
+    signál: podmět v Gen s potomkem det:numgov
+    jádro:  [PROČ: shoda čísla — přísudek Sing, podmět se nemůže shodnout]
+```
+
+**Reprodukce mi běží** (`nalezy/shoda_zbytek.py`) a zařazení dělá
+**výhradně z jmenovek rozboru** (`conj`, `det:numgov`, `Case`) — ne
+z povrchu věty a ne z jádra. Přepínač `--korpus` si věty vytáhne
+z měření, takže seznam nemůže tiše zestárnout. To je ta správná
+konstrukce testu.
+
+**Baseline je citovatelná:** `mereni/2026-08-15-6afc38d.json` nad
+**čistou revizí** (`6afc38d` = commit W‑32), čísla sedí s minulým během
+na jednotku. W‑U1 tím padá.
+
+**Společná příčina je jiná než W‑32, a to je podstatné.** W‑32 byla
+o tom, že se hodnota rysu porovnávala jako **řetězec**. Tohle je jiná
+vada: **shoda se počítá proti špatnému členu.** Řídícím členem je u B
+celá koordinace a u C kvantifikátor — a ani jeden není ten token, který
+UD označí jako `nsubj`. Obě třídy mají v rozboru **jednoznačný signál**,
+takže ani jedna nepotřebuje hádání.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+**Opravu mé chyby přijal správně** a sám dohledal doslovné znění hlášky.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑33 (upřesněná) · kvantifikovaný podmět** — 4 věty, signál
+`det:numgov`. **W‑35 (nová) · koordinovaný podmět** — 6 vět, signál
+`conj` pod podmětem v nominativu. Obě jsou **správná čeština správně
+rozebraná**; chybně čte patro.
+
+**W‑36 (drobnost) · `REVIEW.md` není zakomitovaný.** Je to audit trail
+a je to můj soubor — zmiňuju to proto, že je to táž věc, kterou jsem
+vytkl měřicí vrstvě (W‑U2). Rozhodne člověk, ne já.
+
+**W‑23, W‑25, W‑26, W‑30, W‑31, W‑34** — W‑34 uzavřena tímhle rozborem,
+zbytek leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: C — kvantifikovaný podmět. Tvůj návrh pořadí
+schvaluji a důvod je správný.**
+
+`det:numgov` je **explicitní jmenovka**, kterou UD dává právě proto, že
+determinátor řídí pád své hlavy — parser nic neskrývá, patro se ho jen
+neptá. Oprava je tedy **čtení jedné jmenovky**, kdežto B potřebuje
+počítat shodu proti celé koordinaci, což je **nová operace nad stromem**.
+C je levnější, nezávislejší, a B po ní zůstane měřitelné zvlášť.
+
+**Jedna podmínka, na které trvám:** oprava nesmí znamenat *„když je tam
+kvantifikátor, shodu přeskoč"*. To by byla díra, ne oprava. Pravidlo je
+**pozitivní**: u `det:numgov` se shoda ověřuje proti tomu, co ta
+konstrukce v češtině žádá — **střední jednotné** — takže věta, která to
+poruší, **padne dál**.
+
+**Můj counterexample — bez něj neschválím:** všechny **čtyři** věty
+třídy C se přečtou; věta s `det:numgov` a přísudkem, který střednímu
+jednotnému **neodpovídá**, se **dál zahodí a řekne proč**; třída B
+**zůstane 6** (neopravuje se teď a nesmí se náhodou spravit ani rozbít);
+„Psi byla v pondělí." dál padá; „Obsahuje citron vitamíny?" se dál
+zužuje na jedno čtení; čtrnáct domén se závěry beze změny; devět
+z devíti jádrových relací dál píše česká věta; gate *Farmaka* `N`/`s0005`;
+parita ≥ 51/51; nula `RECALL_FAILURE`; testy zelené; **a korpus se
+přeměří nad čistou revizí** — `morfologie` musí klesnout na **6**
+a žádná jiná třída nesmí přibrat větu, která do ní nepřišla o vrstvu
+níž.
+
+---
+
+## ARCHIV — kolo #73
+
+### Status: 🟢 PASS — shoda průnikem; a jedna „zhoršená" věta je nejlepší nález kola
 
 **Kolo #73.** 947 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **67/67**, živá parita **51/51**, dialogy 14 / 37 / 24 se závěry
