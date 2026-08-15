@@ -2233,3 +2233,49 @@ def test_a_nominal_apposition_is_not_a_heading() -> None:
         provenance="test",
     )
     assert "NADPIS" not in why_nothing(reading)
+
+
+def test_the_heading_guard_asks_the_one_place_that_knows() -> None:
+    """DEVÁTÁ INSTANCE TÉŽE RODINY *(W‑65)*. Stráž nadpisu si napsala
+    UŽŠÍ KOPII `_is_predicate` a nesla obě staré vady naráz:
+    `upos == "VERB"` minulo TRPNÝ ROD (kořen `ADJ` + `aux:pass`, W‑48)
+    a `deprel == "cop"` porovnávalo deprel ŘETĚZCEM (W‑47).
+
+    „Obezita: Zvířata byla vyšetřena veterinářem." je TÁŽ VĚTA, kterou
+    W‑64 odstraňovalo, jen s trpnou apozicí — a hlásila zase, že nemá
+    ani jeden pojmenovatelný člen."""
+    from core_semantics.cascade import why_nothing
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Obezita", "obezita", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(2, ":", ":", "PUNCT", 5, "punct"),
+            _token(3, "Zvířata", "zvíře", "NOUN", 5, "nsubj:pass", Case="Nom", Gender="Neut", Number="Plur"),
+            _token(4, "byla", "být", "AUX", 5, "aux:pass", Number="Plur", Polarity="Pos"),
+            _token(5, "vyšetřena", "vyšetřený", "ADJ", 1, "appos", Number="Plur", Polarity="Pos", Voice="Pass"),
+            _token(6, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    duvod = why_nothing(reading)
+    assert "NADPIS" in duvod and "ani jeden člen" not in duvod
+
+
+def test_the_heading_guard_has_no_second_copy() -> None:
+    """A ať se ta kopie nevrátí: stráž se ptá `_is_predicate`, ne
+    slovního druhu. Kontroluje se ZDROJ, protože chování by prošlo
+    i s kopií — dokud by někdo nepřidal třetí tvar přísudku."""
+    import inspect
+
+    from core_semantics.cascade import why_nothing
+
+    # KOMENTÁŘE SE ODSTŘIHNOU. Vysvětlení, PROČ ta kopie byla špatně,
+    # tu slovo „VERB" nést musí — a test, který by na něj spadl, by
+    # trestal právě to, kvůli čemu se ta oprava dá pochopit.
+    kod = chr(10).join(
+        radek
+        for radek in inspect.getsource(why_nothing).splitlines()
+        if not radek.lstrip().startswith("#")
+    )
+    assert "_is_predicate(" in kod
+    assert "upos ==" not in kod

@@ -3340,13 +3340,16 @@ def why_nothing(reading: Reading) -> str:
         veta_v_apozici = [
             token
             for token in reading.children(anchor.index)
+            # PTÁ SE `_is_predicate`, NEPÍŠE SI VLASTNÍ STRÁŽ *(W‑65)*.
+            # Původní podmínka byla UŽŠÍ KOPIE téže otázky a nesla obě
+            # staré rodiny naráz: `upos == "VERB"` minulo TRPNÝ ROD
+            # (kořen `ADJ` + `aux:pass`, W‑48) a `deprel == "cop"`
+            # porovnávalo deprel ŘETĚZCEM (W‑47). Odpověď přitom leží
+            # o pár set řádků výš. Dvě kopie stráže se rozejdou a nikdo
+            # nepozná, která platí — táž úvaha, proč `title_claims`
+            # nekopíruje stráže `titled_name_of`.
             if base_deprel(token.deprel) == "appos"
-            and (
-                token.upos == "VERB"
-                or any(
-                    child.deprel == "cop" for child in reading.children(token.index)
-                )
-            )
+            and _is_predicate(token, reading)
         ]
         if veta_v_apozici:
             uvnitr = veta_v_apozici[0]

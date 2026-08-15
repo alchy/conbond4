@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.39 · 15. 8. 2026
+**Verze jádra:** 0.1.40 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.40 | § 5.2 — na otázku „je tohle přísudek?“ odpovídá v kaskádě JEDNO místo: stráž nadpisu se ptá `_is_predicate` místo vlastní užší kopie, která nesla W‑48 i W‑47 naráz. Devátá instance téže rodiny; § 13 T91
 | 0.1.39 | § 5.2 — NADPIS SPLYNULÝ S VĚTOU se pojmenuje: „Obezita: Domácí mazlíčci trpí nadváhou.“ má kořenem nadpis a skutečná věta pod ním visí jako `appos`. Číst se to nezačne — přesadit kořen je výrok o TEXTU, ne o rozboru, a rozdělit dvojí text je práce segmentace; § 13 T90
 | 0.1.38 | § 5.2 — DVA ČLENY, JEDNO JMÉNO: srazí‑li se dvě okolnosti na téže roli, ani jedna ji nedostane a obě padnou na svůj TVAR — věta se čte a ptá místo aby zmizela. Když tvary nerozliší ani to, hlášení řekne PROČ; „nemá ani jeden člen“ byla nepravda o textu. Pohlcený přívlastek není nepojmenovaný člen — „Úrazy způsobené pády.“ je JMENNÁ FRÁZE; § 13 T89 | 15. 8. 2026 |
 | 0.1.37 | § 12/1 — JEDNA PODMÍNKA, JEDNA ODPOVĚĎ: role, jejíž jméno zůstalo TVAREM, zastaví zápis VŽDY, ne jen u vedlejší věty. „Petr bydlí v Praze.“ se zapisovala i s rolí `v+Loc/Geo` a po odpovědi `→@` znovu — dva výroky o téže větě. Naučené jméno („proč“) tvar není a zapisuje se dál; rozhoduje značka od toho, kdo roli vyrobil, ne podoba řetězce; § 13 T88 | 15. 8. 2026 |
@@ -1156,6 +1157,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T91 | jedna odpověď na „je to přísudek?“ | „Obezita: Zvířata byla vyšetřena veterinářem.“ dostane hlášku o NADPISU i s trpnou apozicí (kořen `ADJ` + `aux:pass`); „Obezita, nemoc.“ ji dál nedostane |
 | T90 | nadpis splynulý s větou | „Obezita: Domácí mazlíčci trpí nadváhou.“ se NEČTE, ale hlášení mluví o NADPISU a APOZICI, ne o chybějících členech; jmenná apozice bez přísudku hlášku o nadpisu nespustí |
 | T89 | dva členy, jedno jméno | „…byla ovšem interpretace zcela podřízena…“ se ČTE (`advmod` i `advmod:emph`) místo aby zmizela; dvě holá `advmod` se přečíst nedají, ale hlášení jmenuje OBĚ SLOVA; „Úrazy způsobené pády.“ se ohlásí jako JMENNÁ FRÁZE |
 | T88 | jméno = tvar zastaví zápis všude | „Petr bydlí v Praze.“ se NEZAPÍŠE, dokud `v+Loc/Geo` nedostane jméno — stejně jako „Petr odjel, protože pršelo.“; po odpovědi `→@` leží v bázi PRÁVĚ JEDEN výrok o té větě; na `proč` se systém už neptá |

@@ -1372,7 +1372,15 @@ CONTRACTS: tuple[Clause, ...] = (
             "znamenalo rozhodnout, že nadpis do promluvy nepatří, a to "
             "je výrok o TEXTU, ne o rozboru; rozdělit dvojí text je práce "
             "SEGMENTACE. Jmenná apozice bez přísudku sem NEPATŘÍ — "
-            "rozlišuje to rozbor, ne dvojtečka (W‑64)"
+            "rozlišuje to rozbor, ne dvojtečka (W‑64). NA OTÁZKU „JE "
+            "TOHLE PŘÍSUDEK?“ ODPOVÍDÁ JEDNO MÍSTO: stráž se ptá "
+            "`_is_predicate`, nepíše si vlastní užší kopii. Ta kopie "
+            "nesla obě staré rodiny naráz — `upos == „VERB“` minulo "
+            "TRPNÝ ROD (W‑48) a `deprel == „cop“` porovnávalo deprel "
+            "řetězcem (W‑47) — takže „Obezita: Zvířata byla vyšetřena "
+            "veterinářem.“ hlásila zase, že nemá ani jeden pojmenovatelný "
+            "člen. Dvě kopie stráže se rozejdou a nikdo nepozná, která "
+            "platí (W‑65)"
         ),
         anchor="core_semantics.cascade:why_nothing",
         entry="generate(",
@@ -1383,6 +1391,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_nominal_phrase_is_not_a_predicate_without_members",
             "test_a_heading_glued_to_a_sentence_is_named_as_such",
             "test_a_nominal_apposition_is_not_a_heading",
+            "test_the_heading_guard_asks_the_one_place_that_knows",
+            "test_the_heading_guard_has_no_second_copy",
         ),
     ),
     Clause(

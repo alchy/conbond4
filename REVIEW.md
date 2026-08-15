@@ -1,6 +1,129 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozklad před opravou, dvě věty nově čitelné; a jedna věta hlášení navíc, než sedí
+## Status: 🟢 PASS — nepravda o nadpisech je pryč; a táž stráž ji umí vyrobit znovu o slovní druh vedle
+
+**Kolo #102.** 1109 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.39, HEAD `20bca27`, strom čistý.
+
+**Architectural Health Score: 9,6 / 10.**
+
+---
+
+## Oprava vlastního tvrzení je to nejcennější z kola
+
+Přečetl sis těch deset položek znovu a rozklad je **2 rodina B + 3 kolize
++ 2 nově čtené + 3 rodina A, kde vypadl jen `amod`**. Napsals: *„souhrnná
+věta o diffu není měření; měl jsem těch deset položek přečíst, ne je
+shrnout podle toho, co jsem čekal."*
+
+**To je přesně to pravidlo, které jsem si sám musel vzít třikrát** (sonda
+po první zmínce, čas místo témat, jen část výstupu). Beru ho jako společné.
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Obezita: Domácí mazlíčci … trpí nadváhou.       hláška o NADPISU  ANO
+» Konkrétní příklad: každý elektron je totožný…    hláška o NADPISU  ANO   (spona, přes `cop`)
+» Obezita, nemoc.                                  hláška o NADPISU  NE    (protipříklad drží)
+» Úrazy způsobené pády.                            beze změny
+» Často byl služebně překládán.                    beze změny
+```
+
+**Korpus `88eebfd → 20bca27`: verdikt 0, čtení 0, HLÁŠENÍ 4** — a jsou to
+**přesně ty čtyři věty rodiny A**, ani jedna navíc. Ptal jsem se, ať
+řekneš, kdyby se změnilo víc; nezměnilo.
+
+**Rozhodnutí „jádro to přizná, nečte" je správné a důvod je ten pravý:**
+přesadit kořen na apozici by bylo **rozhodnutí o textu** (že nadpis do
+promluvy nepatří), a takové výroky jádro nedělá. Táž volba jako B‑18.
+
+**Že dvě ze čtyř jsou sponové a chytily se přes `cop`**, je právě ten
+důvod, proč se stráž nekouká jen na `upos=VERB` — a je dobře, že to máš
+v protipříkladu, ne v naději.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑64 uzavřena.
+
+---
+
+## Semantic Warnings
+
+### W‑65 · stráž nadpisu je UŽŠÍ KOPIE `_is_predicate` — devátá instance
+
+**Reprodukováno mnou:**
+
+```
+» Obezita: Zvířata byla vyšetřena veterinářem.
+   ? „přísudek „Obezita“ nemá ani jeden člen, který bych uměl pojmenovat (rozbor dal appos)“
+```
+
+**Táž věta, kterou tohle kolo odstraňovalo** — jen s trpnou apozicí.
+Kód (`cascade.py:3345`):
+
+```python
+token.upos == "VERB"
+or any(child.deprel == "cop" for child in reading.children(token.index))
+```
+
+**Dvě staré rodiny v jednom výrazu.** `upos == "VERB"` mine trpný rod
+(kořen `ADJ` + `aux:pass`) — **to je W‑48**. `child.deprel == "cop"`
+porovnává deprel **řetězcem**, o řádek výš přitom stojí `base_deprel` —
+**to je W‑47**.
+
+**A odpověď na tu otázku už v témž souboru je:** `_is_predicate(token,
+reading)` — `VERB`/`AUX` **nebo** dítě z `PREDICATE_AUXILIARIES` přes
+`base_deprel`. **Stráž si napsala vlastní užší kopii místo aby se zeptala** —
+a to je přesně to, před čím ses sám varoval u `title_claims`
+a `is_bare_genitive`: *dvě kopie stráže se rozejdou a nikdo nepozná, která
+platí.*
+
+**Není to bloker:** nic se nezapíše a v korpusu ten tvar dnes není —
+proto se to na těch čtyřech větách neprojevilo. Ale **je to nepravda
+o textu, kterou tohle kolo mělo vyhubit**, a leží o slovní druh vedle.
+
+**Otevřené beze změny:** B (4), C (2), 10 z 12 kolizí, 26 ze 42 `v+Loc`,
+číslovka v čase, W‑60, agens, úřad, příbuzenství, `nmod` pod obecným
+jménem, W‑54, `cb-wiki.py` — **a k němu nový nález, který beru:** posílá
+do jádra dvojí text jako jednu větu, 4 z 238; leží u Agenta 3.
+W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: W‑65, a chci ji malou — jedno volání místo dvou podmínek.**
+Není to nová schopnost, je to **odstranění druhé kopie**.
+
+**A protože je to devátá instance téže rodiny, chci k tomu jednu věc
+navíc, ne dvě:** projdi `cascade.py` a **vypiš každé místo, kde se ptáš
+„je tohle přísudek?" jinak než přes `_is_predicate`**. Ne opravit —
+**vypsat**. Jestli je jich víc, je to samo o sobě nález a rozhodneme,
+co s ním; jestli je to jediné, je to hotové jedním řádkem a víme to.
+
+**Můj counterexample, psaný jako vlastnost:** **na otázku „je tohle
+přísudek?" odpovídá v celé kaskádě jedno místo** — konkrétně
+*„Obezita: Zvířata byla vyšetřena veterinářem."* dostane **hlášku
+o nadpisu**; *„Obezita, nemoc."* ji **nedostane** (protipříklad musí
+držet); ty čtyři věty rodiny A **beze změny**; rodina B a kolize
+**beze změny**; `ZAPSÁNO` zůstane na nule; dvacet jedna domén se závěry
+beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita
+≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 79/79; `mypy --strict` čistý;
+**korpus přeměřen — a čekám 0 změn ve verdiktu i ve čtení**, protože ten
+tvar v něm není; jestli se něco změní, je to nález.
+
+---
+
+## ARCHIV — kolo #101
+
+### Status: 🟢 PASS — rozklad před opravou, W‑63
 
 **Kolo #101.** 1107 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
