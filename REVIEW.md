@@ -1,6 +1,182 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — W‑71 na nule a rozhodnutí o souřadném členu je správné
+## Status: 🔴 FAIL — W‑73 je výborná, a odhalila starší díru: **B‑26**
+
+**Kolo #124.** 1189 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
+doložky **88/88** (nová **S‑42**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## W‑73 · past, kterou jsem popsal, jsi ošetřil líp, než jsem žádal
+
+**Reprodukoval jsem všechny tři případy živě:**
+
+```
+SPORNÝ    Petr a Jana přišli.
+          ? Věta jmenuje víc členů v roli „kdo“ — „Jana“. Platí to o každém
+            zvlášť, nebo o nich dohromady?          zápis: ŽÁDNÝ
+KLADNÝ    →& zvlášť    → ✓ zapsáno [s0001] přijít(kdo:Petr)
+                         ✓ zapsáno [s0004] přijít(kdo:Jana)
+ZÁPORNÝ   →& dohromady → ✓ zapsáno [s0001] zvednout(co:∃klavír, kdo:Petr_a_Jana)
+PROTIPŘÍKLAD  Petr přišel.  → zapsáno rovnou, na sdílení se NEPTÁ
+```
+
+**A ověřil jsem to, co se z výpisu nepozná — jestli kolektivní čtení
+neprosákne na jednotlivce:**
+
+```
+zvedl klavír Petr_a_Jana?   → A
+zvedl klavír Petr?          → U      ← neprosáklo
+přišla Jana? (po „zvlášť“)  → A
+přišel Karel?               → U
+```
+
+**Uzel `Petr` se v kolektivní větvi ani nezaloží** a pozdější *„Petr
+přišel."* v témž sezení se s `Petr_a_Jana` **nespojí**. **Tři členy se
+ptají na oba** („Jana", „Karel"). **To je čistá práce.**
+
+**Že se `→&` NEUČÍ, je správně a důvod je tvůj:** *„zvedli" a „přišli"
+mají týž tvar a opačnou odpověď*. **Distributivita v rozboru není** —
+změřil sis to na stavbě, ne odhadl.
+
+**Předpověď 46 → 0 sis opravil sám, dřív než jsem se zeptal**, a chyba
+byla v tom, CO jsi předpovídal (změnila se otázka, ne formule).
+**Skutečný projev: 58 vět dostalo otázku na sdílení — přepočítal jsem
+si to, sedí to na kus.**
+
+**Práh, ne ztráta:** moje sonda dává 178 → **174**, protože část členů
+přešla pod nový kanál. **Ověřil jsem tu vlastnost, na které záleží:**
+
+```
+vět s otázkou na ROLI              198
+vět s otázkou na SDÍLENÍ            58
+vět, kde běží OBĚ                   50
+vět, kde čeká VÍC NEŽ JEDEN člen   185   (dřív 178)
+mlčí se o někom                      0
+```
+
+**Podlaha se nesnížila, zvedla se.**
+
+---
+
+## Critical Blockers
+
+### B‑26 · odvolat VĚTU nejde — po `revoke` zůstane její druhá polovina
+
+**Doložené během, ne úvahou:**
+
+```
+» Petr a Jana přišli.          →& zvlášť
+   tah ohlásí:  statement_id = s0001,  derived = (s0002, s0003)
+   v bázi ale stojí: s0001 … s0006  —  včetně s0004: přijít(kdo:Jana)
+
+   kb.revoke("s0001", "odvolávám tu větu")  strhlo  [s0001, s0002, s0003]
+   přišel Petr? → U          ✔
+   přišla Jana? → A          ✘  VĚTA JE ODVOLANÁ A BÁZE JI POLOVINOU TVRDÍ DÁL
+```
+
+**Tah zapsal dva výroky a ohlásil jeden.** `TurnResult` nese
+`statement_id` (jeden) a `derived` (reifikace **toho prvního**) —
+**druhé `s0004` se volající nedozví odnikud**. Kdo tu větu chce vzít
+zpět, nemá čím.
+
+**A není to tvoje regrese — je to starší díra, do které nový mechanismus
+jen vstoupil.** Ověřil jsem souřadný **PŘÍSUDEK**, který tu je od T94:
+
+```
+» Petr přišel a odešel.
+   revoke(s0001) → zůstalo  s0004: odejít(kdo:Petr)
+» Jenže roboti se začali opotřebovávat a umírali.      ← jedna z 31 ZAPSANÝCH
+   revoke(s0001) → zůstalo  s0004: umírat(kdo:∀robot)
+```
+
+**Píšu to jako bloker, ne jako varování, a důvod je tvůj vlastní.**
+Když jsi odmítal zapsat větu s rolí pojmenovanou tvarem, napsal jsi:
+*„zapsat teď a po odpovědi znovu by uložilo DVA výroky o téže větě a ten
+první by nikdo neodvolal (B‑19)."* **Přesně tohle se teď děje** — jen je
+to ten druhý. **A netýká se to hypotetické věty: „Jenže roboti…" je
+v historickém korpusu mezi zapsanými.**
+
+**Není to vada zápisu — báze je správně. Je to vada ODVOLATELNOSTI**,
+a ta je u systému, který stojí na *„nic nezůstane netvrzené a všechno
+jde vzít zpět"*, na téže úrovni jako správnost zápisu.
+
+---
+
+## Semantic Warnings
+
+### W‑74 · jedna aserce ve zkouškách se přepsáním fixture oslabila
+
+**Fixtures jsi přepsat musel** — původní stály na souřadném členu, který
+od teď ztracený není, a **žes to napsal do předávky sám, je správně.**
+Prošel jsem ten diff položku po položce a **jedna se opravdu oslabila:**
+
+```
+- assert "jak:Jana" in hlaseni
++ assert "jak:" in hlaseni and "běžet" in hlaseni
+```
+
+**Původní kontrolovala PÁROVÁNÍ role s fillerem v jednom řetězci**, nová
+už jen to, že se obojí v hlášení někde vyskytlo. **Ostatní přepsané
+asserce sílu drží** (`privlastky` místo hledání v textu je dokonce
+přísnější). Vrať tu jednu na párování.
+
+**Otevřené beze změny:** víceslovné jméno a uzel `·Hradec` (W‑72 — tvoje
+rozhodnutí neřešit ho v témž kole beru, míchané kolo se neměří);
+zvratné `si` jako role; 160 konjunktů, jejichž hlava rolí není; W‑67 —
+prázdný `reason` u `ZAPSÁNO`; meze: vnořené datum (3), množství slovem
+(14), počet číslicí (11), kolize (10 z 12), 26 ze 42 `v+Loc`, úřad,
+příbuzenství, `nmod` pod obecným jménem, W‑54, W‑60, W‑42 – W‑45, W‑23,
+W‑25, W‑26, W‑30, W‑31, W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel
+»vše«"* zůstává otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**B‑26 první.** Rozhoduješ jednu věc: **co je jednotka odvolání.** Buď
+tah vrátí **všechny** výroky, které založil, a odvolání jde po nich —
+nebo mají výroky z jedné promluvy **společnou rukojeť** a odvolá se ta.
+**Doporučuju druhé**, protože *„vezmi zpět tu větu"* je to, co člověk
+opravdu chce; ale je to tvoje rozhodnutí a chci u něj vidět důvod.
+
+**Vlastnost, kterou po tobě chci — jako protipříklad:**
+
+* **`revoke` promluvy vezme zpět všechno, co ta promluva zapsala** —
+  doloženo na OBOU cestách: souřadný podmět (`Petr a Jana přišli.`)
+  i souřadný přísudek (`Petr přišel a odešel.`, `Jenže roboti se začali
+  opotřebovávat a umírali.`);
+* **po odvolání se každý dotaz, který byl `A` kvůli té větě, vrátí na
+  `U`** — změřeno, ne odůvodněno;
+* **a naopak**: odvolání NESMÍ strhnout výrok z JINÉ promluvy, který jen
+  sdílí uzel — chci vidět i tenhle záporný případ;
+* **tah, který zapsal víc výroků, je všechny ohlásí** — dnes ohlásí
+  první a druhý zamlčí.
+
+**Podlaha:** 185 vět s víc než jedním čekajícím členem, **0 mlčení**,
+0 překlopení ◐ → ✓, 0 hlášení proti změněné značce, W‑71 = 0, tři věty
+W‑73 beze změny (kladná / sporná / záporná), **kolektivní čtení
+neprosakuje na jednotlivce** (`zvedl klavír Petr?` = `U`), 21 domén,
+`standing_metrics()` 21/107/51/33/26, relace 9/9, gate *Farmaka*,
+parita ≥ 55/55, doložky ≥ 88/88, nula `RECALL_FAILURE`, `mypy --strict`
+čistý, **celý korpus bez pádu, běh před předávkou, každý ✔ doložený
+výpisem**.
+
+**A to číslo, které jsem si vyžádal minule, platí dál:** zapsaných je
+**1 z 238** a tvoje vysvětlení („58 vět čeká na rozhodnutí, které nikdo
+nedal") **je správné a ověřitelné**. Až se ty otázky začnou odpovídat,
+chci u každé nově zapsané věty vidět, že v ní není tvrzení navíc —
+**a po B‑26 taky to, že jde celá vzít zpět.**
+
+---
+
+## ARCHIV — kolo #123
+
+### Status: 🟢 PASS — W‑71 na nule a rozhodnutí o souřadném členu je správné
 
 **Kolo #123.** 1182 zkoušek (+5), `mypy --strict` čistý na 62 souborech,
 doložky **87/87** (nová **S‑41**), `standing_metrics()` =

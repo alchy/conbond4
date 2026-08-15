@@ -80,6 +80,21 @@ class Statement:
     formula: Formula
     provenance: str = ""
     derived_from: str | None = None
+    #: PROMLUVA, ze které výrok vznikl *(B‑26)* — rukojeť odvolání.
+    #:
+    #: Jedna promluva umí zapsat VÍC výroků: souřadný podmět po `→&`
+    #: („Petr a Jana přišli.") i souřadný přísudek (T94) dají dvě tvrzení
+    #: o dvou uzlech. `derived_from` na to nestačí a nesmí se ohnout —
+    #: znamená „vzniklo EXPANZÍ jiného výroku" (reifikace, `disjoint`),
+    #: kdežto tyhle dva jsou SOUROZENCI: ani jeden z druhého neplyne.
+    #: Bez společné rukojeti se odvolala jen půlka věty a báze tvrdila
+    #: druhou dál.
+    #:
+    #: Je to VLASTNÍ POLE, ne čtení z `provenance`. Provenience je
+    #: poznámka pro člověka („tah 3: druhá věta"); rukojeť je hodnota,
+    #: kterou kód POROVNÁVÁ. Číst ji z textu by byla táž rodina jako
+    #: W‑32 … W‑81 — kategorie porovnávaná řetězcem.
+    utterance: str = ""
 
     def __str__(self) -> str:
         origin = f" @from({self.derived_from})" if self.derived_from else ""
@@ -187,6 +202,7 @@ class KnowledgeBase:
         *,
         provenance: str = "",
         derived_from: str | None = None,
+        utterance: str = "",
     ) -> str:
         """Jediný zápis. Smí selhat — a selhání je tah dialogu (§ 9).
 
@@ -210,7 +226,12 @@ class KnowledgeBase:
                 f"„jsou oddělené?“ slouží `disjoint_of(a, b)`."
             )
         self._refuse_ordering_cycle(formula)
-        return self._attach(formula, provenance=provenance, derived_from=derived_from)
+        return self._attach(
+            formula,
+            provenance=provenance,
+            derived_from=derived_from,
+            utterance=utterance,
+        )
 
     def _refuse_ordering_cycle(self, formula: Formula) -> None:
         """Hrana, která by uzavřela uspořádání do kruhu, se ODMÍTÁ (B‑16).
@@ -277,15 +298,18 @@ class KnowledgeBase:
         *,
         provenance: str = "",
         derived_from: str | None = None,
+        utterance: str = "",
     ) -> str:
         """Zápis bez zábran u vchodu. Volá se **jen** z `attach` a z
         `add_disjoint`, která marker zapisuje jako součást své expanze."""
+        # RUKOJEŤ PROMLUVY SE NESE AŽ K ULOŽENÍ *(B‑26)*. Odvozené výroky
+        # ji dědí přes `derived_from`, takže je stačí předat tady.
         if isinstance(formula, Rule):
             sid = formula.id
             if sid in self._statements:
                 raise AttachError(f"pravidlo {sid!r} už v bázi je")
             self._validate_rules(formula)
-            self._store(sid, formula, provenance, derived_from)
+            self._store(sid, formula, provenance, derived_from, utterance)
             return sid
 
         if not formula.is_ground():
@@ -304,7 +328,7 @@ class KnowledgeBase:
             self._validate_identity(formula)
         self._fact_counter += 1
         sid = f"s{self._fact_counter:04d}"
-        self._store(sid, formula, provenance, derived_from)
+        self._store(sid, formula, provenance, derived_from, utterance)
 
         if not formula.is_negated and formula.predicate not in RESERVED_PREDICATES:
             self._depth[sid] = depth
@@ -335,9 +359,14 @@ class KnowledgeBase:
         formula: Formula,
         provenance: str,
         derived_from: str | None,
+        utterance: str = "",
     ) -> None:
         self._statements[sid] = Statement(
-            id=sid, formula=formula, provenance=provenance, derived_from=derived_from
+            id=sid,
+            formula=formula,
+            provenance=provenance,
+            derived_from=derived_from,
+            utterance=utterance,
         )
         self._version += 1
 
@@ -356,9 +385,17 @@ class KnowledgeBase:
             self._derived(role_atom(instance, r.name, r), origin, sid)
 
     def _derived(self, formula: Atom, provenance: str, source: str) -> None:
+        # ODVOZENÝ VÝROK DĚDÍ RUKOJEŤ ZDROJE *(B‑26)*: vznikl expanzí té
+        # věty, takže s ní má i zmizet.
         self._fact_counter += 1
         self._store(
-            f"s{self._fact_counter:04d}", formula, provenance, derived_from=source
+            f"s{self._fact_counter:04d}",
+            formula,
+            provenance,
+            derived_from=source,
+            utterance=self._statements[source].utterance
+            if source in self._statements
+            else "",
         )
 
     def _nesting_depth(self, a: Atom) -> int:
@@ -390,6 +427,34 @@ class KnowledgeBase:
                     revoked.append(other)
                     pending.append(other)
         self._version += 1
+        return revoked
+
+    def revoke_utterance(self, utterance: str, reason: str) -> list[str]:
+        """ODVOLÁNÍ CELÉ PROMLUVY *(B‑26)*.
+
+        „Vezmi zpět tu větu" je to, co člověk chce říct — a jedna věta umí
+        zapsat VÍC výroků: „Petr a Jana přišli." po `→&` uloží dvě tvrzení
+        o dvou uzlech, „Petr přišel a odešel." taky. Odvolání po JEDNOM id
+        strhlo jen půlku a báze tu větu druhou polovinou tvrdila dál —
+        „přišla Jana?" odpovídalo `A` na větu, kterou nikdo nedrží.
+
+        **Jednotkou odvolání je PROMLUVA, ne výrok.** Rozhodnuto takhle
+        proto, že jednotkou zápisu je promluva taky: výroky z jedné věty
+        jsou SOUROZENCI, ani jeden z druhého neplyne, takže je nespojí
+        `derived_from` a spojit je musí to, co je zapsalo.
+
+        **Výrok z JINÉ promluvy se nestrhne, ani když sdílí uzel.** Uzel
+        není důvod k odvolání; kdyby byl, vzalo by „vezmi zpět tu větu"
+        zpátky i věty, které nikdo neodvolával.
+        """
+        cile = [
+            st.id
+            for st in self.active()
+            if st.utterance and st.utterance == utterance
+        ]
+        revoked: list[str] = []
+        for sid in cile:
+            revoked.extend(self.revoke(sid, reason))
         return revoked
 
     # -- inspect -----------------------------------------------------------

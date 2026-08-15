@@ -26,13 +26,15 @@ from core_semantics.ast import (
     QueryStatus,
     UnsafeRule,
     Variable,
+    atom,
+    role,
     complete_of,
     member_of,
 )
-from core_semantics.cascade import completeness_shape
+from core_semantics.cascade import ROLE_SUBJECT, completeness_shape
 from core_semantics.engine import Engine
-from core_semantics.oracle import Reading, Token, Utterance
-from core_semantics.session import Session, declares_complete, revokes
+from core_semantics.oracle import Reading, RecordedOracle, Token, Utterance
+from core_semantics.session import Session, Turn, declares_complete, revokes
 from core_semantics.storage import KnowledgeBase
 from core_semantics.tests._console import echo
 
@@ -337,3 +339,95 @@ def test_the_transcript_prints() -> None:
     assert back is not None
     echo(f"   po odvolání:       {back.name}")
     echo("=" * 72)
+
+
+def _shared_reading(predicate: str, lemma: str) -> Reading:
+    """„Petr a Jana <přišli>." — dvě jména v jedné roli."""
+    return Reading(
+        tokens=(
+            w(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            w(2, "a", "a", "CCONJ", 3, "cc"),
+            w(3, "Jana", "Jana", "PROPN", 1, "conj", Case="Nom", Gender="Fem", Number="Sing"),
+            w(4, predicate, lemma, "VERB", 0, "root", Gender="Masc", Number="Plur", Polarity="Pos"),
+            w(5, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def _one_reading(subject: str, predicate: str, lemma: str) -> Reading:
+    return Reading(
+        tokens=(
+            w(1, subject, subject, "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            w(2, predicate, lemma, "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            w(3, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def _two_sentence_session() -> tuple[Session, Turn, RecordedOracle, str]:
+    """Sezení, ve kterém věta se dvěma členy v jedné roli čeká na `→&`;
+    druhá promluva o TÉMŽE uzlu se dohraje až v samotné zkoušce."""
+    from core_semantics.session import decides_sharing
+    from core_semantics.tests import golden
+
+    first, second = "Petr a Jana přišli.", "Petr odešel."
+    oracle = RecordedOracle(
+        {
+            first: Utterance(text=first, readings=(_shared_reading("přišli", "přijít"),)),
+            second: Utterance(text=second, readings=(_one_reading("Petr", "odešel", "odejít"),)),
+        }
+    )
+    session = Session(lexicon=golden.golden_lexicon())
+    asked = session.utter(first, oracle)
+    assert asked.predication is not None
+    rozhodnuti = decides_sharing(
+        "Každý zvlášť.",
+        asked.predication,
+        _shared_reading("přišli", "přijít"),
+        distributive=True,
+    )
+    return session, rozhodnuti, oracle, second
+
+
+def test_a_turn_reports_every_statement_it_wrote() -> None:
+    """TAH, KTERÝ ZAPSAL VÍC VÝROKŮ, JE VŠECHNY OHLÁSÍ *(B‑26)*.
+    `statement_id` nese jen ten první; kdo tu větu chce vzít zpět, neměl
+    podle čeho."""
+    session, rozhodnuti, _, _ = _two_sentence_session()
+    written = session.play(rozhodnuti)
+    assert len(written.statements) > 1
+    assert written.statement_id in written.statements
+    assert written.utterance, "promluva musí mít rukojeť"
+
+
+def test_revoking_an_utterance_takes_back_both_halves() -> None:
+    """ODVOLAT VĚTU JDE CELOU *(B‑26)*. „Petr a Jana přišli." zapsala dvě
+    tvrzení; `revoke` po jednom id strhlo jen půlku a báze druhou
+    polovinu tvrdila dál — „přišla Jana?" odpovídalo `A` na větu, kterou
+    nikdo nedržel."""
+    session, rozhodnuti, oracle, druha = _two_sentence_session()
+    written = session.play(rozhodnuti)
+    session.utter(druha, oracle)
+    engine = Engine(session.kb)
+    jana = atom("přijít", role(ROLE_SUBJECT, Entity("Jana")))
+    assert engine.ask(jana).status is QueryStatus.PROVEN_TRUE
+    session.kb.revoke_utterance(written.utterance, "zkouška")
+    assert engine.ask(jana).status is QueryStatus.UNKNOWN
+    petr = atom("přijít", role(ROLE_SUBJECT, Entity("Petr")))
+    assert engine.ask(petr).status is QueryStatus.UNKNOWN
+
+
+def test_revoking_an_utterance_spares_another_that_shares_a_node() -> None:
+    """PROTIPŘÍKLAD: odvolání NESMÍ strhnout výrok z JINÉ promluvy, který
+    jen sdílí uzel. Uzel není důvod k odvolání — kdyby byl, vzalo by
+    „vezmi zpět tu větu" zpátky i věty, které nikdo neodvolával."""
+    session, rozhodnuti, oracle, druha = _two_sentence_session()
+    written = session.play(rozhodnuti)
+    session.utter(druha, oracle)
+    engine = Engine(session.kb)
+    odesel = atom("odejít", role(ROLE_SUBJECT, Entity("Petr")))
+    assert engine.ask(odesel).status is QueryStatus.PROVEN_TRUE
+    session.kb.revoke_utterance(written.utterance, "zkouška")
+    assert engine.ask(odesel).status is QueryStatus.PROVEN_TRUE, "cizí promluva zůstává"

@@ -1811,6 +1811,40 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-43",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "ODVOLAT VĚTU JDE CELOU — JEDNOTKOU ODVOLÁNÍ JE PROMLUVA "
+            "*(B‑26)*. Jedna věta umí zapsat VÍC výroků: „Petr a Jana "
+            "přišli.“ po `→&` uloží dvě tvrzení o dvou uzlech, „Petr "
+            "přišel a odešel.“ (T94) taky. `revoke` po jednom id strhlo "
+            "jen půlku a báze druhou polovinu tvrdila DÁL — po odvolání "
+            "věty odpovídalo „přišla Jana?“ pořád `A`. Není to vada "
+            "zápisu (báze byla správně), je to vada ODVOLATELNOSTI, a "
+            "u systému, který stojí na „všechno jde vzít zpět“, je to "
+            "táž úroveň jako správnost zápisu — je to přesně ta vada, "
+            "kterou B‑19 pojmenovala z druhé strany („uložilo by DVA "
+            "výroky a ten první by nikdo neodvolal“). ROZHODNUTO PRO "
+            "PROMLUVU, ne pro výrok, protože JEDNOTKOU ZÁPISU JE "
+            "PROMLUVA TAKY: výroky z jedné věty jsou SOUROZENCI, ani "
+            "jeden z druhého neplyne, takže je `derived_from` nespojí a "
+            "ohnout ho by znamenalo tvrdit odvození, které není. "
+            "Rukojeť je VLASTNÍ POLE, ne text čtený z provenience: "
+            "provenience je poznámka pro člověka, rukojeť je hodnota, "
+            "kterou kód porovnává. Odvozené výroky ji DĚDÍ. VÝROK "
+            "Z JINÉ PROMLUVY SE NESTRHNE, ani když sdílí uzel — uzel "
+            "není důvod k odvolání. A tah, který zapsal víc výroků, je "
+            "VŠECHNY ohlásí; bere se to z báze, ne se sbírá po cestě"
+        ),
+        anchor="core_semantics.storage:KnowledgeBase.revoke_utterance",
+        entry=".play(",
+        enforced_by=(
+            "test_a_turn_reports_every_statement_it_wrote",
+            "test_revoking_an_utterance_takes_back_both_halves",
+            "test_revoking_an_utterance_spares_another_that_shares_a_node",
+        ),
+    ),
+    Clause(
         id="S-42",
         boundary=SESSION_STORAGE,
         promise=(

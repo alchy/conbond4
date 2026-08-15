@@ -241,7 +241,10 @@ def test_an_answer_that_works_stays_silent_about_it() -> None:
     )
     hlaseni = chr(10).join(result.lines)
     assert "ČTENÍ SE NEZMĚNILO" not in hlaseni
-    assert "jak:" in hlaseni and "běžet" in hlaseni
+    # PÁROVÁNÍ, NE VÝSKYT *(W‑74)*. Že se „jak“ i „běžet“ někde objeví,
+    # by prošlo i tehdy, kdyby ten člen skončil v jiné roli — kontroluje
+    # se proto role S FILLEREM v jednom řetězci, jako v původní zkoušce.
+    assert "jak:běžet" in hlaseni
 
 
 def _three_lost_members() -> Reading:

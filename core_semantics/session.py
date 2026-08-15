@@ -784,6 +784,12 @@ class TurnResult:
     lines: tuple[str, ...] = ()
     statement_id: str | None = None
     derived: tuple[str, ...] = ()
+    #: VŠECHNY výroky, které tenhle tah zapsal *(B‑26)*. Jedna promluva
+    #: jich umí uložit víc („Petr a Jana přišli." po `→&`), a `statement_id`
+    #: nese jen ten první — kdo tu větu chce vzít zpět, neměl podle čeho.
+    statements: tuple[str, ...] = ()
+    #: RUKOJEŤ PROMLUVY *(B‑26)*, kterou se odvolává celá věta.
+    utterance: str = ""
     status: QueryStatus | None = None
     report: AuditReport | None = None
     offered: Rule | None = None
@@ -821,6 +827,11 @@ class Session:
         #: Co o právě čtené větě platí — ztracené členy a stopa *(B‑25)*.
         self._standing_lost: tuple[tuple[str, str], ...] = ()
         self._standing_trace: tuple[str, ...] = ()
+        #: PROMLUVA, o které se právě jedná *(B‑26)* — rukojeť odvolání.
+        #: Tah ODPOVĚDI zapisuje výroky té věty, která se ptala, ne své
+        #: vlastní; bez toho by se každá odpověď stala vlastní promluvou
+        #: a „vezmi zpět tu větu“ by nemělo co vzít.
+        self._utterance: str = ""
         #: `LEX` je program vedle `ONTO` a `DIA`, takže patří do sezení,
         #: ne do volání. Jinak by dvě věty téhož dialogu mohly být čteny
         #: podle jiných naučených vzorů a „diff naučeného" (§ 10) by nešel
@@ -1112,7 +1123,11 @@ class Session:
     def _assert(self, index: int, turn: Turn) -> TurnResult:
         assert turn.formula is not None
         try:
-            sid = self.kb.attach(turn.formula, provenance=f"tah {index}")
+            sid = self.kb.attach(
+                turn.formula,
+                provenance=f"tah {index}",
+                utterance=self._utterance or f"v{index}",
+            )
         except AttachError as exc:
             return TurnResult(
                 index=index,
@@ -1420,6 +1435,11 @@ class Session:
         # tah, který ji jen doplňuje (kvantifikátor, odkaz), zdědí
         # poslední známý stav — protože rozbor se jím nemění, takže
         # ztracený člen ztraceným zůstal.
+        if turn.kind is TurnKind.READING:
+            # NOVÁ VĚTA — nová rukojeť *(B‑26)*. Odpovědi na ni si ji
+            # ponesou dál, takže všechno, co z té věty vznikne, patří
+            # k sobě.
+            self._utterance = f"v{index}"
         stale_ztraceno: tuple[tuple[str, str], ...] = tuple(
             lost if lost is not None else (turn.lost or self._standing_lost)
         )
@@ -1428,6 +1448,8 @@ class Session:
         )
         self._standing_lost = stale_ztraceno
         self._standing_trace = stale_stopa
+        # Co v bázi leželo PŘED tímhle tahem — rozdíl je to, co zapsal.
+        pred_zapisem = {st.id for st in self.kb.active()}
         grounded = ground(predication, self.kb.view(), self._discourse)
         # Kontext se posouvá jen po větě, která se OPRAVDU zakotvila.
         # Věta, u které se systém ptá, ještě není řečená do konce, a
@@ -1608,6 +1630,15 @@ class Session:
         # se první zapsala: kdyby se zapsala druhá bez první, ležel by
         # v bázi konec promluvy bez jejího začátku.
         druha_radky = self._write_second(index, predication, routed)
+        # TAH, KTERÝ ZAPSAL VÍC VÝROKŮ, JE VŠECHNY OHLÁSÍ *(B‑26)*. Bere
+        # se to z BÁZE, ne se sbírá po cestě: každá cesta by si to jinak
+        # nesla sama a ta, která by na to zapomněla, by mlčela — a mlčení
+        # o zapsaném výroku je přesně to, kvůli čemu nešlo větu odvolat.
+        zapsane = tuple(
+            st.id
+            for st in self.kb.active()
+            if st.utterance == self._utterance and st.id not in pred_zapisem
+        )
         return replace(
             routed,
             turn=turn,
@@ -1615,6 +1646,8 @@ class Session:
             predication=predication,
             trace=turn.trace,
             question=question,
+            statements=zapsane,
+            utterance=self._utterance,
         )
 
     def _write_second(
@@ -1643,7 +1676,9 @@ class Session:
         if grounded.formula is None:
             return ("  [DRUHÁ VĚTA NEZAPSÁNA: nezakotvila se]",)
         sid = self.kb.attach(
-            grounded.formula, provenance=f"tah {index}: druhá věta"
+            grounded.formula,
+            provenance=f"tah {index}: druhá věta",
+            utterance=self._utterance,
         )
         # ODKUD MÁ PODMĚT, MUSÍ SEDĚT S TÍM, CO SE STALO *(W‑73)*.
         # Pevná věta „přebírá z první" lhala u druhé věty s VLASTNÍM
@@ -1743,7 +1778,11 @@ class Session:
             turn.subject.id,
             role(turn.role_name, Group(turn.node_id), Quantifier.FOR_ALL),
         )
-        sid = self.kb.attach(formula, provenance=f"tah {index}: přívlastek")
+        sid = self.kb.attach(
+            formula,
+            provenance=f"tah {index}: přívlastek",
+            utterance=self._utterance,
+        )
         return TurnResult(
             index=index,
             turn=turn,
@@ -1844,7 +1883,11 @@ class Session:
             )
 
         formula = member_of(Entity(turn.subject.id), Group(turn.node_id))
-        sid = self.kb.attach(formula, provenance=f"tah {index}: titul z věty")
+        sid = self.kb.attach(
+            formula,
+            provenance=f"tah {index}: titul z věty",
+            utterance=self._utterance,
+        )
         # ROZHODNUTO — nabídka se nemaže, PŘEPÍNÁ SE STAV. Smazat ji by
         # ztratilo právě to, co odlišuje „nikdo to netvrdil“ od „už je to
         # rozhodnuté“, a druhé potvrzení by lhalo o textu (W‑56).

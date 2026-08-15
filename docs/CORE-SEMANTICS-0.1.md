@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.58 · 16. 8. 2026
+**Verze jádra:** 0.1.59 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.59 | § 5.2 — ODVOLAT VĚTU JDE CELOU: jednotkou odvolání je PROMLUVA, ne výrok. Věta, která zapsala dvě tvrzení, se odvolávala po půlkách a báze druhou tvrdila dál; § 13 T109 |
 | 0.1.58 | § 5.2 — VÍC ČLENŮ V JEDNÉ ROLI SE NEROZDĚLÍ MLČKY: souřadný člen je druhý uzel téže role, ale distributivní čtení v rozboru NENÍ, takže se systém ptá (`→&`). 58 vět dostalo tu otázku; § 13 T108 |
 | 0.1.57 | § 5.2 — PO ODPOVĚDI NESMÍ ZMLKNOUT ZÁVISLÝ ČLEN TOHO, CO BYLO PRÁVĚ POJMENOVÁNO: patro přívlastku běželo před patrem ztracené role. Změřeno 5 → 0; § 12 (rozklad souřadného členu), § 13 T107 |
 | 0.1.56 | § 5.2 — CO O VĚTĚ PLATÍ, SE NEČTE Z TAHU, KTERÝ NA NI ODPOVÍDÁ: odpověď na jednu otázku rušila ostatní a značka `✓` vznikala z prázdné stopy. Změřeno: 178 vět se ptá dál (bylo 21), překlop ◐→✓ nula (bylo 9); § 13 T106 |
@@ -1315,6 +1316,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T109 | odvolat větu jde celou | „Petr a Jana přišli.“ + `→&` zvlášť zapíše DVA výroky a tah je OBA ohlásí; `revoke_utterance` vezme zpět obojí („přišla Jana?“ → `U`), ale „Petr odešel.“ z jiné promluvy zůstane `A` |
 | T108 | víc členů v jedné roli | „Petr a Jana přišli.“ se PTÁ „o každém zvlášť, nebo dohromady?“ a nezapisuje; `→&` distributivně dá DVA výroky (`přijít(kdo:Petr)`, `přijít(kdo:Jana)`), kolektivně JEDEN uzel `Petr_a_Jana`; „Petr přišel.“ se neptá |
 | T107 | přívlastek nově pojmenovaného členu | „Přidal se zánět ledvin a zápal plic.“ po `→@` na „zápal“ hlásí OBA přívlastky („zánět ledvina“, „zápal plíce“); dokud ten člen ve čtení není, jeho přívlastek se nehlásí |
 | T106 | odpověď nezruší ostatní otázky | „Petr a Jana viděli psa a kočku.“ se po `→@` na jeden člen ptá na zbylý, drží `◐`, `[ZAHOZENO: …]` přežije tah; „Petr přišel.“ dál dostane `✓ přečteno` |
