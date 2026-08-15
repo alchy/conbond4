@@ -3326,6 +3326,36 @@ def why_nothing(reading: Reading) -> str:
                 if t.deprel != "punct" and t.index not in pohlcene
             }
         )
+        # NADPIS SPLYNULÝ S VĚTOU *(W‑64)*. „Obezita: Domácí mazlíčci trpí
+        # nadváhou." má kořenem NADPIS a skutečná věta pod ním visí jako
+        # `appos` — se svým podmětem i přísudkem. Říct u ní „nemá ani
+        # jeden člen, který bych uměl pojmenovat" je NEPRAVDA O TEXTU:
+        # členy tam jsou, jen ne pod tím kořenem.
+        #
+        # ČÍST SE TO NEZAČNE, a je to rozhodnutí, ne mez. Přesadit kořen
+        # by znamenalo rozhodnout, že nadpis do promluvy nepatří — a to
+        # je výrok o TEXTU, ne o rozboru. Rozdělit dvojí text je práce
+        # SEGMENTACE, tedy měřicí vrstvy; jádro to jen PŘIZNÁ, místo aby
+        # o sobě tvrdilo nepravdu. Táž volba jako u B‑18.
+        veta_v_apozici = [
+            token
+            for token in reading.children(anchor.index)
+            if base_deprel(token.deprel) == "appos"
+            and (
+                token.upos == "VERB"
+                or any(
+                    child.deprel == "cop" for child in reading.children(token.index)
+                )
+            )
+        ]
+        if veta_v_apozici:
+            uvnitr = veta_v_apozici[0]
+            return (
+                f"„{head[0].form}“ vypadá jako NADPIS: skutečná věta "
+                f"(„{uvnitr.form}“ i s vlastními členy) pod ním visí jako "
+                f"APOZICE, takže kořenem rozboru není přísudek. Rozdělit "
+                f"nadpis od věty je práce segmentace, ne čtení"
+            )
         if not unmapped and pohlcene:
             return (
                 f"„{head[0].form}“ je JMENNÁ FRÁZE, ne věta: jediné, co "

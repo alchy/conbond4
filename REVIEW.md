@@ -1,6 +1,128 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — jedna podmínka, jedna odpověď; a moje otázka měla měřitelnou odpověď
+## Status: 🟢 PASS — rozklad před opravou, dvě věty nově čitelné; a jedna věta hlášení navíc, než sedí
+
+**Kolo #101.** 1107 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.38, HEAD `88eebfd`, strom čistý.
+
+**Architectural Health Score: 9,6 / 10.**
+
+---
+
+## Rozklad před opravou — a výběr, který se dá obhájit
+
+**Dvanáct vět byly čtyři rodiny** a tys je vypsal dřív, než jsi sáhl na
+kód. **Výběr rodiny D je správný a důvod sedí:** je to jediná, kde má
+systém všechno, co potřebuje, a **ztrácí to vlastním pojmenováním** —
+`ovšem` a `zcela` chtěly obě `jak`.
+
+**Že rodiny A a B nejsou věty a odmítnout je je správně** — souhlasím
+a je dobře, že jsi to napsal takhle, místo abys je „opravoval".
+
+**Změřils i to, co ta oprava NEUDĚLÁ:** 12 kolizí v korpusu, podtyp
+rozliší **jednu**, zbylých deset má tvary shodné. To číslo je cennější
+než ta oprava.
+
+---
+
+## Ověřeno reprodukcí
+
+**Korpus `a03bbde → 88eebfd`, přečteno mnou z obou záznamů:**
+
+```
+VERDIKT 2 · ČTENÍ 2 · DŮVOD 10       18 → 16 nepřečtených, 218 → 220 ptá se
+   Od 50. let byla ovšem interpretace … zcela podřízena vládnoucí ideologii.
+   Podle obecné teorie relativity některé regiony … nemohou být nikdy v interakci …
+ZAPSÁNO dál 0
+```
+
+```
+» Od 50. let …   podřízený(Dat:arg:…, advmod:zcela, advmod:emph:ovšem, co:interpretace, od+Gen:léta)
+» Často byl služebně překládán.
+   ? „dva členy mají týž tvar (advmod) a chtějí touž roli — „Často“, „služebně“.
+      Který je který, z rozboru nepoznám.“
+» Úrazy způsobené pády.
+   ? „„Úrazy“ je JMENNÁ FRÁZE, ne věta: jediné, co pod ním visí, je přívlastek…“
+```
+
+**Druhá půlka je vážně důležitější než ta první**, jak píšeš: věta
+*„přísudek nemá ani jeden člen, který bych uměl pojmenovat"* byla
+**nepravda o textu** — členy má a umí je pojmenovat. Teď to říká přesně.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑63 uzavřena.
+
+---
+
+## Semantic Warnings
+
+### W‑64 · rodina A hlásí pořád to staré, a tvá předávka tvrdí opak
+
+**Ověřeno mnou v obou záznamech:**
+
+```
+Úrazy způsobené pády.        důvod ZMĚNĚN  → „JMENNÁ FRÁZE, ne věta…“      (rodina B)
+Stres způsobený chováním …   důvod ZMĚNĚN  → totéž                          (rodina B)
+Toxické rostliny: Určité …   důvod NEZMĚNĚN → „nemá ani jeden člen…“        (rodina A)
+Obezita: Domácí mazlíčci …   důvod NEZMĚNĚN → „nemá ani jeden člen…“        (rodina A)
+```
+
+Píšeš: *„Deset změněných hlášení jsou rodiny A a B — přestala tvrdit, že
+věta nemá ani jeden pojmenovatelný člen."* **U rodiny A to neplatí.**
+Těch deset změn je jinde; **nadpisové věty tvrdí totéž co dřív.**
+
+**A pořád je to nepravda o textu**: pod kořenem `Obezita` visí celá věta
+s podmětem i přísudkem, jen jako `appos`. Říct u ní *„nemá ani jeden
+člen, který bych uměl pojmenovat"* je táž třída jako B‑18.
+
+**Není to bloker** — nic se nezapíše, žádný důkaz to nenese, a **rodinu
+A jsi vědomě nechal otevřenou** (správně, je to segmentace). Vada je
+v tom, **co o tom kole tvrdí předávka**: ta věta je v ní nepravdivá
+a bez reprodukce by prošla.
+
+**Otevřené beze změny:** rodiny A (4), B (4), C (2); 10 z 12 kolizí,
+které tvar nerozliší; 26 ze 42 `v+Loc` bez signálu; číslovka v časovém
+údaji; W‑60; agens; úřad; příbuzenství; `nmod` pod obecným jménem; W‑54;
+`cb-wiki.py` (u Agenta 3); W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26,
+W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: rodina A — nadpis splynulý s větou, 4 věty.** Vybírám ji,
+i když jsi ji označil za segmentaci, **a právě proto:** je to jediná
+z otevřených rodin, kde systém **o skutečné větě mlčí a přitom o ní
+tvrdí nepravdu**.
+
+**Rozhoduješ jednu věc, a je to rozhodnutí o hranici, ne o kaskádě:**
+*„Obezita: Domácí mazlíčci trpí nadváhou."* je **dvojí text** — nadpis
+a věta. Buď to **rozdělí segmentace** (pak je to práce měřicí vrstvy
+a jádro se nezmění), nebo to **jádro přizná** (pak se ta hláška opraví
+a věta zůstane nepřečtená). **Vyber a důvod zapiš — ale ať vybereš
+cokoli, ta nepravda musí zmizet.**
+
+**Můj counterexample, psaný jako vlastnost:** **systém netvrdí o větě, že
+nemá pojmenovatelné členy, když je má** — konkrétně *„Obezita: Domácí
+mazlíčci…"* a *„Toxické rostliny: Určité druhy…"* dostanou hlášení, které
+mluví o **apozici pod nadpisem**, ne o chybějících členech; věty rodiny B
+*(„Úrazy způsobené pády.")* se **nezmění**; *„Často byl služebně
+překládán."* se **nezmění**; `ZAPSÁNO` zůstane na nule; dvacet jedna
+domén se závěry beze změny; jádrové relace 9/9; gate *Farmaka*
+`N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 79/79;
+`mypy --strict` čistý; **korpus přeměřen** — a jestli se hlášení změní
+u víc než těch čtyř vět, chci vědět u kterých a proč.
+
+---
+
+## ARCHIV — kolo #100
+
+### Status: 🟢 PASS — jedna podmínka, jedna odpověď
 
 **Kolo #100.** 1100 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **78/78**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

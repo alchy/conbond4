@@ -1364,7 +1364,15 @@ CONTRACTS: tuple[Clause, ...] = (
             "bych uměl pojmenovat“ je NEPRAVDA O TEXTU, protože členy má "
             "a umí je pojmenovat. A POHLCENÝ PŘÍVLASTEK NENÍ "
             "NEPOJMENOVANÝ ČLEN: „Úrazy způsobené pády.“ je JMENNÁ "
-            "FRÁZE, ne věta"
+            "FRÁZE, ne věta. A NADPIS SPLYNULÝ S VĚTOU se pojmenuje: "
+            "„Obezita: Domácí mazlíčci trpí nadváhou.“ má kořenem NADPIS "
+            "a skutečná věta pod ním visí jako `appos` se svým podmětem "
+            "i přísudkem — členy tam JSOU, jen ne pod tím kořenem. Číst "
+            "se to nezačne a je to ROZHODNUTÍ: přesadit kořen by "
+            "znamenalo rozhodnout, že nadpis do promluvy nepatří, a to "
+            "je výrok o TEXTU, ne o rozboru; rozdělit dvojí text je práce "
+            "SEGMENTACE. Jmenná apozice bez přísudku sem NEPATŘÍ — "
+            "rozlišuje to rozbor, ne dvojtečka (W‑64)"
         ),
         anchor="core_semantics.cascade:why_nothing",
         entry="generate(",
@@ -1373,6 +1381,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_fallback_asks_and_does_not_write",
             "test_an_unresolvable_collision_says_so_instead_of_lying",
             "test_a_nominal_phrase_is_not_a_predicate_without_members",
+            "test_a_heading_glued_to_a_sentence_is_named_as_such",
+            "test_a_nominal_apposition_is_not_a_heading",
         ),
     ),
     Clause(

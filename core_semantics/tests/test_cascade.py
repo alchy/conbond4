@@ -2184,3 +2184,52 @@ def test_a_nominal_phrase_is_not_a_predicate_without_members() -> None:
     duvod = why_nothing(reading)
     assert "JMENNÁ FRÁZE" in duvod
     assert "neumím" not in duvod
+
+
+def test_a_heading_glued_to_a_sentence_is_named_as_such() -> None:
+    """NADPIS SPLYNULÝ S VĚTOU *(W‑64)*. „Obezita: Domácí mazlíčci trpí
+    nadváhou." má kořenem NADPIS a skutečná věta pod ním visí jako
+    `appos` — se svým podmětem i přísudkem. Říct u ní „nemá ani jeden
+    člen, který bych uměl pojmenovat" je NEPRAVDA O TEXTU: členy tam
+    jsou, jen ne pod tím kořenem.
+
+    **Číst se to nezačne, a je to rozhodnutí, ne mez.** Přesadit kořen by
+    znamenalo rozhodnout, že nadpis do promluvy nepatří — a to je výrok
+    o TEXTU, ne o rozboru.
+    """
+    from core_semantics.cascade import why_nothing
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Obezita", "obezita", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(2, ":", ":", "PUNCT", 4, "punct"),
+            _token(3, "mazlíčci", "mazlíček", "NOUN", 4, "nsubj", Case="Nom", Gender="Masc", Number="Plur"),
+            _token(4, "trpí", "trpět", "VERB", 1, "appos", Number="Plur", Person="3", Polarity="Pos"),
+            _token(5, "nadváhou", "nadváha", "NOUN", 4, "obl:arg", Case="Ins", Gender="Fem", Number="Sing"),
+            _token(6, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    assert generate(reading) == (), "kořen se nepřesazuje — to je výrok o textu"
+    duvod = why_nothing(reading)
+    assert "NADPIS" in duvod and "APOZICE" in duvod
+    assert "ani jeden člen" not in duvod
+    assert "segmentace" in duvod
+
+
+def test_a_nominal_apposition_is_not_a_heading() -> None:
+    """PROTIPŘÍKLAD, bez kterého by hláška o nadpisu spadla na každou
+    apozici: „Karel Čapek, spisovatel, zemřel." má `appos` TAKY, jenže
+    JMENNOU — bez vlastního přísudku. Rozlišuje to rozbor, ne dvojtečka
+    v textu."""
+    from core_semantics.cascade import why_nothing
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Obezita", "obezita", "NOUN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(2, "nemoc", "nemoc", "NOUN", 1, "appos", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(3, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    assert "NADPIS" not in why_nothing(reading)
