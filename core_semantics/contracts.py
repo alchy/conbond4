@@ -1811,6 +1811,39 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-20",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "UZEL SE NEJMENUJE ZKRÁCENĚ *(W‑72)*. „Bydlí v **Hradci "
+            "Králové**.“ dávalo uzel `·Hradec` — VLASTNÍ JMÉNO, KTERÉ "
+            "V TEXTU TAKHLE NESTOJÍ. Je to zrcadlo W‑73: tam měla role "
+            "víc členů, tady má jméno víc slov. UD ten díl váže `nmod`, "
+            "ne `flat`, protože se NESHODUJE V PÁDĚ (`Hradci` je `Loc`, "
+            "`Králové` `Gen`) — a proto ho `NAME_CONTINUATION` míjelo. "
+            "ROZLIŠUJE TO STAVBA, NE SEZNAM MĚST: hlava i díl jsou "
+            "`PROPN` a genitiv je HOLÝ. Ptát se nemusí, a je to "
+            "ZMĚŘENO, ne předpokládáno: „Čapka Josefa“ i „Ludvíku "
+            "Rittersberka“ váže rozbor `flat`, tedy tou větví, která je "
+            "skládá správně od B‑21 — nejsou to tři případy téže věci, "
+            "jak se zdálo z celého stromu, ale dva různé tvary. "
+            "PŘEDLOŽKOVÉ JMÉNO („Rožnov **pod** Radhoštěm“) JE "
+            "POJMENOVANÁ MEZ: holý genitiv to není, takže se neskládá "
+            "a hlásí se dál. Co se do jména složilo, PŘÍVLASTEK UŽ "
+            "NENÍ — jinak by vedle věty stál druhý výrok o části "
+            "toho jména. V korpusu je projev 0 (43 `flat` se skládá "
+            "správně a `nmod` pod zmínkou role tam není ani jednou), "
+            "takže tohle drží JEN zkouška"
+        ),
+        anchor="core_semantics.cascade:name_parts_of",
+        entry="cascade(",
+        enforced_by=(
+            "test_a_name_in_the_genitive_is_part_of_the_name",
+            "test_a_prepositional_second_part_is_not_composed",
+            "test_a_flat_second_part_still_composes",
+            "test_a_composed_name_part_is_not_reported_as_an_attribute",
+        ),
+    ),
+    Clause(
         id="S-43",
         boundary=SESSION_STORAGE,
         promise=(

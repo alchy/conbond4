@@ -439,8 +439,28 @@ def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
             (
                 child
                 for child in reading.children(token.index)
-                if base_deprel(child.deprel) in NAME_CONTINUATION
-                and child.upos == "PROPN"
+                if child.upos == "PROPN"
+                and (
+                    base_deprel(child.deprel) in NAME_CONTINUATION
+                    # DRUHÝ DÍL JMÉNA V GENITIVU *(W‑72)*. „v **Hradci
+                    # Králové**" dávalo uzel `·Hradec` — vlastní jméno,
+                    # které v textu takhle NESTOJÍ. UD tenhle díl váže
+                    # `nmod`, ne `flat`, protože se neshoduje v pádě:
+                    # `Hradci` je `Loc`, `Králové` `Gen`, a genitiv tam
+                    # stojí napevno.
+                    #
+                    # Rozliší se to STAVBOU, ne seznamem měst: hlava
+                    # i díl jsou `PROPN` a genitiv je HOLÝ. „Čapka
+                    # Josefa" ani „Ludvíku Rittersberka" sem nespadnou —
+                    # rozbor je váže `flat`, tedy tou první větví, a ta
+                    # je skládá správně už od B‑21. Předložkové jméno
+                    # („Rožnov **pod** Radhoštěm") je POJMENOVANÁ MEZ:
+                    # holé to není, takže se neskládá a hlásí se dál.
+                    or (
+                        base_deprel(child.deprel) == "nmod"
+                        and is_bare_genitive(child, reading)
+                    )
+                )
             ),
             key=lambda t: t.index,
         )
@@ -3165,6 +3185,11 @@ def genitive_attributes(
         role.mention.token_index: role.mention.lemma
         for role in predication.roles
     }
+    # CO SE SLOŽILO DO JMÉNA, PŘÍVLASTEK UŽ NENÍ *(W‑72)*. „v Hradci
+    # Králové" dá jeden uzel `·Hradec_Králové`; ohlásit k tomu ještě
+    # vztah „Hradec_Králové Králové" znamená tvrdit, že vedle věty stojí
+    # druhý výrok o něčem, co je součástí toho jména.
+    pohlcene = {index for role in predication.roles for index in role.absorbed}
     # GENITIV, KTERÝ SI UŽ NÁROKUJE JÁDROVÁ RELACE, PŘÍVLASTEK NENÍ
     # *(W‑58)*. „Petrovice jsou součástí **Plzně**." a „byl prvním
     # předsedou **odboru**." mají STAVBU IDENTICKOU — u spony je jmenná
@@ -3179,6 +3204,8 @@ def genitive_attributes(
     najdene: list[tuple[str, str, int]] = []
     for token in reading.tokens:
         if token.deprel != "nmod" or not is_bare_genitive(token, reading):
+            continue
+        if token.index in pohlcene:
             continue
         head = _token_at(token.head, reading)
         if head is None or head.upos not in ("NOUN", "PROPN"):

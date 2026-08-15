@@ -1,6 +1,137 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — W‑73 je výborná, a odhalila starší díru: **B‑26**
+## Status: 🟢 PASS — B‑26 zavřená a **tvoje číslo bylo správné, moje ne**
+
+**Kolo #125.** 1195 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
+doložky **89/89** (nová **S‑43**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**, W‑71 dál **0**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Nejdřív moje chyba, protože na ni čekáš a máš pravdu
+
+**Ptal ses, kterou definici jsem použil pro „185", místo abys k tomu
+rozdílu vymyslel příběh. Doměřil jsem to a JE TO MOJE CHYBA:**
+
+```
+» Věta jmenuje víc členů v roli „kdo“ — „chovatelé“.
+                                  ↑↑↑↑↑
+   moje sonda počítala „kdo“ jako ČLEN. Je to JMÉNO ROLE.
+
+po opravě:   členy bez jména role   180   ← tvoje číslo
+             po rolích               177
+             rozdíl A ∖ B              3   (trojčlenné výčty)
+```
+
+**180 sedí přesně.** Je to počtvrté, co mi tenhle druh nepřesnosti
+projde do předávky — a **to, že ses zeptal místo abys to zaokrouhlil,
+je přesně ta věc, kterou tady vymáhám po obou.**
+
+---
+
+## B‑26 · všechny čtyři vlastnosti, každá během
+
+```
+(a) tah hlásí   statements = (s0001 … s0006)   rukojeť = v1
+    revoke_utterance("v1")  strhlo  všech šest
+(b) přišel Petr?  A → U        přišla Jana?  A → U
+(c) „Petr odešel.“ z JINÉ promluvy, sdílí uzel Petr:
+       před odvoláním A  →  po odvolání A        ← nestrhlo se
+(d) statement_id dál nese ten první, nic se nerozbilo
+```
+
+**A souřadný PŘÍSUDEK z T94 je vyřešený toutéž věcí, ověřil jsem obě:**
+
+```
+» Petr přišel a odešel.                         přijít A→U · odejít A→U
+» Jenže roboti se začali opotřebovávat a umírali.  obojí A→U
+```
+
+**Dvě rozhodnutí jsou správná a obě jsi zdůvodnil líp, než jsem žádal:**
+
+**Rukojeť je vlastní pole, ne text čtený z provenience.** *„Provenience
+je poznámka pro člověka, kdežto rukojeť je hodnota, kterou kód
+porovnává."* — to je rodina W‑32 … W‑81 rozpoznaná dřív, než do ní
+někdo spadl.
+
+**Seznam zapsaných se bere Z BÁZE, ne se sbírá po cestě.** *„Ta cesta,
+která by na to zapomněla, by mlčela."* Přesně tak — a je to tentýž
+důvod, proč u B‑25 nesměla značka vznikat z prázdné stopy.
+
+**Sourozenci nejsou odvození.** Že jsi neohnul `derived_from`, abys
+ušetřil pole, je správně: `derived_from` znamená *„plyne z"*, a jedna
+půlka věty z druhé neplyne.
+
+**W‑74 vrácena** na `assert "jak:běžet" in hlaseni` i s poznámkou proč.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené beze změny: **W‑72** (víceslovné jméno, uzel
+`·Hradec`), zvratné `si` jako role (5 vět), **160 konjunktů, jejichž
+hlava rolí není**, W‑67 (prázdný `reason` u `ZAPSÁNO`, u Agenta 3),
+vnořené datum (3), množství slovem (14), počet číslicí (11), kolize
+(10 z 12), 26 ze 42 `v+Loc`, úřad, příbuzenství, `nmod` pod obecným
+jménem, W‑54, W‑60, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30, W‑31,
+W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel »vše«"* zůstává otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**Další je W‑72 — víceslovné jméno.** Bereš ho před těmi 160 konjunkty
+a důvod je pořád táž hierarchie: **160 konjunktů je chybějící schopnost,
+`·Hradec` je nepravda o textu** — poslední známý člen třídy, kterou jsem
+od #118 vedl jako prázdnou.
+
+**A je to zrcadlo toho, cos právě dodělal.** Řekls to v #123 sám:
+**role má víc členů, jméno má víc slov.** U role ses zeptal, protože
+z rozboru to poznat nešlo. **Tady se ptát nejspíš nemusíš** — ale to je
+tvrzení, které chci vidět změřené, ne předpokládané.
+
+**Vlastnost jako protipříklad:**
+
+* **žádný uzel se nejmenuje ZKRÁCENĚ.** Buď `·Hradec_Králové`, nebo se
+  systém zeptá — **`·Hradec` u věty, kde stojí „Hradci Králové", nesmí
+  zůstat ani jako mezistav**;
+* **nesloučí se, co jméno není:** *„Čapka Josefa"* a *„Ludvíku
+  Rittersberka"* (obrácené pořadí, šum rozboru) **zůstanou oddělené** —
+  a jestli je od jména nejde odlišit, **ptá se u všech tří**;
+* **do báze nesmí projít zkrácené jméno** ani po zodpovězení všech
+  ostatních otázek — dnes to drží jen tím, že se ta věta nezapíše;
+* podle stálého pravidla **kladný, sporný a záporný případ**; ty tři
+  věty z korpusu se na to hodí.
+
+**Změř předem a na projev:** kolik uzlů v korpusu dnes vzniká z jména,
+které má v textu víc slov — **`flat`, `nmod` s `PROPN`, i příjmení za
+křestním**. Jestli jsou to jednotky, je to malá oprava; jestli desítky,
+chci to vědět dřív než kód.
+
+**Podlaha:** **180** vět s víc než jedním čekajícím členem (tvoje
+definice, ověřená), **0 mlčení**, 0 překlopení ◐ → ✓, 0 hlášení proti
+změněné značce, W‑71 = 0, tři věty W‑73 beze změny, **kolektivní čtení
+neprosakuje** (`zvedl klavír Petr?` = `U`), **`revoke_utterance` bere
+zpět celou větu na OBOU cestách a nestrhne cizí promluvu**, 21 domén,
+`standing_metrics()` 21/107/51/33/26, relace 9/9, gate *Farmaka*,
+parita ≥ 55/55, doložky ≥ 89/89, nula `RECALL_FAILURE`, `mypy --strict`
+čistý, **celý korpus bez pádu, běh před předávkou, každý ✔ doložený
+výpisem**.
+
+---
+
+## ARCHIV — kolo #124
+
+### Status: 🔴 FAIL — W‑73 je výborná, a odhalila starší díru: **B‑26**
 
 **Kolo #124.** 1189 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
 doložky **88/88** (nová **S‑42**), `standing_metrics()` =

@@ -3054,3 +3054,63 @@ def test_a_subtyped_copula_reads_the_same_sentence() -> None:
     podtyp = generate(_copula_sentence("cop:expl"))[0].predication
     holy = generate(_copula_sentence("cop"))[0].predication
     assert str(podtyp) == str(holy)
+
+
+def _name_with_second_part(deprel: str, case: str, *, preposition: bool = False) -> Reading:
+    """„Bydlí v Hradci Králové." — jediné, co se mění, je vazba druhého
+    dílu jména a jeho pád."""
+    tokens = [
+        _token(1, "Bydlí", "bydlet", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+        _token(2, "v", "v", "ADP", 3, "case", AdpType="Prep", Case="Loc"),
+        _token(3, "Hradci", "Hradec", "PROPN", 1, "obl", Case="Loc", Gender="Masc", NameType="Geo", Number="Sing"),
+        _token(5, "Králové", "Králové", "PROPN", 3, deprel, Case=case, Gender="Fem", NameType="Geo", Number="Sing"),
+        _token(6, ".", ".", "PUNCT", 1, "punct"),
+    ]
+    if preposition:
+        tokens.insert(3, _token(4, "pod", "pod", "ADP", 5, "case", AdpType="Prep", Case="Ins"))
+    return Reading(tokens=tuple(tokens), provenance="test")
+
+
+def test_a_name_in_the_genitive_is_part_of_the_name() -> None:
+    """UZEL SE NEJMENUJE ZKRÁCENĚ *(W‑72)*. „v **Hradci Králové**"
+    dávalo `·Hradec` — vlastní jméno, které v textu takhle NESTOJÍ.
+
+    UD ten díl váže `nmod`, ne `flat`, protože se neshoduje v pádě:
+    `Hradci` je `Loc`, `Králové` `Gen`. Rozliší se to STAVBOU, ne
+    seznamem měst: hlava i díl jsou `PROPN` a genitiv je HOLÝ."""
+    predication = cascade(
+        _name_with_second_part("nmod", "Gen"), tiers=HARD_TIERS
+    ).survivors[0].predication
+    jmena = [r.mention.lemma for r in predication.roles]
+    assert "Hradec_Králové" in jmena
+    assert "Hradec" not in jmena, "zkrácené jméno nesmí zůstat ani jako mezistav"
+
+
+def test_a_prepositional_second_part_is_not_composed() -> None:
+    """POJMENOVANÁ MEZ: „Rožnov **pod** Radhoštěm" holý genitiv nemá,
+    takže se neskládá — a hlásí se dál. Je to mez, ne tichý default."""
+    predication = cascade(
+        _name_with_second_part("nmod", "Ins", preposition=True), tiers=HARD_TIERS
+    ).survivors[0].predication
+    assert all("Králové" not in r.mention.lemma for r in predication.roles)
+
+
+def test_a_flat_second_part_still_composes() -> None:
+    """PROTIPŘÍKLAD, KTERÝ HLÍDÁ, ŽE SE NIC NEROZBILO: `flat` se skládal
+    od B‑21 a skládá se dál — „Čapka Josefa" i „Ludvíku Rittersberka"
+    jdou touhle větví, ne tou novou."""
+    predication = cascade(
+        _name_with_second_part("flat", "Loc"), tiers=HARD_TIERS
+    ).survivors[0].predication
+    assert any(r.mention.lemma == "Hradec_Králové" for r in predication.roles)
+
+
+def test_a_composed_name_part_is_not_reported_as_an_attribute() -> None:
+    """CO SE SLOŽILO DO JMÉNA, PŘÍVLASTEK UŽ NENÍ *(W‑72)*. Ohlásit
+    k jednomu uzlu ještě vztah „Hradec_Králové Králové" znamená tvrdit,
+    že vedle věty stojí druhý výrok o části toho jména."""
+    from core_semantics.cascade import genitive_attributes
+
+    reading = _name_with_second_part("nmod", "Gen")
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    assert genitive_attributes(reading, predication) == ()
