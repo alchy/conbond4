@@ -744,21 +744,54 @@ def _quantified(subject: "Mention", reading: Reading) -> bool:
     )
 
 
+#: Spojky, u kterých koordinace SČÍTÁ. „či" a „nebo" nabízejí alternativu,
+#: takže „Vesmír či kosmos JE…" je správně v jednotném čísle; „ale" uvozuje
+#: doplnění, ne druhý podmět.
+CONJUNCTIVE_LEMMAS = ("a", "i")
+
+
 def _coordinated(subject: "Mention", reading: Reading) -> bool:
-    """Je podmět KOORDINACE? *(W‑35)*
+    """Žádá tahle koordinace podmětu MNOŽNÉ číslo? *(W‑35)*
 
     „Karel Čapek **a** jeho bratr Josef **byli** aktéry…" Přísudek je
     v plurálu podle CELÉ koordinace, ale UD dává jako `nsubj` první člen
     v singuláru a zbytek věší na něj jako `conj`. Shoda se pak počítá
     proti jednomu členu místo proti celé skupině.
 
-    Rozhoduje jmenovka rozboru, ne spojka: `conj` je hrana koordinace,
-    kdežto „a" může spojovat i dvě věty nebo dva přívlastky.
+    **Pravidlo je užší, než se na první pohled zdá, a zúžilo ho MĚŘENÍ.**
+    Verze „dva a víc členů → plurál" shodila na korpusu sedm vět, které
+    jsou bezvadná čeština. Plurál žádá koordinace jen tehdy, když
+    SČÍTÁ a přísudek stojí ZA podmětem:
+
+    * **disjunkce** nabízí alternativu, ne součet — „Vesmír **či** kosmos
+      **je**…" je správně v jednotném čísle;
+    * **přísudek před podmětem** se v češtině smí shodovat s NEJBLIŽŠÍM
+      členem — „Ke chřipce **se přidal** zánět ledvin a zápal plic.";
+    * `ale` uvozuje doplnění, ne druhý podmět.
+
+    Rozhoduje jmenovka rozboru, ne spojka sama: `conj` je hrana
+    koordinace, kdežto „a" spojuje i dvě věty nebo dva přívlastky. Lemma
+    spojky se čte až Z TÉ HRANY (`cc` pod členem koordinace).
     """
-    return any(
-        token.head == subject.token_index and token.deprel == "conj"
+    members = [
+        token
         for token in reading.tokens
-    )
+        if token.head == subject.token_index and token.deprel == "conj"
+    ]
+    if not members:
+        return False
+    head = _predicate_head(reading)
+    if head is not None and head[1].index < subject.token_index:
+        # Přísudek stojí PŘED podmětem — čeština tu připouští shodu
+        # s nejbližším členem, takže plurál žádat nelze.
+        return False
+    marks = [
+        token.lemma
+        for member in members
+        for token in reading.tokens
+        if token.head == member.index and token.deprel == "cc"
+    ]
+    return bool(marks) and all(mark in CONJUNCTIVE_LEMMAS for mark in marks)
 
 
 def agreement_tier(

@@ -723,14 +723,33 @@ def test_the_two_branches_never_swap_places() -> None:
 
 
 def _coordinated_clause(verb: str, verb_feats: dict[str, str]) -> Reading:
-    """„Petr a Pavel <sloveso> knihu." — koordinace jako `conj` pod podmětem."""
+    """„Petr a Pavel <sloveso> knihu."
+
+    Spojka `a` visí jako `cc` pod druhým členem — přesně jak ji dává UD,
+    a je to podstatné: typ koordinace se čte Z TÉ HRANY, ne z pořadí slov.
+    """
     return Reading(
         tokens=(
-            _token(1, "Petr", "Petr", "PROPN", 3, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
-            _token(2, "Pavel", "Pavel", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Masc"),
-            _token(3, verb, verb.lower(), "VERB", 0, "root", **verb_feats),
-            _token(4, "knihu", "kniha", "NOUN", 3, "obj", Case="Acc", Number="Sing", Gender="Fem"),
-            _token(5, ".", ".", "PUNCT", 3, "punct"),
+            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, "a", "a", "CCONJ", 3, "cc"),
+            _token(3, "Pavel", "Pavel", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(4, verb, verb.lower(), "VERB", 0, "root", **verb_feats),
+            _token(5, "knihu", "kniha", "NOUN", 4, "obj", Case="Acc", Number="Sing", Gender="Fem"),
+            _token(6, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def _coordination_with(mark: str, verb: str, verb_feats: dict[str, str]) -> Reading:
+    """Táž stavba, jiná spojka — minimální pár na typ koordinace."""
+    return Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, mark, mark, "CCONJ", 3, "cc"),
+            _token(3, "Pavel", "Pavel", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(4, verb, verb.lower(), "VERB", 0, "root", **verb_feats),
+            _token(5, ".", ".", "PUNCT", 4, "punct"),
         ),
         provenance="test",
     )
@@ -754,6 +773,44 @@ def test_a_coordinated_subject_with_a_singular_predicate_still_falls() -> None:
     assert why is not None and "MNOŽNÉM" in why
 
 
+def test_a_disjunction_does_not_demand_the_plural() -> None:
+    """„Vesmír **či** kosmos JE…" — disjunkce nabízí ALTERNATIVU, ne
+    součet, takže jednotné číslo je správně. Verze pravidla „dva a víc
+    členů → plurál" tuhle větu shodila; zúžilo ho MĚŘENÍ na korpusu, ne
+    úvaha od stolu."""
+    reading = _coordination_with("či", "četl", {"Number": "Sing", "Gender": "Masc"})
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors, why
+
+
+def test_a_conjunction_still_demands_the_plural() -> None:
+    """Druhá půlka téhož minimálního páru: táž stavba se spojkou „a"
+    plurál ŽÁDÁ. Kdyby zúžení spolklo i tenhle případ, byla by z opravy
+    díra."""
+    reading = _coordination_with("a", "četl", {"Number": "Sing", "Gender": "Masc"})
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors == ()
+    assert why is not None and "MNOŽNÉM" in why
+
+
+def test_a_predicate_before_the_subject_may_agree_with_the_nearest() -> None:
+    """„Ke chřipce **se přidal** zánět ledvin a zápal plic." — když
+    přísudek stojí PŘED podmětem, čeština připouští shodu s nejbližším
+    členem. Žádat tu plurál znamená zahodit bezvadnou větu."""
+    reading = Reading(
+        tokens=(
+            _token(1, "přidal", "přidat", "VERB", 0, "root", Number="Sing", Gender="Masc"),
+            _token(2, "zánět", "zánět", "NOUN", 1, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(3, "a", "a", "CCONJ", 4, "cc"),
+            _token(4, "zápal", "zápal", "NOUN", 2, "conj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(5, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors, why
+
+
 def test_the_gender_of_a_coordination_is_a_declared_limit() -> None:
     """MEZ SE ŘÍKÁ NAHLAS. „Petr a Marie četli." má rod, který čeština
     počítá pravidly (muž + žena → mužský životný), ne průnikem. Patro to
@@ -767,10 +824,11 @@ def test_the_gender_of_a_coordination_is_a_declared_limit() -> None:
 
     mixed = Reading(
         tokens=(
-            _token(1, "Petr", "Petr", "PROPN", 3, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
-            _token(2, "Marie", "Marie", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Fem"),
-            _token(3, "četli", "číst", "VERB", 0, "root", Number="Plur", Gender="Masc"),
-            _token(4, ".", ".", "PUNCT", 3, "punct"),
+            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(2, "a", "a", "CCONJ", 3, "cc"),
+            _token(3, "Marie", "Marie", "PROPN", 1, "conj", Case="Nom", Number="Sing", Gender="Fem"),
+            _token(4, "četli", "číst", "VERB", 0, "root", Number="Plur", Gender="Masc"),
+            _token(5, ".", ".", "PUNCT", 4, "punct"),
         ),
         provenance="test",
     )

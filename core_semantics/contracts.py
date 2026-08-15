@@ -1009,8 +1009,13 @@ CONTRACTS: tuple[Clause, ...] = (
         boundary=ORACLE_CASCADE,
         promise=(
             "u KOORDINOVANÉHO PODMĚTU je řídícím členem CELÁ KOORDINACE: "
-            "„Karel a jeho bratr Josef BYLI…“ — dva a víc členů žádá "
-            "MNOŽNÉ číslo, ať UD označí jako `nsubj` kohokoli. Pravidlo je "
+            "„Karel a jeho bratr Josef BYLI…“ — koordinace, která SČÍTÁ "
+            "a jejíž přísudek stojí ZA podmětem, žádá MNOŽNÉ číslo, ať UD "
+            "označí jako `nsubj` kohokoli. Pravidlo ZÚŽILO MĚŘENÍ, ne "
+            "úvaha: verze „dva a víc členů → plurál“ shodila na korpusu "
+            "sedm bezvadných vět. Disjunkce („či“) nabízí ALTERNATIVU, ne "
+            "součet, a přísudek PŘED podmětem se smí shodovat "
+            "s nejbližším členem — obojí je legitimní jednotné číslo. Pravidlo je "
             "KLADNÉ jako u kvantifikace: „Petr a Pavel četl knihu.“ padne "
             "a řekne proč. Koordinace se pozná z hrany `conj`, ne ze "
             "spojky — „a“ spojuje i dvě věty nebo dva přívlastky. ROD SE "
@@ -1024,6 +1029,9 @@ CONTRACTS: tuple[Clause, ...] = (
         entry="agreement_tier(",
         enforced_by=(
             "test_a_coordinated_subject_no_longer_blocks_the_reading",
+            "test_a_disjunction_does_not_demand_the_plural",
+            "test_a_conjunction_still_demands_the_plural",
+            "test_a_predicate_before_the_subject_may_agree_with_the_nearest",
             "test_a_coordinated_subject_with_a_singular_predicate_still_falls",
             "test_the_gender_of_a_coordination_is_a_declared_limit",
             "test_a_quantified_subject_is_not_treated_as_a_coordination",
