@@ -770,6 +770,9 @@ class Session:
         #: jiný výchozí lexikon při přehrání *(W‑51)*.
         self.notes: list[str] = []
         self._pending: Rule | None = None
+        #: Co o právě čtené větě platí — ztracené členy a stopa *(B‑25)*.
+        self._standing_lost: tuple[tuple[str, str], ...] = ()
+        self._standing_trace: tuple[str, ...] = ()
         #: `LEX` je program vedle `ONTO` a `DIA`, takže patří do sezení,
         #: ne do volání. Jinak by dvě věty téhož dialogu mohly být čteny
         #: podle jiných naučených vzorů a „diff naučeného" (§ 10) by nešel
@@ -1311,6 +1314,9 @@ class Session:
         turn: Turn,
         predication: Predication,
         prefix: Sequence[str],
+        *,
+        lost: Sequence[tuple[str, str]] | None = None,
+        trace: Sequence[str] | None = None,
     ) -> TurnResult:
         """Čtení → zakotvení → směrování, společné pro všechny tři cesty.
 
@@ -1318,6 +1324,15 @@ class Session:
         vlastní kopii, rozešly by se — a rozešly by se zrovna v tom, jestli
         se po odpovědi opravdu ZNOVU ZKUSÍ zapsat, což je celý smysl toho,
         že se člověk odpovídat obtěžoval.
+
+        **CO O VĚTĚ PLATÍ, SE NEČTE Z TAHU, KTERÝ NA NI ODPOVÍDÁ** *(B‑25)*.
+        Ztracené členy a stopa se braly z `turn`, jenže tah ODPOVĚDI je
+        vlastní tah a obojí má prázdné — takže odpověď na jednu otázku
+        zrušila ostatní a věta se prohlásila za přečtenou. Značka `✓`
+        vznikala Z NEPŘÍTOMNOSTI DŮKAZU: `has_dropped` se ptala stopy,
+        která na tahové cestě nebyla. Kdo `_settle` volá, proto dodá, co
+        o větě platí PO jeho tahu; `_standing` drží poslední známý stav
+        pro tahy, které větu nečtou znovu, jen ji doplňují.
 
         **Otázka se skládá AŽ Z VÝSLEDKU ZAKOTVENÍ** *(G‑4)*. Role, kterou
         zakotvení doložilo, otevřenou otázku nemá — a značka `◐` se řídí
@@ -1337,6 +1352,19 @@ class Session:
         # Je to zrcadlo nálezu z N‑3: tam se otázka četla ze STOPY, tedy
         # z logu, tady se počítala PŘED krokem, který ji ruší. Obojí má
         # touž opravu — ptát se AŽ VÝSLEDKU.
+        # CO O TÉHLE VĚTĚ PLATÍ TEĎ *(B‑25)*. Tah čtení to nese sám;
+        # tah ODPOVĚDI, který větu čte znovu, to dodá z nového verdiktu;
+        # tah, který ji jen doplňuje (kvantifikátor, odkaz), zdědí
+        # poslední známý stav — protože rozbor se jím nemění, takže
+        # ztracený člen ztraceným zůstal.
+        stale_ztraceno: tuple[tuple[str, str], ...] = tuple(
+            lost if lost is not None else (turn.lost or self._standing_lost)
+        )
+        stale_stopa: tuple[str, ...] = tuple(
+            trace if trace is not None else (turn.trace or self._standing_trace)
+        )
+        self._standing_lost = stale_ztraceno
+        self._standing_trace = stale_stopa
         grounded = ground(predication, self.kb.view(), self._discourse)
         # Kontext se posouvá jen po větě, která se OPRAVDU zakotvila.
         # Věta, u které se systém ptá, ještě není řečená do konce, a
@@ -1375,7 +1403,7 @@ class Session:
             part
             for part in (
                 open_roles_question(still_open),
-                lost_question(turn.lost),
+                lost_question(stale_ztraceno),
                 # Otázka na význam povrchové role (N‑3). Počítá se
                 # z HOTOVÉ predikace, ne ze stopy — jinak by se ptala na
                 # tvary, které pozdější patro spotřebovalo.
@@ -1409,10 +1437,10 @@ class Session:
         # s otevřenou rolí by na `role()` spadlo na `UnquantifiedRole`,
         # a čtení, ze kterého vypadl kus věty, není celá věta. V obou
         # případech je odevzdané míň, než ta značka říká.
-        partial = question is not None or has_dropped(turn.trace)
+        partial = question is not None or has_dropped(stale_stopa)
         mark = "◐ přečteno, neúplné" if partial else "✓ přečteno"
         lines = [*prefix, f"{mark}  {predication}"]
-        lines.extend(f"  {step}" for step in turn.trace)
+        lines.extend(f"  {step}" for step in stale_stopa)
         lines.extend(f"  {note}" for note in grounded.notes)
         lines.extend(f"  {anchor}" for anchor in grounded.anchors)
         if question:
@@ -1461,7 +1489,7 @@ class Session:
         )
         routed = (
             None
-            if turn.lost
+            if stale_ztraceno
             or pending_relation
             or pending_complete
             or pending_role_name
@@ -1999,7 +2027,14 @@ class Session:
         marne = _pointless_answer(turn, verdict.decided.predication)
         if marne is not None:
             prefix.append(marne)
-        return self._settle(index, turn, verdict.decided.predication, prefix)
+        return self._settle(
+            index,
+            turn,
+            verdict.decided.predication,
+            prefix,
+            lost=verdict.lost,
+            trace=verdict.trace,
+        )
 
     def _name_relation_here(self, index: int, turn: Turn) -> TurnResult:
         """`→⊆1` — jádrová relace pro TUHLE VĚTU. Nic se neučí."""
@@ -2054,7 +2089,14 @@ class Session:
                 lines=(*prefix, "→ větu se ani tak přečíst nepodařilo"),
                 trace=verdict.trace,
             )
-        return self._settle(index, turn, verdict.decided.predication, prefix)
+        return self._settle(
+            index,
+            turn,
+            verdict.decided.predication,
+            prefix,
+            lost=verdict.lost,
+            trace=verdict.trace,
+        )
 
     def _declare_distinct(self, index: int, turn: Turn) -> TurnResult:
         """`!≠` — „ti dva nejsou tíž".

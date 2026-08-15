@@ -1,6 +1,193 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — druhé „ne" v řadě, a lepší než to první
+## Status: 🔴 FAIL — N‑1 jsi zavřel dobře, a pod ním leží větší: **B‑25**
+
+**Kolo #121.** 1170 zkoušek (+5), `mypy --strict` čistý na 62 souborech,
+doložky **85/85** (nová **S‑39** je můj counterexample doslova),
+`standing_metrics()` = **21/107/51/33/26**, parita 55/55, jádrové relace
+9/9, `U` 11, nula `RECALL_FAILURE`. **Moje vlastní baterie 20 ✔ / 0 ✘**
+— B‑1, B‑2 (ani `derivation()` nezaloží uzel), matice ⪯ včetně
+konkrétní × ∃ → U, disjoint → N, absence → U, CONFLICT s oběma důkazy,
+**sortové stráže 6/6**, smyčka `before(t,t)` odmítnuta a báze ji přežila,
+nedestruktivní `same_as`, **I‑16 blokuje 9/9 jádrových predikátů**,
+kvantifikátor jen na `RoleTerm`.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## N‑1 · rozhodl jsi dobře a doložil jsi to během
+
+**Reprodukoval jsem obě větve na skutečné větě, ne na záznamu:**
+
+```
+→@ nsubj>conj+Nom ~ kdo
+  ✓ naučeno  role nsubj>conj+Nom ~ kdo [hypothesis, tah 2]
+    ale ČTENÍ SE NEZMĚNILO: roli „kdo“ drží „zánět“, takže „zápal“
+    zůstává mimo čtení. Mapování platí dál — zabere tam, kde je volná
+→@ nsubj>conj+Nom ~ jak
+  ✓ naučeno … → přidat(jak:zápal, k+Dat:chřipka, kdo:∀zánět)   ← mlčí, správně
+```
+
+**Nepřijmout by znamenalo zahodit platné zobecnění — souhlasím**, a
+rozdíl proti `→∈` bez nabídky (B‑23) jsi pojmenoval přesně: tam se nemá
+učit *co*.
+
+**A že jsi ohlásil, jak tě první sonda svedla, dřív než jsem se zeptal,
+je to nejcennější v celé předávce.** Číslo „212 neúčinných", které měřilo
+hlavně srážky s napevno zvoleným `jak`, by se citovalo dodnes.
+
+---
+
+## Ale to číslo pořád neměří, co si o něm přečte příští čtenář
+
+**„ÚČINNÝCH 1388 z 1388, NAPRÁZDNO NULA" znamená: »když si člověk vybere
+jméno, které je volné, člen se uchytí«.** To není totéž jako *„člen jde
+pojmenovat"*. **Změřil jsem tu druhou otázku sám** — úzce, jen přímý
+souřadný člen obsazené role (`ROLE>conj+Pád`), a **každý tah jsem
+skutečně zahrál**:
+
+```
+vět s přímým souřadným členem              39 z 238
+ztracených členů toho tvaru                65
+   PRAVDIVÉ jméno role je OBSAZENÉ         50
+tahů zahráno pravdivým jménem              50
+   čtení beze změny                        44
+   čtení se změnilo                         6      ← a tohle je B‑25
+```
+
+**U padesáti z pětašedesáti nemá pravdivá odpověď kam jít.** „Někteří
+veterináři a **chovatelé** se postavili" — `chovatelé` je podmět, `kdo`
+drží `veterináři`, a jediné, co se uchytí, je odpověď, která o tom členu
+tvrdí něco jiného, než co ve větě je. **Účinnost koupená nepravdivým
+jménem není účinnost.**
+
+**Takže na moji otázku „jen souřadný člen a `nmod`, nebo obecnější?"
+odpověď „ani jedno" nesedí:** srážka **je** ta souřadná třída, jen
+popsaná ze strany role místo ze strany tvaru.
+
+---
+
+## Critical Blockers
+
+### B‑25 · odpověď na JEDNU otázku zruší OSTATNÍ a věta se prohlásí za přečtenou
+
+**Změřeno přes celý korpus, každá položka je zahraný tah:**
+
+```
+vět, kde se systém ptá na VÍC členů najednou     178 z 238
+  po odpovědi na JEDEN tvar se ptá dál            21
+  po odpovědi na JEDEN tvar UŽ SE NEPTÁ          157
+     z toho značka přeskočila ◐ → ✓ přečteno       9
+     a hlášení u toho řeklo „ČTENÍ SE NEZMĚNILO“   5
+```
+
+**Nejostřejší kus:**
+
+```
+» Státy, města a obce v západních zemích často vydávají místní nařízení,
+  která omezují počet nebo druh domácích zvířat, …
+   ptal se na 15 členů, odpovězen 1 („města“)
+   PŘED: ◐ přečteno, neúplné  vydávat(co:∃místní_nařízení, jak:často, kdo:∀stát)
+   PO  : ✓ přečteno          vydávat(co:∃místní_nařízení, jak:často, kdo:∀stát)
+   nová otázka: ŽÁDNÁ
+```
+
+**Čtrnáct členů zůstalo venku, systém se na ně přestal ptát a větu
+označil za PŘEČTENOU.** A v pěti případech u toho tvé nové hlášení
+tvrdí „ČTENÍ SE NEZMĚNILO" — **jenže změnilo se to nejdůležitější:
+věta přestala být neúplná.** Dvě věty téhož hlášení si odporují:
+
+```
+✓ přečteno  moci_vztahovat(jak:rovněž, kdo:∀další_pravidlo)
+  ale ČTENÍ SE NEZMĚNILO: … takže „nařízení“ zůstává mimo čtení
+```
+
+**Mechanismus jsem našel, ať to nemusíš hledat:**
+
+```
+STOPA PŘED:  generátor: 1 čtení
+             [ZAHOZENO: „odlišná“, „nařízení“, „údržby“ — role není]
+STOPA PO TAHU:  (prázdná)
+```
+
+`session.py:1413` počítá `partial = question is not None or
+has_dropped(turn.trace)` — a **stopa po tahu je prázdná**, takže
+`has_dropped` nevidí nic a značka vyjde `✓` **z nepřítomnosti důkazu**.
+Tvůj vlastní komentář o dva řádky výš to říká líp než já: *„čtení, ze
+kterého vypadl kus věty, není celá věta."*
+
+**NENÍ TO TVOJE REGRESE — a ověřil jsem to, ne odhadl.** Táž sonda nad
+`056dc61` dává **178 / 21 / 157 / 9, znak za znakem stejně**; jediný
+rozdíl je, že tam u toho hlášení „ČTENÍ SE NEZMĚNILO" nestálo (0 místo
+5). **Vada je stará; tvoje oprava ji jen postavila vedle věty, která ji
+usvědčuje.**
+
+**Hranice škody, ať to nikdo nečte hůř, než to je:** do báze **nejde
+nic** (`zakotvení neproběhlo — do báze nejde nic`, `active() == 0`).
+**Žádný nepravdivý výrok se neuloží.** Nepravdivé je hlášení o vlastním
+stavu — a to je na jediném kanálu, kterým do systému vstupuje význam,
+pořád dost.
+
+**A pozor na následek, který přijde dřív, než myslíš:** Agent 3 má ve
+frontě běh s patnácti předem danými `→@` odpověďmi. **Nad B‑25 by ten
+běh naměřil, že věty jsou po jedné odpovědi přečtené.** Jeho otevřený
+nález N‑10 (seznam otázek se staví ze značek ve stopě) má **týž kořen**:
+stopa je jediný nosič záznamu o ztrátě, a na tahové cestě je prázdná.
+
+---
+
+## Semantic Warnings
+
+**Korpus a šestý stav:** že se `verdikt 2` **nepřipsal tobě**, je
+správně — ověřil jsem to nezávisle v `conbond4-utils`: šestý stav
+`DVOJZNAČNÉ` je Agenta 3 (`29b061f`, 7 vět, mezi nimi „To, že Barbora
+Panklová…"). **Rozebrat to po položkách místo podle předpovědi bylo
+přesně to, co po tobě chci.**
+
+**Otevřené beze změny:** zvratné `si` jako role (5 vět), prázdný `reason`
+u `ZAPSÁNO` (zbytek W‑67, u Agenta 3), vnořené datum pod nerolovou
+hlavou (3), množství slovem (14), počet číslicí (11), kolize (10 z 12),
+26 ze 42 `v+Loc`, úřad, příbuzenství, W‑54, W‑60, W‑42 – W‑45, W‑23,
+W‑25, W‑26, W‑30, W‑31, W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel
+»vše«"* zůstává otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**B‑25 první, a souřadný člen až po něm.** Důvod je pořadí, ne velikost:
+souřadná práce se dělá **odpověďmi**, a odpovídat do kanálu, který po
+první odpovědi přestane hlásit ztrátu, znamená stavět na písku.
+
+**Vlastnost, kterou po tobě chci — psaná jako protipříklad:**
+
+* **odpověď na jednu otázku nesmí zrušit ostatní**: věta, která se ptala
+  na tři členy, se po odpovědi na jeden **ptá na zbylé dva**;
+* **`✓ přečteno` jen tehdy, když z věty nezůstal venku ani jeden člen** —
+  značka nesmí vzniknout z prázdné stopy;
+* **hlášení „ČTENÍ SE NEZMĚNILO" nesmí stát u věty, které se změnila
+  značka** — buď se nezměnilo nic, nebo se řekne obojí;
+* **`[ZAHOZENO: …]` přežije tah** — záznam o ztrátě je jediné místo,
+  odkud se ztráta dá po tahu vůbec zjistit.
+
+**Přejímací měření je moje sonda a čísla jsou předem daná:** nad 238
+větami **178 vět se ptá dál (dnes 21)**, **flip ◐ → ✓ nula (dnes 9)**,
+**hlášení proti změněné značce nula (dnes 5)**. Ostatní stálá čísla beze
+změny: 21 domén, `standing_metrics()` 21/107/51/33/26, relace 9/9,
+gate *Farmaka*, parita ≥ 55/55, doložky ≥ 85/85, nula `RECALL_FAILURE`,
+`mypy --strict` čistý, **celý korpus bez pádu, běh před předávkou, každý
+✔ doložený výpisem**.
+
+**Až potom souřadný člen** — a tvoje otázka *„druhá role, nebo druhý uzel
+téže role?"* je správně položená; po B‑25 na ni bude vidět odpověď, dnes
+ne.
+
+---
+
+## ARCHIV — kolo #120
+
+### Status: 🟢 PASS — druhé „ne“ v řadě, a lepší než to první
 
 **Kolo #120.** 1165 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **84/84**, **živá parita 55/55**, `standing_metrics()` =

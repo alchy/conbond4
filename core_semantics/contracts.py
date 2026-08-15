@@ -1811,6 +1811,39 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-40",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "CO O VĚTĚ PLATÍ, SE NEČTE Z TAHU, KTERÝ NA NI ODPOVÍDÁ "
+            "*(B‑25)*. Ztracené členy a stopa se braly z `turn`, jenže "
+            "tah ODPOVĚDI je vlastní tah a obojí má PRÁZDNÉ — takže "
+            "odpověď na JEDNU otázku zrušila ostatní a věta se prohlásila "
+            "za přečtenou. „Státy, města a obce…“ se ptala na 15 členů; "
+            "po odpovědi na JEDEN stálo `✓ přečteno` s TOUŽ formulí a "
+            "otázka ŽÁDNÁ — čtrnáct členů zůstalo venku a systém o nich "
+            "mlčel. ZNAČKA VZNIKALA Z NEPŘÍTOMNOSTI DŮKAZU: `has_dropped` "
+            "se ptala stopy, která na tahové cestě nebyla. Do báze přitom "
+            "nešlo nic — nepravdivé bylo HLÁŠENÍ O VLASTNÍM STAVU, a to "
+            "je na jediném kanálu, kterým do systému vstupuje význam, "
+            "dost. Tah, který větu čte ZNOVU, proto dodá nový verdikt; "
+            "tah, který ji jen DOPLŇUJE (kvantifikátor, odkaz), zdědí "
+            "poslední známý stav, protože rozborem se ztracený člen "
+            "ztraceným být nepřestal. `✓` jen tehdy, když venku nezůstal "
+            "NIKDO; `[ZAHOZENO: …]` přežije tah; hlášení „ČTENÍ SE "
+            "NEZMĚNILO“ (S‑39) tím pádem nemůže stát u věty, které se "
+            "značka změnila — obojí plyne z TÉHOŽ verdiktu. Věta, ze "
+            "které venku nezůstal nikdo, značku `✓` dostane dál"
+        ),
+        anchor="core_semantics.session:Session._settle",
+        entry=".play(",
+        enforced_by=(
+            "test_answering_one_question_does_not_cancel_the_others",
+            "test_a_sentence_with_a_member_left_out_is_not_marked_read",
+            "test_the_dropped_note_survives_the_turn",
+            "test_a_finished_sentence_still_gets_the_read_mark",
+        ),
+    ),
+    Clause(
         id="S-39",
         boundary=SESSION_STORAGE,
         promise=(

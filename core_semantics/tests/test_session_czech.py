@@ -16,7 +16,7 @@ from core_semantics.oracle import (
     Token,
     Utterance,
 )
-from core_semantics.session import Session, TurnKind
+from core_semantics.session import Session, TurnKind, TurnResult
 
 STAMP = "test-model"
 
@@ -239,3 +239,95 @@ def test_an_answer_that_works_stays_silent_about_it() -> None:
     hlaseni = chr(10).join(result.lines)
     assert "ČTENÍ SE NEZMĚNILO" not in hlaseni
     assert "jak:Jana" in hlaseni
+
+
+def _three_lost_members() -> Reading:
+    """„Petr a Jana viděli psa a kočku." — mimo čtení zůstane souřadný
+    podmět I souřadný předmět, takže se věta ptá na DVA členy najednou."""
+    return Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 4, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "a", "a", "CCONJ", 3, "cc"),
+            _token(3, "Jana", "Jana", "PROPN", 1, "conj", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(4, "viděli", "vidět", "VERB", 0, "root", Gender="Masc", Number="Plur", Polarity="Pos"),
+            _token(5, "psa", "pes", "NOUN", 4, "obj", Case="Acc", Gender="Masc", Number="Sing"),
+            _token(6, "a", "a", "CCONJ", 7, "cc"),
+            _token(7, "kočku", "kočka", "NOUN", 5, "conj", Case="Acc", Gender="Fem", Number="Sing"),
+            _token(8, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def _asked_about_many() -> tuple[Session, Reading, TurnResult]:
+    from core_semantics.tests import golden
+
+    text = "Petr a Jana viděli psa a kočku."
+    reading = _three_lost_members()
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    first = session.utter(text, oracle)
+    assert len(first.turn.lost) >= 2, "věta se musí ptát na víc členů"
+    return session, reading, first
+
+
+def test_answering_one_question_does_not_cancel_the_others() -> None:
+    """ODPOVĚĎ NA JEDNU OTÁZKU NESMÍ ZRUŠIT OSTATNÍ *(B‑25)*. Ztracené
+    členy se braly z `turn`, jenže tah ODPOVĚDI je vlastní tah a má je
+    prázdné — takže se systém po jedné odpovědi přestal ptát na zbytek."""
+    from core_semantics.session import names_role
+
+    session, reading, first = _asked_about_many()
+    result = session.play(
+        names_role("Je to okolnost.", reading, first.turn.lost[0][1], "jak")
+    )
+    assert result.turn.lost or "ZAHOZENO" in chr(10).join(result.lines)
+    assert "jakou roli hraje" in (result.question or ""), "ptá se na zbylé členy"
+
+
+def test_a_sentence_with_a_member_left_out_is_not_marked_read() -> None:
+    """ZNAČKA NESMÍ VZNIKNOUT Z PRÁZDNÉ STOPY *(B‑25)*. `has_dropped` se
+    ptala stopy tahu, která na tahové cestě nebyla, takže `✓ přečteno`
+    vznikalo Z NEPŘÍTOMNOSTI DŮKAZU — u věty, ze které zůstalo venku
+    čtrnáct členů."""
+    from core_semantics.session import names_role
+
+    session, reading, first = _asked_about_many()
+    result = session.play(
+        names_role("Je to okolnost.", reading, first.turn.lost[0][1], "jak")
+    )
+    assert not any(line.startswith("✓ přečteno") for line in result.lines)
+    assert any(line.startswith("◐ přečteno, neúplné") for line in result.lines)
+
+
+def test_the_dropped_note_survives_the_turn() -> None:
+    """`[ZAHOZENO: …]` PŘEŽIJE TAH *(B‑25)*. Stopa je jediný nosič
+    záznamu o ztrátě; když se po tahu vyprázdní, není z čeho poznat, že
+    věta není celá."""
+    from core_semantics.session import names_role
+
+    session, reading, first = _asked_about_many()
+    result = session.play(
+        names_role("Je to okolnost.", reading, first.turn.lost[0][1], "jak")
+    )
+    assert any("ZAHOZENO" in line for line in result.lines)
+
+
+def test_a_finished_sentence_still_gets_the_read_mark() -> None:
+    """PROTIPŘÍKLAD: věta, ze které venku nezůstal NIKDO, značku `✓`
+    dostane dál — oprava nesmí značku jen utlumit."""
+    from core_semantics.tests import golden
+
+    text = "Petr přišel."
+    reading = Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "přišel", "přijít", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    result = session.utter(text, oracle)
+    assert any(line.startswith("✓ přečteno") for line in result.lines)
