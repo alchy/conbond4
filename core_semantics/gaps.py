@@ -28,7 +28,7 @@ je to v reportu vidět (`exhausted`), ne zamlčené.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Sequence
 
 from .ast import (
@@ -67,6 +67,18 @@ MAX_BRANCHES = 8
 #: který si nikdo nevšimne, dokud ho neuvidí v transkriptu.
 NO_PATH = "nikdo to neřekl a žádné pravidlo to nevyrábí"
 
+#: `via` pro cíl, který někdo ŘEKL, ale nezapsal se *(W‑55)*. Vlastní
+#: konstanta, ne varianta `NO_PATH`, protože říká něco jiného: „nikdo to
+#: neřekl" byla u titulu („básník Josef Hora") NEPRAVDA O VLASTNÍM VSTUPU
+#: — ta věta to řekla a jádro to jen nesmělo zapsat samo. Verdikt `U`
+#: zůstává správný (nikdo to nepotvrdil); mění se DŮVOD, a rozdíl je
+#: v tom, co s ním člověk může udělat.
+#:
+#: **Rozbor mezery o titulech nic neví a vědět nemá.** Co je nerozhodnuté,
+#: mu řekne volající — tady je to jen JMENOVKA pro cíl, na který někdo
+#: ukázal.
+STATED_UNDECIDED = "řekls to, ale nezapsalo se to — čeká to na potvrzení"
+
 
 @dataclass(frozen=True, slots=True)
 class OpenGoal:
@@ -91,8 +103,8 @@ class OpenGoal:
         # „potřeboval jsem to přes X" dává smysl jen tam, kde X je CESTA.
         # U cíle, který je sám dotaz, žádná cesta nevedla — a tvrdit ji by
         # bylo vysvětlení, které si vymýšlí (I‑14).
-        if self.via == NO_PATH:
-            return f"? platí {self.atom}? [HYPOTÉZA — {NO_PATH}]"
+        if self.via in (NO_PATH, STATED_UNDECIDED):
+            return f"? platí {self.atom}? [HYPOTÉZA — {self.via}]"
         return f"? platí {self.atom}? [HYPOTÉZA — potřeboval jsem to přes {self.via}]"
 
 
@@ -163,7 +175,17 @@ class GapFinder:
 
     # -- veřejné API -------------------------------------------------------
 
-    def explain(self, query: Atom) -> GapReport:
+    def explain(
+        self, query: Atom, *, undecided: Sequence[Atom] = ()
+    ) -> GapReport:
+        """`undecided` jsou výroky, které NĚKDO ŘEKL a nejsou zapsané.
+
+        Rozbor mezery si je nezjišťuje sám a nemá — neví, co se ve větě
+        řeklo, a domýšlet si to by byla inference navíc. Dostane je od
+        volajícího a jen podle nich JINAK POJMENUJE DŮVOD: rozdíl mezi
+        „nikdo to neřekl" a „řekls to, čeká to na potvrzení" je rozdíl
+        mezi mezerou a mezerou, která o sobě lže *(W‑55)*.
+        """
         derivation = self.engine.derivation()
         if self.engine.ask(query).status is not QueryStatus.UNKNOWN:
             return GapReport(query=query, open_goals=())
@@ -171,12 +193,32 @@ class GapFinder:
         goals = self._goals_for(query, derivation, depth=0)
         return GapReport(
             query=query,
-            open_goals=self._dedupe(goals),
+            open_goals=self._dedupe(self._name_undecided(goals, undecided)),
             known=self._what_is_known(query, derivation),
             exhausted=self._exhausted,
             unsafe_offer=self._contradicts_base(query, derivation),
             disputed=self._disputed_for(query, derivation),
         )
+
+    @staticmethod
+    def _name_undecided(
+        goals: list[OpenGoal], undecided: Sequence[Atom]
+    ) -> list[OpenGoal]:
+        """Cíli, který někdo řekl, se PŘEPÍŠE DŮVOD, ne existence.
+
+        Porovnává se ATOM, ne jeho vykreslení: shoda dvou řetězců by tiše
+        přestala platit, jakmile se změní tisk formulí kvůli něčemu úplně
+        jinému.
+        """
+        if not undecided:
+            return goals
+        rekli = list(undecided)
+        return [
+            replace(goal, via=STATED_UNDECIDED)
+            if goal.atom in rekli and goal.via == NO_PATH
+            else goal
+            for goal in goals
+        ]
 
     def _disputed_for(
         self, query: Atom, derivation: Derivation

@@ -249,7 +249,15 @@ def _dialogue_unknowns() -> tuple[Diagnosis, ...]:
             grounded = ground(result.predication, session.kb.view())
             if grounded.formula is None:
                 continue
-            item = diagnose(session.engine(), grounded.formula)
+            # Nerozhodnuté výroky se PŘEDÁVAJÍ (W‑55). Bez nich by rozklad
+            # o tvrzení, které věta vyslovila, hlásil „nikdo to neřekl“ —
+            # tedy přesně tu nepravdu, kvůli které ta kategorie vznikla,
+            # jen o patro výš.
+            item = diagnose(
+                session.engine(),
+                grounded.formula,
+                undecided=session.undecided(),
+            )
             if item is not None:
                 found.append(item)
     return tuple(found)

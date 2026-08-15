@@ -50,6 +50,7 @@ from .ast import (
     Variable,
     atom,
     complete_of,
+    member_of,
     role,
     same_as_of,
 )
@@ -75,6 +76,8 @@ from .cascade import (
     anaphora_tier,
     attribute_question,
     attribute_tier,
+    title_tier,
+    title_question,
     subordinate_tier,
     completeness_tier,
     naming_tier,
@@ -243,6 +246,13 @@ class TurnKind(Enum):
     #: vlastnictví. Ani `→=`, ani `→@` to nejsou — první rozhoduje odkaz
     #: uvnitř jedné formule, druhý učí tvar; tenhle přidává FAKT.
     NAME_OWNER = "→'"
+    #: POTVRZENÍ tvrzení, které nese TITUL *(W‑55)*. „básník Josef Hora“
+    #: tvrdí, že Josef Hora je básník — a jádro to samo zapsat nesmí:
+    #: týž tvar nese povolání, úřad držený v čase i příbuzenství, což
+    #: jsou tři různá tvrzení, a rozbor je nerozlišuje. Vlastní druh
+    #: tahu, protože zapisuje DRUHÝ VÝROK vedle věty a nic se jím NEUČÍ:
+    #: „prezident Masaryk“ v jiné větě znamená totéž a bude se ptát znovu.
+    CONFIRM_TITLE = "→∈"
 
 
 @dataclass(frozen=True, slots=True)
@@ -394,6 +404,28 @@ def names_attribute(
         subject=Group(head),
         node_id=filler,
         role_name=role_name,
+    )
+
+
+def confirms_title(text: str, name: str, title: str) -> Turn:
+    """POTVRZENÍ toho, co tvrdí titul *(W‑55)*.
+
+    Zapisuje DRUHÝ VÝROK vedle věty — `member(elem:Josef_Hora,
+    group:∀básník)` k větě „Nad hrobem promluvil básník Josef Hora."
+    Věta sama se zapsala, když se dočetla; tenhle tah přidává, co v ní
+    stálo a co se zapsat nesmělo.
+
+    **Nic se tím neučí**, a je to týž důvod jako u `→@1`: tvar
+    nerozhoduje. „básník Josef Hora" je povolání, „prezident Masaryk"
+    úřad držený v čase a „bratr Josef Čapek" vztah k někomu, kdo ve větě
+    často není — a rozbor je nerozlišuje. Druhá věta téhož tvaru se tedy
+    musí zeptat znovu.
+    """
+    return Turn(
+        TurnKind.CONFIRM_TITLE,
+        text,
+        subject=Entity(name),
+        node_id=title,
     )
 
 
@@ -655,6 +687,18 @@ class Session:
         #: navázat. Je to nová INFORMACE, ne nová inference — nic se z ní
         #: neodvozuje, jen se z ní NABÍZEJÍ kandidáti.
         self._discourse = Discourse()
+        #: TVRZENÍ, KTERÁ VĚTA VYSLOVILA A JÁDRO JE ZATÍM NEZAPSALO
+        #: *(W‑55)*, jako `(jméno, titul) → věta, ve které to zaznělo`.
+        #:
+        #: Bez téhle paměti by systém na „Je Josef Hora básník?“ odpověděl
+        #: „nikdo to neřekl“ — a to je nepravda o vlastním vstupu. `U` je
+        #: pořád správný verdikt (nikdo to nepotvrdil), ale DŮVOD je jiný
+        #: a člověk na něj může odpovědět jedním tahem.
+        #:
+        #: Leží to v SEZENÍ, ne v žurnálu: nabídka se při přehrání spočítá
+        #: znovu z rozboru, takže determinismus (§ 10) to nemění. A není
+        #: to inference — nic se z toho neodvozuje, jen se to PAMATUJE.
+        self._offered_titles: dict[tuple[str, str], str] = {}
         #: Otisk lexikonu, se kterým sezení ZAČALO. Bere se hned, protože
         #: později už bude jiný — dialog se učí.
         self._opening_fingerprint = self.lexicon.fingerprint()
@@ -691,6 +735,10 @@ class Session:
             # Genitivní přívlastek jako čekající DRUHÝ VÝROK. Nic
             # neblokuje: větě chybí přívlastek, ne predikát.
             attribute_tier(),
+            # Tvrzení titulu, taky jako čekající DRUHÝ VÝROK (W‑55). Hned
+            # za přívlastkem, protože je to táž třída věci — něco, co ve
+            # větě stojí vedle predikace — a taky nic neblokuje.
+            title_tier(),
             # Vedlejší věta jako role hlavní predikace. Za přívlastkem:
             # obojí reifikuje, ale tohle přidává ROLI, takže musí běžet
             # dřív, než se počítají ztracené členy.
@@ -754,6 +802,7 @@ class Session:
             TurnKind.NAME_OWNER: self._name_owner,
             TurnKind.DECLARE_COMPLETE: self._declare_complete,
             TurnKind.NAME_ATTRIBUTE: self._name_attribute,
+            TurnKind.CONFIRM_TITLE: self._confirm_title,
             TurnKind.REVOKE: self._revoke,
             TurnKind.QUESTION: self._question,
             TurnKind.BOUND: self._bound,
@@ -917,7 +966,9 @@ class Session:
         # Na `U` se místo zopakované otázky vypíše ROZBOR mezery (§ 6.8).
         # „Chybí vědět: <dotaz>" člověku neřekne, co má doplnit.
         gap_lines = (
-            GapFinder(engine).explain(turn.query).render()
+            GapFinder(engine)
+            .explain(turn.query, undecided=self.undecided())
+            .render()
             if result.status is QueryStatus.UNKNOWN
             else ()
         )
@@ -926,6 +977,7 @@ class Session:
                 report, gap_lines=gap_lines, grounding_cited=grounding_cited
             )
         )
+        lines.extend(self._offered_title_note(turn.query, result.status))
         offered = self._offer_bridge(turn, result, lines)
         return TurnResult(
             index=index,
@@ -934,6 +986,51 @@ class Session:
             status=result.status,
             report=report,
             offered=offered,
+        )
+
+    def undecided(self) -> tuple[Atom, ...]:
+        """Výroky, které VĚTA ŘEKLA a nikdo je nepotvrdil *(W‑55)*.
+
+        Skládají se ze zapamatovaných nabídek, ne z báze: v bázi nejsou —
+        to je celý ten stav. Rozbor mezery je dostane, aby o nich přestal
+        tvrdit „nikdo to neřekl".
+        """
+        return tuple(
+            member_of(Entity(jmeno), Group(titul))
+            for jmeno, titul in self._offered_titles
+        )
+
+    def _offered_title_note(
+        self, query: Atom, status: QueryStatus
+    ) -> tuple[str, ...]:
+        """„Řeklas to, jen se to ještě nezapsalo." *(W‑55)*
+
+        **`U` zůstává `U` a je to správně** — nikdo to nepotvrdil, takže
+        se to netvrdí. Mění se DŮVOD: „nikdo to neřekl" byla nepravda
+        o vlastním vstupu systému, protože ta věta to řekla. Mezera, která
+        o sobě lže, je horší než mezera.
+
+        **Páruje se přes UZLY, ne přes text formule.** Řetězcová shoda
+        dvou vykreslení je táž vada, kterou tady hlídám v kaskádě:
+        vykreslení se změní kvůli něčemu úplně jinému a párování tiše
+        přestane fungovat.
+
+        A hlásí se VĚTA, ve které to zaznělo. Tvrzení „řeklas to" bez
+        toho, co se řeklo, je tvrzení bez důkazu.
+        """
+        if status is not QueryStatus.UNKNOWN or query.predicate != "member":
+            return ()
+        elem = query.get_role("elem")
+        group = query.get_role("group")
+        if elem is None or group is None:
+            return ()
+        veta = self._offered_titles.get((elem.target.id, group.target.id))
+        if veta is None:
+            return ()
+        return (
+            f"  [ŘEKLS TO — „{veta}“ to tvrdí titulem. Nezapsalo se to: "
+            f"týž tvar nese povolání, úřad v čase i příbuzenství, takže "
+            f"to jádro samo zapsat nesmí. Čeká to na tvé potvrzení]",
         )
 
     def _bound(self, index: int, turn: Turn) -> TurnResult:
@@ -1147,6 +1244,13 @@ class Session:
         # byla otázka na něco, co ta druhá odpověď stejně nastaví — a
         # člověk by nevěděl, kterou z těch dvou právě odpovídá.
         anchored |= set(grounded.asked)
+        # NABÍDKA SE ZAPAMATUJE (W‑55). Od téhle chvíle systém ví, že to
+        # tvrzení ve větě ZAZNĚLO — a když se na ně někdo zeptá dřív, než
+        # ho potvrdí, neodpoví „nikdo to neřekl“. Zapisuje se VĚTA,
+        # ve které to stálo, ne jen značka: bez ní je hlášení „řekls to“
+        # bez důkazu, a to je táž vada jako mezera, kterou to opravuje.
+        for jmeno, titul, _ in predication.pending_title:
+            self._offered_titles[(jmeno, titul)] = turn.text
         still_open = tuple(
             role
             for role in predication.open_roles()
@@ -1174,6 +1278,10 @@ class Session:
                 # až za uzavřením: je to vztah VEDLE věty, takže se ptá
                 # jako poslední a větu samotnou nezdržuje.
                 attribute_question(predication),
+                # Otázka na to, co tvrdí TITUL (W‑55). Za přívlastkem
+                # z téhož důvodu: je to výrok vedle věty, takže větu
+                # samotnou nezdržuje a ptá se jako poslední.
+                title_question(predication),
                 grounded.question,
             )
             if part
@@ -1340,6 +1448,31 @@ class Session:
                 f"✓ zapsáno [{sid}]  {formula}",
                 "[VZTAH VEDLE VĚTY — věta sama se zapsala už dřív; tvar "
                 "se tím NEUČÍ, další věta se zeptá znovu]",
+            ),
+            statement_id=sid,
+        )
+
+    def _confirm_title(self, index: int, turn: Turn) -> TurnResult:
+        """`→∈` — člověk potvrdil, co tvrdí TITUL *(W‑55)*.
+
+        **Věta se tímhle tahem NEZAPISUJE ZNOVU.** Zapsala se sama, když
+        se dočetla; tenhle tah přidává výrok, který v ní stál vedle
+        predikace. Táž úvaha jako u `→@1`.
+        """
+        assert turn.subject is not None
+        formula = member_of(Entity(turn.subject.id), Group(turn.node_id))
+        sid = self.kb.attach(formula, provenance=f"tah {index}: titul")
+        # ROZHODNUTO — nabídka se z paměti bere pryč. Kdyby tam zůstala,
+        # hlásil by systém u zapsaného faktu „čeká to na tvé rozhodnutí“
+        # a člověk by nevěděl, jestli se to zapsalo.
+        self._offered_titles.pop((turn.subject.id, turn.node_id), None)
+        return TurnResult(
+            index=index,
+            turn=turn,
+            lines=(
+                f"✓ zapsáno [{sid}]  {formula}",
+                "[VÝROK VEDLE VĚTY — věta sama se zapsala už dřív; tvar "
+                "se tím NEUČÍ, další věta s titulem se zeptá znovu]",
             ),
             statement_id=sid,
         )

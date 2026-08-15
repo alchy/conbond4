@@ -200,6 +200,15 @@ class Predication:
     #: uvnitř fráze, tedy DRUHÝ VÝROK vedle věty; větě samotné chybí
     #: přívlastek, ne predikát.
     pending_attribute: tuple[tuple[str, str, int], ...] = ()
+    #: TVRZENÍ, KTERÉ NESE TITUL *(W‑55)*, jako `(jméno, titul, token)`.
+    #: „básník Josef Hora“ tvrdí DVĚ věci — že promluvil a že je básník.
+    #: Zapisovala se jedna a o druhé systém říkal „nikdo to neřekl“, což
+    #: byla nepravda o tom, co ve větě stálo.
+    #:
+    #: Blokovat větu NESMÍ, ze stejného důvodu jako `pending_attribute`:
+    #: je to druhý výrok VEDLE věty, ne chybějící role. Věta „Nad hrobem
+    #: promluvil básník Josef Hora.“ je celá i bez něj.
+    pending_title: tuple[tuple[str, str, int], ...] = ()
 
     def __post_init__(self) -> None:
         names = [r.name for r in self.roles]
@@ -2661,6 +2670,113 @@ def subordinate_tier(lexicon: Lexicon) -> Tier:
                 )
             )
         return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
+
+
+def title_claims(
+    reading: Reading, predication: Predication
+) -> tuple[tuple[str, str, int], ...]:
+    """Co titul TVRDÍ o tom, koho pojmenovává *(W‑55)*.
+
+    Vrací `(jméno, titul, token)`. „básník Josef Hora“ tvrdí DVĚ věci —
+    že promluvil a že je básník. Zapisovala se jedna a o druhé systém
+    říkal „nikdo to neřekl“; jenže **ta věta to řekla**. Mezera, která
+    o sobě lže, je horší než mezera.
+
+    **Stráže se NEOPISUJÍ, ptá se `titled_name_of`.** Tím platí i tady
+    všechno, co se u W‑53 a W‑54 změřilo: `flat` (ne `nmod`, takže „Město
+    Praha“ tudy nejde), `PROPN` pod `NOUN` a JEDNOTNÉ ČÍSLO (takže „bratří
+    Čapků“ tudy nejde taky). Druhá kopie těch podmínek by se s první
+    rozešla a nikdo by nevěděl která.
+
+    **Jméno musí být VE ČTENÍ**, stejně jako u genitivního přívlastku:
+    tvrzení o někom, o kom věta nemluví, by viselo na uzlu, který se
+    v predikaci nevyskytuje.
+    """
+    ve_cteni = {role.mention.lemma for role in predication.roles}
+    najdene: list[tuple[str, str, int]] = []
+    for token in reading.tokens:
+        jmena = titled_name_of(token, reading)
+        if not jmena:
+            continue
+        jmeno = "_".join(part.lemma for part in jmena)
+        if jmeno not in ve_cteni:
+            continue
+        najdene.append((jmeno, token.lemma, token.index))
+    return tuple(najdene)
+
+
+def title_question(predication: Predication) -> str | None:
+    """Otázka na to, co titul tvrdí *(W‑55)*.
+
+    **PTÁ SE, NEDOSAZUJE — a je to změřené rozhodnutí, ne opatrnost.**
+    Zapsat `member` rovnou z tvaru je odvození z konstrukce, tedy totéž,
+    co se u `same_as` z apozice odmítlo. Rozdíl je, že rozbor tuhle
+    stavbu rozlišuje… jenže **měření říká, že tvar sám o významu
+    nerozhoduje**. Ze 71 zmínek v měřeném korpusu:
+
+      * 29 je POVOLÁNÍ — „básník", „spisovatel", „historik", „astronom".
+        Tam je `member` přesně to, co věta tvrdí.
+      * 24 je ÚŘAD DRŽENÝ V ČASE — „prezident Masaryk", „ministr",
+        „předseda", „primátor". `member(Masaryk, prezident)` bez času
+        tvrdí, že jím je pořád; Masaryk zemřel v roce 1937.
+      * 18 je PŘÍBUZENSTVÍ — „bratr Josef Čapek", „matka", „dcera".
+        „bratr" není třída, do které se patří: je to vztah K NĚKOMU,
+        a ten druhý ve větě často není. `member(Josef_Čapek, bratr)`
+        tvrdí „Josef Čapek je bratr", což není, co věta říká.
+
+    Tvar je u všech tří TÝŽ. Kdyby se zapisovalo ze tvaru, byly by dvě
+    třetiny zápisů buď bezčasé o něčem časovém, nebo neúplné o vztahu —
+    a byly by v bázi jako doložený fakt. Proto se **nabízí a ptá**: to,
+    co věta říká, se ohlásí, a rozhodne člověk.
+    """
+    if not predication.pending_title:
+        return None
+    parts = [
+        f"„{titul} {jmeno.replace('_', ' ')}“"
+        for jmeno, titul, _ in predication.pending_title
+    ]
+    return (
+        "Ta věta tvrdí ještě tohle: " + ", ".join(parts) + ". Zapíšu to "
+        "jako členství vedle věty, ale sám to neudělám — týž tvar nese "
+        "povolání („básník Josef Hora“), úřad držený v čase („prezident "
+        "Masaryk“) i příbuzenství („bratr Josef Čapek“), a to jsou tři "
+        "různá tvrzení. Potvrdíš?"
+    )
+
+
+def title_tier() -> Tier:
+    """Tvrzení titulu jako ČEKAJÍCÍ DRUHÝ VÝROK *(W‑55)*.
+
+    Patro nic nedosazuje a nic neblokuje — jen označí, že vedle věty leží
+    tvrzení, které věta vyslovila a jádro ho samo zapsat nesmí.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        oznacene: list[Candidate] = []
+        notes: list[str] = []
+        for candidate in candidates:
+            found = title_claims(reading, candidate.predication)
+            if not found:
+                oznacene.append(candidate)
+                continue
+            notes.append(
+                "[TITUL TVRDÍ: "
+                + ", ".join(
+                    f"„{t} {j.replace('_', ' ')}“" for j, t, _ in found
+                )
+                + " — výrok vedle věty, čeká se na potvrzení]"
+            )
+            oznacene.append(
+                Candidate(
+                    replace(candidate.predication, pending_title=found),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(oznacene), "; ".join(notes) if notes else None
 
     return tier
 

@@ -57,6 +57,12 @@ class UnknownReason(Enum):
     #: Hledání se zastavilo na mezi hloubky. `U` tu může být opatrnost,
     #: ne nevědomost — a je poctivé to nemíchat s ostatními.
     DEPTH_LIMIT = "hledání se zastavilo na mezi hloubky"
+    #: NĚKDO TO ŘEKL a nezapsalo se to *(W‑55)*. `U` je tu správně —
+    #: nikdo to nepotvrdil, takže se to netvrdí — ale míchat to s `U`,
+    #: o kterém nepadlo ani slovo, by zakrylo právě ten rozdíl, kvůli
+    #: kterému tahle kategorie vznikla: na tohle `U` jde odpovědět
+    #: JEDNÍM TAHEM, a systém i ví, kterým.
+    STATED_UNDECIDED = "řeklo se to, ale čeká to na potvrzení"
     #: O věci nikdo nic neřekl a nic k ní nevede. Nejčistší `U`, jaké
     #: v otevřeném světě existuje.
     NOT_STATED = "nikdo to neřekl a neplyne to"
@@ -93,7 +99,9 @@ def _stated(engine: "Engine", query: Atom) -> tuple[str, ...]:
     )
 
 
-def diagnose(engine: "Engine", query: Atom) -> Diagnosis | None:
+def diagnose(
+    engine: "Engine", query: Atom, *, undecided: Sequence[Atom] = ()
+) -> Diagnosis | None:
     """Proč tenhle dotaz vyšel `U` — nebo `None`, když nevyšel.
 
     Vrací se `None`, a ne nějaké „v pořádku": dotaz s verdiktem `A`, `N`
@@ -107,7 +115,7 @@ def diagnose(engine: "Engine", query: Atom) -> Diagnosis | None:
     if stated:
         return Diagnosis(query, UnknownReason.RECALL_FAILURE, stated)
 
-    report = GapFinder(engine).explain(query)
+    report = GapFinder(engine).explain(query, undecided=undecided)
     if report.disputed:
         return Diagnosis(
             query,
@@ -125,12 +133,22 @@ def diagnose(engine: "Engine", query: Atom) -> Diagnosis | None:
         return Diagnosis(query, UnknownReason.MISSING_LINK, named)
     if report.exhausted:
         return Diagnosis(query, UnknownReason.DEPTH_LIMIT)
+    # AŽ TADY, a schválně za `MISSING_LINK`: „řeklo se to" je jmenovka
+    # důvodu, ne cesty. Kdyby stálo výš, přebilo by nález, který hledání
+    # opravdu udělalo, značkou, kterou mu někdo dal zvenčí.
+    if query in list(undecided):
+        return Diagnosis(query, UnknownReason.STATED_UNDECIDED)
     return Diagnosis(query, UnknownReason.NOT_STATED)
 
 
-def survey(engine: "Engine", queries: Sequence[Atom]) -> tuple[Diagnosis, ...]:
+def survey(
+    engine: "Engine",
+    queries: Sequence[Atom],
+    *,
+    undecided: Sequence[Atom] = (),
+) -> tuple[Diagnosis, ...]:
     """Rozklad `U` přes sadu dotazů. Dotazy s jiným verdiktem vypadnou."""
-    found = (diagnose(engine, query) for query in queries)
+    found = (diagnose(engine, query, undecided=undecided) for query in queries)
     return tuple(item for item in found if item is not None)
 
 

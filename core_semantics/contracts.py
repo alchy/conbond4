@@ -1173,6 +1173,44 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-13",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "TITUL NESE TVRZENÍ a to tvrzení se NABÍDNE, NEZAPÍŠE. "
+            "„básník Josef Hora“ říká dvě věci — že promluvil a že je "
+            "básník; věta se zapíše, členství se OHLÁSÍ jako výrok vedle "
+            "ní a čeká na tah `→∈`. Zapsat ho ze tvaru je ODVOZENÍ "
+            "Z KONSTRUKCE, tedy totéž, co se odmítlo u `same_as` "
+            "z apozice (B‑22) — a tady je to DOLOŽENÉ ČÍSLEM, ne jen "
+            "obhájené: ze 71 zmínek v měřeném korpusu je 29 POVOLÁNÍ, 24 "
+            "ÚŘAD DRŽENÝ V ČASE („prezident Masaryk“ zemřel roku 1937) "
+            "a 18 PŘÍBUZENSTVÍ („bratr“ KOHO?). Tvar je u všech tří TÝŽ. "
+            "DRUHÁ PŮLKA JE HLÁŠENÍ: dokud se nepotvrdí, je verdikt `U` "
+            "a to je správně, ale DŮVOD nesmí být „nikdo to neřekl“ — "
+            "ta věta to řekla, a mezera, která o sobě lže, je horší než "
+            "mezera. Rozbor mezery o titulech nic neví; co je "
+            "nerozhodnuté, mu řekne sezení, a páruje se přes ATOM, ne "
+            "přes vykreslení. Nic se tím NEUČÍ: „prezident Masaryk“ "
+            "v další větě znamená totéž a zeptá se znovu. Stráže se "
+            "neopisují — ptá se `titled_name_of`, takže `nmod` („Město "
+            "Praha“) ani plurál („bratří Čapků“) tudy nejdou (W‑55)"
+        ),
+        anchor="core_semantics.cascade:title_claims",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_title_is_read_as_a_claim",
+            "test_a_modifier_is_not_a_claim",
+            "test_a_plural_family_is_not_a_claim",
+            "test_a_claim_about_someone_outside_the_reading_is_not_taken",
+            "test_the_sentence_is_written_and_the_claim_is_not",
+            "test_the_claim_is_reported_not_swallowed",
+            "test_the_gap_stops_claiming_nobody_said_it",
+            "test_a_question_nobody_touched_still_says_nobody_said_it",
+            "test_confirming_writes_the_claim_and_closes_the_offer",
+            "test_the_breakdown_has_its_own_reason_for_this",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(

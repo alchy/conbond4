@@ -121,6 +121,11 @@ class Step:
     #: v rozboru (spojka jako `mark`), takže druhá věta s touž spojkou
     #: se už neptá.
     names_role: tuple[str, str] | None = None
+    #: `(jméno, titul)` — krok POTVRZUJE, co tvrdí TITUL (`→∈`), a
+    #: zapíše DRUHÝ VÝROK vedle věty. Vlastní pole, ne jedna z odpovědí:
+    #: není to role predikace ani tvar, který by se učil — „prezident
+    #: Masaryk“ v jiné větě znamená totéž a bude se ptát znovu.
+    confirms_title: tuple[str, str] | None = None
     #: Důvod — krok ODVOLÁVÁ výrok zapsaný krokem `declares_complete`.
     #: Uzavření světa je DEKLARACE, ne trvalá vlastnost, a sada to musí
     #: umět projít celou cestou tam i zpět.
@@ -2068,6 +2073,10 @@ TITLED_NAME = Dialogue(
             reads="promluvit(kde:hrob, kdo:·Josef_Hora)",
             anchors=("básník Josef Hora → Josef_Hora (založen)",),
             writes="promluvit(kde:hrob, kdo:Josef_Hora)",
+            # VĚTA SE ZAPÍŠE A PŘESTO SE PTÁ, a není to rozpor: co se
+            # zapisuje, je predikace, a co se ptá, je výrok VEDLE ní
+            # (W‑55). Doména 19 na tom stojí celá.
+            asks="básník Josef Hora",
             point=(
                 "ZMÍNKA JE ČLOVĚK, NE TITUL. Dokud jméno padalo, četla se "
                 "tahle věta jako `promluvit(kdo:∀básník)` — o VŠECH "
@@ -2157,6 +2166,171 @@ TITLED_NAME = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 19 · Co tvrdí titul — DRUHÝ VÝROK, který se nabídne a nezapíše sám
+# --------------------------------------------------------------------------
+
+TITLE_CLAIM = Dialogue(
+    name="Co tvrdí titul",
+    source="„Nad hrobem promluvil básník Josef Hora. … Prezident Masaryk "
+    "zemřel.“",
+    shapes=(
+        PROPN_SUBJ,
+        NOUN_SUBJ_SG,
+        NOUN_ROOT,
+        ("NOUN", "Sing", "Ins", "obl", Operation.EXISTS),
+        ("PROPN", "Plur", "Loc", "obl", Operation.SELF),
+    ),
+    roles=(("nad+Ins", "kde"), ("v+Loc", "kde")),
+    steps=(
+        Step(
+            text="Nad hrobem promluvil básník Josef Hora.",
+            reading=sentence(
+                w("Nad", "nad", "ADP", 2, "case", AdpType="Prep", Case="Ins"),
+                w("hrobem", "hrob", "NOUN", 3, "obl", Animacy="Inan", Case="Ins", Gender="Masc", Number="Sing"),
+                w("promluvil", "promluvit", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("básník", "básník", "NOUN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("Josef", "Josef", "PROPN", 4, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("Hora", "Hora", "PROPN", 4, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="promluvit(kde:hrob, kdo:·Josef_Hora)",
+            writes="promluvit(kde:hrob, kdo:Josef_Hora)",
+            asks="básník Josef Hora",
+            point=(
+                "VĚTA TVRDÍ DVĚ VĚCI — že promluvil a že je básník. "
+                "Zapíše se jedna a druhá se OHLÁSÍ. Nezapsat ji je "
+                "rozhodnutí, ne opomenutí; neohlásit ji bylo opomenutí"
+            ),
+        ),
+        Step(
+            text="Je Josef Hora básník?",
+            reading=sentence(
+                w("Je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Josef", "Josef", "PROPN", 4, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("Hora", "Hora", "PROPN", 2, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("básník", "básník", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="member(elem:·Josef_Hora, group:·básník)",
+            answers="U",
+            point=(
+                "`U` JE POŘÁD SPRÁVNĚ — nikdo to nepotvrdil, takže se to "
+                "netvrdí. Co se změnilo, je DŮVOD: bylo tu „nikdo to "
+                "neřekl“, a to byla nepravda o vlastním vstupu systému. "
+                "Verdikt se tím nezlepšil ani nezhoršil; přestal lhát"
+            ),
+        ),
+        Step(
+            text="Ano, Josef Hora byl básník.",
+            confirms_title=("Josef_Hora", "básník"),
+            writes="member(elem:Josef_Hora, group:·básník)",
+            point=(
+                "TAH, NE VĚTA. Věta sama se zapsala už při čtení; tenhle "
+                "tah přidává výrok, který v ní stál vedle predikace — týž "
+                "tvar jako `→@1` u genitivního přívlastku"
+            ),
+        ),
+        Step(
+            text="Je Josef Hora básník?",
+            reading=sentence(
+                w("Je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Josef", "Josef", "PROPN", 4, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("Hora", "Hora", "PROPN", 2, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("básník", "básník", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 4, "punct"),
+            ),
+            reads="member(elem:·Josef_Hora, group:·básník)",
+            answers="A",
+            point="KLADNÝ PŘÍPAD UZAVŘEN — a doložený tím tahem, ne tvarem",
+        ),
+        Step(
+            text="Prezident Masaryk zemřel.",
+            reading=sentence(
+                w("Prezident", "prezident", "NOUN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("Masaryk", "Masaryk", "PROPN", 1, "flat", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("zemřel", "zemřít", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="zemřít(kdo:·Masaryk)",
+            writes="zemřít(kdo:Masaryk)",
+            asks="prezident Masaryk",
+            point=(
+                "SPORNÝ PŘÍPAD, a je vidět, jak se s ním naloží: TÝŽ TVAR "
+                "jako u básníka, ale „prezident“ je úřad DRŽENÝ V ČASE — "
+                "Masaryk zemřel v roce 1937. Systém to proto NEZAPÍŠE a "
+                "ohlásí to; čas jádro neumí, a tvrdit bezčasé členství "
+                "tam, kde jazyk mluví o období, by byl doložený nesmysl"
+            ),
+        ),
+        Step(
+            text="Je Masaryk prezident?",
+            reading=sentence(
+                w("Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Masaryk", "Masaryk", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("prezident", "prezident", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Masaryk, group:·prezident)",
+            answers="U",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA: sporný titul zůstane "
+                "`U`, dokud ho člověk nepotvrdí. Kdyby se zapisoval ze "
+                "tvaru, ležel by tu `A` — a bylo by to doložené tvrzení, "
+                "že Masaryk je prezident"
+            ),
+            limit=(
+                "Systém NEVÍ, že „prezident“ je úřad a „básník“ povolání. "
+                "Nerozlišuje je — proto se ptá na OBOJÍ. Že se sporný "
+                "případ nezapíše, není chytrost jádra, je to důsledek "
+                "toho, že se nezapíše ŽÁDNÝ"
+            ),
+        ),
+        Step(
+            text="Město Praha leží v Čechách.",
+            reading=sentence(
+                w("Město", "město", "NOUN", 3, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+                w("Praha", "Praha", "PROPN", 1, "nmod", Case="Nom", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("leží", "ležet", "VERB", 0, "root", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("v", "v", "ADP", 5, "case", AdpType="Prep", Case="Loc"),
+                w("Čechách", "Čechy", "PROPN", 3, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="ležet(kde:Čechy, kdo:∀město)",
+            asks="Praha",
+            point=(
+                "ZÁPORNÝ PŘÍPAD: `nmod`, ne `flat` — tudy žádné tvrzení "
+                "nevzniká. Ptá se se na roli „Prahy“, tedy na TOTÉŽ co "
+                "před W‑55; nabídka členství tu není žádná"
+            ),
+            limit=(
+                "Krok je ZÁMĚRNĚ POSLEDNÍ: nechává otevřenou otázku po "
+                "roli a další věta by se četla jako odpověď na ni"
+            ),
+        ),
+    ),
+    note=(
+        "Devatenáctý akceptační dialog. Za jednou větou se schovává "
+        "OBECNÁ SCHOPNOST ČTENÍ: syntaktická hlava není referent a "
+        "přívlastek v apozici nese PREDIKACI o něm. Je to 32 vět z 238 "
+        "měřeného korpusu, tedy běžná encyklopedická próza. Rozhodnutí "
+        "znělo NABÍDNOUT, ne zapsat, a stojí na měření, ne na opatrnosti: "
+        "ze 71 zmínek je 29 povolání, 24 úřad držený v čase a 18 "
+        "příbuzenství — TÝŽ TVAR a tři různá tvrzení. Kdyby se zapisovalo "
+        "ze tvaru, byly by dvě třetiny zápisů buď bezčasé o něčem "
+        "časovém, nebo neúplné o vztahu, a ležely by v bázi jako "
+        "doložený fakt."
+    ),
+    limit=(
+        "CO SE TÍM NEŘEŠÍ: čas. „prezident Masaryk“ se nezapíše proto, že "
+        "se nezapíše nic, ne proto, že by jádro poznalo úřad od povolání. "
+        "Ta rodina zůstává otevřená a nabídka ji jen zviditelňuje — "
+        "člověk, který potvrdí „Masaryk je prezident“, zapíše bezčasé "
+        "tvrzení a systém ho před tím jen VARUJE, nezabrání mu."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -2176,4 +2350,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     SUBORDINATE,
     FULL_NAME,
     TITLED_NAME,
+    TITLE_CLAIM,
 )

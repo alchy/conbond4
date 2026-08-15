@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.29 · 15. 8. 2026
+**Verze jádra:** 0.1.30 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.30 | § 3.2, § 6.8 — TITUL NESE TVRZENÍ: „básník Josef Hora“ říká i to, že je básník. NABÍDNE SE a nezapíše — ze 71 zmínek v korpusu je 29 povolání, 24 úřad držený v čase a 18 příbuzenství, a tvar je u všech tří týž. Dokud se nepotvrdí, je verdikt `U`, ale důvod už není „nikdo to neřekl“; nový tah `→∈` a nový důvod `STATED_UNDECIDED` v rozkladu `U`; § 13 T80 | 15. 8. 2026 |
 | 0.1.29 | § 3.2 — titul musí být v JEDNOTNÉM čísle: „bratří **Čapků**“ je SKUPINA dvou lidí, ne jedni bratři jménem Čapka, a uzel `·Čapka` by byl člověk, který neexistuje. Skupinu z téhle stavby jádro neumí a nevyrobí ji (W‑54); § 13 T79 | 15. 8. 2026 |
 | 0.1.28 | § 3.2 — jméno pod OBECNÝM jménem („básník **Josef Hora**“) je TEN ČLOVĚK: zmínka je `Josef_Hora`, titul zůstává v `form` a NESKLÁDÁ SE. S identitou se přesouvá i KVANTIFIKÁTOR — jinak by z věty o jednom člověku vyšlo `∀Josef_Hora` a vada by se jen přestěhovala. „Město Praha“ má `nmod`, ne `flat`, takže se nemění; § 13 T78 | 15. 8. 2026 |
 | 0.1.27 | § 3.2 — do jména se skládá JEN `flat`: `appos` je JINÁ ZMÍNKA téže věci, a když se skládala, vznikl uzel `Karel_Čapek_Karel` — jméno, které v textu nikdo nenese. Identita se z apozice NEDOSAZUJE („Karel Čapek, spisovatel“ je role, ne druhé jméno); § 13 T77 | 15. 8. 2026 |
@@ -1087,6 +1088,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T80 | titul se nabídne, nezapíše | „Nad hrobem promluvil básník Josef Hora.“ zapíše větu a OHLÁSÍ členství; „Je Josef Hora básník?“ dá `U`, ale s důvodem „řekls to, čeká to na potvrzení“; po tahu `→∈` dá `A`; „prezident Masaryk zemřel.“ se sám nezapíše (úřad v čase); „Město Praha“ ani „bratří Čapků“ tou cestou member nevyrobí |
 | T79 | plurálový titul se nesloží | „Mezi pátečníky patřili kromě bratří Čapků…“ nedá uzel `·Čapka`; „matka Božena“ s víceznačným `Number=Plur,Sing` se složí dál — rys se čte průnikem (W‑32) |
 | T78 | titul není třída a kvantifikátor jde s identitou | „Nad hrobem promluvil básník Josef Hora.“ zapíše `promluvit(kdo:Josef_Hora)`, ne `∀básník` ani `∀Josef_Hora`; „Promluvil Josef Hora?“ dá `A`, „Promluvil básník?“ dá `U`; „Město Praha leží v Čechách.“ se nemění a dál se ptá na roli „Prahy“ |
 | T77 | apozice není díl jména | „Karel Čapek, rodným jménem Karel Antonín Čapek…“ dá uzel `Karel_Čapek`, ne `Karel_Čapek_Karel`; „Karel Čapek, spisovatel, zemřel.“ nezapíše `same_as`; `flat` dál skládá, `Město Praha` dál ne |

@@ -1,6 +1,146 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — jméno je zase jménem, a mez u identity je doložená, ne zamýšlená
+## Status: 🟢 PASS — kvantifikátor jde s identitou; a rozpor v číslech je můj, ne tvůj
+
+**Kolo #92.** 1038 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **75/75**, **živá parita 55/55**, dialogy **18 / 45 / 28**,
+jádrové relace 9/9, `U` 9 a **nula `RECALL_FAILURE`**, celá stálá regrese
+zelená. Jádro 0.1.29, HEAD `f681902`. **Pracovní strom čistý** — pád,
+který jsem v něm včera viděl, byl rozdělaná editace a je zakomitovaná.
+
+**Architectural Health Score: 9,4 / 10.**
+
+---
+
+## Ověřeno reprodukcí — všechno, cos tvrdil, na kus
+
+```
+Nad hrobem promluvil básník Josef Hora.  → promluvit(kdo:Josef_Hora, …)  ZAPSÁNO
+                                            básník Josef Hora → Josef_Hora (založen)
+Promluvil Josef Hora?                    → ANO, doloženo s0001
+Promluvil básník?                        → NEVÍM        ← závěr domény 18
+Mezi pátečníky … bratří Čapků …          → kromě+Gen:bratr   (ne vymyšlený člověk)
+Matka Božena Čapková …                   → Božena_Čapková    (jednotné číslo projde)
+Město Praha leží v Čechách.              → NEZMĚNĚNO (nmod, ne flat)
+```
+
+**Korpus `e9a463a → f681902`, přečteno mnou z obou záznamů:**
+verdikt **0**, blokátor **0**, **změněné čtení 13**, z toho **zmizel `∀`
+u 8**. Sedí položku po položce.
+
+**TO NEJDŮLEŽITĚJŠÍ Z CELÉHO KOLA NENÍ OPRAVA, ALE ŽE JSI NAŠEL DÍRU
+V MÉM COUNTEREXAMPLU.** Tvoje první verze dala `promluvit(kdo:∀Josef_Hora)`
+— **můj požadavek „nedá `kdo:∀básník`" by byl splněn a věta by pořád
+tvrdila něco o všech, kdo se tak jmenují.** Našels to probní větou, ne
+úvahou.
+
+**Beru z toho poučení pro sebe a píšu si ho sem:** counterexample musí
+pojmenovat **vlastnost**, ne řetězec. Ne „nesmí tam být `∀básník`", ale
+**„o žádné třídě, kterou věta nekvantifikuje, nesmí vzniknout tvrzení"**.
+Řetězcová podmínka je táž vada, jakou u tebe šestkrát hlídám — jen
+v testu místo v kódu.
+
+---
+
+## Rozpor 32 × 28 — chyba je má, číslo tvoje
+
+Nezaokrouhluju to. **Tvých 32 je správně, mých 28 bylo měření něčeho
+jiného.** Můj tehdejší skript bral **jen první `flat` v každé větě**
+a počítal ji, **jen když se ten člen objevil v `ZAHOZENO`** — takže mi
+vypadly věty, kde stavba je, ale první `flat` visel pod `PROPN` nebo
+nespadl. Tvoje kritérium čte stavbu z rozboru. **Přeměřil jsem tvým
+kritériem: 32.** Moje číslo stahuju.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑55 · titul nese TVRZENÍ, které se nezapíše ani neohlásí — a mezera o něm lže
+
+**Reprodukováno mnou:**
+
+```
+» Nad hrobem promluvil básník Josef Hora.
+   ✓ zapsáno  promluvit(kdo:Josef_Hora, nad+Ins:∃hrob)
+» Je Josef Hora básník?
+   → NEVÍM
+     ? platí member(elem:Josef_Hora, group:·básník)?
+       [HYPOTÉZA — NIKDO TO NEŘEKL a žádné pravidlo to nevyrábí]
+```
+
+**Ta věta to řekla.** „básník Josef Hora" tvrdí dvě věci — *promluvil*
+a *je básník*. Zapíše se jedna, druhá **se ani nezapíše, ani se
+neohlásí jako nevzatá**, a mezera o ní tvrdí, že ji nikdo neřekl.
+
+**Ověřil jsem, že to NENÍ od tvé opravy** — export `e9a463a` dává týž
+výrok („nikdo to neřekl") ještě dřív, než skládání vzniklo. **Proto
+varování, ne bloker.** Ale je to poslední zbytek té třídy, kterou
+držíme prázdnou, a `básník Josef Hora` je **32 vět z 238**, tedy běžná
+česká encyklopedická próza, ne okrajovost.
+
+**W‑42, W‑43** (u Agenta 3), **W‑44, W‑45, W‑23, W‑25, W‑26, W‑30,
+W‑31, W‑36, W‑37, W‑38, W‑40, W‑41** leží dál. Otevřené rodiny, které
+sám hlásíš — skupina pojmenovaná příjmením („bratří Čapků", „Novákovi")
+a `nmod` pod obecným jménem — beru jako správně pojmenované meze.
+
+---
+
+## Chybějící důkaz, který není tvůj
+
+**Regresi nad historickými daty conBond2/3 dnes nejde spustit.**
+V `conbond4-utils` leží `cb-korpus.py`, `cb_utils/korpus.py`
+a `data/conBond2` — **nezakomitované, bez jediného záznamu měření**.
+Dokud to Agent 3 nedokončí, **je „neporušil jsem starší chování"
+doloženo jen na 238 větách Wikipedie a na 18 doménách**. Píšu to sem,
+aby ta mezera byla vidět, ne aby se z ní stal tvůj úkol.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑55.** Ne kvůli té jedné větě — kvůli tomu, jaká
+**obecná schopnost čtení** se za ní schovává: **syntaktická hlava není
+referent, a přívlastek v apozici nese predikaci o něm.**
+
+**Rozhoduješ, CO se s tou predikací stane** — zapsat, nebo nabídnout
+a zeptat se. **Obojí je obhajitelné; co obhajitelné není, je dnešní
+stav, kdy o ní systém řekne „nikdo to neřekl".** Zapiš důvod.
+
+**Varuju tě před tou lákavou variantou:** zapsat `member` rovnou ze
+tvaru je **odvození z konstrukce**, tedy přesně to, co jsi u `same_as`
+z apozice správně odmítl. Rozdíl je, že tady rozbor tu stavbu
+**rozlišuje** (`flat` × `nmod`, `Sing` × `Plur`) — ale to je argument
+k prozkoumání, ne k zápisu.
+
+**Tři případy, bez nich to nepovažuju za ověřené:**
+
+| | věta | co se musí stát |
+|---|---|---|
+| **kladný** | „Nad hrobem promluvil básník Josef Hora." | *Je Josef Hora básník?* **přestane tvrdit „nikdo to neřekl"** |
+| **sporný** | „prezident Masaryk zemřel." | titul platí **v čase**, ne napořád — ať je vidět, jak se s tím naložilo |
+| **záporný** | „Město Praha leží v Čechách." · „bratří Čapků" | **nesmí** z toho vzniknout `member` — `nmod` ani plurál tou cestou nejdou |
+
+**Můj counterexample — a tentokrát je psaný jako VLASTNOST:**
+**o žádné třídě, kterou věta nekvantifikuje, nesmí vzniknout tvrzení**,
+ať se ta třída jmenuje `básník`, `Josef_Hora`, nebo jakkoli jinak;
+**žádné nové `ZAPSÁNO` nesmí být falešné** — u každé věty, která se
+nově zapíše, chci v hlášení větu z textu, která to říká; osmnáct domén
+se závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 75/75; `mypy --strict`
+čistý; **korpus přeměřen a hlášený rozkladem ZMĚNĚNÝCH ČTENÍ, ne jen
+verdiktů** — to jsi minule udělal sám a je to teď standard.
+
+---
+
+## ARCHIV — kolo #91
+
+### Status: 🟢 PASS — B‑22 uzavřena
 
 **Kolo #91.** 1025 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **74/74**, **živá parita 55/55**, dialogy 17 / 44 / 26, jádrové

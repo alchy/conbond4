@@ -26,6 +26,7 @@ from core_semantics.ast import Group
 from core_semantics.session import (
     declares_complete,
     decides_reference,
+    confirms_title,
     names_attribute,
     names_role,
     revokes,
@@ -74,6 +75,7 @@ def _is_turn(step: Step) -> bool:
         or step.decides_reference is not None
         or step.names_role is not None
         or step.names_attribute is not None
+        or step.confirms_title is not None
         or step.declares_complete != ""
         or step.revokes_complete != ""
     )
@@ -97,6 +99,12 @@ def _answer(
         return session.play(
             names_role(step.text, previous.reading, shape, role_name)
         )
+    if step.confirms_title is not None:
+        # TVRZENÍ TITULU. Skládá se ze jména a titulu, ne z toho, na co se
+        # systém ptal: otázka jen ohlásí, co ve větě stálo, a co se z toho
+        # potvrdí, je rozhodnutí člověka.
+        jmeno, titul = step.confirms_title
+        return session.play(confirms_title(step.text, jmeno, titul))
     if step.names_attribute is not None:
         # PŘÍVLASTEK. Skládá se z hlavy a genitivu, ne z toho, na co se
         # systém ptal — otázka nabízí jména rolí, ale kterou dvojici
