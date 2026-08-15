@@ -2370,7 +2370,21 @@ def lost_members(
 
 
 def _dropped_note(reading: Reading, predication: Predication) -> str | None:
-    lost = dropped_tokens(reading, predication)
+    """Co z věty vypadlo — a genitivní přívlastek mezi to NEPATŘÍ.
+
+    Hlásit u něj „pro tenhle vztah role není" by bylo NEPRAVDA vedle
+    vlastní otázky: systém v témže tahu říká, že na ten přívlastek čeká
+    a ptá se na jeho roli. Dvě hlášky o jedné věci, které si odporují,
+    jsou horší než jedna — je to táž třída jako W‑20.
+    """
+    attribute_tokens = {
+        token for _, _, token in genitive_attributes(reading, predication)
+    }
+    lost = [
+        token
+        for token in dropped_tokens(reading, predication)
+        if token.index not in attribute_tokens
+    ]
     if not lost:
         return None
     parts = []

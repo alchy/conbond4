@@ -112,6 +112,10 @@ class Step:
     #: textu, ne důkaz, takže antecedent vybírá ČLOVĚK i tehdy, když je
     #: kandidát jediný.
     decides_reference: tuple[str, str] | None = None
+    #: `(hlava, genitiv, jméno role)` — krok POJMENUJE roli genitivního
+    #: přívlastku (`→@1`) a zapíše DRUHÝ VÝROK vedle věty. Vlastní pole:
+    #: není to role predikace, a nic se tím neučí.
+    names_attribute: tuple[str, str, str] | None = None
     #: Důvod — krok ODVOLÁVÁ výrok zapsaný krokem `declares_complete`.
     #: Uzavření světa je DEKLARACE, ne trvalá vlastnost, a sada to musí
     #: umět projít celou cestou tam i zpět.
@@ -137,6 +141,10 @@ class Dialogue:
     #: vlastnost češtiny, a v záznamu domény má být vidět, že padlo.
     roles: tuple[tuple[str, str], ...] = ()
     note: str = ""
+    #: Co doména ukázat NEUMÍ. Doména, která svou mez nepřizná, tvrdí
+    #: víc, než dokládá — a zrovna u akceptační sady je to nebezpečné,
+    #: protože ta sada JE smlouva.
+    limit: str = ""
 
     def lexicon(self) -> Lexicon:
         lexicon = czech_seed()
@@ -1725,6 +1733,107 @@ PRODROP = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 15 · Chov a péče — GENITIVNÍ PŘÍVLASTEK jako druhý výrok vedle věty
+# --------------------------------------------------------------------------
+
+ATTRIBUTE = Dialogue(
+    name="Chov a péče",
+    source="„Chov zvířat je náročný. … Péče majitele je nutná.“",
+    shapes=(
+        ("NOUN", "Sing", "Nom", "nsubj", Operation.SELF),
+        ("ADJ", "Sing", "Nom", "root", Operation.SELF),
+    ),
+    steps=(
+        Step(
+            text="Chov zvířat je náročný.",
+            reading=sentence(
+                w("Chov", "chov", "NOUN", 4, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+                w("zvířat", "zvíře", "NOUN", 1, "nmod", Case="Gen", Gender="Neut", Number="Plur"),
+                w("je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("náročný", "náročný", "ADJ", 0, "root", Animacy="Inan", Case="Nom", Degree="Pos", Gender="Masc", Number="Sing", Polarity="Pos"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            reads="být(co:·náročný, kdo:·chov)",
+            writes="být(co:·náročný, kdo:·chov)",
+            asks=(
+                "VĚTA SE ZAPÍŠE A PŘESTO SE SYSTÉM PTÁ. Genitivní "
+                "přívlastek není role slovesa — „zvířat“ visí jako `nmod` "
+                "pod „chov“, tedy pod JMÉNEM, a predikace nese role "
+                "PŘÍSUDKU. Větě proto nechybí predikát, chybí jí "
+                "přívlastek, a blokovat kvůli němu zápis by bylo zadržet "
+                "větu kvůli něčemu, co v ní vůbec není"
+            ),
+            point=(
+                "DŘÍV SE TENHLE GENITIV HLÁSIL JAKO ZTRACENÝ ČLEN a věta "
+                "se kvůli němu nezapsala. Ztracený člen je role, která "
+                "vypadla; tohle je vztah dvou jmen uvnitř fráze"
+            ),
+        ),
+        Step(
+            text="Je to předmět toho děje.",
+            names_attribute=("chov", "zvíře", "co"),
+            writes="chov(co:∀zvíře)",
+            point=(
+                "DRUHÝ VÝROK VEDLE VĚTY, týž tvar jako `→'`. Věta se tím "
+                "NEZAPISUJE ZNOVU — zapsala se, když se dočetla; kdyby "
+                "tenhle tah šel přes `_settle`, ležel by v bázi týž výrok "
+                "dvakrát"
+            ),
+        ),
+        Step(
+            text="Péče majitele je nutná.",
+            reading=sentence(
+                w("Péče", "péče", "NOUN", 4, "nsubj", Case="Nom", Gender="Fem", Number="Sing"),
+                w("majitele", "majitel", "NOUN", 1, "nmod", Animacy="Anim", Case="Gen", Gender="Masc", Number="Sing"),
+                w("je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("nutná", "nutný", "ADJ", 0, "root", Case="Nom", Degree="Pos", Gender="Fem", Number="Sing", Polarity="Pos"),
+                w(".", ".", "PUNCT", 4, "punct"),
+            ),
+            reads="být(co:·nutný, kdo:·péče)",
+            writes="být(co:·nutný, kdo:·péče)",
+            asks=(
+                "PTÁ SE ZNOVU, a je to důkaz, že se tvar NENAUČIL. Kdyby "
+                "se učil, přečetl by tuhle větu podle předchozí odpovědi "
+                "— tedy NARUBY"
+            ),
+            point=(
+                "„chov zvířat“ a „péče majitele“ mají TÝŽ TVAR a OPAČNÝ "
+                "SMĚR: zvířata se chovají, kdežto majitel pečuje. Význam "
+                "genitivu je vlastnost VĚTY, ne tvaru"
+            ),
+        ),
+        Step(
+            text="Je to původce toho děje.",
+            names_attribute=("péče", "majitel", "kdo"),
+            writes="péče(kdo:∀majitel)",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Týž tvar dal JINOU "
+                "ROLI — `kdo` proti `co` o dva kroky výš — a to je celý "
+                "důvod, proč se tenhle tah nesmí nic učit"
+            ),
+        ),
+    ),
+    note=(
+        "Patnáctý akceptační dialog. Genitivní přívlastek nese pět měřením "
+        "doložených významů (předmět děje, původce děje, nositel "
+        "vlastnosti, část z celku, míra a druh) a liší se PRÁVĚ TÍM, "
+        "kterou roli genitiv v reifikovaném vztahu plní. Menu proto není "
+        "nový druh rozhodnutí — je to otázka na jméno role, kterou systém "
+        "už uměl."
+    ),
+    limit=(
+        "CO TAHLE DOMÉNA UKÁZAT NEUMÍ: otázku, která by prošla OD VĚTY "
+        "K PŘÍVLASTKU. Reifikovaný fakt se ZÁMĚRNĚ neřetězí — nevytváří "
+        "uzávěr — takže „Je náročné to, co se týká zvířat?“ by potřebovala "
+        "můstkové pravidlo, a to je jiná schopnost. Doména proto končí na "
+        "JEDNOM výroku: dokládá, že přívlastek se zapíše a systém se na "
+        "něj zeptá, ne že se dá s větou spojit. Svázat obojí by znamenalo "
+        "měřit dvě věci naráz a přivést partitivní uzávěr zadními vrátky."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -1740,4 +1849,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     NAMING,
     DISCOURSE,
     PRODROP,
+    ATTRIBUTE,
 )

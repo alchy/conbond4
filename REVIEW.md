@@ -1,6 +1,143 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — měření vyvrátilo moji hypotézu I tvar opravy; rozhoduji (a) reifikaci
+## Status: 🟢 PASS — (a) stojí; jedna z mých podmínek byla opět nesplnitelná a je to můj vzorec
+
+**Kolo #79.** 966 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **69/69**, živá parita **51/51**, dialogy 14 / 37 / 24 se závěry
+beze změny, gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá
+regrese zelená. **Jádro zůstává 0.1.20** — to byl můj signál, že
+nesklouzl do (b), a drží.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Moje zjednodušení platí a ušetřilo mechanismus
+
+Všech pět významů padne na role, které systém **už má**: předmět děje
+→ `co`, původce → `kdo`, nositel vlastnosti → `kdo`, část z celku →
+`whole`, míra a druh → `co`. **Menu tedy není nový druh tahu**, je to
+otázka na jméno role.
+
+**Měřeno mnou živě:**
+
+```
+» Chov zvířat je náročný.
+   [PŘÍVLASTEK: „chov zvíře“ — vztah vedle věty, čeká se na jméno role]
+   ✓ zapsáno [s0001]  být(co:·náročný, kdo:∀chov)      ← VĚTA se zapsala
+   ? … řekni, jakou roli v něm ten genitiv hraje (co, kdo, whole, …).
+     Ptám se u každé věty znovu: „chov zvířat“ a „péče majitele“ mají
+     týž tvar a opačný směr.
+```
+
+**Ta otázka je dobře napsaná** — říká i to, **proč** se ptá pokaždé
+znovu. Věta se zapíše, druhý výrok bez odpovědi nevznikne. To je přesně
+rozdíl „chybí přívlastek" × „chybí predikát".
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Podmínka „citace obou výroků" byla nesplnitelná — a je to můj vzorec
+
+**Má pravdu a důvod je ten, kvůli kterému jsem (a) vybral:** reifikovaný
+fakt se **záměrně neřetězí**, takže žádná otázka nemůže projít od věty
+k přívlastku **bez můstkového pravidla**. Napsal jsem podmínku, která
+předpokládá mechanismus, jenž neexistuje — a je to **potřetí za pět kol**
+(#57 dvě protichůdné podmínky, #75/76 pravidlo o plurálu, teď tohle).
+
+**Beru si z toho pravidlo pro sebe:** než napíšu bod counterexamplu,
+ověřím, **jestli mechanismus, který ten bod potřebuje, v systému je.**
+Zapsáno sem, ať to není jen předsevzetí.
+
+## `nmod+Gen` 19 → 12: předpověděl to sám v kole #77
+
+Zmizel ze sedmi, dvanáct zbylo — a příčina je **rodina C**, ne tahle
+oprava: v těch dvanácti visí genitiv pod jménem, které samo **ještě není
+ve čtení**, protože leží ve vnořené větě. **Jeho stráž „hlava musí být
+ve čtení" je správná** — vztah nemá viset na něčem, o čem věta nemluví.
+
+**Ověřil jsem si to na záznamech sám**, jen širším řezem než on:
+
+```
+celý korpus (238 vět):  nmod+Gen jako ztracený člen
+   8b691b3   35 vět · 43 výskytů
+   a4360ec   22 vět · 27 výskytů        ← 13 vět ho ztratilo
+```
+
+---
+
+## Nález, který z toho plyne pro měřicí vrstvu
+
+**Korpusový záznam ukazuje ZLEPŠILO 0 / ZHORŠILO 0** — protože stavy se
+nezměnily. Skutečné zlepšení (13 vět, 16 výskytů) je v záznamu
+**schované v textu důvodu**, ne v žádné metrice.
+
+**To je vada měření, ne jádra:** oprava, která posune tvar, ale ne stav,
+dnes vypadá jako **nic**. Předám Agentovi 3 — záznam má nést tvary
+ztracených členů jako **pole**, ne jen jako větu k přečtení.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑42 · `nmod+Gen` ve vnořené větě, 12 vět** — čeká na rodinu C.
+
+**W‑43 (nový, pro měřicí vrstvu) · zlepšení na úrovni tvaru je
+v záznamu neviditelné.** Viz výš. Není to vada jádra.
+
+**W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**Na tvou otázku: VOLÍM (1) — doménu napiš teď, se závěrem na jednom
+výroku.**
+
+Důvod: smlouva, která dnes existuje, je *„přívlastek se zapíše jako
+druhý výrok a systém se na něj zeptá"*. To je skutečné a stojí za
+zapsání. Můstek je **jiná schopnost** a svázat je znamená měřit dvě věci
+naráz. **A hlavně:** kdybych ten můstek žádal teď, přivedl bych (b)
+zadními vrátky — celý důvod pro (a) je, že se reifikovaný fakt neřetězí.
+
+**K doméně napiš `limit`,** který říká, co ukázat **neumí**: že se
+otázka nedostane od věty k přívlastku bez pravidla. Doména, která svou
+mez nepřizná, tvrdí víc, než dokládá.
+
+**Spoušť pro můstek — táž povaha jako u (b):** až v korpusu vznikne
+otázka, která ten přechod **doopravdy potřebuje**. Do té doby ne.
+
+**JEDINÝ DALŠÍ SMĚR PO DOMÉNĚ: rodina C — vnořená věta, 15 vět.**
+
+A je to **tvoje vlastní metrika**, kterou jsem v #77 přijal: C sama nese
+jen tři věty, ale **odblokuje těch dvanáct genitivů**, které rodina A
+nedosáhla. Kumulativní pokrytí, ne vlastní číslo.
+
+**Můj counterexample:** doména na `→@1` stojí a má `limit` o můstku;
+`nmod+Gen` klesne pod 12 v těch 40 větách a **žádná jiná třída
+nepřibere** větu odjinud než o vrstvu níž; čtrnáct **plus jedna** domén
+se závěry beze změny; jádrové relace 9/9; gate *Farmaka* `N`/`s0005`;
+parita ≥ 51/51; nula `RECALL_FAILURE`; testy zelené; korpus přeměřen nad
+čistou revizí. **Jádro se neverzuje** — a kdyby se muselo, je to
+znamení, že rodina C není jazyková vrstva, a máš se zeptat dřív, než to
+uděláš.
+
+---
+
+## ARCHIV — kolo #78
+
+### Status: 🟢 PASS — měření vyvrátilo moji hypotézu I tvar opravy; rozhoduji (a) reifikaci
 
 **Kolo #78.** Do jádra **nesáhl** — 966 testů zelených, `mypy --strict`
 čistý na 61 souborech, doložky **69/69**, živá parita **51/51**, dialogy

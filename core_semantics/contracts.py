@@ -1041,6 +1041,34 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-36",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "GENITIVNÍ PŘÍVLASTEK je DRUHÝ VÝROK vedle věty, ne role "
+            "predikace: „zvířat“ visí jako `nmod` pod „chov“, tedy pod "
+            "JMÉNEM, a predikace nese role PŘÍSUDKU. Větě proto nechybí "
+            "predikát a zápis se kvůli němu NEBLOKUJE — blokovat by "
+            "znamenalo zadržet větu kvůli něčemu, co v ní není. Mezi "
+            "ZTRACENÉ ČLENY nepatří a nehlásí se jako zahozený: dvě "
+            "hlášky o jedné věci, které si odporují, jsou horší než "
+            "jedna. Tah `→@1` zapíše vztah po odpovědi a NIC SE JÍM "
+            "NEUČÍ — „chov zvířat“ a „péče majitele“ mají týž tvar "
+            "a opačný směr, takže naučit ho jako tvar by znamenalo "
+            "přečíst druhou větu naruby; druhá věta se ptá znovu. "
+            "Pět měřených významů se liší PRÁVĚ jménem role, takže menu "
+            "není nový druh rozhodnutí (W‑39)"
+        ),
+        anchor="core_semantics.cascade:genitive_attributes",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_sentence_is_written_even_though_the_attribute_waits",
+            "test_the_attribute_is_not_reported_as_a_dropped_member",
+            "test_the_second_statement_needs_the_answer",
+            "test_the_same_form_can_take_a_different_role",
+            "test_nothing_is_learned_so_the_next_sentence_asks_again",
+        ),
+    ),
+    Clause(
         id="S-35",
         boundary=CASCADE_SESSION,
         promise=(

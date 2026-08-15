@@ -365,3 +365,131 @@ def test_a_demonstrative_that_does_mean_a_node_is_still_asked_about() -> None:
     assert result.statement_id is None or result.question is not None, (
         "určitý popis se buď doptá, nebo se doloží — tiše se nezahazuje"
     )
+
+
+# --------------------------------------------------------------------------
+# GENITIVNÍ PŘÍVLASTEK — druhý výrok vedle věty (W‑39)
+# --------------------------------------------------------------------------
+#
+# „Chov zvířat je náročný." Genitiv visí jako `nmod` pod JMÉNEM, ne pod
+# přísudkem, takže to není role predikace — predikace nese role slovesa
+# a „zvířat" není argument „být". Je to vztah dvou jmen uvnitř fráze,
+# tedy druhý výrok vedle věty; týž tvar, jaký má přivlastnění (`→'`).
+#
+# Měřením doložených významů je PĚT (předmět děje, původce, nositel
+# vlastnosti, část z celku, míra a druh) a liší se PRÁVĚ TÍM, kterou roli
+# genitiv v reifikovaném vztahu plní. Menu proto není nový druh
+# rozhodnutí — je to otázka na jméno role.
+
+BREEDING = Reading(
+    tokens=(
+        w(1, "Chov", "chov", "NOUN", 4, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+        w(2, "zvířat", "zvíře", "NOUN", 1, "nmod", Case="Gen", Number="Plur", Gender="Neut"),
+        w(3, "je", "být", "AUX", 4, "cop", Polarity="Pos", **COP),
+        w(4, "náročný", "náročný", "ADJ", 0, "root", Case="Nom", Number="Sing", Gender="Masc"),
+        w(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+CARE = Reading(
+    tokens=(
+        w(1, "Péče", "péče", "NOUN", 4, "nsubj", Case="Nom", Number="Sing", Gender="Fem"),
+        w(2, "majitele", "majitel", "NOUN", 1, "nmod", Case="Gen", Number="Sing", Gender="Masc"),
+        w(3, "je", "být", "AUX", 4, "cop", Polarity="Pos", **COP),
+        w(4, "nutná", "nutný", "ADJ", 0, "root", Case="Nom", Number="Sing", Gender="Fem"),
+        w(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+BREEDING_TEXT = "Chov zvířat je náročný."
+CARE_TEXT = "Péče majitele je nutná."
+
+
+def _attribute_session() -> tuple[Session, _Recorded]:
+    from core_semantics.lexicon import (
+        LearnedPattern,
+        Operation,
+        PatternStatus,
+        Trigger,
+        czech_seed,
+    )
+
+    lexicon = czech_seed()
+    for upos, deprel in (("NOUN", "nsubj"), ("ADJ", "root")):
+        lexicon.add(
+            LearnedPattern(
+                trigger=Trigger(
+                    lemma="", upos=upos, number="Sing", case="Nom", deprel=deprel
+                ),
+                operation=Operation.SELF,
+                learned_from="test",
+                status=PatternStatus.CONFIRMED,
+            )
+        )
+    return Session(lexicon=lexicon), _Recorded(
+        {BREEDING_TEXT: BREEDING, CARE_TEXT: CARE}
+    )
+
+
+def test_the_sentence_is_written_even_though_the_attribute_waits() -> None:
+    """Větě nechybí PREDIKÁT, chybí jí PŘÍVLASTEK. Blokovat kvůli němu
+    zápis by znamenalo zadržet větu kvůli něčemu, co v ní není."""
+    session, oracle = _attribute_session()
+    result = session.utter(BREEDING_TEXT, oracle)
+    assert result.statement_id is not None
+    assert result.question is not None
+    assert result.predication is not None
+    assert result.predication.pending_attribute == (("chov", "zvíře", 2),)
+
+
+def test_the_attribute_is_not_reported_as_a_dropped_member() -> None:
+    """Dvě hlášky o jedné věci, které si odporují, jsou horší než jedna:
+    systém v témže tahu říká, že na přívlastek ČEKÁ, takže hlásit u něj
+    „pro tenhle vztah role není" je nepravda (táž třída jako W‑20)."""
+    session, oracle = _attribute_session()
+    trace = " ".join(session.utter(BREEDING_TEXT, oracle).lines)
+    assert "PŘÍVLASTEK" in trace
+    assert "zvířat" not in trace.split("ZAHOZENO")[-1] if "ZAHOZENO" in trace else True
+
+
+def test_the_second_statement_needs_the_answer() -> None:
+    """Bez odpovědi druhý výrok NEVZNIKNE — a věta přesto stojí."""
+    from core_semantics.ast import Atom
+
+    session, oracle = _attribute_session()
+    session.utter(BREEDING_TEXT, oracle)
+    assert not any(
+        isinstance(statement.formula, Atom)
+        and statement.formula.predicate == "chov"
+        for statement in session.kb.active()
+    )
+
+
+def test_the_same_form_can_take_a_different_role() -> None:
+    """„chov zvířat" a „péče majitele" mají TÝŽ TVAR a OPAČNÝ SMĚR:
+    zvířata se chovají, kdežto majitel pečuje."""
+    from core_semantics.session import names_attribute
+
+    session, oracle = _attribute_session()
+    session.utter(BREEDING_TEXT, oracle)
+    first = session.play(names_attribute("Předmět.", "chov", "zvíře", "co"))
+    session.utter(CARE_TEXT, oracle)
+    second = session.play(names_attribute("Původce.", "péče", "majitel", "kdo"))
+    assert any("chov(co:∀zvíře)" in line for line in first.lines)
+    assert any("péče(kdo:∀majitel)" in line for line in second.lines)
+
+
+def test_nothing_is_learned_so_the_next_sentence_asks_again() -> None:
+    """Kdyby se tvar naučil, druhá věta by se nezeptala — a přečetla by
+    se podle první odpovědi, tedy NARUBY."""
+    from core_semantics.session import names_attribute
+
+    session, oracle = _attribute_session()
+    session.utter(BREEDING_TEXT, oracle)
+    session.play(names_attribute("Předmět.", "chov", "zvíře", "co"))
+    again = session.utter(CARE_TEXT, oracle)
+    assert again.predication is not None
+    assert again.predication.pending_attribute == (("péče", "majitel", 2),)
+    assert again.question is not None and "přívlastek" in again.question

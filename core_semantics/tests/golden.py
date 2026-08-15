@@ -1075,6 +1075,51 @@ P3 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# R · genitivní přívlastek (patnáctý akceptační dialog)
+# --------------------------------------------------------------------------
+#
+# Obě věty se ZAPÍŠOU a přesto se systém ptá — a to je na nich to
+# podstatné. Genitiv visí pod JMÉNEM, ne pod přísudkem, takže větě
+# nechybí predikát; chybí jí přívlastek, a ten je druhý výrok vedle věty.
+
+R1 = Golden(
+    dialogue="R",
+    text="Chov zvířat je náročný.",
+    tokens=(
+        tok(1, "Chov", "chov", "NOUN", 4, "nsubj", Animacy="Inan", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(2, "zvířat", "zvíře", "NOUN", 1, "nmod", Case="Gen", Gender="Neut", Number="Plur"),
+        tok(3, "je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(4, "náročný", "náročný", "ADJ", 0, "root", Animacy="Inan", Case="Nom", Degree="Pos", Gender="Masc", Number="Sing", Polarity="Pos"),
+        tok(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    predication="být(co:·náročný, kdo:∀chov)",
+    asks=(
+        "ptá se na význam genitivního přívlastku — a VĚTA SE PŘESTO "
+        "ZAPÍŠE, protože přívlastek není role přísudku"
+    ),
+)
+
+R2 = Golden(
+    dialogue="R",
+    text="Péče majitele je nutná.",
+    tokens=(
+        tok(1, "Péče", "péče", "NOUN", 4, "nsubj", Case="Nom", Gender="Fem", Number="Sing"),
+        tok(2, "majitele", "majitel", "NOUN", 1, "nmod", Animacy="Anim", Case="Gen", Gender="Masc", Number="Sing"),
+        tok(3, "je", "být", "AUX", 4, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(4, "nutná", "nutný", "ADJ", 0, "root", Case="Nom", Degree="Pos", Gender="Fem", Number="Sing", Polarity="Pos"),
+        tok(5, ".", ".", "PUNCT", 4, "punct"),
+    ),
+    predication="být(co:·nutný, kdo:∀péče)",
+    asks="TÝŽ TVAR jako R1, a ptá se ZNOVU — význam genitivu se neučí",
+    point=(
+        "„chov zvířat“ a „péče majitele“ mají identický rozbor a OPAČNÝ "
+        "SMĚR: zvířata se chovají, kdežto majitel pečuje. Naučit ten tvar "
+        "by znamenalo přečíst druhou větu naruby"
+    ),
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
@@ -1087,6 +1132,7 @@ CORPUS: tuple[Golden, ...] = (
     N1, N2, N3,
     O1, O2, O3,
     P1, P2, P3,
+    R1, R2,
 )
 
 
