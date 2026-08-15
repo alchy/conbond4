@@ -1,6 +1,120 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — správnost stojící na náhodě; a je to NÁVRAT staré třídy vad
+## Status: 🟢 PASS — survey hotov, nula změn chování; a našel při tom fakt o nikom
+
+**Kolo #84.** 989 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **71/71**, živá parita **53/53**, dialogy 15 / 41 / 24, gate
+*Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá regrese zelená.
+Jádro zůstává 0.1.20 (`9be6ecc`).
+
+**Architectural Health Score: 9,0 / 10** — drží se na 9,0 kvůli W‑48.
+
+---
+
+## Survey: rozhodnuto u každého místa, chování beze změny
+
+Ověřeno mnou z obou záznamů — **`2a28455 → 9be6ecc`: změnilo se 0 vět**,
+verdikty i blokátory identické. Podmínku „ani o jednu větu" splnil
+doslova a doložil ji dvakrát.
+
+```
+podtypy DOLOŽENÉ v korpusu (238 vět):
+   nsubj 253 / nsubj:pass 38      advcl:pred 30 / advcl 21   ← podtyp častější
+   expl:pv 69 / expl:pass 12      det 109 / det:numgov 5 / det:nummod 3
+BEZ podtypu: cop · conj · cc · obj · nmod · mark · punct
+```
+
+**Devět z šestnácti míst stojí nad základem, který v tomhle korpusu
+podtyp nemá** — a nechat je být je **rozhodnutí, ne opomenutí**, jak
+píše: měnit porovnání tam, kde se nemá co změnit, přidá šum do diffu
+a zakryje místa, kde na tom záleží. Souhlasím.
+
+**Rozhodnutí „dovnitř" mají správný důvod**, zvlášť tohle: `nsubj:pass`
+je **vyslovený** podmět, takže bez něj by pro‑drop u **každé trpné věty**
+tvrdil, že podmět chybí, a ptal se na antecedent někoho, kdo ve větě
+stojí. **Rozhodnutí „ven"** (`advcl:pred` jako doplněk, `det:numgov`
+jako kvantifikátor) teď **říká kód**, ne náhoda.
+
+---
+
+## Critical Blockers
+
+### W‑48 · pasivní pro‑drop nevystřelí — do báze jde FAKT O NIKOM
+
+**Nezpůsobilo to tohle kolo**, našel to sám a **záměrně neopravil**,
+protože moje podmínka zněla „chování se nezmění ani o jednu větu".
+To bylo správné rozhodnutí. Ale je to **nejdražší druh vady, jaký
+tenhle projekt má**, a proto to jde do blokerů, ne mezi varování.
+
+**Reprodukováno mnou:**
+
+```
+» Byl pohřben na Vyšehradě.   ✓ zapsáno [s0002]  pohřbený(kde:Vyšehrad)
+                              ptá se: NE                 ← FAKT O NIKOM
+» Narodil se v Praze.         ◐ NEZAPSÁNO, ptá se        ← činný rod se ptá
+```
+
+**Příčina je táž třída jako W‑47, jen o patro vedle:** kořen pasiva je
+`ADJ` (`pohřben`), ne `VERB` — ověřeno na rozboru — a patro z kola #72
+žádá `root.upos in ("VERB","AUX")`. **Přesná shoda na kategorii, která
+má variantu**, potřetí.
+
+**A má to viditelný druhý účinek**, který jsem si všiml při reprodukci:
+protože se ta věta zapsala bez podmětu, byl v další větě jediným
+kandidátem na antecedent **Vyšehrad** — systém tedy nabídl místo jako
+toho, kdo se narodil. Zeptal se, takže nic nepokazil, ale **kvalita
+nabídky je přímým důsledkem W‑48**.
+
+---
+
+## Semantic Warnings
+
+**W‑47 uzavřena** tímhle survey.
+
+**W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37,
+W‑38, W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑48. Tvoje pořadí schvaluji a tvůj důvod je
+přesný** — zápis faktu o nikom je nejdražší vada, kterou tenhle systém
+umí udělat, a #72 to už jednou rozhodlo pro činný rod.
+
+**Obecný problém, ne jedna věta:** kategorie kořene se porovnává
+**výčtem**, který nezná varianty. U trpného rodu je kořen `ADJ`
+s `aux:pass` pod sebou — a to je **struktura, ne slovní druh**. Řešení
+má být téhož tvaru jako u `advcl`: **čti, co v rozboru je** (`aux:pass`,
+`expl:pass`), ne „jakou má kořen značku".
+
+**Tři věci, které z toho udělají obecnou opravu:**
+
+1. Rozpoznat trpný rod **ze struktury** (`aux:pass` / `nsubj:pass`),
+   ne z `upos`.
+2. Když **je** `nsubj:pass`, podmět **není** vynechaný — to už survey
+   rozhodl a nesmí se to rozejít.
+3. Když **není**, je to pro‑drop a platí všechno z #72: **navrhne
+   kandidáta a zeptá se, bez odpovědi nezapíše nic**.
+
+**Můj counterexample — čísla ODHADUJI, měřit je budeš ty:** „Byl pohřben
+na Vyšehradě." se **nezapíše** a **zeptá se** na podmět; „Karel Čapek
+byl pohřben na Vyšehradě." (má `nsubj:pass`) se **zapíše** a **neptá**;
+činný pro‑drop z #72 beze změny; **žádná věta se nezapíše bez podmětu**,
+kde podmět chybí; patnáct domén se závěry beze změny; jádrové relace
+9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 53/53; nula `RECALL_FAILURE`;
+testy zelené; korpus přeměřen nad čistou revizí a **v diffu je vidět,
+které věty přešly ze `ZAPSÁNO` do `PTÁ SE`** — je to zlepšení, i když
+číslo `ZAPSÁNO` klesne.
+
+**Doména na `advcl` s `limit`em o `advcl:pred` až po tom**, jak jsi
+navrhl.
+
+---
+
+## ARCHIV — kolo #83
+
+### Status: 🟢 PASS — správnost stojící na náhodě; a je to NÁVRAT staré třídy vad
 
 **Kolo #83.** Do jádra **nesáhl** — 989 testů zelených, `mypy --strict`
 čistý na 61 souborech, doložky **71/71**, živá parita **53/53**, dialogy

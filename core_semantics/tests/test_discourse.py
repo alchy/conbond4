@@ -476,3 +476,110 @@ def test_a_predicate_that_says_nothing_about_the_subject_offers_nobody() -> None
     session = prodrop_session()
     result = session.utter(text, _Recorded({text: bare}))
     assert result.predication is None or result.predication.role("kdo") is None
+
+
+# --------------------------------------------------------------------------
+# Trpný rod se pozná ZE STRUKTURY — W‑48
+# --------------------------------------------------------------------------
+#
+# „Byl pohřben na Vyšehradě." nemá podmět a přesto se zapsala BEZ NĚJ,
+# tedy jako fakt o nikom, a nic to neřeklo. Příčina: kořen trpné věty je
+# `ADJ` (příčestí `pohřben`), pomocné sloveso visí pod ním jako `aux:pass`,
+# a patro se ptalo na SLOVNÍ DRUH kořene výčtem `("VERB", "AUX")`.
+#
+# Potřetí táž třída vad: W‑32 porovnávala rysy řetězcem, W‑47 deprel
+# řetězcem, tohle `upos` výčtem. Pokaždé kategorie, která má variantu.
+
+PASSIVE_NO_SUBJECT = Reading(
+    tokens=(
+        w(1, "Byl", "být", "AUX", 2, "aux:pass", Gender="Masc", Number="Sing"),
+        w(2, "pohřben", "pohřbený", "ADJ", 0, "root", Gender="Masc", Number="Sing", Voice="Pass"),
+        w(3, "v", "v", "ADP", 4, "case", Case="Loc"),
+        w(4, "Praze", "Praha", "PROPN", 2, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+        w(5, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+PASSIVE_WITH_SUBJECT = Reading(
+    tokens=(
+        w(1, "Jan", "Jan", "PROPN", 3, "nsubj:pass", Case="Nom", Gender="Masc", Number="Sing"),
+        w(2, "byl", "být", "AUX", 3, "aux:pass", Gender="Masc", Number="Sing"),
+        w(3, "pohřben", "pohřbený", "ADJ", 0, "root", Gender="Masc", Number="Sing", Voice="Pass"),
+        w(4, "v", "v", "ADP", 5, "case", Case="Loc"),
+        w(5, "Praze", "Praha", "PROPN", 3, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+        w(6, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+PASSIVE_NO_SUBJECT_TEXT = "Byl pohřben v Praze."
+PASSIVE_WITH_SUBJECT_TEXT = "Jan byl pohřben v Praze."
+
+
+def _passive_oracle() -> _Recorded:
+    return _Recorded(
+        {
+            TEACHER_TEXT: TEACHER,
+            PASSIVE_NO_SUBJECT_TEXT: PASSIVE_NO_SUBJECT,
+            PASSIVE_WITH_SUBJECT_TEXT: PASSIVE_WITH_SUBJECT,
+        }
+    )
+
+
+def test_a_subjectless_passive_no_longer_writes_a_fact_about_nobody() -> None:
+    """CRITICAL. Věta bez podmětu se nesmí zapsat dekapitovaná, ať je
+    kořen VERB, nebo ADJ. Trpný rod na tom nic nemění."""
+    session = Session(lexicon=lexicon())
+    session.utter(TEACHER_TEXT, _passive_oracle())
+    result = session.utter(PASSIVE_NO_SUBJECT_TEXT, _passive_oracle())
+    assert result.statement_id is None
+    assert result.question is not None
+    assert result.predication is not None
+    role = result.predication.role("kdo")
+    assert role is not None, "podmět musí vzniknout i u trpné věty"
+
+
+def test_a_passive_with_a_subject_is_not_treated_as_pro_drop() -> None:
+    """`nsubj:pass` je VYSLOVENÝ podmět. Kdyby se sem nezapočítal, patro
+    by u každé trpné věty tvrdilo, že podmět chybí, a ptalo se na
+    antecedent někoho, kdo ve větě stojí. Survey W‑47 to rozhodl a tohle
+    se s ním nesmí rozejít."""
+    session = Session(lexicon=lexicon())
+    session.utter(TEACHER_TEXT, _passive_oracle())
+    result = session.utter(PASSIVE_WITH_SUBJECT_TEXT, _passive_oracle())
+    assert result.predication is not None
+    assert result.predication.role("kdo") is None
+    otazka = result.question or ""
+    assert "nemá podmět" not in otazka
+
+
+def test_the_predicate_is_recognised_from_structure_not_from_upos() -> None:
+    """PŘÍČINA, ne příznak. Kdyby se zase začal číst výčet slovních druhů,
+    tenhle test padne dřív, než se to projeví zápisem faktu o nikom."""
+    import inspect
+
+    from core_semantics.cascade import PREDICATE_AUXILIARIES, _is_predicate
+
+    # Rozhoduje STRUKTURA: pomocné sloveso pod kořenem, ne značka kořene.
+    assert set(PREDICATE_AUXILIARIES) == {"aux", "cop"}
+    source = inspect.getsource(_is_predicate)
+    assert "PREDICATE_AUXILIARIES" in source
+    assert "W‑48" in source, "důvod má být v kódu, ne jen v commitu"
+    assert _is_predicate(PASSIVE_NO_SUBJECT.tokens[1], PASSIVE_NO_SUBJECT)
+
+
+def test_a_nominal_root_without_an_auxiliary_is_not_a_predicate() -> None:
+    """Stráž zůstává úzká: jméno bez pomocného slovesa přísudek NENÍ,
+    takže se u něj podmět nedoplňuje. Jinak by patro vyrábělo otázku
+    u každé jmenné fráze."""
+    from core_semantics.cascade import _is_predicate
+
+    holy = Reading(
+        tokens=(
+            w(1, "Praha", "Praha", "PROPN", 0, "root", Case="Nom", Gender="Fem", Number="Sing"),
+            w(2, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    assert not _is_predicate(holy.tokens[0], holy)

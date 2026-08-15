@@ -1099,6 +1099,30 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-37",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "PŘÍSUDEK SE POZNÁ ZE STRUKTURY, ne ze slovního druhu. Trpná "
+            "věta má kořen `ADJ` (příčestí „pohřben“) a pomocné sloveso "
+            "pod ním jako `aux:pass`; výčet `(\"VERB\", \"AUX\")` na to "
+            "byl slepý, takže se trpná věta BEZ PODMĚTU zapsala BEZ "
+            "PODMĚTU — jako fakt o nikom, a nic to neřeklo. Je to potřetí "
+            "táž třída jako W‑32 (rysy řetězcem) a W‑47 (deprel řetězcem): "
+            "kategorie, která má variantu. Když `nsubj:pass` JE, podmět "
+            "vynechaný NENÍ a patro se neptá — nesmí se to rozejít se "
+            "survey W‑47. Jméno bez pomocného slovesa přísudek není "
+            "(W‑48)"
+        ),
+        anchor="core_semantics.cascade:_is_predicate",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_subjectless_passive_no_longer_writes_a_fact_about_nobody",
+            "test_a_passive_with_a_subject_is_not_treated_as_pro_drop",
+            "test_the_predicate_is_recognised_from_structure_not_from_upos",
+            "test_a_nominal_root_without_an_auxiliary_is_not_a_predicate",
+        ),
+    ),
+    Clause(
         id="S-35",
         boundary=CASCADE_SESSION,
         promise=(

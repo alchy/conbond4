@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.20 · 15. 8. 2026
+**Verze jádra:** 0.1.21 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.21 | § 5.2 — PŘÍSUDEK SE POZNÁ ZE STRUKTURY, ne ze slovního druhu: trpná věta má kořen `ADJ` a pomocné sloveso pod ním jako `aux:pass`, takže výčet `(VERB, AUX)` na ni byl slepý a zapisovala se BEZ PODMĚTU — jako fakt o nikom. Potřetí táž třída jako 0.1.18 (rysy řetězcem) a W‑47 (deprel řetězcem); § 13 T71 | 15. 8. 2026 |
 | 0.1.20 | § 5.2 — u KOORDINOVANÉHO PODMĚTU je řídícím členem CELÁ KOORDINACE: koordinace, která SČÍTÁ a jejíž přísudek stojí ZA podmětem, žádá MNOŽNÉ číslo. Pravidlo zúžilo MĚŘENÍ — disjunkce („či“) a přísudek před podmětem mají jednotné číslo právem. Pravidlo je kladné — „Petr a Pavel četl knihu.“ padá dál. ROD SE U KOORDINACE NEOVĚŘUJE a je to PŘIZNANÁ MEZ: čeština ho řeší pravidly (muž + žena → mužský životný), ne průnikem; § 13 T70 | 15. 8. 2026 |
 | 0.1.19 | § 5.2 — u KVANTIFIKOVANÉHO PODMĚTU se shoda počítá proti KVANTIFIKÁTORU, ne proti jménu: „několik měření … podpořilo“ žádá přísudek ve STŘEDNÍM JEDNOTNÉM. Pravidlo je KLADNÉ, ne výjimka — „Několik hostů přišli.“ padá dál. Řídící člen se čte z jmenovky `det:numgov`, ne ze seznamu slov; § 13 T69 | 15. 8. 2026 |
 | 0.1.18 | § 5.2 — SHODA SE POROVNÁVÁ PRŮNIKEM HODNOT, ne rovností řetězce: rys, který UD uvede jako množinu (`Plur,Sing`), je přiznaná víceznačnost tvaru, ne konjunkce dvou tvrzení. Kontroluje se číslo I ROD — bez rodu by průnik propustil „Psi byla“. Na encyklopedickém korpusu klesla třída morfologie z 29/238 na 10/238; § 13 T68 | 15. 8. 2026 |
@@ -1078,6 +1079,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T71 | trpný rod se pozná ze struktury | „Byl pohřben v Praze.“ se NEZAPÍŠE a zeptá se na podmět; „Jan byl pohřben v Praze.“ (má `nsubj:pass`) se na podmět neptá; činný pro‑drop beze změny; jméno bez pomocného slovesa přísudek není |
 | T70 | koordinovaný podmět | „Petr a Pavel četli knihu.“ se přečte, „Petr a Pavel četl knihu.“ padne a řekne proč; koordinace se pozná z hrany `conj`, ne ze spojky; rod se u koordinace NEOVĚŘUJE a je to zapsaná mez; kvantifikovaný podmět se s koordinací neplete |
 | T69 | kvantifikovaný podmět | „Několik hostů přišlo.“ se přečte, „Několik hostů přišli.“ padne a řekne proč; řídící člen se bere z `det:numgov`, ne ze seznamu slov; koordinovaný podmět tahle větev nechytá a padá dál |
 | T68 | shoda průnikem, ne rovností | „Matka sbírala folklor.“, „Povodeň zasáhla dům.“ i „Přednáška byla v pondělí.“ se PŘEČTOU; „Psi byla v pondělí.“ se dál zahodí a řekne proč (rod); „Obsahuje citron vitamíny?“ se pořád zužuje na jedno čtení; chybějící rys shodu neruší |

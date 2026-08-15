@@ -1617,6 +1617,35 @@ def relation_tier(lexicon: Lexicon) -> Tier:
 ANAPHORIC_LEMMAS = ("on", "jeho", "její", "jejich")
 
 
+#: Pomocná slovesa, která z kořene dělají PŘÍSUDEK, i když jeho slovní
+#: druh je jiný. `aux:pass` je trpný rod („byl pohřben"), `cop` jmenný
+#: přísudek („je učitel"), `aux` složený čas.
+PREDICATE_AUXILIARIES = ("aux", "cop")
+
+
+def _is_predicate(root: Token, reading: Reading) -> bool:
+    """Je kořen PŘÍSUDEK? Čte se STRUKTURA, ne slovní druh *(W‑48)*.
+
+    Trpný rod má kořen `ADJ` — „Byl **pohřben** na Vyšehradě." je
+    příčestí — a pomocné sloveso visí pod ním jako `aux:pass`. Výčet
+    slovních druhů (`VERB`, `AUX`) na to byl slepý, takže se celá trpná
+    věta bez podmětu zapsala BEZ PODMĚTU, tedy jako fakt o nikom, a nic
+    to neřeklo.
+
+    **Potřetí táž třída vad**: W‑32 porovnávala rysy řetězcem, W‑47
+    deprel řetězcem, tohle porovnávalo `upos` výčtem. Pokaždé to byla
+    kategorie, která má variantu, a pokaždé pomohlo totéž — číst, CO
+    V ROZBORU JE, ne jakou to má značku.
+    """
+    if root.upos in ("VERB", "AUX"):
+        return True
+    return any(
+        token.head == root.index
+        and base_deprel(token.deprel) in PREDICATE_AUXILIARIES
+        for token in reading.tokens
+    )
+
+
 def prodrop_tier() -> Tier:
     """VĚTA BEZ PODMĚTU — český pro‑drop *(0.1.17)*.
 
@@ -1640,7 +1669,7 @@ def prodrop_tier() -> Tier:
         candidates: tuple[Candidate, ...], reading: Reading
     ) -> tuple[tuple[Candidate, ...], str | None]:
         root = next((t for t in reading.tokens if t.head == 0), None)
-        if root is None or root.upos not in ("VERB", "AUX"):
+        if root is None or not _is_predicate(root, reading):
             return candidates, None
         # ZÁKLAD, ne přesná shoda *(W‑47)*. `nsubj:pass` JE vyslovený
         # podmět — „Karel Čapek byl pohřben…" ho má. Kdyby se sem
