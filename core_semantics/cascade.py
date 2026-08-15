@@ -2761,6 +2761,35 @@ def quantifier_tier(lexicon: Lexicon) -> Tier:
                 ):
                     roles.append(role)
                     continue
+                if role.mention.upos == "PROPN":
+                    # VLASTNÍ JMÉNO JE KONKRÉTNÍ, AŤ STOJÍ KDEKOLI *(W‑78)*.
+                    # Že `PROPN` je signál individua, je v projektu
+                    # rozhodnuté od N‑2d — jenže dosud to byl NAUČENÝ VZOR
+                    # vázaný na (upos, číslo, pád, deprel), takže „Karel
+                    # Čapek" dostal `·` jako `nsubj` a jako `nsubj:pass`
+                    # nebo `Ins:arg` se na něj systém ptal znovu. DESÁTÁ
+                    # INSTANCE téže rodiny (W‑32 … W‑65): kategorie, která
+                    # má varianty, porovnávaná výčtem.
+                    #
+                    # DŮSLEDEK BYL NA STRANĚ ODPOVÍDÁNÍ, ne čtení: „Byl
+                    # Karel Čapek pohřben na Vyšehradě?" nedostalo
+                    # odpověď, ačkoli ten fakt v bázi ležel. Otázka, na
+                    # kterou báze odpověď MÁ a nedá ji, je horší než
+                    # chybějící zápis.
+                    #
+                    # Je to VLASTNOST JMÉNA, ne role — proto tady a ne
+                    # v seznamu deprelů: doplnit `nsubj:pass` by tutéž
+                    # otázku vrátilo u jedenáctého tvaru.
+                    roles.append(
+                        replace(
+                            role,
+                            quantifier=Quantifier.SELF,
+                            pending=None,
+                            awaiting="",
+                            source="vlastní jméno je konkrétní (PROPN)",
+                        )
+                    )
+                    continue
                 resolved, note = _quantify(role, candidate.predication.mood, reading, lexicon)
                 if note:
                     notes.append(note)

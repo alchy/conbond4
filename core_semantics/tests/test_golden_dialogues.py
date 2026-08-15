@@ -379,11 +379,66 @@ def test_replay_with_a_different_lexicon_says_so() -> None:
 
     Neshoda přehrání NEZASTAVÍ — lexikon se legitimně rozrůstá učením
     a odmítnutí by nutilo ho uměle ořezávat — ale TIŠE PROJÍT NESMÍ."""
-    from core_semantics.tests.dialogues import SUBORDINATE
+    # DOMÉNA SE UŽ NEHODÍ, a je to důsledek W‑78: „Proč odjel" měla
+    # jedinou potvrzenou dvojici `PROPN/nsubj → ·`, a vlastní jméno je
+    # od té chvíle konkrétní STRUKTURÁLNĚ. Přehrání s jiným lexikonem
+    # proto dá touž bázi a test by neměřil nic. Bere se tedy tvar, který
+    # NAUČENÝ ZŮSTAL: obecné jméno v podmětu.
+    from core_semantics.lexicon import (
+        LearnedPattern,
+        Operation,
+        PatternStatus,
+        Trigger,
+        czech_seed,
+    )
+    from core_semantics.oracle import Reading, Token, Utterance
 
-    _, session = play(SUBORDINATE)
+    def _t(i: int, f: str, l: str, u: str, h: int, d: str, **ft: str) -> Token:
+        return Token(
+            index=i, form=f, lemma=l, upos=u, head=h, deprel=d,
+            feats=tuple(sorted(ft.items())),
+        )
 
-    stejny = Session.replay(session.journal, lexicon=SUBORDINATE.lexicon())
+    veta = Reading(
+        tokens=(
+            _t(1, "Kočka", "kočka", "NOUN", 2, "nsubj", Case="Nom", Gender="Fem", Number="Sing"),
+            _t(2, "spí", "spát", "VERB", 0, "root", Number="Sing", Person="3", Polarity="Pos"),
+            _t(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+            _t(4, "Praze", "Praha", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+            _t(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+
+    class _Recorded:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(text=text, readings=(veta,))
+
+    def _lexikon() -> object:
+        lexicon = czech_seed()
+        lexicon.add(
+            LearnedPattern(
+                trigger=Trigger(
+                    lemma="", upos="NOUN", number="Sing", case="Nom", deprel="nsubj"
+                ),
+                operation=Operation.FOR_ALL,
+                learned_from="test W‑51",
+                status=PatternStatus.CONFIRMED,
+            )
+        )
+        return lexicon
+
+    # ŽURNÁL MUSÍ OBSAHOVAT TAH, KTERÝ ČTE ZNOVU. Do žurnálu jde vybraná
+    # PREDIKACE, tedy už zkvantifikovaná — samotné přehrání čtení tedy
+    # lexikon nepotřebuje. Rozdíl se projeví až u tahu `→@`, který větu
+    # čte NANOVO z rozboru, a tam na výchozím lexikonu záleží.
+    session = Session(lexicon=_lexikon())  # type: ignore[arg-type]
+    session.utter("Kočka spí v Praze.", _Recorded())
+    session.play(names_role("Je to místo.", veta, "v+Loc/Geo", "kde"))
+
+    stejny = Session.replay(session.journal, lexicon=_lexikon())  # type: ignore[arg-type]
     assert stejny.program() == session.program()
     assert stejny.notes == [], "shodný lexikon se neohlašuje — není co říct"
 

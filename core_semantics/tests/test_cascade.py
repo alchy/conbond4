@@ -2776,3 +2776,55 @@ def test_a_plain_modifier_is_not_a_nested_date() -> None:
         provenance="test",
     )
     assert date_parts_under(reading.tokens[2], reading) == ()
+
+
+def test_a_proper_name_is_concrete_in_any_role() -> None:
+    """W‑78, DESÁTÁ INSTANCE TÉŽE RODINY. Že `PROPN` je signál individua,
+    je rozhodnuté od N‑2d — jenže to byl NAUČENÝ VZOR vázaný na (upos,
+    číslo, pád, deprel), takže „Karel Čapek" dostal `·` jako `nsubj`
+    a jako `nsubj:pass` nebo `Ins:arg` se na něj systém ptal znovu.
+
+    **Důsledek byl na straně ODPOVÍDÁNÍ, ne čtení:** „Byl Karel Čapek
+    pohřben na Vyšehradě?" nedostalo odpověď, ačkoli ten fakt v bázi
+    ležel. Otázka, na kterou báze odpověď MÁ a nedá ji, je horší než
+    chybějící zápis."""
+    for deprel, case in (("nsubj:pass", "Nom"), ("obl:arg", "Ins")):
+        reading = Reading(
+            tokens=(
+                _token(1, "Karel", "Karel", "PROPN", 3, deprel, Case=case, Gender="Masc", Number="Sing"),
+                _token(2, "byl", "být", "AUX", 3, "aux:pass", Gender="Masc", Number="Sing", Polarity="Pos"),
+                _token(3, "pohřben", "pohřbený", "ADJ", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos", Voice="Pass"),
+                _token(4, ".", ".", "PUNCT", 3, "punct"),
+            ),
+            provenance="test",
+        )
+        verdict = cascade(
+            reading, tiers=(*HARD_TIERS, quantifier_tier(czech_seed()))
+        )
+        role = next(
+            r
+            for r in verdict.survivors[0].predication.roles
+            if r.mention.upos == "PROPN"
+        )
+        assert role.quantifier is Quantifier.SELF, deprel
+        assert "vlastní jméno" in role.source
+
+
+def test_a_common_noun_is_still_asked_about() -> None:
+    """PROTIPŘÍKLAD: „Byla kniha napsána?" se dál ptá. Je to VLASTNOST
+    JMÉNA, ne role — proto se nedoplňoval seznam deprelů, který by tutéž
+    otázku vrátil u jedenáctého tvaru."""
+    reading = Reading(
+        tokens=(
+            _token(1, "kniha", "kniha", "NOUN", 3, "nsubj:pass", Case="Nom", Gender="Fem", Number="Sing"),
+            _token(2, "byla", "být", "AUX", 3, "aux:pass", Gender="Fem", Number="Sing", Polarity="Pos"),
+            _token(3, "napsána", "napsaný", "ADJ", 0, "root", Gender="Fem", Number="Sing", Polarity="Pos", Voice="Pass"),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    verdict = cascade(reading, tiers=(*HARD_TIERS, quantifier_tier(czech_seed())))
+    role = next(
+        r for r in verdict.survivors[0].predication.roles if r.mention.upos == "NOUN"
+    )
+    assert role.quantifier is None

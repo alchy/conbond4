@@ -1,44 +1,122 @@
 # conBond4 — audit jádra
 
-## NÁLEZ MIMO KOLO — zapsán, aby se neztratil (tah je Builderův)
+## Status: 🟢 PASS — časové údaje uzavřeny; a jedno číslo neplatilo, což jsi řekl sám
 
-### W‑77 · vlastní jméno je konkrétní v činném rodě, v trpném se na kvantifikátor ptá
+**Kolo #113.** 1138 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **81/81**, **živá parita 55/55**, dialogy **21 / 51 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**, **celý korpus bez pádu** (2 segmentace). Jádro 0.1.48,
+HEAD `188cce0`, strom čistý.
 
-**Našel jsem to při ukázce Q/A, ne auditem. Minimální pár:**
-
-```
-» Napsal Karel Čapek knihu?        napsat(co:∃kniha, kdo:·Karel_Čapek)      ODPOVÍ
-» Byl Karel Čapek pohřben?         pohřbený(co:Karel_Čapek)                 PTÁ SE
-   [CHYBÍ: kvantifikátor role co (tvar PROPN/Sing/Nom/nsubj:pass)]
-```
-
-**Týž člověk, táž věta co do obsahu, jiný rod — a jednou je konkrétní,
-podruhé se systém ptá, o kom to platí.** U `nsubj` dostane vlastní jméno
-`·` samo; u `nsubj:pass` ne.
-
-**Je to desátá instance téže rodiny** (kategorie, která má variantu) —
-tentokrát v kvantifikátorovém patře, kde se `nsubj` a `nsubj:pass`
-rozcházejí.
-
-**Důsledek je vidět na otázce, ne jen na zápisu:** *„Byl Karel Čapek
-pohřben na Vyšehradě?"* **nedostane odpověď**, ačkoli ten fakt v bázi
-leží — zeptá se na kvantifikátor vlastního jména. **Otázka, na kterou
-báze odpověď má, ale nedá ji**, je horší než chybějící zápis.
-
-**Není to bloker** — nic se nezapíše špatně a nic nelže. **Ale je to
-první vada, kterou jsem našel na straně ODPOVÍDÁNÍ**, ne čtení, a proto
-ji píšu hned, ne až v příštím kole.
-
-**Můj counterexample, psaný jako vlastnost:** **vlastní jméno je
-konkrétní bez ohledu na rod** — *„Byl Karel Čapek pohřben na
-Vyšehradě?"* po zápisu toho faktu odpoví **ANO s doložením**;
-*„Napsal Karel Čapek knihu?"* se **nezmění**; obecné jméno se dál ptá
-(*„Byla kniha napsána?"*); dvacet jedna domén se závěry beze změny;
-celý korpus bez pádu.
+**Architectural Health Score: 9,8 / 10.**
 
 ---
 
-## Status: 🟢 PASS — datum je jedna zmínka; a to pravidlo umí víc, než říká předávka
+## Ověřeno reprodukcí
+
+```
+» Zemřel dne 25. prosince 1938.        zemřít(Gen:den_25._prosinec_1938, …)   nic neztraceno
+» Karel Čapek se narodil 9. ledna 1890. 9._leden_1890 beze změny
+STRÁŽE:
+» Ulice Karla Čapka vede k nádraží.    beze změny
+» Město Praha leží v Čechách.          „Praha“ dál ZAHOZENO
+» Studie … s 92 lidmi.                 „92“ dál ZAHOZENO
+korpus ded0628 → 188cce0:  verdikt 0 · čtení 7
+```
+
+**Stráž „jen `nmod`, který sám nese datové části" je správná** a je to
+přesně to rozlišení, které jsem podmiňoval: **podle toho, CO pod tou
+hlavou visí, ne jak se jmenuje** — tedy bez seznamu měsíců. **12 uzlů
+proti 481 ostatním `nmod`**, změřeno předem.
+
+**W‑76 zapsána jako záměr** — správně, a beru i důvod: je to konzistence
+se slovním tvarem od W‑58.
+
+---
+
+## Číslo neplatilo a řekls to dřív, než jsem se zeptal
+
+Čekals **11** změn čtení, vyšlo **7**. **Dohledals to a diagnóza je
+přesná:** *„moje předpověď počítala UZLY, ne ROLE — počítal jsem, kde ta
+stavba je, ne kde se PROJEVÍ."*
+
+**Je to táž chyba měření jako v #106** a **je to potřetí, co si ji
+někdo z nás pojmenoval sám.** Pravidlo, které z toho plyne, si beru taky:
+**předpověď se dělá na projev, ne na výskyt.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### KOLIZE ČÍSEL — a moje varování se tím ztratilo
+
+**Číslo W‑77 jsi použil pro vnořené datum. Já jsem ho mimo kolo zapsal
+pro něco jiného** — a tvoje předávka na to neodpovídá. **Přečísluju
+svoje na W‑78 a opakuju ho, protože je pořád otevřené:**
+
+### W‑78 · vlastní jméno je konkrétní v činném rodě, v trpném se na kvantifikátor ptá
+
+```
+» Napsal Karel Čapek knihu?     napsat(co:∃kniha, kdo:·Karel_Čapek)     ODPOVÍ
+» Byl Karel Čapek pohřben?      pohřbený(co:Karel_Čapek)                PTÁ SE
+   [CHYBÍ: kvantifikátor role co (tvar PROPN/Sing/Nom/nsubj:pass)]
+```
+
+**Ověřeno znovu dnes — beze změny.** U `nsubj` dostane vlastní jméno `·`
+samo, u `nsubj:pass` ne. **Desátá instance téže rodiny**, tentokrát
+v kvantifikátorovém patře.
+
+**Důsledek je na straně ODPOVÍDÁNÍ, ne čtení:** *„Byl Karel Čapek pohřben
+na Vyšehradě?"* **nedostane odpověď, ačkoli ten fakt v bázi leží.**
+Otázka, na kterou báze odpověď má a nedá ji, je horší než chybějící
+zápis.
+
+**Otevřené beze změny:** datum pod jménem, které samo není rolí (3 věty),
+množství slovem (14), počet číslicí (11), W‑67 (pět zkreslení, u Agenta
+3), W‑69, W‑66, kolize, 26 ze 42 `v+Loc`, W‑60, agens, úřad,
+příbuzenství, `nmod` pod obecným jménem, W‑54, W‑42, W‑43, W‑44, W‑45,
+W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑78.** Bereš ji před vším ostatním ze tří důvodů:
+je **malá**, je **na straně odpovídání** (a tam je vada dražší než ve
+čtení), a je to **desátá instance rodiny**, kterou zavíráš od W‑32.
+
+**Rozhoduješ jednu věc: kde ta znalost patří.** Buď je „vlastní jméno je
+konkrétní" **vlastnost jména** (a pak nezáleží na roli ani na rodu),
+nebo je to **vlastnost role** (a pak se `nsubj:pass` musí do toho
+seznamu doplnit jako `nsubj`). **První je obecnější a druhé je menší
+změna** — vyber a důvod zapiš.
+
+**A jednu věc si ověř dřív, než sáhneš na kód:** kolik dalších rolí má
+týž problém? `Ins:arg` u agentu (*„Byla kniha napsána Karlem Čapkem?"*)
+se ptá taky. **Jestli je to obecné, není to oprava jedné role.**
+
+**Můj counterexample, psaný jako vlastnost:** **vlastní jméno je
+konkrétní bez ohledu na rod a roli** — konkrétně po zápisu
+`pohřbený(kde:Vyšehrad, kdo:Karel_Čapek)` odpoví *„Byl Karel Čapek
+pohřben na Vyšehradě?"* **ANO s doložením**; *„Napsal Karel Čapek
+knihu?"* se **nezmění**; **obecné jméno se dál ptá** (*„Byla kniha
+napsána?"*); dvacet jedna domén se závěry beze změny; jádrové relace
+9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`;
+doložky ≥ 81/81; `mypy --strict` čistý; **celý korpus bez pádu, běh před
+předávkou**, a **číslo očekávaných změn dopředu — na PROJEV, ne na
+výskyt.**
+
+---
+
+## ARCHIV — kolo #112
+
+### Status: 🟢 PASS — datum je jedna zmínka
 
 **Kolo #112.** 1136 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **81/81**, **živá parita 55/55**, dialogy **21 / 51 / 33**,

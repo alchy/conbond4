@@ -1497,6 +1497,31 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-18",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "VLASTNÍ JMÉNO JE KONKRÉTNÍ, AŤ STOJÍ KDEKOLI *(W‑78)*. Že "
+            "`PROPN` je signál individua, je rozhodnuté od N‑2d — jenže "
+            "to byl NAUČENÝ VZOR vázaný na (upos, číslo, pád, deprel), "
+            "takže „Karel Čapek“ dostal `·` jako `nsubj`, ale jako "
+            "`nsubj:pass` nebo `Ins:arg` se na něj systém ptal znovu. "
+            "DESÁTÁ INSTANCE TÉŽE RODINY (W‑32 … W‑65): kategorie, která "
+            "má varianty, porovnávaná výčtem. DŮSLEDEK BYL NA STRANĚ "
+            "ODPOVÍDÁNÍ, ne čtení — „Byl Karel Čapek pohřben na "
+            "Vyšehradě?“ nedostalo odpověď, ačkoli ten fakt v bázi ležel, "
+            "a otázka, na kterou báze odpověď MÁ a nedá ji, je horší než "
+            "chybějící zápis. Je to VLASTNOST JMÉNA, ne role: doplnit "
+            "`nsubj:pass` do seznamu deprelů by tutéž otázku vrátilo "
+            "u jedenáctého tvaru. OBECNÉ JMÉNO se dál ptá"
+        ),
+        anchor="core_semantics.cascade:quantifier_tier",
+        entry="cascade(",
+        enforced_by=(
+            "test_a_proper_name_is_concrete_in_any_role",
+            "test_a_common_noun_is_still_asked_about",
+        ),
+    ),
+    Clause(
         id="S-38",
         boundary=SESSION_STORAGE,
         promise=(
