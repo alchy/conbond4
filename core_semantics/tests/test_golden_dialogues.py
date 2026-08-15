@@ -464,3 +464,22 @@ def test_the_fingerprint_lives_in_the_journal_not_in_the_session() -> None:
         "další tahy ho nenesou — jinak by se razil rostoucí lexikon"
     )
     assert otisky[0] == SUBORDINATE.lexicon().fingerprint()
+
+
+def test_the_standing_metrics_are_measured_in_one_place() -> None:
+    """ČÍSLO V PŘEDÁVCE MUSÍ MÍT BĚH *(W‑81)*. Ohlásil jsem „40
+    odpovědí“ — veličinu, která neexistuje: sledované číslo je 33 a je
+    33 od #110. Sečetl jsem `answers` se všemi `answers_*`, tedy věci,
+    které se počítají zvlášť.
+
+    Zkouška nehlídá jádro, hlídá HLÁŠENÍ: dokud čísla stojí tady,
+    nemůže je nikdo v předávce dopočítat po svém."""
+    from core_semantics.tests.dialogues import standing_metrics
+
+    assert standing_metrics() == {
+        "domén": 21,
+        "kroků": 107,
+        "zápisů": 51,
+        "odpovědí": 33,
+        "otázek": 26,
+    }

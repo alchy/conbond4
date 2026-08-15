@@ -61,6 +61,7 @@ from .ast import (
     role,
 )
 from .cascade import (
+    quantifies,
     AWAITING_QUANTIFIER,
     feature_values,
     ROLE_SUBJECT,
@@ -406,6 +407,16 @@ def _ground_role(
         # u něj neměla tah, který by ji přijal — a kvantifikátorovou
         # otázku klade kaskáda, takže tady se mlčí, ne aby se zamlčelo,
         # ale aby se neptalo dvakrát na dvě různé věci.
+        return _UNRESOLVED
+
+    if quantifies(mention):
+        # W‑81. „vše" NEODKAZUJE — kvantifikuje, a kvantifikátor si nese
+        # z rozboru (`PronType`), takže se tu nemá co rozhodovat. Bez
+        # téhle podmínky spadne DET do zbytkové větve pro zájmena a ta
+        # o něm ŘEKNE NEPRAVDU („odkazuje mimo text"). Mlčí se ze
+        # stejného důvodu jako u zvratného zájmena (W‑68): otázka by
+        # neměla tah, který by ji přijal — `→=` odkaz u role, která na
+        # odkaz nečeká, odmítne.
         return _UNRESOLVED
 
     if reading.dropped or mention.upos in UNSUPPORTED_UPOS:

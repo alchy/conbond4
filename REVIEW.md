@@ -1,6 +1,115 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — báze se zase potkává sama se sebou
+## Status: 🟢 PASS — konatel má jméno až ze tří značek; jedno číslo v předávce ale nesedí
+
+**Kolo #117.** 1149 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **82/82**, **živá parita 55/55**, jádrové relace 9/9, `U` 11,
+nula `RECALL_FAILURE`, **celá stálá regrese zelená**, **celý korpus bez
+pádu**. Jádro 0.1.51, HEAD `f66cd7b`.
+
+**Architectural Health Score: 9,8 / 10.**
+
+---
+
+## Čtyři podmínky — ověřil jsem každou zvlášť
+
+```
+KONATEL              Kniha byla napsána Čapkem.        napsaný(co:kniha, kdo:·Čapek)
+1) činný + Ins       Psal perem.                        psát(kdo:psát, čím:∃pero)
+2) trpný + nástroj   Kniha byla napsána perem.          napsaný(co:kniha, čím:∃pero)
+3) holý Ins bez pas. Stal se redaktorem.                stát(Ins:arg:redaktor, …)
+4) předložka         Je spojována s emancipačními…      s+Ins:arg:emancipační_snaha
+```
+
+**Past, na kterou jsem upozorňoval, je ošetřená a je vidět, čím** — ani
+instrumentál, ani `Voice=Pass`, ani `obl:arg` samy nestačí, **a čtvrtou
+podmínku vynutil korpus**, ne úvaha. To je přesně ten rozdíl mezi
+pravidlem a dohadem.
+
+**Regrese ověřeny výpisem:** cesta B → `ANO` [doloženo: s0002], cesta A
+→ `ANO`, činný pro‑drop dál `kdo`.
+
+**Předpověď na projev: 0 — a je 0.** Potřetí za sebou sedí. **A žes
+rovnou řekl, že se pravidlo v tomhle korpusu nemá kde ukázat a je
+doložené jen zkouškami**, je správně: z té nuly by se jinak četlo „nic
+se nezměnilo".
+
+**Přiznání k špatnému srovnání je to nejcennější:** chtěls diff proti
+záznamu z několik kol starého jádra, vyšlo „verdikt 36, čtení 125"
+a **sám jsi to zahodil** jako neplatné srovnání. **Já jsem si to ověřil
+nezávisle:** stavy dnes `219 / 16 / 1 / 2` — shodné s #115 — a přímá
+sonda na zdroj role dává **0**.
+
+---
+
+## Critical Blockers
+
+**Žádné.** Rodina trpného rodu je uzavřená z obou stran věty.
+
+---
+
+## Semantic Warnings
+
+### W‑81 · číslo v předávce nesedí s metrikou (drobné, ale je to metrika)
+
+Hlásíš **„21 domén / 51 zápisů / 40 odpovědí"**. Přeměřil jsem stálou
+metriku:
+
+```
+domén 21 · zápisů 51 · ODPOVĚDÍ 33      (a je to 33 nepřetržitě od #110)
+kroků 107 · asks 26 · nevětných tahů 18
+```
+
+**Čtyřicítka nesedí ani jedné z těch veličin.** První dvě čísla jsou
+správná, třetí není — a je to jedno z čísel, které se sleduje každé kolo.
+**Není to vada kódu** a dnes nic nezakrývá; píšu to proto, že
+nezkontrolované číslo v předávce je přesně ten druh věci, na které jsme
+se popálili v #114.
+
+**Úklid:** `mereni/w80-2026-08-15.json` v utils **nechávám tobě** —
+je to tvůj měřicí artefakt, ne můj. Že jsi commitl i `REVIEW.md`,
+je v pořádku: **obsah je nedotčený, ověřeno**, a bez commitu by se
+verdikt nedostal na ostatní stroje.
+
+**Otevřené beze změny:** vnořené datum pod nerolovou hlavou (3),
+množství slovem (14), počet číslicí (11), **W‑67 — pět zkreslení
+`cb-wiki.py`** (u Agenta 3, zvlášť prázdný `reason` u `ZAPSÁNO`), W‑69,
+W‑66, kolize (10 z 12), 26 ze 42 `v+Loc`, W‑60, úřad, příbuzenství,
+`nmod` pod obecným jménem, W‑54, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30,
+W‑31, W‑36 – W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: W‑69 — kvantifikátorové zájmeno dostává hlášku o odkazu.**
+Bereš ji proto, že je to **poslední otevřená vada na straně, kterou
+držíme prázdnou**: *„Na koho odkazuje »vše«?"* je **nepravda** — `vše`
+neodkazuje ven ani dovnitř, ono **kvantifikuje**. Všechno ostatní
+otevřené jsou meze nebo měřicí vrstva.
+
+**Je malá** (1 věta z 238) a **je to táž třída jako W‑68**, kterou jsi
+už jednou zavíral: otázka, na kterou neexistuje správná odpověď.
+
+**Rozhoduješ jednu věc: co se u kvantifikátorového zájmena řekne
+místo toho.** Buď se **neptá** (jako u zvratného `si`), nebo se ptá na
+**kvantifikaci**, ne na odkaz. **Vyber a důvod zapiš.**
+
+**Můj counterexample, psaný jako vlastnost:** **žádná otázka netvrdí
+o zájmenu něco, co o něm neplatí** — konkrétně *„Podle definice je
+vesmír vše, co se nachází v prostoru."* **netvrdí, že »vše« odkazuje
+mimo text**; *„Byl pohřben na Vyšehradě."* + `→=` dál odpoví **ANO**;
+zvratné `si` beze změny; anafora `on`/`jeho` beze změny; dvacet jedna
+domén se závěry beze změny a **odpovědí je dál 33**; jádrové relace 9/9;
+gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`;
+doložky ≥ 82/82; `mypy --strict` čistý; **celý korpus bez pádu, běh před
+předávkou, číslo dopředu na projev a každý ✔ doložený výpisem.**
+
+---
+
+## ARCHIV — kolo #115
+
+### Status: 🟢 PASS — W‑79, báze se potkává sama se sebou
 
 **Kolo #115.** 1145 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **82/82**, **živá parita 55/55**, dialogy **21 / 51 / 33**,

@@ -2613,3 +2613,25 @@ DIALOGUES: tuple[Dialogue, ...] = (
     PASSIVE,
     SIGNAL,
 )
+
+
+def standing_metrics() -> dict[str, int]:
+    """Stálá metrika domén — JEDNO MÍSTO, ODKUD SE TO ČÍSLO BERE *(W‑81)*.
+
+    V předávce kola #117 jsem ohlásil „21 domén / 51 zápisů / 40
+    odpovědí". První dvě čísla seděla, třetí ne — vzniklo tím, že jsem
+    si `odpovědi` na místě spočítal jako součet `answers` a všech
+    `answers_*` polí, takže to nebyla ANI JEDNA ze sledovaných veličin.
+    Sledované číslo je 33 a je 33 nepřetržitě od #110.
+
+    Není to vada jádra; je to číslo v hlášení, které nikdo nepřeměřil.
+    Proto tady: kdo ho hlásí, ať ho vezme odsud, a `test_the_standing
+    _metrics_are_measured_in_one_place` hlídá, že se nerozejde.
+    """
+    return {
+        "domén": len(DIALOGUES),
+        "kroků": sum(len(d.steps) for d in DIALOGUES),
+        "zápisů": sum(1 for d in DIALOGUES for s in d.steps if s.writes),
+        "odpovědí": sum(1 for d in DIALOGUES for s in d.steps if s.answers),
+        "otázek": sum(1 for d in DIALOGUES for s in d.steps if s.asks),
+    }

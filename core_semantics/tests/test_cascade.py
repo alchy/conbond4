@@ -2963,3 +2963,49 @@ def test_an_active_prodrop_still_gets_a_subject() -> None:
         reading, tiers=(*HARD_TIERS, prodrop_tier())
     ).survivors[0].predication
     assert predication.role(ROLE_SUBJECT) is not None
+
+
+def _pronoun_predicate(form: str, lemma: str, upos: str, prontype: str) -> Reading:
+    """„Vesmír je <zájmeno>." — `PronType` je jediná proměnná."""
+    return Reading(
+        tokens=(
+            _token(1, "Vesmír", "vesmír", "NOUN", 3, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "je", "být", "AUX", 3, "cop", Number="Sing", Polarity="Pos"),
+            _token(3, form, lemma, upos, 0, "root", Case="Nom", Gender="Neut", Number="Sing", PronType=prontype),
+            _token(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def _quantifier_of(reading: Reading, name: str) -> Quantifier | None:
+    from core_semantics.tests import golden
+
+    predication = cascade(
+        reading, tiers=(*HARD_TIERS, quantifier_tier(golden.golden_lexicon()))
+    ).survivors[0].predication
+    return next(r.quantifier for r in predication.roles if r.name == name)
+
+
+def test_a_total_pronoun_carries_its_own_quantifier() -> None:
+    """KVANTIFIKÁTOR SI NESE SAMO SLOVO *(W‑81)*: „vše" znamená totalitu,
+    takže ptát se „o každém, nebo o některém?" je otázka, jejíž odpověď
+    v textu už stojí. Táž úvaha jako u vlastního jména (W‑78).
+
+    Dosud role s `DET` propadla první podmínkou patra (`DET` není
+    v `QUANTIFIED_UPOS`), takže se na ni nikdo neptal — a zakotvení pak
+    sáhlo po zbytkové větvi a řeklo o ní nepravdu."""
+    assert _quantifier_of(_pronoun_predicate("vše", "všechen", "DET", "Tot"), "co") is Quantifier.FOR_ALL
+
+
+def test_an_indefinite_pronoun_is_existential() -> None:
+    """„něco" je existence — táž značka, jiná hodnota *(W‑81)*."""
+    assert _quantifier_of(_pronoun_predicate("něco", "něco", "PRON", "Ind"), "co") is Quantifier.EXISTS
+
+
+def test_a_negative_pronoun_gets_no_quantifier() -> None:
+    """PROTIPŘÍKLAD A POJMENOVANÁ MEZ: zápor NENÍ třetí kvantifikátor.
+    „nikdo" je popření existence a to jádro nese na PREDIKACI (silná
+    negace), ne na roli; kvantifikátor by z toho udělal výrok „platí
+    o žádném", který nejde ověřit *(W‑81)*."""
+    assert _quantifier_of(_pronoun_predicate("nic", "nic", "PRON", "Neg"), "co") is None

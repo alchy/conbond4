@@ -1454,6 +1454,40 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="G-10",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "KVANTIFIKÁTOROVÉ ZÁJMENO KVANTIFIKUJE, NEODKAZUJE *(W‑81)*. "
+            "„Podle definice je vesmír **vše**, co se nachází "
+            "v prostoru.“ dostávala „Na koho odkazuje „vše“? Tohle "
+            "zájmeno neumím navázat — ODKAZUJE MIMO TEXT, ne do něj.“ — "
+            "a ta věta o tom zájmenu TVRDÍ NEPRAVDU: „vše“ neodkazuje "
+            "ven ani dovnitř. Vzniklo to ZBYTKOVOU VĚTVÍ: co nebylo "
+            "v `ANAPHORIC_LEMMAS`, dostalo jedno vysvětlení pro všechno "
+            "ostatní — jedenáctá instance téže rodiny (W‑32 … W‑80). "
+            "Rozhoduje `PronType` z ROZBORU, ne výčet slov: `Tot` je "
+            "totalita (`∀`), `Ind` existence (`∃`), a KVANTIFIKÁTOR SI "
+            "NESE SAMO SLOVO, takže se na něj nikdo neptá — táž úvaha "
+            "jako u vlastního jména (W‑78), kde odpověď taky stojí "
+            "v textu. ZÁPOR JE POJMENOVANÁ MEZ, NE TŘETÍ KVANTIFIKÁTOR: "
+            "`Neg` („nikdo“, „nic“) kvantifikátor NEDOSTANE, protože "
+            "popření existence nese jádro na PREDIKACI (silná negace), "
+            "a „platí o žádném“ není výrok, který by šel ověřit — lhát "
+            "se o něm ale nesmí stejně, proto se zbytkové větvi vyhýbá "
+            "taky. Zájmeno s `PronType=Prs` ODKAZUJE a ptá se dál"
+        ),
+        anchor="core_semantics.cascade:quantifying_pronoun",
+        entry="ground(",
+        enforced_by=(
+            "test_a_quantifying_pronoun_is_not_told_it_refers_outside_the_text",
+            "test_a_negative_pronoun_is_not_told_it_refers_either",
+            "test_a_referring_pronoun_is_still_asked_about",
+            "test_a_total_pronoun_carries_its_own_quantifier",
+            "test_an_indefinite_pronoun_is_existential",
+            "test_a_negative_pronoun_gets_no_quantifier",
+        ),
+    ),
+    Clause(
         id="O-17",
         boundary=ORACLE_CASCADE,
         promise=(

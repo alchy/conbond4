@@ -1953,6 +1953,51 @@ AWAITING_ROLE_NAME = "jméno role"
 #: bez kvantifikátoru se do role nedostane.
 QUANTIFIED_UPOS = ("NOUN", "PROPN", "PRON", "ADJ")
 
+#: Zájmena, která KVANTIFIKUJÍ, a co znamenají *(W‑81)*. `Tot` je „vše",
+#: „všechen", „každý" — totalita; `Ind` je „něco", „někdo", „některý" —
+#: existence. `Neg` („nikdo", „nic") tu SCHVÁLNĚ NENÍ: zápor není třetí
+#: kvantifikátor, je to popření existence, a to jádro nese na PREDIKACI
+#: (silná negace), ne na roli. Dát mu kvantifikátor by znamenalo zapsat
+#: „platí o žádném", což není výrok, který by šel ověřit.
+QUANTIFYING_PRONTYPE: dict[str, Quantifier] = {
+    "Tot": Quantifier.FOR_ALL,
+    "Ind": Quantifier.EXISTS,
+}
+
+
+def quantifying_pronoun(mention: Mention) -> Quantifier | None:
+    """KVANTIFIKÁTOROVÉ ZÁJMENO — kvantifikuje, NEODKAZUJE *(W‑81)*.
+
+    „Podle definice je vesmír **vše**, co se nachází v prostoru." se ptala
+    *„Na koho odkazuje „vše“? Tohle zájmeno neumím navázat — odkazuje mimo
+    text, ne do něj."* Ta věta o tom zájmenu TVRDÍ NEPRAVDU: „vše"
+    neodkazuje ven ani dovnitř, ono kvantifikuje. Vzniklo to zbytkovou
+    větví — co není v `ANAPHORIC_LEMMAS`, dostalo jedno vysvětlení pro
+    všechno ostatní.
+
+    **Rys z ROZBORU, ne seznam slov** (jako `Reflex=Yes` u W‑68 a `PROPN`
+    u W‑78): `PronType` říká parser a je to táž značka, kterou se ta
+    zájmena od odkazujících liší.
+    """
+    if mention.upos not in ("DET", "PRON"):
+        return None
+    return QUANTIFYING_PRONTYPE.get(dict(mention.feats).get("PronType", ""))
+
+
+def quantifies(mention: Mention) -> bool:
+    """Zájmeno, které NEODKAZUJE — širší než `quantifying_pronoun` *(W‑81)*.
+
+    Zahrnuje i ZÁPORNÉ („nikdo", „nic", `PronType=Neg`), které
+    kvantifikátor NEDOSTANE — zápor jádro nese na predikaci, ne na roli.
+    Otázka na odkaz by o něm ale lhala úplně stejně jako u „vše", a
+    zbytková větev nerozlišuje: proto se drží dva výčty a ne jeden.
+    Mez je tím pojmenovaná, ne zakrytá — záporné zájmeno se nezakotví a
+    věta se nezapíše.
+    """
+    return mention.upos in ("DET", "PRON") and dict(mention.feats).get(
+        "PronType"
+    ) in ("Tot", "Ind", "Neg")
+
 #: Překlad z uzavřeného menu do jádra. `DEFINITE` tu ZÁMĚRNĚ není: určitost
 #: není kvantifikace, odkazuje na už existující uzel a rozřešit ten odkaz
 #: je práce V3. Kvantifikátor se z ní proto neodvozuje — vyplyne až z toho,
@@ -2813,6 +2858,31 @@ def quantifier_tier(lexicon: Lexicon) -> Tier:
         for candidate in candidates:
             roles: list[RoleReading] = []
             for role in candidate.predication.roles:
+                quantifying = quantifying_pronoun(role.mention)
+                if quantifying is not None and role.quantifier is None:
+                    # KVANTIFIKÁTOROVÉ ZÁJMENO SI NESE KVANTIFIKÁTOR
+                    # S SEBOU *(W‑81)*. Dosud propadlo hned první
+                    # podmínkou (`DET` není v `QUANTIFIED_UPOS`), takže
+                    # se na ně nikdo neptal — a zakotvení pak sáhlo po
+                    # zbytkové větvi pro zájmena a řeklo o něm nepravdu.
+                    # Je to táž úvaha jako u vlastního jména (W‑78):
+                    # kvantifikátor NEURČUJE mluvčí, když ho to slovo
+                    # samo znamená; ptát se „o každém, nebo o některém?"
+                    # u slova „vše" je otázka, jejíž odpověď už v textu
+                    # stojí.
+                    roles.append(
+                        replace(
+                            role,
+                            quantifier=quantifying,
+                            pending=None,
+                            awaiting="",
+                            source=(
+                                "kvantifikátorové zájmeno "
+                                f"(PronType={dict(role.mention.feats).get('PronType')})"
+                            ),
+                        )
+                    )
+                    continue
                 if (
                     role.quantifier is not None
                     # Role, která čeká na ODKAZ, kvantifikátor nepotřebuje:

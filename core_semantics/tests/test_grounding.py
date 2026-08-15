@@ -480,3 +480,61 @@ def test_the_reflexive_sentence_asks_only_what_it_can_answer() -> None:
     )
     grounded = ground(generate(reading)[0].predication, KnowledgeBase().view())
     assert "odkazuje mimo text" not in (grounded.question or "")
+
+
+def _pronoun_reading(form: str, lemma: str, upos: str, prontype: str) -> Reading:
+    """„Vesmír je <zájmeno>." — jediná proměnná je `PronType`."""
+    return Reading(
+        tokens=(
+            tok(1, "Vesmír", "vesmír", "NOUN", 3, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            tok(2, "je", "být", "AUX", 3, "cop", Number="Sing", Polarity="Pos"),
+            tok(3, form, lemma, upos, 0, "root", Case="Nom", Gender="Neut", Number="Sing", PronType=prontype),
+            tok(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def test_a_quantifying_pronoun_is_not_told_it_refers_outside_the_text() -> None:
+    """„Podle definice je vesmír **vše**, co se nachází v prostoru."
+    dostávala *„Na koho odkazuje „vše“? … odkazuje mimo text, ne do
+    něj."* — a ta věta o tom zájmenu TVRDÍ NEPRAVDU *(W‑81)*.
+
+    „Vše" neodkazuje ven ani dovnitř, ono KVANTIFIKUJE. Vzniklo to
+    zbytkovou větví: co není v `ANAPHORIC_LEMMAS`, dostalo jedno
+    vysvětlení pro všechno ostatní."""
+    from core_semantics.cascade import generate
+
+    grounded = ground(
+        generate(_pronoun_reading("vše", "všechen", "DET", "Tot"))[0].predication,
+        KnowledgeBase().view(),
+    )
+    assert "odkazuje mimo text" not in (grounded.question or "")
+
+
+def test_a_negative_pronoun_is_not_told_it_refers_either() -> None:
+    """PROTIPŘÍKLAD, KTERÝ DRŽÍ VLASTNOST, NE JEDEN PŘÍPAD: „nikdo"
+    kvantifikátor NEDOSTANE (zápor jádro nese na predikaci), ale lhát se
+    o něm nesmí stejně jako o „vše" *(W‑81)*."""
+    from core_semantics.cascade import generate
+
+    grounded = ground(
+        generate(_pronoun_reading("nic", "nic", "PRON", "Neg"))[0].predication,
+        KnowledgeBase().view(),
+    )
+    assert "odkazuje mimo text" not in (grounded.question or "")
+
+
+def test_a_referring_pronoun_is_still_asked_about() -> None:
+    """PROTIPŘÍKLAD: `PronType=Prs` ODKAZUJE a doptat se na ně správné
+    je. Rozhoduje rys z ROZBORU — kdyby se mlčelo u všech zájmen,
+    zmizela by s tou nepravdou i pravdivá otázka."""
+    from core_semantics.cascade import quantifies
+    from core_semantics.oracle import Token
+
+    zajmeno = tok(3, "ono", "on", "PRON", 0, "root", Case="Nom", PronType="Prs")
+    from core_semantics.cascade import Mention
+
+    assert not quantifies(
+        Mention(form="ono", lemma="on", upos="PRON", token_index=3, feats=zajmeno.feats)
+    )
