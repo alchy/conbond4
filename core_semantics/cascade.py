@@ -3253,12 +3253,36 @@ def coordination_tier(lexicon: Lexicon) -> Tier:
         out: list[Candidate] = []
         for candidate in candidates:
             token = druhe[0]
-            vlastni = tuple(
-                _nominal(child, reading, _role_for(child, reading) or ROLE_OBJECT)
+            deti = [
+                child
                 for child in reading.children(token.index)
                 if _role_for(child, reading) is not None
                 and base_deprel(child.deprel) not in ("cop", "aux")
+            ]
+            # DVA ČLENY, JEDNO JMÉNO — TÁŽ ÚVAHA JAKO W‑63, jen uvnitř
+            # druhé věty. „…chovat doma i venku." dá dvakrát `jak`
+            # a `Predication` duplicitní roli ODMÍTÁ — patro tedy nesmí
+            # takovou predikaci ani postavit. Vybrat jeden z těch dvou by
+            # byl tichý default u role, kterou věta vyslovila dvakrát,
+            # takže oba padnou na SVŮJ TVAR a systém se zeptá.
+            obsazena = collections.Counter(
+                _role_for(child, reading) for child in deti
             )
+            vlastni = tuple(
+                _nominal(
+                    child,
+                    reading,
+                    surface_role(child, reading)
+                    if obsazena[_role_for(child, reading)] > 1
+                    else (_role_for(child, reading) or ROLE_OBJECT),
+                )
+                for child in deti
+            )
+            if len({r.name for r in vlastni}) != len(vlastni):
+                # Ani tvar je nerozlišil — druhá věta se přečíst nedá
+                # a hlásí se jako nepřečtená (W‑70), ne že spadne.
+                out.append(candidate)
+                continue
             # ROLE, KTEROU VYROBÍ PATRO, MUSÍ DOSTAT KVANTIFIKÁTOR *(W‑73)*.
             # Kvantifikátorové patro už proběhlo, takže role vzniklé tady
             # by zůstaly bez něj — a role bez kvantifikátoru se do jádra

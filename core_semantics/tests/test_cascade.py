@@ -2575,3 +2575,30 @@ def test_a_spoken_second_subject_makes_its_own_node() -> None:
     assert "VLASTNÍ PODMĚT" in hlaseni and "VYSLOVENÝ podruhé" in hlaseni, (
         "že uzel VZNIKÁ a nepřebírá se, musí být vidět"
     )
+
+
+def test_a_second_sentence_with_two_same_named_members_does_not_crash() -> None:
+    """REGRESE Z KOLA #110, nalezená BĚHEM NAD KORPUSEM, ne testem:
+    „Zvířata lze chovat doma i venku." dá v druhé větě dvakrát `jak`
+    a `Predication` duplicitní roli ODMÍTÁ — patro ji tedy nesmí ani
+    postavit.
+
+    Táž úvaha jako W‑63, jen uvnitř druhé věty: oba členy padnou na SVŮJ
+    TVAR, a když je nerozliší ani ten, druhá věta se nepřečte a ohlásí se
+    (W‑70). Spadnout nesmí ani v jednom případě."""
+    from core_semantics.cascade import coordination_tier
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Jan", "Jan", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "přišel", "přijít", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "a", "a", "CCONJ", 4, "cc"),
+            _token(4, "zpíval", "zpívat", "VERB", 2, "conj", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(5, "doma", "doma", "ADV", 4, "advmod"),
+            _token(6, "venku", "venku", "ADV", 4, "advmod"),
+            _token(7, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    verdict = cascade(reading, tiers=(*HARD_TIERS, coordination_tier(czech_seed())))
+    assert verdict.survivors, "věta se čte dál, jen druhá půlka nevznikne"

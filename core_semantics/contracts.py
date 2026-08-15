@@ -1467,7 +1467,11 @@ CONTRACTS: tuple[Clause, ...] = (
             "Porovnává se TOTOŽNOST ROLE, ne jméno — kopie a nový uzel "
             "se stejným lemmatem by se jménem nerozlišily. Role, které "
             "patro vyrobí, dostanou KVANTIFIKÁTOR: kvantifikátorové "
-            "patro už proběhlo (W‑73)"
+            "patro už proběhlo, a NESMÍ POSTAVIT PREDIKACI S DUPLICITNÍ "
+            "ROLÍ: dva `advmod` uvnitř druhé věty chtějí oba `jak`, "
+            "`Predication` to odmítá, takže oba padnou na SVŮJ TVAR "
+            "a když je nerozliší ani ten, druhá věta se nepřečte a jen "
+            "ohlásí — táž úvaha jako W‑63, jen o patro dál (W‑73)"
         ),
         anchor="core_semantics.cascade:second_predications",
         entry="cascade(",
@@ -1481,6 +1485,7 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_written_sentence_always_names_its_unread_half",
             "test_one_utterance_can_write_two_statements",
             "test_a_spoken_second_subject_makes_its_own_node",
+            "test_a_second_sentence_with_two_same_named_members_does_not_crash",
         ),
     ),
     Clause(
