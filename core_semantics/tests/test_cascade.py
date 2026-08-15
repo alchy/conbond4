@@ -1785,7 +1785,11 @@ def test_a_passive_without_a_subject_still_asks_for_one() -> None:
         reading, tiers=(*HARD_TIERS, passive_tier(), prodrop_tier())
     )
     predication = verdict.survivors[0].predication
-    assert predication.role(ROLE_OBJECT) is None
+    # ROLE SE OD W‑79 JMENUJE `co`, ne `kdo`: trpný podmět je PATIENS,
+    # ať ho text vysloví, nebo ne. Mění se JMÉNO role, ne to, že se na ni
+    # systém ptá — dvě jména pro touž roli rozpadala bázi na dvě poloviny.
+    assert predication.role(ROLE_OBJECT) is not None
+    assert predication.role(ROLE_SUBJECT) is None
     assert "BEZ PODMĚTU" in "\n".join(verdict.trace)
 
 
@@ -2828,3 +2832,65 @@ def test_a_common_noun_is_still_asked_about() -> None:
         r for r in verdict.survivors[0].predication.roles if r.mention.upos == "NOUN"
     )
     assert role.quantifier is None
+
+
+def test_a_passive_has_one_role_name_spoken_or_not() -> None:
+    """W‑79 a COUNTEREXAMPLE REVIEWERA: TÁŽ VĚTA MÁ TOUŽ ROLI, ať text
+    podmět zopakuje, nebo ne.
+
+    Trpný rod psal `kdo`, když byl podmět vynechaný, a četl `co`, když
+    byl vyslovený — DVĚ JMÉNA PRO TOUŽ ROLI podle toho, jestli text
+    podmět zopakoval. Báze se tím rozpadala na dvě poloviny, které se
+    nepotkají, a mezera pak tvrdila „nikdo to neřekl" o výroku, který
+    v ní ležel."""
+    from core_semantics.cascade import passive_tier, prodrop_tier
+
+    vysloveny = Reading(
+        tokens=(
+            _token(1, "Karel", "Karel", "PROPN", 3, "nsubj:pass", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "byl", "být", "AUX", 3, "aux:pass", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "pohřben", "pohřbený", "ADJ", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos", Voice="Pass"),
+            _token(4, "na", "na", "ADP", 5, "case", AdpType="Prep", Case="Loc"),
+            _token(5, "Vyšehradě", "Vyšehrad", "PROPN", 3, "obl", Case="Loc", Gender="Masc", NameType="Geo", Number="Sing"),
+            _token(6, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    vynechany = Reading(
+        tokens=(
+            _token(1, "Byl", "být", "AUX", 2, "aux:pass", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "pohřben", "pohřbený", "ADJ", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos", Voice="Pass"),
+            _token(3, "na", "na", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+            _token(4, "Vyšehradě", "Vyšehrad", "PROPN", 2, "obl", Case="Loc", Gender="Masc", NameType="Geo", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    patra = (*HARD_TIERS, passive_tier(), prodrop_tier())
+    jmena = {
+        r.name
+        for reading in (vysloveny, vynechany)
+        for r in cascade(reading, tiers=patra).survivors[0].predication.roles
+        if r.mention.upos != "PROPN" or r.name == ROLE_OBJECT
+    }
+    assert jmena == {ROLE_OBJECT}, "jedno jméno, ať text podmět zopakuje nebo ne"
+
+
+def test_an_active_prodrop_still_gets_a_subject() -> None:
+    """PROTIPŘÍKLAD: v ČINNÉM rodě je vynechaný podmět dál `kdo`.
+    Rozhoduje `Voice=Pass` na přísudku, ne to, že podmět chybí."""
+    from core_semantics.cascade import prodrop_tier
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Narodil", "narodit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "v", "v", "ADP", 3, "case", AdpType="Prep", Case="Loc"),
+            _token(3, "Praze", "Praha", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+            _token(4, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(
+        reading, tiers=(*HARD_TIERS, prodrop_tier())
+    ).survivors[0].predication
+    assert predication.role(ROLE_SUBJECT) is not None

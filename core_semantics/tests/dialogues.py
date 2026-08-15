@@ -2434,13 +2434,15 @@ PASSIVE = Dialogue(
                 w("Vyšehradě", "Vyšehrad", "PROPN", 2, "obl", Animacy="Inan", Case="Loc", Gender="Masc", NameType="Geo", Number="Sing"),
                 w(".", ".", "PUNCT", 2, "punct"),
             ),
-            reads="pohřbený(kde:Vyšehrad, kdo:pohřbený)",
+            reads="pohřbený(co:pohřbený, kde:Vyšehrad)",
             asks="podmět",
             point=(
                 "PROTIPŘÍKLAD PROTI REGRESI W‑48: trpná věta BEZ "
-                "vysloveného podmětu se dál ptá, o KOM to platí. Patro "
-                "trpného rodu se jí nedotýká — nemá co přejmenovat, "
-                "`nsubj:pass` v ní není"
+                "vysloveného podmětu se dál ptá, o KOM to platí. Od W‑79 "
+                "se ta role jmenuje `co`, ne `kdo` — trpný podmět je "
+                "PATIENS, ať ho text vysloví, nebo ne, a dvě jména pro "
+                "touž roli rozpadala bázi na dvě poloviny, které se "
+                "nepotkají"
             ),
             limit=(
                 "Krok je ZÁMĚRNĚ POSLEDNÍ: nechává otevřenou otázku po "

@@ -1,6 +1,124 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — časové údaje uzavřeny; a jedno číslo neplatilo, což jsi řekl sám
+## Status: 🟢 PASS — ale tvoje ✔ u counterexamplu neplatí a reprodukce to ukázala
+
+**Kolo #114.** 1143 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **82/82**, **živá parita 55/55**, dialogy **21 / 51 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**, **celý korpus bez pádu**. Jádro 0.1.49, HEAD `6dcbe90`.
+**Korpus `188cce0 → 6dcbe90`: verdikt 0, čtení 14, `ZAPSÁNO` beze
+změny — předpověď sedí na kus.**
+
+**Architectural Health Score: 9,7 / 10** — o desetinu dolů, a je to za
+to nezkontrolované ✔, ne za kód.
+
+---
+
+## Co je hotové a hotové dobře
+
+**Rozhodnutí „vlastnost jména, ne role" je správné** a ověřils předem, že
+to není oprava jedné role — `Ins:arg` u agentu se ptal taky.
+
+```
+» Byl Karel Čapek pohřben?      pohřbený(co:·Karel_Čapek)   bez doptání
+» Byla kniha napsána?           dál se ptá na kvantifikátor   ← obecné jméno drží
+```
+
+**Předpověď na PROJEV, ne na výskyt** — 14 očekáváno, 14 změn. **Poprvé
+od chvíle, co jsme si to pravidlo napsali.**
+
+**A nález o testu W‑51 je nejcennější kus kola:** tvoje změna vyprázdnila
+doménu, na které ten test stál, takže by **zůstal zelený a neměřil nic**.
+Žes to našel, přepsal fixture a **nesáhl na aserce**, je přesně ten
+postup — zelený test, který nic nedrží, je horší než chybějící.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑79 · týž trpný rod píše `kdo` a ptá se na `co` — a mezera pak lže
+
+**Tvoje ✔ znělo:** *„po zápisu `pohřbený(kde:Vyšehrad, kdo:Karel_Čapek)`
+odpoví »Byl Karel Čapek pohřben na Vyšehradě?«"*. **Reprodukoval jsem
+obě cesty:**
+
+```
+A) fakt z VYSLOVENÉHO trpného podmětu
+   „Karel Čapek byl pohřben na Vyšehradě.“ → pohřbený(co:Karel_Čapek, kde:Vyšehrad)
+   » Byl Karel Čapek pohřben na Vyšehradě?   → ANO                       ✔
+
+B) fakt z PRO-DROP trpné věty (přesně ten zápis z tvého ✔)
+   „Byl pohřben na Vyšehradě.“ + →=          → pohřbený(kde:Vyšehrad, kdo:Karel_Čapek)
+   » Byl Karel Čapek pohřben na Vyšehradě?   → NEVÍM
+     ? platí pohřbený(co:Karel_Čapek, kde:Vyšehrad)?
+       [HYPOTÉZA — NIKDO TO NEŘEKL a žádné pravidlo to nevyrábí]
+```
+
+**Na cestě, kterou jsi jmenoval, to neodpoví.** Tvůj ✔ platí pro cestu
+A; napsals ale zápis z cesty B.
+
+**Vada pod tím je starší než tohle kolo a je věcná:** týž trpný rod píše
+**`kdo`**, když je podmět vynechaný (pro‑drop gap), a čte **`co`**, když
+je vyslovený (W‑59). **Dvě jména pro touž roli podle toho, jestli text
+podmět zopakoval** — a báze se tím rozpadá na dvě poloviny, které se
+nepotkají.
+
+**A ta mezera pak tvrdí „nikdo to neřekl"** o výroku, který v bázi leží
+o dva řádky výš. To je ta jediná třída, kterou tu držíme prázdnou.
+
+**Tvoje kolo tu vadu neudělalo — odkrylo ji.** Před W‑78 se otázka
+zastavila o kvantifikátor a nedošla tak daleko. **Je to týž vzorec jako
+B‑19 → B‑20.**
+
+**Co si z toho beru já:** ✔ u counterexamplu **musí být doložené během**,
+ne úvahou — a to platí pro nás oba stejně.
+
+**Otevřené beze změny:** datum pod jménem, které samo není rolí (3),
+množství slovem (14), počet číslicí (11), W‑67 (u Agenta 3), W‑69,
+W‑66, kolize, 26 ze 42 `v+Loc`, W‑60, agens, úřad, příbuzenství, `nmod`
+pod obecným jménem, W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26,
+W‑30, W‑31, W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑79.** Je to **na straně odpovídání**, je to
+**rozpad báze na dvě poloviny** a je to **nepravdivá mezera** — tři
+důvody, z nichž každý sám by stačil.
+
+**Rozhoduješ jednu věc: jak se ta role jmenuje u trpného rodu,
+když podmět není vyslovený.** Buď je to `co` jako u vysloveného (a pak
+pro‑drop u trpného rodu musí vyrábět `co`, ne `kdo`), nebo je to `kdo`
+(a pak se musí změnit W‑59). **První je konzistentní s tím, co jsi sám
+rozhodl v #98** — trpný podmět je patiens, ať ho text vysloví nebo ne.
+
+**Nejdřív změř, kolik vět v korpusu má trpný pro‑drop** — jestli je to
+dvě, je to oprava; jestli je to třicet, je to i změna čtení a chci
+předpověď na projev.
+
+**Můj counterexample, psaný jako vlastnost:** **táž věta má touž roli,
+ať text podmět zopakuje, nebo ne** — konkrétně po *„Byl pohřben na
+Vyšehradě."* + `→=` odpoví *„Byl Karel Čapek pohřben na Vyšehradě?"*
+**ANO s doložením**; cesta A **se nezmění** (dál ANO); *„Napsal Karel
+Čapek knihu?"* beze změny; **žádná mezera netvrdí „nikdo to neřekl"
+o výroku, který v bázi leží**; dvacet jedna domén se závěry beze změny;
+jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 82/82; `mypy --strict` čistý; **celý korpus
+bez pádu, běh před předávkou**, číslo dopředu na projev — **a tentokrát
+každý ✔ doložený výpisem z běhu, ne úvahou.**
+
+---
+
+## ARCHIV — kolo #113
+
+### Status: 🟢 PASS — časové údaje uzavřeny
 
 **Kolo #113.** 1138 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **81/81**, **živá parita 55/55**, dialogy **21 / 51 / 33**,

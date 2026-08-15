@@ -2285,6 +2285,24 @@ def prodrop_tier() -> Tier:
         # dělá; patro se ho jen neptalo.
         hlavy = _predicate_head(reading)
         nositel = hlavy[0] if hlavy else root
+        # TRPNÝ ROD DÁVÁ `co`, I KDYŽ PODMĚT NENÍ VYSLOVENÝ *(W‑79)*.
+        # Vyslovený trpný podmět je PATIENS (W‑59) — a to platí i tehdy,
+        # když ho text podruhé neřekne. Dokud tudy vznikalo `kdo`, měla
+        # TÁŽ VĚTA DVĚ JMÉNA PRO TOUŽ ROLI podle toho, jestli text podmět
+        # zopakoval, a báze se rozpadala na dvě poloviny, které se
+        # nepotkají: „Byl pohřben na Vyšehradě." + `→=` zapsalo
+        # `kdo:Karel_Čapek`, kdežto otázka „Byl Karel Čapek pohřben na
+        # Vyšehradě?" se ptala na `co:Karel_Čapek` a mezera tvrdila
+        # „nikdo to neřekl" o výroku, který ležel o dva řádky výš.
+        #
+        # Rys se čte z ROZBORU (`Voice=Pass` na přísudku), ne z deprelu:
+        # `nsubj:pass` tu z definice není — to je ta věta, která podmět
+        # nevyslovila.
+        jmeno_role = (
+            ROLE_OBJECT
+            if dict(root.feats).get("Voice") == "Pass"
+            else ROLE_SUBJECT
+        )
         feats = dict(nositel.feats)
         if "Gender" not in feats and "Number" not in feats:
             # Přísudek, který o podmětu nic neříká, nedává ani vodítko.
@@ -2292,11 +2310,11 @@ def prodrop_tier() -> Tier:
             return candidates, None
         marked: list[Candidate] = []
         for candidate in candidates:
-            if candidate.predication.role(ROLE_SUBJECT) is not None:
+            if candidate.predication.role(jmeno_role) is not None:
                 marked.append(candidate)
                 continue
             gap = RoleReading(
-                ROLE_SUBJECT,
+                jmeno_role,
                 Mention(
                     lemma=nositel.lemma,
                     form=nositel.form,

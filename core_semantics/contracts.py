@@ -1296,7 +1296,16 @@ CONTRACTS: tuple[Clause, ...] = (
             "s povrchovým jménem a po rozhodnutí podruhé); ptá se "
             "VLASTNÍ otázkou, která se ptá KTERÁ ZE DVOU STRAN, ne co "
             "ten tvar znamená. AGENS se rolí NESTÁVÁ — „Auto bylo "
-            "koupeno Filipem.“ je vlastní rodina (W‑59)"
+            "koupeno Filipem.“ je vlastní rodina (W‑59). TÁŽ ROLE, AŤ JE "
+            "PODMĚT VYSLOVENÝ, NEBO NE *(W‑79)*: pro‑drop u trpného rodu "
+            "vyrábí taky `co`, protože trpný podmět je PATIENS bez ohledu "
+            "na to, jestli ho text zopakoval. Dvě jména pro touž roli "
+            "rozpadala bázi na dvě poloviny, které se nepotkají — „Byl "
+            "pohřben na Vyšehradě.“ + `→=` zapsalo `kdo:Karel_Čapek`, "
+            "kdežto otázka se ptala na `co:Karel_Čapek` a mezera tvrdila "
+            "„nikdo to neřekl“ o výroku, který v bázi ležel. Rozhoduje "
+            "`Voice=Pass` na PŘÍSUDKU, ne deprel: `nsubj:pass` tu "
+            "z definice není. Činný pro‑drop dál dává `kdo`"
         ),
         anchor="core_semantics.cascade:passive_tier",
         entry=".utter(",
@@ -1307,6 +1316,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_collided_passive_does_not_write",
             "test_a_passive_without_a_subject_still_asks_for_one",
             "test_a_passive_sentence_goes_all_the_way_into_the_base",
+            "test_a_passive_has_one_role_name_spoken_or_not",
+            "test_an_active_prodrop_still_gets_a_subject",
         ),
     ),
     Clause(

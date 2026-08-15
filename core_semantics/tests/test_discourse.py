@@ -536,8 +536,12 @@ def test_a_subjectless_passive_no_longer_writes_a_fact_about_nobody() -> None:
     assert result.statement_id is None
     assert result.question is not None
     assert result.predication is not None
-    role = result.predication.role("kdo")
-    assert role is not None, "podmět musí vzniknout i u trpné věty"
+    # Od W‑79 se ta role jmenuje `co`: trpný podmět je PATIENS, ať ho
+    # text vysloví, nebo ne. Test drží TOTÉŽ tvrzení — role vzniknout
+    # musí a věta se nesmí zapsat dekapitovaná — jen pod jménem, které
+    # se s vysloveným trpným podmětem potká.
+    role = result.predication.role("co")
+    assert role is not None, "role musí vzniknout i u trpné věty"
 
 
 def test_a_passive_with_a_subject_is_not_treated_as_pro_drop() -> None:
