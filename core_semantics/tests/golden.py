@@ -1120,6 +1120,53 @@ R2 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# S · vedlejší věta (šestnáctý akceptační dialog)
+# --------------------------------------------------------------------------
+#
+# S1 drží, že se vedlejší věta stane ROLÍ s povrchovým jménem a věta se
+# NEZAPÍŠE, dokud to jméno nedostane (B‑19). S2 drží druhou půlku: podmět
+# vyjádřený celou větou je VYSLOVENÝ podmět, takže se o něm netvrdí, že
+# chybí — jen se řekne, že ho dosadit zatím neumíme (B‑18).
+
+S1 = Golden(
+    dialogue="S",
+    text="Petr odjel, protože pršelo.",
+    tokens=(
+        tok(1, "Petr", "Petr", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "odjel", "odjet", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(3, ",", ",", "PUNCT", 5, "punct"),
+        tok(4, "protože", "protože", "SCONJ", 5, "mark"),
+        tok(5, "pršelo", "pršet", "VERB", 2, "advcl", Aspect="Imp", Gender="Neut", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(6, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    predication="odjet(advcl:protože:∃pršet, kdo:·Petr)",
+    asks=(
+        "vedlejší věta je ROLE hlavní predikace, ale její jméno je zatím "
+        "povrchový tvar — systém se ptá a NEZAPISUJE (B‑19)"
+    ),
+)
+
+S2 = Golden(
+    dialogue="S",
+    text="Je jasné, že Jan přišel.",
+    tokens=(
+        tok(1, "Je", "být", "AUX", 2, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "jasné", "jasný", "ADJ", 0, "root", Case="Nom", Degree="Pos", Gender="Neut", Number="Sing", Polarity="Pos"),
+        tok(3, ",", ",", "PUNCT", 6, "punct"),
+        tok(4, "že", "že", "SCONJ", 6, "mark"),
+        tok(5, "Jan", "Jan", "PROPN", 6, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(6, "přišel", "přijít", "VERB", 2, "csubj", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(7, ".", ".", "PUNCT", 2, "punct"),
+    ),
+    predication="být(co:·jasný)",
+    asks=(
+        "podmětem je celá věta vedlejší; systém NETVRDÍ, že podmět chybí, "
+        "a neptá se na antecedent — řekne, že ho dosadit zatím neumí"
+    ),
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
@@ -1133,6 +1180,7 @@ CORPUS: tuple[Golden, ...] = (
     O1, O2, O3,
     P1, P2, P3,
     R1, R2,
+    S1, S2,
 )
 
 

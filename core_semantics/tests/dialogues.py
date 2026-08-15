@@ -1839,6 +1839,120 @@ ATTRIBUTE = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 16 · Proč odjel — VEDLEJŠÍ VĚTA jako role hlavní predikace
+# --------------------------------------------------------------------------
+
+SUBORDINATE = Dialogue(
+    name="Proč odjel",
+    source="„Petr odjel, protože pršelo. … Jan odjel, protože sněžilo.“",
+    shapes=(("PROPN", "Sing", "Nom", "nsubj", Operation.SELF),),
+    steps=(
+        Step(
+            text="Petr odjel, protože pršelo.",
+            reading=sentence(
+                w("Petr", "Petr", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("odjel", "odjet", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w(",", ",", "PUNCT", 5, "punct"),
+                w("protože", "protože", "SCONJ", 5, "mark"),
+                w("pršelo", "pršet", "VERB", 2, "advcl", Aspect="Imp", Gender="Neut", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            reads="odjet(advcl:protože:∃pršet, kdo:·Petr)",
+            asks=(
+                "VEDLEJŠÍ VĚTA SE PŘESTALA ZTRÁCET: je z ní ROLE hlavní "
+                "predikace, jejímž fillerem je DĚJ. Jméno té role ale "
+                "systém zatím nezná, takže zůstane povrchové "
+                "(`advcl:protože`) a ZEPTÁ SE — dosadit ho z pořadí slov "
+                "by znamenalo vymyslet si význam (INV‑11)"
+            ),
+            point=(
+                "A NEZAPÍŠE SE *(B‑19)*. Dřív se „pršelo“ hlásilo jako "
+                "ZTRACENÝ ČLEN a zápis blokovalo; patro z něj udělalo "
+                "roli, ale tu zábranu mu zapomnělo dát — a odpověď `→@` "
+                "pak větu zapsala PODRUHÉ, jednou s povrchovým jménem "
+                "a podruhé s naučeným. Ten první výrok by nikdo neodvolal"
+            ),
+        ),
+        Step(
+            text="Je to důvod.",
+            names_role=("advcl:protože", "proč"),
+            reads="odjet(kdo:·Petr, proč:∃pršet)",
+            writes="odjet(kdo:Petr, proč:∃pršet)",
+            point=(
+                "ODPOVĚĎ JE TAH `→@` a UČÍ TVAR — tady je rozdíl proti "
+                "genitivnímu přívlastku, na kterém záleží: tam byl směr "
+                "vlastností VĚTY („chov zvířat“ × „péče majitele“), kdežto "
+                "spojka je v ROZBORU jako `mark`, takže odpověď je v tvaru. "
+                "Tenhle tah taky RE-ČTE, a proto potřebuje `replay` "
+                "výchozí lexikon (B‑20)"
+            ),
+        ),
+        Step(
+            text="Jan odjel, protože sněžilo.",
+            reading=sentence(
+                w("Jan", "Jan", "PROPN", 2, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("odjel", "odjet", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w(",", ",", "PUNCT", 5, "punct"),
+                w("protože", "protože", "SCONJ", 5, "mark"),
+                w("sněžilo", "sněžit", "VERB", 2, "advcl", Aspect="Imp", Gender="Neut", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            reads="odjet(kdo:·Jan, proč:∃sněžit)",
+            writes="odjet(kdo:Jan, proč:∃sněžit)",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Táž spojka podruhé "
+                "se UŽ NEPTÁ — jedna odpověď zavřela celou třídu vět. "
+                "Kdyby se tvar neučil, byl by z dialogu výslech"
+            ),
+        ),
+        Step(
+            text="Je jasné, že Jan přišel.",
+            reading=sentence(
+                w("Je", "být", "AUX", 2, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("jasné", "jasný", "ADJ", 0, "root", Case="Nom", Degree="Pos", Gender="Neut", Number="Sing", Polarity="Pos"),
+                w(",", ",", "PUNCT", 6, "punct"),
+                w("že", "že", "SCONJ", 6, "mark"),
+                w("Jan", "Jan", "PROPN", 6, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("přišel", "přijít", "VERB", 2, "csubj", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w(".", ".", "PUNCT", 2, "punct"),
+            ),
+            asks=(
+                "PODMĚTEM JE CELÁ VĚTA VEDLEJŠÍ (`csubj`) a systém to "
+                "ŘEKNE: netvrdí, že věta podmět nemá, ani nemlčí — říká, "
+                "že ho dosadit zatím neumí. Rozdíl mezi „neřečeno“ "
+                "a „řečeno, neumím“ (B‑18)"
+            ),
+            point=(
+                "A NEZAPÍŠE SE, dokud ta vedlejší věta nemá roli *(W‑50)*. "
+                "Dnes to drží druhá zeď — pro vedlejší větu role není, "
+                "takže se ohlásí jako ZAHOZENÁ — a tenhle krok to DOKLÁDÁ. "
+                "Kdyby jí někdo roli dal, aniž z ní udělá podmět, zapsala "
+                "by se věta bez podmětu a nic by to neřeklo"
+            ),
+        ),
+    ),
+    note=(
+        "Šestnáctý akceptační dialog. Vedlejší věta se spojkou je "
+        "OKOLNOST hlavního děje, tedy jeho role, a jméno té role nese "
+        "SPOJKA. Doména drží tři věci naráz: že se tvar UČÍ (druhá věta "
+        "se neptá), že se věta NEZAPÍŠE dřív, než role dostane jméno "
+        "(B‑19), a že věta s VĚTNÝM PODMĚTEM se nezapíše, dokud ta "
+        "vedlejší věta nemá roli (W‑50)."
+    ),
+    limit=(
+        "CO TAHLE DOMÉNA NEBERE: `advcl:pred`. Je to DOPLNĚK — „ukázalo "
+        "se JAKO snižující“ — a ne okolnost: neodpovídá na proč ani kdy, "
+        "ale na to, ČÍM se ta věc ukázala být. Do okolnostní role tedy "
+        "nepatří a sémanticky je blíž `xcomp`, který se skládá do "
+        "přísudku. V měřeném korpusu je ho 30 výskytů proti 21 holým "
+        "`advcl`, takže to není okrajová výjimka — a právě proto se "
+        "vylučuje VÝSLOVNĚ, ne řetězcovou shodou. Hranice bez zapsaného "
+        "důvodu se čte jako opomenutí."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -1855,4 +1969,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     DISCOURSE,
     PRODROP,
     ATTRIBUTE,
+    SUBORDINATE,
 )

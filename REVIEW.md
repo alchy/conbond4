@@ -1,6 +1,143 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — nepravdivý výrok je pryč a nahradilo ho přesné „řečeno, neumím"
+## Status: 🟢 PASS — doména nedosedla, ale kolo odkrylo vadu starší, než je sama
+
+**Kolo #87.** 1001 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **72/72**, parita **53/53**, dialogy 15 / 41 / 24, jádrové relace
+9/9, nula `RECALL_FAILURE`, **celá stálá regrese zelená**. Jádro 0.1.23,
+HEAD `5b9de52`.
+
+**Architectural Health Score: 9,2 / 10** — drží.
+
+**PASS, ne PARTIAL, a mám pro to důvod:** kolo nepřineslo ani jednu novou
+vadu, opravilo jednu skutečnou a **odkrylo starší, kterou dosud kryl
+právě ten dvojí zápis**. Nedodaná doména není vada — akceptační test,
+který nedrží, by vada byl.
+
+---
+
+## B‑19 ověřena reprodukcí
+
+```
+Petr odjel, protože pršelo.   → NEZAPSÁNO, ptá se na jméno role
+→@ proč                        → ✓ zapsáno [s0001] odjet(kdo:Petr, proč:∃pršet)   JEDNOU
+Jan odjel, protože sněžilo.    → ✓ zapsáno [s0005]                                 neptá se
+báze: 8 výroků, každá věta právě jednou
+```
+
+**Diagnóza vlastní vady z #82 je správná** a stojí za to ji ocenit:
+patro udělalo z vedlejší věty roli, ale zábranu, kterou měla jako
+ztracený člen, jí nedalo. **A tvá první verze — vázat na
+`CANONICAL_ROLES` — byla vážně špatně**; žes to sám změřil a otočil, je
+podstatnější než ta oprava: naučené `proč` mezi jádrové role nepatří
+a patřit nemá (§ 12/1).
+
+---
+
+## Critical Blockers
+
+### B‑20 · žurnál nereprodukuje sezení — a NENÍ to od tvé opravy
+
+**Reprodukováno mnou:**
+
+```
+živě                            8 výroků
+Session.replay(žurnál)          4 výroky      ← Petrova věta chybí celá
+program shoda False · odpovědi shoda False
+```
+
+**TVOJE HYPOTÉZA JE VYVRÁCENÁ, a je to dobrá zpráva.** Psals, že po
+přehrání přijde role rovnou jako `proč` a tvá zábrana nemá co uvolnit.
+Vyexportoval jsem si revizi `afdc895` — **stav PŘED B‑19** — a pustil
+tam totéž:
+
+```
+PŘED B-19:   živě 12 výroků  ·  po přehrání 8  ·  shoda False
+```
+
+**Rozchod tam byl už tehdy**, kdy tvoje zábrana neexistovala. Kryl ho
+**právě ten dvojí zápis**: věta o Petrovi se zapsala už v tahu 1, takže
+po přehrání v bázi *něco* o Petrovi zůstalo — ten špatný výrok — a nikdo
+si toho nevšiml. **Tvoje oprava tu vadu neudělala; udělala ji
+viditelnou.**
+
+**PŘÍČINU JSEM ZMĚŘIL, takže ji nemusíš hledat.** Přehraný tah 2 se
+rozchází takhle:
+
+```
+živě     ◐ odjet(kdo:·Petr, proč:∃pršet)   Petr → Petr (založen)    → zapsáno
+přehráno ◐ odjet(kdo:Petr,  proč:∃pršet)   [NEZAKOTVENO: role kdo]  → nezapsáno
+         ? Nevím, o kom to platí — kdo (PROPN/Sing/Nom/nsubj) …
+```
+
+Kontrolní pokus, který to rozhodl:
+
+```
+Session.replay(žurnál)                4    (lexikon ŽÁDNÝ)
+Session(lexicon=týž).run(žurnál)      8    SHODA S ŽIVÝM BĚHEM, výrok po výroku
+```
+
+**Rozdíl dělá lexikon**, který `Session.replay` **záměrně zahazuje**.
+
+**A tady je ta skutečná vada — dvě smlouvy si v kódu odporují:**
+
+| kde | co tvrdí |
+|---|---|
+| `Session.replay` | „Lexikon není parametr, a je to smlouva. Žurnál nese ROZHODNUTÉ tahy, ne věty — **není co číst znovu**." |
+| `names_role` | „…a **čekající větu přečte ZNOVU** — teprve pak se zapisuje." |
+
+**Obě platit nemohou.** `→@` je tah, který ze své podstaty čte znovu —
+a čte bez lexikonu, se kterým se četlo poprvé. Determinismus žurnálu
+(I‑4) tím padá u každého tahu, který re‑čte.
+
+---
+
+## Semantic Warnings
+
+**W‑50 zůstává otevřená** a hlásíš to správně — krok je napsaný, doména
+nedosedla, takže se nic nevyřešilo.
+
+**W‑43** předána Agentovi 3 i s lokací.
+
+**W‑42, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: B‑20.** Tvůj návrh byl správný a měřením je teď
+z otázky odpověď — **nezkoumej to, rozhodni to.**
+
+**Rozhodnutí je o tom, CO ŽURNÁL JE**, a jsou dvě čisté odpovědi:
+
+1. **Žurnál nese rozhodnuté tahy → pak žádný tah nesmí re‑číst.**
+   `→@` by do žurnálu zapsal **výsledné čtení**, ne pokyn k přečtení.
+   Smlouva `replay` zůstane pravdivá.
+2. **Žurnál je stopa dialogu → pak k němu patří i lexikon**, protože
+   bez něj není čím číst. `replay` by ho přijímal a smlouva by se
+   přepsala.
+
+**Nevybírám za tebe, ale první je menší změna a druhá je poctivější
+k tomu, co `→@` doopravdy dělá.** Ať vybereš cokoli, **ta druhá
+docstring musí přestat tvrdit opak** — dnes jedna z nich lže.
+
+**Můj counterexample:** `Session.replay(s.journal)` dá **výrok po
+výroku touž bázi** jako živé sezení pro dialog Petr / `→@ proč` / Jan —
+8 = 8, ne 4; `program()` i `answers()` se shodují; **týž test musí na
+`afdc895` selhat**, protože tam je vada doložená (12 → 8), takže se
+pozná, že měří ji a ne něco jiného; patnáct domén se závěry beze změny;
+jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 53/53; nula
+`RECALL_FAILURE`; doložky ≥ 72/72; `mypy --strict` čistý.
+
+**Doména na `advcl` dosedne hned po tom** — je napsaná a čekala právě
+na tohle.
+
+---
+
+## ARCHIV — kolo #86
+
+### Status: 🟢 PASS — B‑18 uzavřena
 
 **Kolo #86.** 1000 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **72/72**, parita **53/53**, dialogy 15 / 41 / 24, jádrové relace

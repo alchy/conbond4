@@ -750,17 +750,39 @@ class Session:
 
     @classmethod
     def replay(
-        cls, journal: Sequence[Turn], *, profile: TemplateProfile = DEFAULT_PROFILE
+        cls,
+        journal: Sequence[Turn],
+        *,
+        lexicon: Lexicon | None = None,
+        profile: TemplateProfile = DEFAULT_PROFILE,
     ) -> "Session":
-        """Přehraje žurnál. **Lexikon není parametr, a je to smlouva.**
+        """Přehraje žurnál. **Lexikon JE parametr, a je to smlouva** *(B‑20)*.
 
-        Žurnál nese ROZHODNUTÉ tahy, ne věty (§ 10) — čtení je v něm už
-        vybrané, takže není co číst znovu a naučené vzory nemají do čeho
-        mluvit. Kdyby žurnál někdy začal nést text, přestane to platit
-        a přehrání se rozejde s originálem podle toho, co se mezitím
-        systém naučil. Psáno sem proto, aby to byla smlouva, ne náhoda.
+        Dřív tu stálo, že parametr není, protože „žurnál nese rozhodnuté
+        tahy, ne věty — čtení je v něm už vybrané, takže není co číst
+        znovu". Ta věta předpověděla vlastní vyvrácení: *„kdyby žurnál
+        někdy začal nést text, přestane to platit"*. Začal.
+
+        **Tahy, které RE-ČTOU, v žurnálu jsou.** `→@` (`names_role`)
+        z podstaty naučí tvar a čekající větu přečte ZNOVU — jinak by se
+        věta zapsala oseknutá (N‑5). Nese proto `reading`, tedy text,
+        a čte ho lexikonem, který v tu chvíli platí. Bez výchozího
+        lexikonu se přehrání rozejde přesně tak, jak ta stará věta
+        varovala.
+
+        **Změřeno, ne odhadnuto** *(B‑20)*: `replay` bez lexikonu dalo
+        u téhož žurnálu 4 výroky proti 8 živým a Petrova věta chyběla
+        celá; `Session(lexicon=týž).run(žurnál)` dalo 8 a shodovalo se
+        výrok po výroku. Rozdíl nedělal žádný tah — dělal ho lexikon,
+        který si sezení přineslo na začátku a žurnál ho nikdy nenesl.
+
+        **Nic se tím nezlehčuje.** Přehrání pořád nesmí NIC ROZHODOVAT:
+        odpovědi leží v tazích a naučené vzory jen umožňují ta rozhodnutí
+        zopakovat. Lexikon je tu jako VÝCHOZÍ STAV, ne jako druhý zdroj
+        rozhodnutí — proto je pojmenovaný parametr a proto se s ním
+        `replay` chová deterministicky (I‑4).
         """
-        session = cls(profile=profile)
+        session = cls(profile=profile, lexicon=lexicon)
         session.run(journal)
         return session
 

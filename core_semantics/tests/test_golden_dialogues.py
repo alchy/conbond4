@@ -225,12 +225,16 @@ def test_dialogue_reads_writes_and_answers_as_recorded(dialogue: Dialogue) -> No
 def test_dialogue_is_replayable(dialogue: Dialogue) -> None:
     """Celý dialog přehraný ze žurnálu dá tutéž bázi i tytéž odpovědi.
 
-    Bez orákula — parser se přehrávání ani nedotkne, protože žurnál nese
-    rozhodnuté tahy, ne věty (§ 10). Vazby zmínek na uzly tím přežívají
-    taky: kdyby se dosazovaly znovu, dialog by po přehrání mohl mluvit
-    o jiných uzlech než při prvním běhu."""
+    Bez orákula — parser se přehrávání ani nedotkne. Vazby zmínek na uzly
+    tím přežívají taky: kdyby se dosazovaly znovu, dialog by po přehrání
+    mohl mluvit o jiných uzlech než při prvním běhu.
+
+    **S LEXIKONEM DOMÉNY** *(B‑20)*. Tahy, které RE-ČTOU (`→@`), v žurnálu
+    jsou a čtou text lexikonem, který v tu chvíli platí; potvrzené tvary
+    domény v žurnálu nikdy nebyly. Bez nich se přehrání rozejde — a nebyl
+    to důsledek žádné opravy, jen ho dosud kryl dvojí zápis (B‑19)."""
     _, session = play(dialogue)
-    replayed = Session.replay(session.journal)
+    replayed = Session.replay(session.journal, lexicon=dialogue.lexicon())
     assert replayed.program() == session.program()
     assert replayed.answers() == session.answers()
 
