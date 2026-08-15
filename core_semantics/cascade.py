@@ -192,6 +192,14 @@ class Predication:
     #: `complete(g)` je jediné místo, kde se z NEPŘÍTOMNOSTI stane „ne",
     #: takže tiše se nezapíše nikdy.
     pending_complete: str = ""
+    #: GENITIVNÍ PŘÍVLASTEK, jehož význam se ČEKÁ *(W‑39)*, jako
+    #: `(hlava, genitiv, token)`. Není to role predikace a blokovat větu
+    #: proto NESMÍ: „Druhou polovinu domu obýval bratr." má `domu` jako
+    #: `nmod` pod `polovinu`, tedy pod JMÉNEM — predikace nese role
+    #: SLOVESA a `domu` není argument „obývat". Je to vztah dvou jmen
+    #: uvnitř fráze, tedy DRUHÝ VÝROK vedle věty; větě samotné chybí
+    #: přívlastek, ne predikát.
+    pending_attribute: tuple[tuple[str, str, int], ...] = ()
 
     def __post_init__(self) -> None:
         names = [r.name for r in self.roles]
@@ -2258,13 +2266,106 @@ def lost_shape(token: Token, reading: Reading) -> str:
     return ">".join(reversed(path)) + "+" + (token.feat("Case") or "?")
 
 
+def genitive_attributes(
+    reading: Reading, predication: Predication
+) -> tuple[tuple[str, str, int], ...]:
+    """Genitivní přívlastky jako `(hlava, genitiv, token)` *(W‑39)*.
+
+    Hlava musí být JMÉNO, které je ve čtení — jinak by vztah visel na
+    něčem, o čem věta nemluví. Genitiv sám ve čtení není a ani být nemá:
+    není to role slovesa.
+
+    **Měřením doložených významů je pět** (předmět děje, původce děje,
+    nositel vlastnosti, část z celku, míra a druh) a liší se PRÁVĚ TÍM,
+    kterou roli genitiv v reifikovaném vztahu plní — `chov(co:zvíře)`
+    proti `péče(kdo:majitel)`. Menu tedy není nový druh rozhodnutí, je to
+    otázka na JMÉNO ROLE; a protože „přínos Němcové" a „popis Němcové"
+    mají identický rozbor, rozhodnout ji musí člověk.
+    """
+    ve_cteni = {role.mention.lemma for role in predication.roles}
+    najdene: list[tuple[str, str, int]] = []
+    for token in reading.tokens:
+        if token.deprel != "nmod" or dict(token.feats).get("Case") != "Gen":
+            continue
+        head = _token_at(token.head, reading)
+        if head is None or head.upos not in ("NOUN", "PROPN"):
+            continue
+        if head.lemma not in ve_cteni:
+            continue
+        najdene.append((head.lemma, token.lemma, token.index))
+    return tuple(najdene)
+
+
+def attribute_question(predication: Predication) -> str | None:
+    """Otázka na význam genitivního přívlastku *(W‑39)*.
+
+    Ptá se na JMÉNO ROLE, protože právě jím se ty významy liší. A ptá se
+    U KAŽDÉ VĚTY ZNOVU: „chov zvířat" a „péče majitele" mají týž tvar
+    a opačný směr, takže naučit ho jako tvar by znamenalo přečíst druhou
+    větu naruby.
+    """
+    if not predication.pending_attribute:
+        return None
+    parts = [
+        f"„{hlava} {genitiv}“"
+        for hlava, genitiv, _ in predication.pending_attribute
+    ]
+    return (
+        "Co ten přívlastek v genitivu tvrdí — " + ", ".join(parts) + "? "
+        "Zapíšu to jako vztah vedle věty; řekni, jakou roli v něm ten "
+        "genitiv hraje (co, kdo, whole, …). Ptám se u každé věty znovu: "
+        "„chov zvířat“ a „péče majitele“ mají týž tvar a opačný směr."
+    )
+
+
+def attribute_tier() -> Tier:
+    """Genitivní přívlastek jako ČEKAJÍCÍ DRUHÝ VÝROK *(W‑39)*.
+
+    Patro nic nedosazuje a nic neblokuje — jen označí, že vedle věty leží
+    vztah, jehož význam zná až člověk.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        oznacene: list[Candidate] = []
+        notes: list[str] = []
+        for candidate in candidates:
+            found = genitive_attributes(reading, candidate.predication)
+            if not found:
+                oznacene.append(candidate)
+                continue
+            notes.append(
+                "[PŘÍVLASTEK: "
+                + ", ".join(f"„{h} {g}“" for h, g, _ in found)
+                + " — vztah vedle věty, čeká se na jméno role]"
+            )
+            oznacene.append(
+                Candidate(
+                    replace(candidate.predication, pending_attribute=found),
+                    origin=candidate.origin,
+                )
+            )
+        return tuple(oznacene), "; ".join(notes) if notes else None
+
+    return tier
+
+
 def lost_members(
     reading: Reading, predication: Predication
 ) -> tuple[tuple[Token, str], ...]:
-    """Ztracené významové členy i s jejich tvarem."""
+    """Ztracené významové členy i s jejich tvarem.
+
+    **Genitivní přívlastek mezi ně NEPATŘÍ** *(W‑39)*. Není to role
+    slovesa, která by z věty vypadla — je to vztah dvou jmen uvnitř
+    fráze, tedy druhý výrok vedle věty. Hlásit ho jako ztrátu znamenalo
+    zablokovat zápis věty, které nechybí predikát, ale přívlastek.
+    """
+    attribute_tokens = {token for _, _, token in genitive_attributes(reading, predication)}
     return tuple(
         (token, lost_shape(token, reading))
         for token in dropped_tokens(reading, predication)
+        if token.index not in attribute_tokens
     )
 
 

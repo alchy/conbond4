@@ -1,6 +1,144 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozbor třídy `role`; odpověď je „ani jedno" a je lepší než obě moje varianty
+## Status: 🟢 PASS — měření vyvrátilo moji hypotézu I tvar opravy; rozhoduji (a) reifikaci
+
+**Kolo #78.** Do jádra **nesáhl** — 966 testů zelených, `mypy --strict`
+čistý na 61 souborech, doložky **69/69**, živá parita **51/51**, dialogy
+14 / 37 / 24, gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá
+stálá regrese zelená. Jádro zůstává 0.1.20. **Ohlásil PARTIAL a schvaluji
+ho — zastavil se přesně tam, kde měl.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Moje hypotéza neplatí a je to doloženo
+
+Napsal jsem, že hypotéza k ověření je, *„jestli genitivní přívlastek padá
+celý do `names_owner`"*. **Nepadá — a přivlastnění mezi těmi významy ani
+nefiguruje.** Reprodukováno mnou (`nalezy/genitiv_vyznamy.py`):
+
+```
+1 · předmět děje        10   chov zvířat · hledání viníků · vznik cukrovky
+2 · původce děje         4   péče majitele · přínos Němcové · vývoj astronomie
+3 · nositel vlastnosti   4   osud vesmíru · původ spisovatelky
+4 · část z celku         3   polovina domu · typy psů
+5 · míra a druh          3   míra péče · třída terapie
+Z · není přívlastek      1   „Hradci Králové“ — jedno jméno, rozbor ho rozdělil
+```
+
+**Dvojice 1 a 2 se z tvaru rozlišit nedají** a ověřil jsem si to sám —
+*„Přínos Němcové"* a *„Popis Němcové"* mají **identický rozbor**
+(`nmod`, `Gen`) a **opačný směr**. Je to táž třída dvojznačnosti jako
+holá spona: **navrhnout a zeptat se, nikdy nedosadit.**
+
+## Strukturní nález mění tvar opravy a je správný
+
+Ověřeno mnou na rozboru:
+
+```
+» Druhou polovinu domu obýval bratr.
+    polovinu  NOUN  obj   → hlava obýval
+    domu      NOUN  nmod  → hlava polovinu     ← visí pod JMÉNEM
+```
+
+**Genitiv není role predikace** — predikace nese role slovesa a `domu`
+není argument „obývat". Je to **vztah dvou jmen uvnitř fráze**, tedy
+**druhý výrok vedle věty**. „Dát mu jméno role" by byla oprava špatného
+tvaru.
+
+---
+
+## Rozhodnutí: (a) REIFIKACE. (b) zůstává otevřená s pojmenovanou spouští
+
+**Beru (a) a důvod je ten, který v tomhle projektu platí pořád:
+nepřidávat uzávěr dřív, než ho něco potřebuje.**
+
+Proti (b) mluví tři věci:
+
+1. **Jádro už prostor „část z celku" rozřezalo podle sortů** — `contains`
+   pro místo, `within` pro čas, `subset` pro třídy. Obecná partitivní
+   relace by se s nimi **překrývala**, a překryté uzávěry jsou zdroj
+   nejtěžších vad; kolizi jmen `whole`/`part` jsme viděli už v kole #59.
+2. **Reifikace je mechanismus, který stojí** a dělá přesně tohle:
+   `chov zvířat` → `chov(co:∀zvíře)`. Deverbální jméno **je** sloveso,
+   jen zabalené — a systém umí vztahy reifikovat od začátku.
+3. **Verze jádra se nemění**, takže se nic z toho, co drží, nedotkne.
+
+**Spoušť pro (b), ať to není odloženo „navždy":** až přijde otázka, která
+potřebuje **tranzitivitu částí** (*„je půlka půlky částí celku?"*)
+a reifikovaný fakt na ni nestačí, je to důkaz, že partitivnost je
+uzávěrová. **Do té doby ne.** Zapiš tu spoušť do dokumentace, ať se na ni
+nezapomene.
+
+**A jedno zjednodušení, které z tvého měření plyne a stojí za to ho
+využít:** těch pět významů se liší **právě tím, kterou roli genitiv
+v reifikovaném vztahu plní** — `chov(co:…)` × `péče(kdo:…)`. Menu tedy
+není šestý druh tahu; je to **otázka na jméno role**, kterou systém už
+umí (`names_role`). Ověř si to na všech pěti, ale pokud to vyjde, ušetří
+to celý nový mechanismus.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑40 · zařazení do pěti významů je RUČNÍ a je to v hlavičce přiznané.**
+Na rozdíl od rodin v `role_rozbor.py`, které jdou odvodit z jmenovek
+rozboru, tohle je **popis nad daty**. Že to přiznal místo aby se tvářil
+strojově, je správně — ale znamená to, že **to číslo nesmí do žádné
+agregované metriky**, dokud ho nepotvrdí druhý pár očí.
+
+**W‑41 · „Hradci Králové" rozbor rozdělil** na dvě jména. Jedna věta,
+třída `Z`, a je to vada rozboru, ne jádra — zapsat jako známou mez.
+
+**W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38, W‑39** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: postav (a) — genitivní přívlastek jako druhý výrok
+přes reifikaci.**
+
+1. **Druhý výrok, ne role predikace.** Věta zapíše svou predikaci
+   a **vedle ní** vztah z genitivní fráze — týž tvar jako `→'`.
+2. **Ptá se, nedosazuje.** Významy 1 a 2 jsou z tvaru nerozlišitelné,
+   takže bez odpovědi **se ten druhý výrok nezapíše**. Věta sama se
+   zapsat smí — chybí jí přívlastek, ne predikát.
+3. **Nic se neučí** — je to vlastnost věty, ne tvaru: `chov zvířat`
+   a `péče majitele` mají týž tvar a opačný směr.
+4. **Zkus to jako `names_role` nad reifikovaným vztahem**, ne jako nový
+   druh tahu. Když to nevyjde, řekni proč.
+
+**Můj counterexample — bez něj neschválím:** *„Chov zvířat je náročný."*
+zapíše predikaci **a** po odpovědi i `chov(co:∀zvíře)`; **bez odpovědi
+druhý výrok nevznikne**, ale věta ano; *„Péče majitele je nutná."* dá po
+odpovědi `péče(kdo:majitel)`, tedy **jinou roli** u téhož tvaru; druhá
+věta téhož tvaru **se zeptá znovu**; otázka, která potřebuje ten druhý
+výrok, na něj odpoví s **citací obou** výroků; tvar `nmod+Gen` **zmizí
+jako blokátor** z těch 19 vět; **žádná jiná třída nepřibere** větu
+odjinud než o vrstvu níž; čtrnáct domén se závěry beze změny; jádrové
+relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 51/51; nula
+`RECALL_FAILURE`; testy zelené; **jádro se neverzuje** — a kdyby ses
+k verzi dostal, je to znamení, že jsi sklouzl do (b), a máš se vrátit.
+
+---
+
+## ARCHIV — kolo #77
+
+### Status: 🟢 PASS — rozbor třídy `role`; odpověď je „ani jedno" a je lepší než obě moje varianty
 
 **Kolo #77.** Do jádra **nesáhl** — `git status` hlásí jen `REVIEW.md`.
 966 testů zelených, `mypy --strict` čistý na 61 souborech, doložky

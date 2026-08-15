@@ -72,6 +72,8 @@ from .cascade import (
     as_relation,
     complete_question,
     anaphora_tier,
+    attribute_question,
+    attribute_tier,
     completeness_tier,
     naming_tier,
     prodrop_tier,
@@ -222,6 +224,12 @@ class TurnKind(Enum):
     #: součástí týdne." mají TÝŽ tvar a různé relace, protože jedno je
     #: místo a druhé čas — a to čeština neříká.
     NAME_RELATION_HERE = "→⊆1"
+    #: ODPOVĚĎ na otázku, co tvrdí GENITIVNÍ PŘÍVLASTEK (W‑39). Vlastní
+    #: druh tahu, protože zapisuje DRUHÝ VÝROK vedle věty, ne roli
+    #: predikace — a NIC SE JÍM NEUČÍ: „chov zvířat" a „péče majitele"
+    #: mají týž tvar a opačný směr, takže naučit ho jako tvar by
+    #: znamenalo přečíst druhou větu naruby.
+    NAME_ATTRIBUTE = "→@1"
     #: POTVRZENÍ, že se skupina má prohlásit za UZAVŘENOU. Vlastní druh
     #: tahu, a nikoli odpověď `→`: `complete(g)` je jediný výrok, který
     #: mění, co znamená TICHO — od něj se z nepřítomnosti stane „ne".
@@ -356,6 +364,28 @@ def declares_disjoint(text: str, first: GroupTerm, second: GroupTerm) -> Turn:
     jeden atom, ale marker plus derivační expanze na dvě pravidla se
     silnou negací (§ 5.3)."""
     return Turn(TurnKind.DISJOINT, text, pair=(first, second))
+
+
+def names_attribute(
+    text: str, head: str, filler: str, role_name: str
+) -> Turn:
+    """ODPOVĚĎ na otázku po významu genitivního přívlastku *(W‑39)*.
+
+    Zapisuje DRUHÝ VÝROK vedle věty — `chov(co:∀zvíře)` k větě „Chov
+    zvířat je náročný." Věta sama se zapsala, když se dočetla; tenhle tah
+    přidává, co se z ní zapsat nedalo, a je to týž tvar jako `→'`.
+
+    **Nic se tím neučí.** Význam genitivu je vlastnost VĚTY, ne tvaru:
+    „přínos Němcové" a „popis Němcové" mají identický rozbor a opačný
+    směr, takže druhá věta téhož tvaru se musí zeptat znovu.
+    """
+    return Turn(
+        TurnKind.NAME_ATTRIBUTE,
+        text,
+        subject=Group(head),
+        node_id=filler,
+        role_name=role_name,
+    )
 
 
 def declares_complete(text: str, group: GroupTerm) -> Turn:
@@ -643,6 +673,9 @@ class Session:
             # rozhodnutí, ale pro‑drop se pozná až podle toho, že podmět
             # v predikaci opravdu není.
             prodrop_tier(),
+            # Genitivní přívlastek jako čekající DRUHÝ VÝROK. Nic
+            # neblokuje: větě chybí přívlastek, ne predikát.
+            attribute_tier(),
             # Uzavření světa až ZA relací: patro jen navrhuje a nikdy nic
             # nedosazuje, takže pořadí nemění čtení — mění jen to, v jakém
             # pořadí se člověk ptá.
@@ -694,6 +727,7 @@ class Session:
             TurnKind.ANSWER_HERE: self._answer_here,
             TurnKind.NAME_OWNER: self._name_owner,
             TurnKind.DECLARE_COMPLETE: self._declare_complete,
+            TurnKind.NAME_ATTRIBUTE: self._name_attribute,
             TurnKind.REVOKE: self._revoke,
             TurnKind.QUESTION: self._question,
             TurnKind.BOUND: self._bound,
@@ -1036,6 +1070,10 @@ class Session:
                 # dokud se neví, co věta tvrdí, nemá smysl se ptát, jestli
                 # to má zavřít svět.
                 complete_question(predication),
+                # Otázka na význam genitivního přívlastku (W‑39). Stojí
+                # až za uzavřením: je to vztah VEDLE věty, takže se ptá
+                # jako poslední a větu samotnou nezdržuje.
+                attribute_question(predication),
                 grounded.question,
             )
             if part
@@ -1166,6 +1204,31 @@ class Session:
             ),
             statement_id=marker,
             derived=(left, right),
+        )
+
+    def _name_attribute(self, index: int, turn: Turn) -> TurnResult:
+        """`→@1` — člověk pojmenoval roli genitivního přívlastku.
+
+        **Věta se tímhle tahem NEZAPISUJE ZNOVU.** Zapsala se sama, když
+        se dočetla; tenhle tah přidává vztah, který v ní visel na jménu,
+        ne na přísudku. Kdyby prošel `_settle`, ležel by v bázi týž výrok
+        dvakrát — táž vada, kterou u ztraceného členu hlídá zábrana.
+        """
+        assert turn.subject is not None
+        formula = atom(
+            turn.subject.id,
+            role(turn.role_name, Group(turn.node_id), Quantifier.FOR_ALL),
+        )
+        sid = self.kb.attach(formula, provenance=f"tah {index}: přívlastek")
+        return TurnResult(
+            index=index,
+            turn=turn,
+            lines=(
+                f"✓ zapsáno [{sid}]  {formula}",
+                "[VZTAH VEDLE VĚTY — věta sama se zapsala už dřív; tvar "
+                "se tím NEUČÍ, další věta se zeptá znovu]",
+            ),
+            statement_id=sid,
         )
 
     def _declare_complete(self, index: int, turn: Turn) -> TurnResult:

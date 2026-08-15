@@ -1011,6 +1011,28 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
 
+**Partitivní relace v jádře — ODLOŽENA, A JE ZAPSANÁ SPOUŠŤ** *(W‑39,
+rozhodnuto 15. 8. 2026)*. Genitivní přívlastek nese pět měřením
+doložených významů a jeden z nich je „část z celku" („polovina domu").
+Nabízelo se přidat obecnou partitivní relaci do jádra; nepřidala se, a to
+ze tří důvodů:
+
+1. jádro už prostor „část z celku" **rozřezalo podle sortů** — `contains`
+   pro místo, `within` pro čas, `subset` pro třídy — a obecná partitivní
+   relace by se s nimi překrývala; překryté uzávěry jsou zdroj nejtěžších
+   vad;
+2. **reifikace stojí a dělá přesně tohle**: deverbální jméno JE sloveso,
+   jen zabalené, takže „chov zvířat" je `chov(co:∀zvíře)` bez jakékoli
+   změny jádra;
+3. neměnit jádro znamená nedotknout se ničeho, co drží.
+
+> **Spoušť, po které se to má přehodnotit:** až přijde otázka, která
+> potřebuje **tranzitivitu částí** („je půlka půlky částí celku?") a
+> reifikovaný fakt na ni nestačí. To je důkaz, že partitivnost je
+> uzávěrová vlastnost, ne jen popisná. Do té doby ne — reifikovaný fakt
+> se ZÁMĚRNĚ neřetězí, a právě to je na něm to bezpečné.
+
+
 | Téma | Proč mimo | Co bude potřebovat |
 |---|---|---|
 | `closed_context` (§ 6.9 zadání) | uzavřený svět uvnitř otevřeného | lokální doména + UNA + `EXACTLY_ONE`/`AT_MOST_ONE`/`AT_LEAST_ONE`/`ALL_DIFFERENT` |
