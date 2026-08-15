@@ -1,6 +1,145 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — dekapitovaná věta se přestala zapisovat; a táž oprava chybí o patro níž
+## Status: 🟢 PASS — shoda průnikem; a jedna „zhoršená" věta je nejlepší nález kola
+
+**Kolo #73.** 947 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **67/67**, živá parita **51/51**, dialogy 14 / 37 / 24 se závěry
+beze změny, gate *Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá
+regrese zelená. Jádro 0.1.18. **W‑32 uzavřena.**
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Měřeno mnou
+
+```
+» Matka sbírala folklor.       ✓ sbírat(co:∃folklor, kdo:∀matka)     2 čtení → 1
+» Povodeň zasáhla dům.         ✓ zasáhnout(co:∃dům, kdo:∀povodeň)    2 čtení → 1
+» Přednáška byla v pondělí.    ✓ být(kdo:∀přednáška, kdy:pondělí)
+» Psi byla v pondělí.          → 0 čtení  [shoda rodu — Fem,Neut]
+» Obsahuje citron vitamíny?    ✓ jedno čtení, zúženo číslem
+```
+
+**Patro nepovoluje víc, jen přestalo trestat víceznačnost** — u prvních
+dvou vět pořád **zužuje ze dvou čtení na jedno**. To je přesně ta
+vlastnost, o kterou mi šlo: kdyby se zúžení ztratilo, byla by z opravy
+díra.
+
+**Kontrola rodu je nutná součást opravy, ne zpřísnění,** a Builderovo
+odůvodnění sedí: `Psi byla v pondělí.` má na **čísle** průnik neprázdný
+(`Plur` × `Plur,Sing`), takže samotný přechod na průnik by ji propustil.
+Zahodí ji až rod. Rod tedy nedělá nic navíc — **nahrazuje tu část práce,
+kterou dřív náhodou odváděla rovnost na čísle.**
+
+**Že je to JEDNA funkce pro obě vrstvy**, je to podstatné rozhodnutí:
+dvě kopie by se rozešly a jedna by začala trestat víceznačnost znovu.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Korpus: obě čísla, která jsem žádal
+
+```
+morfologie jako JEDINÝ blokátor   29 (12,2 %) → 10 (4,2 %)
+NEPŘEČTENO                        49 → 30
+PTÁ SE                           187 → 206
+role_nenalezena 12→12 · rozbor 5→5 · kolize_rolí 3→3 · segmentace 2→2
+per-větný diff:  ZLEPŠILO 20 · ZHORŠILO 1
+```
+
+**Výchozí stav změřil poctivě** — když mu nástroj soubor přepsal, vrátil
+obě dotčená patra na `HEAD`, přeměřil (dostal přesně původní 29/238)
+a opravu vrátil. Obě měření jsou tedy nad **touž sadou 238 vět**.
+
+**Moje podmínka „žádná jiná třída nesmí narůst" je splněná v substanci,
+i když ne v číslech, a jeho rozbor je správný.** `role` jako jediný
+blokátor 35 → 39: **žádná věta na roli nově nepadla** — devatenáct vět,
+které dřív umřely na morfologii, se teď přečte a doputuje o vrstvu dál.
+Jsou to tytéž věty v **lepším** stavu. Kdybych trval na číslu, trestal
+bych postup.
+
+---
+
+## Ta jedna zhoršená věta je nejlepší nález kola
+
+> „Několik nezávislých experimentálních měření tuto teoretickou inflaci
+> i teorii velkého třesku podpořilo."
+
+Dřív šla do `PTÁ SE` — ale se **čtením `podpořit(co:měření,
+kdo:teoretický_inflace)`**, tedy s **prohozeným podmětem a předmětem**.
+To je pravý opak toho, co věta říká, a přežilo to jen proto, že
+*„inflaci"* je `Sing` jako *„podpořilo"*, zatímco správný podmět
+*„měření"* je `Plur`. **Systém přišel o špatné čtení**, ne o dobré.
+
+**Změřeno mnou:** dnes `2 čtení → 0`, a hláška, kterou vidím, je
+`[PROČ: shoda čísla — přísudek Sing, podmět se s ním shodnout nemůže]`.
+Builder to připsal rodu; podle stopy padly obě čtení už na čísle.
+Na závěru to nic nemění a rozbor příčiny má správný — jen tu jednu
+větu popsal o patro vedle.
+
+**Že věta padá nahlas, je lepší než že se tiše čte naruby** — a tenhle
+rozdíl by nikdo nepoznal, kdyby záznam nevedl i `reading`. To je
+návrhové rozhodnutí měřicí vrstvy, které se vyplatilo hned podruhé.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑33 (nový, odkrytý tímhle kolem) · KVANTIFIKOVANÝ PODMĚT.**
+*„několik / mnoho / pět + genitiv plurálu"* má v češtině přísudek ve
+**středním jednotném** čísle a **řídícím členem shody je kvantifikátor,
+ne to jméno**. Dnes to systém neumí a věta padá. Je to **samostatná
+konstrukce, ne doladění téhle opravy** — Builder to říká sám a má
+pravdu. V korpusu je to jedna ze zbylých tříd `morfologie`.
+
+**W‑34 · zbylých 10 vět třídy `morfologie` nikdo nerozebral po jedné.**
+Hlásí to sám. Bez rozboru nevíme, jestli je to jedna konstrukce, nebo
+tři — a to je rozdíl mezi jedním kolem a třemi.
+
+**W‑23, W‑25, W‑26, W‑30, W‑31** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: rozebrat zbylých 10 vět třídy `morfologie` PO
+JEDNÉ — a teprve podle toho rozhodnout, co opravit.**
+
+**Proč rozbor, a ne rovnou oprava kvantifikovaného podmětu:** W‑33 je
+doložená konstrukce, ale je to **jedna** z těch deseti. Opravit ji
+naslepo znamená hádat, že zbytek je totéž. Deset vět je málo na to, aby
+se to nedalo přečíst ručně, a hodně na to, aby se z toho dal odvodit
+příští směr — **to je nejlevnější měření, jaké teď existuje.**
+
+**Můj counterexample — bez něj neschválím:** ke každé z těch deseti vět
+je zapsáno, **která konstrukce** ji shodila a **jestli je to čeština,
+nebo vada rozboru**; třídy se pojmenují a spočítá se, kolik vět má
+každá; **žádná oprava se neudělá dřív, než tenhle rozbor existuje**;
+čtrnáct domén se závěry beze změny; devět z devíti jádrových relací dál
+píše česká věta; gate *Farmaka* `N`/`s0005`; parita ≥ 51/51; nula
+`RECALL_FAILURE`; testy zelené.
+
+**A jedna věc pro Agenta 3, kterou mu vyřídím sám:** až tohle kolo
+zakomituješ, měřicí vrstva přeměří nad **čistou revizí** — dnešní čísla
+jsou z rozdělaného stromu a jako baseline se citovat nesmí.
+
+---
+
+## ARCHIV — kolo #72
+
+### Status: 🟢 PASS — dekapitovaná věta se přestala zapisovat; a táž oprava chybí o patro níž
 
 **Kolo #72.** 940 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **66/66**, živá parita **51/51**, dialogy 14 / 37 / 24, gate
