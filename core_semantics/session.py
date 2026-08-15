@@ -255,6 +255,41 @@ class TurnKind(Enum):
     CONFIRM_TITLE = "→∈"
 
 
+class TitleKind(Enum):
+    """Čím ten titul je — a rozhoduje to ČLOVĚK *(W‑57)*.
+
+    **Z rozboru se to přečíst nedá**: „prezident Masaryk“ a „básník Josef
+    Hora“ mají identický rozbor. Rozdíl přitom není nuance — je to rozdíl
+    mezi tvrzením, které platí, a tvrzením, které platí ŠÍŘ, NEŽ CO VĚTA
+    ŘEKLA. Systém proto tuhle otázku nehádá a nedosazuje; je to týž tvar
+    rozhodnutí jako `→∀` × `→∀1` nebo `→⊆` × `→⊆1`.
+    """
+
+    #: POVOLÁNÍ — „básník", „spisovatel", „astronom". Bezčasé členství je
+    #: u nich v pořádku: je to vlastnost člověka, ne funkce, kterou někdo
+    #: v nějakém období zastával.
+    TRADE = "povolání"
+    #: ÚŘAD DRŽENÝ V ČASE — „prezident", „ministr", „předseda". Bezčasé
+    #: `member(Masaryk, prezident)` tvrdí, že jím je pořád; Masaryk zemřel
+    #: v roce 1937. Jádro čas neumí, a NEŽ ABY ZAPSALO ŠIRŠÍ TVRZENÍ, NEŽ
+    #: CO VĚTA ŘÍKÁ, NEZAPÍŠE NIC.
+    OFFICE = "úřad"
+
+
+@dataclass(frozen=True, slots=True)
+class TitleOffer:
+    """Tvrzení titulu v jednom sezení a jeho STAV *(W‑55, W‑56)*.
+
+    Jeden záznam pro tři stavy, ne dvě kolekce: chybí = nikdo to netvrdil,
+    `statement_id is None` = nabídnuto a čeká, jinak = ROZHODNUTO. Dvě
+    kolekce by se rozešly a nikdo by nevěděl která má pravdu — táž úvaha
+    jako u tří stavů souřadnosti (W‑33).
+    """
+
+    sentence: str
+    statement_id: str | None = None
+
+
 @dataclass(frozen=True, slots=True)
 class Turn:
     """Jeden tah dialogu. `text` je pro člověka, ostatní pole pro jádro."""
@@ -276,6 +311,9 @@ class Turn:
     other: Term | None = None
     #: Nová jména při rozdělení uzlu (`!÷`).
     split_into: tuple[str, str] | None = None
+    #: ČÍM je titul, který se potvrzuje (`→∈`) — rozhodnutí člověka,
+    #: protože z rozboru se to přečíst nedá *(W‑57)*.
+    title_kind: "TitleKind | None" = None
     #: OTISK VÝCHOZÍHO LEXIKONU, se kterým tah vznikl *(W‑51)*. Leží
     #: v ŽURNÁLU, ne v sezení, takže přežije uložení — a přehrání s jiným
     #: lexikonem se pozná. Bez něj platil determinismus jen podmíněně
@@ -407,7 +445,9 @@ def names_attribute(
     )
 
 
-def confirms_title(text: str, name: str, title: str) -> Turn:
+def confirms_title(
+    text: str, name: str, title: str, kind: TitleKind = TitleKind.TRADE
+) -> Turn:
     """POTVRZENÍ toho, co tvrdí titul *(W‑55)*.
 
     Zapisuje DRUHÝ VÝROK vedle věty — `member(elem:Josef_Hora,
@@ -426,6 +466,7 @@ def confirms_title(text: str, name: str, title: str) -> Turn:
         text,
         subject=Entity(name),
         node_id=title,
+        title_kind=kind,
     )
 
 
@@ -698,7 +739,7 @@ class Session:
         #: Leží to v SEZENÍ, ne v žurnálu: nabídka se při přehrání spočítá
         #: znovu z rozboru, takže determinismus (§ 10) to nemění. A není
         #: to inference — nic se z toho neodvozuje, jen se to PAMATUJE.
-        self._offered_titles: dict[tuple[str, str], str] = {}
+        self._offered_titles: dict[tuple[str, str], TitleOffer] = {}
         #: Otisk lexikonu, se kterým sezení ZAČALO. Bere se hned, protože
         #: později už bude jiný — dialog se učí.
         self._opening_fingerprint = self.lexicon.fingerprint()
@@ -997,7 +1038,8 @@ class Session:
         """
         return tuple(
             member_of(Entity(jmeno), Group(titul))
-            for jmeno, titul in self._offered_titles
+            for (jmeno, titul), nabidka in self._offered_titles.items()
+            if nabidka.statement_id is None
         )
 
     def _offered_title_note(
@@ -1024,9 +1066,10 @@ class Session:
         group = query.get_role("group")
         if elem is None or group is None:
             return ()
-        veta = self._offered_titles.get((elem.target.id, group.target.id))
-        if veta is None:
+        nabidka = self._offered_titles.get((elem.target.id, group.target.id))
+        if nabidka is None or nabidka.statement_id is not None:
             return ()
+        veta = nabidka.sentence
         return (
             f"  [ŘEKLS TO — „{veta}“ to tvrdí titulem. Nezapsalo se to: "
             f"týž tvar nese povolání, úřad v čase i příbuzenství, takže "
@@ -1250,7 +1293,12 @@ class Session:
         # ve které to stálo, ne jen značka: bez ní je hlášení „řekls to“
         # bez důkazu, a to je táž vada jako mezera, kterou to opravuje.
         for jmeno, titul, _ in predication.pending_title:
-            self._offered_titles[(jmeno, titul)] = turn.text
+            # ROZHODNUTÉ SE NEPŘEPISUJE. Druhá věta s týmž titulem by
+            # jinak zapsaný stav vrátila na „čeká“ a systém by se ptal
+            # na něco, co už v bázi leží.
+            self._offered_titles.setdefault(
+                (jmeno, titul), TitleOffer(sentence=turn.text)
+            )
         still_open = tuple(
             role
             for role in predication.open_roles()
@@ -1475,12 +1523,14 @@ class Session:
         """
         assert turn.subject is not None
         klic = (turn.subject.id, turn.node_id)
-        veta = self._offered_titles.get(klic)
-        if veta is None:
-            duvod = (
-                f"potvrdit „{turn.node_id} {turn.subject.id.replace('_', ' ')}“ "
-                f"nejde: žádná věta v tomhle sezení to netvrdí"
-            )
+        popis = f"„{turn.node_id} {turn.subject.id.replace('_', ' ')}“"
+        nabidka = self._offered_titles.get(klic)
+
+        # TŘI STAVY, TŘI HLÁŠKY. Slít je do jedné znamená říct o textu
+        # něco, co neplatí — a to je jediná třída, kterou tu držíme
+        # prázdnou (W‑56).
+        if nabidka is None:
+            duvod = f"potvrdit {popis} nejde: žádná věta v tomhle sezení to netvrdí"
             return TurnResult(
                 index=index,
                 turn=turn,
@@ -1493,12 +1543,57 @@ class Session:
                 ),
                 error=duvod,
             )
+        if nabidka.statement_id is not None:
+            # UŽ ROZHODNUTO. Dřív se sem propadalo do hlášky „žádná věta
+            # to netvrdí“ — jenže ta věta v sezení JE a výrok z ní přímo
+            # vznikl. Nic se nezapisovalo, takže to nebyl bloker; byl to
+            # ale VÝROK O TEXTU, KTERÝ NEPLATÍ.
+            duvod = (
+                f"potvrdit {popis} znovu nejde: už je to potvrzené "
+                f"a leží to v bázi jako [{nabidka.statement_id}]"
+            )
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(
+                    f"✗ nezapsáno: {duvod}",
+                    f"[tvrdí to „{nabidka.sentence}“ a rozhodnuto o tom "
+                    f"už bylo. Jestli to chceš vzít zpět, odvolej "
+                    f"{nabidka.statement_id}]",
+                ),
+                error=duvod,
+            )
+        if turn.title_kind is TitleKind.OFFICE:
+            # ÚŘAD SE NEZAPÍŠE, a není to opatrnost — je to MĚŘENÍ.
+            # V korpusu nenese ANI JEDNA zmínka úřadu čas, který by šlo
+            # použít: čtyři zmínky, u kterých čas na titulu visí, jsou
+            # ŽIVOTNÍ DATA v závorce (1902–1968), ne doba držení funkce.
+            # Není tedy co zapsat — a `member(Masaryk, prezident)` bez
+            # času tvrdí, že jím je pořád (W‑57).
+            duvod = (
+                f"potvrdit {popis} jako ÚŘAD nejde: úřad platí V ČASE "
+                f"a jádro čas neumí"
+            )
+            return TurnResult(
+                index=index,
+                turn=turn,
+                lines=(
+                    f"✗ nezapsáno: {duvod}",
+                    f"[tvrdí to „{nabidka.sentence}“, ale bezčasé "
+                    f"`member` by platilo ŠÍŘ, než co ta věta říká: "
+                    f"úřad se drží NĚJAKÉ OBDOBÍ, ne pořád. Čas by to "
+                    f"spravil, jenže v korpusu žádný použitelný není — "
+                    f"u úřadů nula. Nabídka zůstává otevřená]",
+                ),
+                error=duvod,
+            )
+
         formula = member_of(Entity(turn.subject.id), Group(turn.node_id))
         sid = self.kb.attach(formula, provenance=f"tah {index}: titul z věty")
-        # ROZHODNUTO — nabídka se z paměti bere pryč. Kdyby tam zůstala,
-        # hlásil by systém u zapsaného faktu „čeká to na tvé rozhodnutí“
-        # a člověk by nevěděl, jestli se to zapsalo.
-        del self._offered_titles[klic]
+        # ROZHODNUTO — nabídka se nemaže, PŘEPÍNÁ SE STAV. Smazat ji by
+        # ztratilo právě to, co odlišuje „nikdo to netvrdil“ od „už je to
+        # rozhodnuté“, a druhé potvrzení by lhalo o textu (W‑56).
+        self._offered_titles[klic] = replace(nabidka, statement_id=sid)
         return TurnResult(
             index=index,
             turn=turn,
@@ -1508,9 +1603,9 @@ class Session:
                 # byla. „Řekls to“ bez toho, co se řeklo, je tvrzení bez
                 # důkazu — a tady je to navíc jediné, co ten zápis
                 # opravňuje.
-                f"[VÝROK VEDLE VĚTY — tvrdí to „{veta}“; věta sama se "
-                f"zapsala už dřív. Tvar se tím NEUČÍ, další věta "
-                f"s titulem se zeptá znovu]",
+                f"[VÝROK VEDLE VĚTY jako POVOLÁNÍ — tvrdí to "
+                f"„{nabidka.sentence}“; věta sama se zapsala už dřív. "
+                f"Tvar se tím NEUČÍ, další věta s titulem se zeptá znovu]",
             ),
             statement_id=sid,
         )

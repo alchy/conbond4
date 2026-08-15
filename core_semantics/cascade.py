@@ -2730,6 +2730,14 @@ def title_question(predication: Predication) -> str | None:
     třetiny zápisů buď bezčasé o něčem časovém, nebo neúplné o vztahu —
     a byly by v bázi jako doložený fakt. Proto se **nabízí a ptá**: to,
     co věta říká, se ohlásí, a rozhodne člověk.
+
+    **A ptá se na DRUH, ne na „ano/ne"** *(W‑57)*. Kdyby stačilo
+    odkliknout, vyrobilo by potvrzení u úřadu tvrzení, které platí ŠÍŘ,
+    než co věta říká — a šířku nikdo neřekl, jen ji nikdo nezastavil.
+    Čas by to spravil, jenže **v korpusu žádný použitelný není**: ze 39
+    zmínek visí čas na titulu u čtyř a všechny čtyři jsou ŽIVOTNÍ DATA
+    v závorce (1902–1968), ne doba držení funkce; u úřadů je to NULA.
+    Není to tedy úloha o čase v jádře — nemá se co zapsat.
     """
     if not predication.pending_title:
         return None
@@ -2739,10 +2747,13 @@ def title_question(predication: Predication) -> str | None:
     ]
     return (
         "Ta věta tvrdí ještě tohle: " + ", ".join(parts) + ". Zapíšu to "
-        "jako členství vedle věty, ale sám to neudělám — týž tvar nese "
-        "povolání („básník Josef Hora“), úřad držený v čase („prezident "
-        "Masaryk“) i příbuzenství („bratr Josef Čapek“), a to jsou tři "
-        "různá tvrzení. Potvrdíš?"
+        "jako členství vedle věty, ale sám to neudělám a NEPTÁM SE JEN "
+        "„ano/ne“ — potřebuju vědět, ČÍM ten titul je. POVOLÁNÍ („básník "
+        "Josef Hora“) zapíšu; ÚŘAD DRŽENÝ V ČASE („prezident Masaryk“) "
+        "nezapíšu, protože bezčasé členství by platilo šíř, než co ta "
+        "věta říká — Masaryk byl prezident v nějakém období, ne pořád. "
+        "Z rozboru se to rozeznat nedá: „prezident“ a „básník“ v něm "
+        "vypadají stejně. Povolání, nebo úřad?"
     )
 
 

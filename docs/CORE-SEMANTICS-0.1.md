@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.31 · 15. 8. 2026
+**Verze jádra:** 0.1.32 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.32 | § 6.8 — `→∈` se NEPTÁ „ano/ne“, ptá se na DRUH: POVOLÁNÍ se zapíše, ÚŘAD DRŽENÝ V ČASE ne, protože bezčasé `member` by platilo šíř, než co věta říká. Z rozboru se to rozeznat nedá, rozhoduje ČLOVĚK. Změřeno: ze 39 zmínek titulu visí čas na titulu u čtyř a všechny čtyři jsou životní data v závorce, u úřadů NULA — není to úloha o čase v jádře. Tři stavy nabídky mají tři různé hlášky; § 13 T82, T83 | 15. 8. 2026 |
 | 0.1.31 | § 6.8 — `→∈` je POTVRZENÍ, takže BEZ NABÍDKY SE ODMÍTNE (`✗`). Bez věty by v bázi ležel výrok s proveniencí titulu a s hláškou o textu, který nikdo neřekl. Potvrzený titul teď CITUJE VĚTU přímo v hlášení; odmítnutý tah nabídku nespotřebuje; § 13 T81 | 15. 8. 2026 |
 | 0.1.30 | § 3.2, § 6.8 — TITUL NESE TVRZENÍ: „básník Josef Hora“ říká i to, že je básník. NABÍDNE SE a nezapíše — ze 71 zmínek v korpusu je 29 povolání, 24 úřad držený v čase a 18 příbuzenství, a tvar je u všech tří týž. Dokud se nepotvrdí, je verdikt `U`, ale důvod už není „nikdo to neřekl“; nový tah `→∈` a nový důvod `STATED_UNDECIDED` v rozkladu `U`; § 13 T80 | 15. 8. 2026 |
 | 0.1.29 | § 3.2 — titul musí být v JEDNOTNÉM čísle: „bratří **Čapků**“ je SKUPINA dvou lidí, ne jedni bratři jménem Čapka, a uzel `·Čapka` by byl člověk, který neexistuje. Skupinu z téhle stavby jádro neumí a nevyrobí ji (W‑54); § 13 T79 | 15. 8. 2026 |
@@ -1089,6 +1090,8 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
+| T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
 | T80 | titul se nabídne, nezapíše | „Nad hrobem promluvil básník Josef Hora.“ zapíše větu a OHLÁSÍ členství; „Je Josef Hora básník?“ dá `U`, ale s důvodem „řekls to, čeká to na potvrzení“; po tahu `→∈` dá `A`; „prezident Masaryk zemřel.“ se sám nezapíše (úřad v čase); „Město Praha“ ani „bratří Čapků“ tou cestou member nevyrobí |
 | T79 | plurálový titul se nesloží | „Mezi pátečníky patřili kromě bratří Čapků…“ nedá uzel `·Čapka`; „matka Božena“ s víceznačným `Number=Plur,Sing` se složí dál — rys se čte průnikem (W‑32) |

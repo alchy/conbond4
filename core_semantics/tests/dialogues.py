@@ -121,11 +121,14 @@ class Step:
     #: v rozboru (spojka jako `mark`), takže druhá věta s touž spojkou
     #: se už neptá.
     names_role: tuple[str, str] | None = None
-    #: `(jméno, titul)` — krok POTVRZUJE, co tvrdí TITUL (`→∈`), a
+    #: `(jméno, titul, druh)` — krok POTVRZUJE, co tvrdí TITUL (`→∈`), a
     #: zapíše DRUHÝ VÝROK vedle věty. Vlastní pole, ne jedna z odpovědí:
     #: není to role predikace ani tvar, který by se učil — „prezident
     #: Masaryk“ v jiné větě znamená totéž a bude se ptát znovu.
-    confirms_title: tuple[str, str] | None = None
+    #: Druh je „povolání“ nebo „úřad“ a rozhoduje ho ČLOVĚK: z rozboru
+    #: se přečíst nedá a rozdíl není nuance — u úřadu by bezčasé členství
+    #: platilo šíř, než co věta říká *(W‑57)*.
+    confirms_title: tuple[str, str, str] | None = None
     #: Důvod — krok ODVOLÁVÁ výrok zapsaný krokem `declares_complete`.
     #: Uzavření světa je DEKLARACE, ne trvalá vlastnost, a sada to musí
     #: umět projít celou cestou tam i zpět.
@@ -2223,7 +2226,7 @@ TITLE_CLAIM = Dialogue(
         ),
         Step(
             text="Ano, Josef Hora byl básník.",
-            confirms_title=("Josef_Hora", "básník"),
+            confirms_title=("Josef_Hora", "básník", "povolání"),
             writes="member(elem:Josef_Hora, group:·básník)",
             point=(
                 "TAH, NE VĚTA. Věta sama se zapsala už při čtení; tenhle "
@@ -2261,6 +2264,26 @@ TITLE_CLAIM = Dialogue(
                 "Masaryk zemřel v roce 1937. Systém to proto NEZAPÍŠE a "
                 "ohlásí to; čas jádro neumí, a tvrdit bezčasé členství "
                 "tam, kde jazyk mluví o období, by byl doložený nesmysl"
+            ),
+        ),
+        Step(
+            text="Byl to úřad, ne povolání.",
+            confirms_title=("Masaryk", "prezident", "úřad"),
+            refuses="úřad platí v čase a jádro čas neumí",
+            point=(
+                "POTVRZENÍ, KTERÉ NEZAPÍŠE. Člověk řekl, čím ten titul "
+                "je — a právě proto se nic nezapsalo: bezčasé "
+                "`member(Masaryk, prezident)` by platilo ŠÍŘ, než co ta "
+                "věta říká. Odkliknout „ano“ nestačí a systém se na "
+                "„ano/ne“ ani neptá; ptá se na DRUH, protože z rozboru "
+                "se povolání od úřadu rozeznat nedá"
+            ),
+            limit=(
+                "Čas by to spravil, jenže V KORPUSU ŽÁDNÝ POUŽITELNÝ "
+                "NENÍ: ze 39 zmínek titulu visí čas na titulu u čtyř a "
+                "všechny čtyři jsou ŽIVOTNÍ DATA v závorce (1902–1968), "
+                "ne doba držení funkce; u úřadů je to nula. Není to tedy "
+                "úloha o čase v jádře — nemá se co zapsat"
             ),
         ),
         Step(

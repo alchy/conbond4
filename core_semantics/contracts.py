@@ -1201,7 +1201,18 @@ CONTRACTS: tuple[Clause, ...] = (
             "potvrzený titul z textu. ŽÁDNÝ ZÁPIS NESMÍ NÉST TVRZENÍ "
             "O TEXTU, KTERÉ NENÍ DOLOŽENÉ KONKRÉTNÍ VĚTOU V SEZENÍ; "
             "u potvrzeného titulu je proto ta věta PŘÍMO V HLÁŠENÍ. "
-            "Odmítnutý tah nabídku NESPOTŘEBUJE (B‑23)"
+            "Odmítnutý tah nabídku NESPOTŘEBUJE (B‑23). TŘI STAVY, TŘI "
+            "HLÁŠKY: chybí nabídka („nikdo to netvrdil“) × už rozhodnuto "
+            "(„leží to v bázi jako sXXXX“) — slít je znamená říct o textu "
+            "něco, co neplatí (W‑56). A POTVRZENÍ SE NEPTÁ „ANO/NE“, "
+            "PTÁ SE NA DRUH: POVOLÁNÍ se zapíše, ÚŘAD DRŽENÝ V ČASE NE, "
+            "protože bezčasé `member` by platilo ŠÍŘ, než co věta říká — "
+            "„prezident Masaryk“ držel úřad NĚJAKÉ OBDOBÍ. Čas by to "
+            "spravil, jenže v korpusu žádný použitelný není: ze 39 zmínek "
+            "visí čas na titulu u čtyř a všechny čtyři jsou ŽIVOTNÍ DATA "
+            "v závorce, u úřadů je to NULA — není to úloha o čase "
+            "v jádře, nemá se co zapsat. Z rozboru se povolání od úřadu "
+            "rozeznat NEDÁ, takže to rozhoduje ČLOVĚK (W‑57)"
         ),
         anchor="core_semantics.cascade:title_claims",
         entry=".utter(",
@@ -1220,6 +1231,12 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_confirmation_of_a_title_nobody_said_is_refused",
             "test_the_refusal_does_not_eat_the_offer",
             "test_every_written_title_cites_a_sentence_that_was_really_said",
+            "test_a_second_confirmation_does_not_claim_nobody_said_it",
+            "test_the_two_refusals_do_not_share_a_reason",
+            "test_an_office_is_not_written_however_hard_you_click",
+            "test_refusing_an_office_leaves_the_offer_open",
+            "test_a_trade_is_written",
+            "test_the_question_asks_which_kind_not_yes_or_no",
         ),
     ),
     Clause(

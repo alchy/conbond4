@@ -1,6 +1,130 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — „potvrzení" nic nepotvrzuje a hlásí větu, která neexistuje
+## Status: 🟢 PASS — potvrzení zase něco potvrzuje, a odmítnutí po sobě neuklízí cizí stav
+
+**Kolo #94.** 1058 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **76/76**, **živá parita 55/55**, dialogy **19 / 48 / 31**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.31, HEAD `feb5888`, strom čistý.
+
+**Architectural Health Score: 9,4 / 10.**
+
+---
+
+## Ověřeno reprodukcí — čtyři cesty, ne jedna
+
+```
+1) prázdné sezení          ✗ nezapsáno · báze 0
+      „potvrdit „král Kdokoli“ nejde: žádná věta v tomhle sezení to netvrdí“
+2) jiný titul po větě      ✗ nezapsáno · báze 4 beze změny
+      nabídka PO odmítnutí zůstala:  member(elem:Josef_Hora, group:·básník)
+3) správné potvrzení       ✓ zapsáno [s0005]  @tah 3: titul z věty
+      [VÝROK VEDLE VĚTY — tvrdí to „Nad hrobem promluvil básník Josef Hora.“]
+      Je Josef Hora básník?  → ANO, doloženo s0005
+4) TÉŽ potvrzení podruhé   ✗ nezapsáno · báze 5 beze změny
+```
+
+**Volba (1) je správná a tvůj důvod pro odmítnutí místo „očištění" je
+ten podstatný:** kdyby se jen opravila hláška a zápis zůstal, **zůstal by
+v systému způsob, jak dostat do báze cokoli pod jménem POTVRZENÍ**.
+
+**Vada, kterou jsi našel sám, je cennější než ta, kterou jsem našel já.**
+Odmítnutý tah nabídku **spotřebovával** (`pop` běžel vždycky), takže po
+odmítnutém *„prezident Josef Hora"* by spadlo i potvrzení té **správné**
+dvojice a nikdo by nevěděl proč. **Ověřil jsem to živě — body 2 a 3 nad
+sebou:** po odmítnutí nabídka zůstala a potvrzení pak prošlo. *Odmítnutí,
+které po sobě uklidí cizí stav, je horší než zápis* — souhlas.
+
+**Bod 4 zavírá i to, na co ses neptal**: dvojí potvrzení už neprojde,
+takže se sem nevrací B‑19.
+
+**Test psaný jako VLASTNOST je správný tvar** — věta z hlášení se hledá
+**v žurnálu**, ne porovnává jako řetězec. To je přesně to poučení
+z #92 a je dobře, že sis ho vzal za své dřív, než jsem ho vymáhal.
+
+**Korpus `ec572d0 → feb5888`, přečteno mnou z obou záznamů:** verdikt 0,
+blokátor 0, **čtení 0**. Očekával jsem nulu a nula to je — tah
+v korpusovém běhu nepadne.
+
+---
+
+## Critical Blockers
+
+**Žádné.** B‑23 uzavřena.
+
+---
+
+## Semantic Warnings
+
+### W‑56 · odmítnutí říká špatný důvod, když je titul UŽ POTVRZENÝ
+
+**Reprodukováno, bod 4 výše:**
+
+```
+» →∈ „básník Josef Hora“  (podruhé, s0005 už v bázi)
+   ✗ nezapsáno: potvrdit „básník Josef Hora“ nejde:
+     ŽÁDNÁ VĚTA V TOMHLE SEZENÍ TO NETVRDÍ
+```
+
+**Ta věta v sezení je** — je to `s0001`, a `s0005` z ní přímo vznikl
+s proveniencí *„titul z věty"*. Pravý důvod není *„nikdo to neřekl"*,
+ale *„už je to potvrzené"*.
+
+**Není to bloker:** nic se nezapíše, žádný důkaz to nenese, člověk
+nedostane výrok navíc. Ale **je to výrok o textu, který neplatí**, a to je
+ta jediná třída, kterou tu držíme prázdnou. Dva stavy — *nikdo to
+netvrdil* × *už rozhodnuto* — se slily do jedné hlášky, což je táž chyba
+tvaru jako slévání pěti stavů v měření.
+
+---
+
+## Otevřené, beze změny
+
+Čas u úřadů (24/71), příbuzenství (18/71), `nmod` pod obecným jménem,
+skupina v plurálu (W‑54) — **správně přiznané meze, ne dluh**.
+
+**Nález o `cb-wiki.py`** (`reason` uříznut, ze záznamu vyjdou 2 místo 13)
+leží u Agenta 3 s lokací a **zkreslí každé další čtení korpusu** — je to
+čtvrté potvrzení W‑43.
+
+**W‑42, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**W‑56 oprav jedním rozlišením** — dva různé stavy, dvě různé hlášky —
+**a neber si na to vlastní kolo**; vezmi ji s sebou do dalšího směru.
+
+**HLAVNÍ SMĚR: ČAS U ÚŘADŮ.** Je to největší otevřená rodina, kterou jsi
+sám změřil (**24 zmínek ze 71**), a jediná, kde **potvrzení dnes vede
+k tvrzení, které text neříká**: kdo potvrdí *„Masaryk je prezident"*,
+zapíše **bezčasý** výrok, a systém ho jen varuje.
+
+**Než začneš stavět, změř** — a to je podmínka, ne rada: **kolik z těch
+24 vět vůbec nese čas** (rok, „v letech", „od…do"), který by šlo použít.
+Jestli ho většina nenese, není to úloha o čase v jádře, ale o tom, že se
+nemá co zapsat — a pak je správná odpověď **nenabízet** místo
+**nabízet a varovat**.
+
+**Můj counterexample, psaný jako vlastnost:** **žádné potvrzení nesmí
+vyrobit výrok, který platí v širším rozsahu, než co věta říká.**
+Konkrétně: *„Prezident Masaryk zemřel."* buď členství nenabídne, nebo ho
+nabídne s časem, který ve větě stojí — **ale nesmí zapsat bezčasé
+`member(Masaryk, prezident)` jen proto, že člověk odklikl**; *„Nad hrobem
+promluvil básník Josef Hora."* se **nezmění** (povolání bezčasé je
+v pořádku, a jestli se to změní, ať je to napsané jako rozhodnutí);
+devatenáct domén se závěry beze změny; jádrové relace 9/9; gate *Farmaka*
+`N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky ≥ 76/76;
+`mypy --strict` čistý; **korpus přeměřen s rozkladem nabídek**, ne jen
+verdiktů.
+
+---
+
+## ARCHIV — kolo #93
+
+### Status: 🔴 FAIL — B‑23, potvrzení bez nabídky
 
 **Kolo #93.** 1054 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **76/76**, **živá parita 55/55**, dialogy **19 / 48 / 31**,

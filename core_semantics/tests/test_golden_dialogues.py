@@ -26,6 +26,7 @@ from core_semantics.ast import Group
 from core_semantics.session import (
     declares_complete,
     decides_reference,
+    TitleKind,
     confirms_title,
     names_attribute,
     names_role,
@@ -103,8 +104,10 @@ def _answer(
         # TVRZENÍ TITULU. Skládá se ze jména a titulu, ne z toho, na co se
         # systém ptal: otázka jen ohlásí, co ve větě stálo, a co se z toho
         # potvrdí, je rozhodnutí člověka.
-        jmeno, titul = step.confirms_title
-        return session.play(confirms_title(step.text, jmeno, titul))
+        jmeno, titul, druh = step.confirms_title
+        return session.play(
+            confirms_title(step.text, jmeno, titul, TitleKind(druh))
+        )
     if step.names_attribute is not None:
         # PŘÍVLASTEK. Skládá se z hlavy a genitivu, ne z toho, na co se
         # systém ptal — otázka nabízí jména rolí, ale kterou dvojici
@@ -227,6 +230,13 @@ def test_dialogue_reads_writes_and_answers_as_recorded(dialogue: Dialogue) -> No
 
         if step.asks:
             assert result.question is not None, f"{where}: mělo se ptát"
+
+        if step.refuses:
+            # `refuses` dosud hlídalo JEN to, že se nezapsalo — takže by
+            # prošel i krok, který nic neodmítl a jen mlčky nic neudělal.
+            # Odmítnutí a nečinnost jsou dvě různé věci a sada je má
+            # rozlišit; jinak by nešlo poznat regresi od zamýšlené meze.
+            assert result.error is not None, f"{where}: mělo se odmítnout"
 
 
 @pytest.mark.parametrize("dialogue", DIALOGUES, ids=lambda d: d.name)

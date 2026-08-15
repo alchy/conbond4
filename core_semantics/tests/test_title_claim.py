@@ -24,7 +24,7 @@ from core_semantics.ast import Entity, Group, QueryStatus, member_of
 from core_semantics.cascade import title_claims
 from core_semantics.gaps import NO_PATH, STATED_UNDECIDED, GapFinder
 from core_semantics.oracle import Reading, Token, Utterance
-from core_semantics.session import Session, confirms_title
+from core_semantics.session import Session, TitleKind, confirms_title
 from core_semantics.lexicon import (
     LearnedPattern,
     Operation,
@@ -335,3 +335,92 @@ def test_every_written_title_cites_a_sentence_that_was_really_said() -> None:
         "hlášení cituje větu, kterou v tomhle sezení nikdo neřekl"
     )
     assert POET_TEXT in hlaseni
+
+
+# --------------------------------------------------------------------------
+# Tři stavy, tři hlášky *(W‑56)* — a druh titulu rozhoduje člověk *(W‑57)*
+# --------------------------------------------------------------------------
+
+
+def _confirmed() -> Session:
+    session = _session()
+    session.utter(POET_TEXT, _Recorded())
+    session.play(confirms_title("Povolání.", "Josef_Hora", "básník"))
+    return session
+
+
+def test_a_second_confirmation_does_not_claim_nobody_said_it() -> None:
+    """W‑56. Po zápisu propadalo druhé `→∈` do hlášky „žádná věta
+    v tomhle sezení to netvrdí“ — jenže ta věta v sezení JE a výrok z ní
+    přímo vznikl. Nic se nezapisovalo, takže to nebyl bloker; byl to ale
+    VÝROK O TEXTU, KTERÝ NEPLATÍ, a to je ta jediná třída, kterou tady
+    držíme prázdnou."""
+    session = _confirmed()
+    result = session.play(confirms_title("Povolání.", "Josef_Hora", "básník"))
+    assert result.error is not None
+    assert result.statement_id is None
+    hlaseni = "\n".join(result.lines)
+    assert "netvrdí" not in hlaseni, "ta věta to tvrdí a leží z ní zápis"
+    assert "už je to potvrzené" in hlaseni
+    assert POET_TEXT in hlaseni
+
+
+def test_the_two_refusals_do_not_share_a_reason() -> None:
+    """Dva RŮZNÉ stavy — „nikdo to netvrdil“ a „už rozhodnuto“ — musí mít
+    různý důvod. Slít je do jedné hlášky je táž chyba tvaru jako slévat
+    pět stavů měření do jednoho skóre: číslo sedí, informace zmizí."""
+    neznamy = Session().play(confirms_title("Ano.", "Kdokoli", "král"))
+    rozhodnuty = _confirmed().play(
+        confirms_title("Povolání.", "Josef_Hora", "básník")
+    )
+    assert neznamy.error != rozhodnuty.error
+
+
+def test_an_office_is_not_written_however_hard_you_click() -> None:
+    """W‑57 a COUNTEREXAMPLE REVIEWERA JAKO VLASTNOST: **žádné potvrzení
+    nesmí vyrobit výrok, který platí v širším rozsahu, než co věta
+    říká.** „prezident Masaryk“ drží úřad NĚJAKÉ OBDOBÍ; bezčasé
+    `member` tvrdí, že jím je pořád."""
+    session = _session()
+    session.utter(POET_TEXT, _Recorded())
+    result = session.play(
+        confirms_title("Úřad.", "Josef_Hora", "básník", TitleKind.OFFICE)
+    )
+    assert result.error is not None
+    assert result.statement_id is None
+    assert "member(elem:Josef_Hora, group:·básník)" not in [
+        str(s.formula) for s in session.kb.active()
+    ]
+
+
+def test_refusing_an_office_leaves_the_offer_open() -> None:
+    """Odmítnutí úřadu není rozhodnutí o té nabídce — jádro jen neumí, co
+    by bylo potřeba. Nabídka proto zůstává otevřená a `undecided` ji dál
+    hlásí; kdyby zmizela, tvrdil by systém, že se o ní rozhodlo."""
+    session = _session()
+    session.utter(POET_TEXT, _Recorded())
+    session.play(confirms_title("Úřad.", "Josef_Hora", "básník", TitleKind.OFFICE))
+    assert member_of(Entity("Josef_Hora"), Group("básník")) in session.undecided()
+
+
+def test_a_trade_is_written() -> None:
+    """Druhá půlka W‑57 v témže testu: kdyby se nezapisovalo NIC, prošlo
+    by odmítnutí úřadu taky — a doména by měřila mlčení."""
+    session = _session()
+    session.utter(POET_TEXT, _Recorded())
+    result = session.play(
+        confirms_title("Povolání.", "Josef_Hora", "básník", TitleKind.TRADE)
+    )
+    assert result.statement_id is not None
+    assert "POVOLÁNÍ" in "\n".join(result.lines)
+
+
+def test_the_question_asks_which_kind_not_yes_or_no() -> None:
+    """Kdyby stačilo odkliknout „ano“, vyrobilo by potvrzení u úřadu
+    tvrzení širší, než co věta říká — a šířku by nikdo neřekl, jen by ji
+    nikdo nezastavil. Otázka proto nabízí DVĚ MOŽNOSTI a říká, která se
+    nezapíše."""
+    otazka = _session().utter(POET_TEXT, _Recorded()).question
+    assert otazka is not None
+    assert "povolání" in otazka.lower()
+    assert "úřad" in otazka.lower()
