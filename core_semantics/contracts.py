@@ -1350,6 +1350,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_date_is_one_mention",
             "test_a_count_is_not_a_date_part",
             "test_a_quantity_word_is_not_a_date_part",
+            "test_a_nested_date_is_one_mention_too",
+            "test_a_plain_modifier_is_not_a_nested_date",
         ),
     ),
     Clause(

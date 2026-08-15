@@ -1,6 +1,153 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — dva různé roky přestaly být jedním uzlem
+## NÁLEZ MIMO KOLO — zapsán, aby se neztratil (tah je Builderův)
+
+### W‑77 · vlastní jméno je konkrétní v činném rodě, v trpném se na kvantifikátor ptá
+
+**Našel jsem to při ukázce Q/A, ne auditem. Minimální pár:**
+
+```
+» Napsal Karel Čapek knihu?        napsat(co:∃kniha, kdo:·Karel_Čapek)      ODPOVÍ
+» Byl Karel Čapek pohřben?         pohřbený(co:Karel_Čapek)                 PTÁ SE
+   [CHYBÍ: kvantifikátor role co (tvar PROPN/Sing/Nom/nsubj:pass)]
+```
+
+**Týž člověk, táž věta co do obsahu, jiný rod — a jednou je konkrétní,
+podruhé se systém ptá, o kom to platí.** U `nsubj` dostane vlastní jméno
+`·` samo; u `nsubj:pass` ne.
+
+**Je to desátá instance téže rodiny** (kategorie, která má variantu) —
+tentokrát v kvantifikátorovém patře, kde se `nsubj` a `nsubj:pass`
+rozcházejí.
+
+**Důsledek je vidět na otázce, ne jen na zápisu:** *„Byl Karel Čapek
+pohřben na Vyšehradě?"* **nedostane odpověď**, ačkoli ten fakt v bázi
+leží — zeptá se na kvantifikátor vlastního jména. **Otázka, na kterou
+báze odpověď má, ale nedá ji**, je horší než chybějící zápis.
+
+**Není to bloker** — nic se nezapíše špatně a nic nelže. **Ale je to
+první vada, kterou jsem našel na straně ODPOVÍDÁNÍ**, ne čtení, a proto
+ji píšu hned, ne až v příštím kole.
+
+**Můj counterexample, psaný jako vlastnost:** **vlastní jméno je
+konkrétní bez ohledu na rod** — *„Byl Karel Čapek pohřben na
+Vyšehradě?"* po zápisu toho faktu odpoví **ANO s doložením**;
+*„Napsal Karel Čapek knihu?"* se **nezmění**; obecné jméno se dál ptá
+(*„Byla kniha napsána?"*); dvacet jedna domén se závěry beze změny;
+celý korpus bez pádu.
+
+---
+
+## Status: 🟢 PASS — datum je jedna zmínka; a to pravidlo umí víc, než říká předávka
+
+**Kolo #112.** 1136 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **81/81**, **živá parita 55/55**, dialogy **21 / 51 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**, **celý korpus bez pádu** (2 segmentace). Jádro 0.1.47,
+HEAD `ded0628`, strom čistý.
+
+**Architectural Health Score: 9,8 / 10.**
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Karel Čapek se narodil 9. ledna 1890.   narodit(Gen:9._leden_1890, kdo:·Karel_Čapek)
+                                          nic se nehlásí jako ztracené
+» Studie byla provedena s 92 lidmi.       „92“ dál ZAHOZENO
+» Byly tam tři typy zvířat.               „tři“ dál ZAHOZENO
+» V roce 1986 byla studie provedena.      rok_1986 beze změny
+```
+
+**Korpus `d51940f → ded0628`: verdikt 0, čtení 8** — a **všech 8 má
+složenou řadovou číslovku**. **Čekals osm a osm to je** — předpověď
+předem, ne mez objevená po diffu. To je ten rozdíl, na kterém tady
+záleží.
+
+**Rozklad zbylých 68 rozhodl sám** (24 nesložený letopočet, 19 řadová,
+14 množství slovem, 11 počet číslicí) a vzals největší dosažitelnou;
+zbytek jsi **nechal ležet** i s důvodem.
+
+**A tvůj argument o tečce jsem ověřil na živé službě:** `9.` a `92`
+mají **NumForm=Digit, NumType=Card, nummod** — rozbor je nerozliší
+ničím. **Rozeznat je podle hlavy by znamenalo seznam měsíců v kódu**,
+tedy ten druhý slovník, který jsi u letopočtu sám odmítl. Tečka je
+vlastnost **tokenu**, ne slovníku. Souhlasím.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑75 uzavřena.
+
+---
+
+## Semantic Warnings
+
+### W‑76 · pravidlo je širší než „datum" a předávka to neříká
+
+**Reprodukováno mnou:**
+
+```
+» Obsadil 1. místo.              obsadit(co:∃1._místo, …)
+» V 19. století se to změnilo.   změnit(kdo:ten, v+Loc:∃19._století)
+```
+
+**Skládá se každá řadová číslovka s tečkou, ne jen datum.** Předávka
+mluví o časovém údaji; **pravidlo je o řadové číslovce.**
+
+**Není to vada a řeknu proč:** je to **konzistentní** s tím, co systém
+už dělá slovem — `první předseda` → `první_předseda` (W‑58). Digitální
+zápis se dosud choval jinak než slovní, a tohle ten rozdíl smazalo. Nic
+se netvrdí navíc, nic se tiše neztrácí.
+
+**Ale je to změna, kterou popis nezmiňuje**, a příště by ji někdo hledal
+jako nález. **Zapiš ji do rozhodnutí**, ať platí jako záměr, ne jako
+vedlejší účinek.
+
+**Otevřené beze změny:** (a) **datum vnořené pod jiným jménem** —
+*„dne 25. prosince 1938"*, kde měsíc není rolí; 24 nesložených letopočtů
+i s jejich řadovými číslovkami; (b) **množství slovem 14** a **počet
+číslicí 11**; W‑67 (pět zkreslení, u Agenta 3), W‑69, W‑66, kolize,
+26 ze 42 `v+Loc`, W‑60, agens, úřad, příbuzenství, `nmod` pod obecným
+jménem, W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31,
+W‑36, W‑37, W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: DATUM VNOŘENÉ POD JINÝM JMÉNEM — *„dne 25. prosince
+1938"*.** Je to **poslední podrodina časových údajů** a tvůj vlastní
+rozklad ji vyčíslil na **24 nesložených letopočtů plus jejich řadové
+číslovky**. Bereš ji proto, že je to **táž věc o patro níž**, ne nová
+schopnost.
+
+**Rozhoduješ jednu věc: skládá se datum i přes `nmod`, nebo se to
+přizná?** Obojí je obhajitelné a **varování je totéž jako minule**:
+skládat přes `nmod` obecně by sáhlo na *„ulice Karla Čapka"* a *„město
+Praha"*, kde je `nmod` něco úplně jiného. **Jestli z toho vyjde, že
+bezpečně to jde jen tam, kde je pod `nmod` datum, řekni to a omez se na
+to** — a jestli se to bez seznamu měsíců rozlišit nedá, **je správná
+odpověď přiznat mez**, ne postavit slovník.
+
+**Můj counterexample, psaný jako vlastnost:** **žádná část jednoho
+časového údaje se nehlásí jako ztracený člen, ani když je ten údaj
+vnořený** — konkrétně *„Zemřel dne 25. prosince 1938."* nehlásí `25.`
+ani `1938`; *„Karel Čapek se narodil 9. ledna 1890."* zůstává
+`9._leden_1890`; *„ulice Karla Čapka"* a *„Město Praha"* se
+**nezmění**; množství a počty se **nezmění**; `rok_1986` zůstává;
+dvacet jedna domén se závěry beze změny; jádrové relace 9/9; gate
+*Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky
+≥ 81/81; `mypy --strict` čistý; **celý korpus bez pádu, běh před
+předávkou** — a **číslo očekávaných změn řekni dopředu**, jako dnes.
+
+---
+
+## ARCHIV — kolo #111
+
+### Status: 🟢 PASS — letopočet je součást zmínky
 
 **Kolo #111.** 1133 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **81/81**, **živá parita 55/55** a **4/4 na doméně 21**, dialogy

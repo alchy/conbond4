@@ -2728,3 +2728,51 @@ def test_a_quantity_word_is_not_a_date_part() -> None:
         provenance="test",
     )
     assert date_parts_under(reading.tokens[2], reading) == ()
+
+
+def test_a_nested_date_is_one_mention_too() -> None:
+    """W‑77. „dne **25. prosince 1938**" má měsíc jako `nmod` pod „dne",
+    takže se dosud nesložilo NIC — ani řadová číslovka, ani letopočet —
+    a obojí se hlásilo jako ztracený člen věty, jejímž členem není."""
+    from core_semantics.cascade import date_parts_under
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Zemřel", "zemřít", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "dne", "den", "NOUN", 1, "obl", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(3, "25.", "25.", "NUM", 4, "nummod", NumForm="Digit", NumType="Card"),
+            _token(4, "prosince", "prosinec", "NOUN", 2, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(5, "1938", "1938", "NUM", 4, "nummod", NumForm="Digit", NumType="Card"),
+            _token(6, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    assert [t.form for t in date_parts_under(reading.tokens[1], reading)] == [
+        "25.",
+        "prosince",
+        "1938",
+    ]
+    predication = generate(reading)[0].predication
+    assert "den_25._prosinec_1938" in {r.mention.lemma for r in predication.roles}
+    assert dropped_tokens(reading, predication) == ()
+
+
+def test_a_plain_modifier_is_not_a_nested_date() -> None:
+    """PROTIPŘÍKLAD, a je to celá stráž: skládat `nmod` obecně by sáhlo
+    na „ulice Karla Čapka" i „Město Praha", kde je `nmod` něco úplně
+    jiného. Rozlišuje se BEZ SEZNAMU MĚSÍCŮ — ne podle toho, jak se ta
+    hlava jmenuje, ale podle toho, CO POD NÍ VISÍ. V měřeném korpusu je
+    takových `nmod` uzlů 12, ostatních 481."""
+    from core_semantics.cascade import date_parts_under
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Bydlel", "bydlet", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "v", "v", "ADP", 3, "case", AdpType="Prep", Case="Loc"),
+            _token(3, "ulici", "ulice", "NOUN", 1, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+            _token(4, "Karla", "Karel", "PROPN", 3, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    assert date_parts_under(reading.tokens[2], reading) == ()

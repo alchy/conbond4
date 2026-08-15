@@ -750,6 +750,33 @@ def date_parts_under(token: Token, reading: Reading) -> tuple[Token, ...]:
     Množství slovem („tři typy", „pět měsíců") taky ne — je to vlastní
     úloha a do složení zmínky nepatří.
     """
+    # DATUM VNOŘENÉ POD JINÝM JMÉNEM *(W‑77)*. „dne **25. prosince
+    # 1938**" má měsíc jako `nmod` pod „dne", takže se dosud nesložilo
+    # nic — ani řadová číslovka, ani letopočet — a obojí se hlásilo jako
+    # ztracený člen jedné věty, jejímž členem není.
+    #
+    # Bere se JEN takový `nmod`, který SÁM NESE DATOVÉ ČÁSTI. Skládat
+    # `nmod` obecně by sáhlo na „ulice Karla Čapka" i „Město Praha",
+    # kde je `nmod` něco úplně jiného — a rozlišit to bez SEZNAMU
+    # MĚSÍCŮ jde právě takhle: ne podle toho, jak se ta hlava jmenuje,
+    # ale podle toho, co pod ní visí. V měřeném korpusu takových `nmod`
+    # uzlů je 12, ostatních 481.
+    vnorene = [
+        child
+        for child in reading.children(token.index)
+        if base_deprel(child.deprel) == "nmod"
+        and _date_numerals(child, reading)
+    ]
+    najdene = [
+        *vnorene,
+        *(t for child in vnorene for t in _date_numerals(child, reading)),
+        *_date_numerals(token, reading),
+    ]
+    return tuple(sorted(najdene, key=lambda t: t.index))
+
+
+def _date_numerals(token: Token, reading: Reading) -> tuple[Token, ...]:
+    """Číslovky jednoho časového údaje PŘÍMO pod tokenem *(W‑75)*."""
     najdene = [
         child
         for child in reading.children(token.index)

@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.47 · 15. 8. 2026
+**Verze jádra:** 0.1.48 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.48 | § 3.2 — DATUM VNOŘENÉ POD JINÝM JMÉNEM se skládá taky („dne 25. prosince 1938“ → `den_25._prosinec_1938`), ale JEN takový `nmod`, který sám nese datové části — rozlišuje se podle toho, CO pod hlavou visí, ne jak se jmenuje. A pravidlo je O ŘADOVÉ ČÍSLOVCE, ne jen o datu: „1. místo“ → `1._místo`, což slovem systém dělal vždycky; § 13 T99
 | 0.1.47 | § 3.2 — CELÝ ČASOVÝ ÚDAJ JE JEDNA ZMÍNKA: „9. ledna 1890“ dá `9._leden_1890`. Řadovou číslovku pozná TEČKA V ZÁPISU — rozbor „9.“ a „92“ nerozliší ničím jiným, takže rozeznat je podle hlavy by znamenalo mít v kódu seznam měsíců. Počet ani množství slovem tudy neprojdou; § 13 T98
 | 0.1.46 | § 3.2 — LETOPOČET JE SOUČÁST ZMÍNKY: „v roce 1986“ a „v roce 1990“ dávaly OBĚ uzel `rok`, tedy jeden uzel pro všechny roky, a číslo se hlásilo jako ztracený člen, ačkoli z věty nevypadlo. Skládá se do `rok_1986`; POČET („92 lidmi“) tudy neprojde; § 13 T97
 | 0.1.45 | § 5.2 — DRUHÁ VĚTA S VLASTNÍM PODMĚTEM si nic nepůjčuje a UZEL VZNIKÁ Z NĚJ; v hlášení je to vidět, protože u sdíleného podmětu se přenáší TÁŽ zmínka a tady vzniká DRUHÁ (M‑2). Role, které patro vyrobí, dostanou kvantifikátor — jinak se druhá věta nezakotví; § 13 T96
@@ -1215,6 +1216,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T99 | vnořené datum a řadová číslovka obecně | „Zemřel dne 25. prosince 1938.“ nehlásí „25.“ ani „1938“; „ulice Karla Čapka“ a „Město Praha“ se nemění; „Obsadil 1. místo.“ dá `1._místo` — ZÁMĚR, ne vedlejší účinek |
 | T98 | celý datum je jedna zmínka | „Karel Čapek se narodil 9. ledna 1890.“ nehlásí ani „9.“, ani „1890“; „s 92 lidmi“, „21 let“ i „tři typy“ se hlásí dál |
 | T97 | letopočet je součást zmínky | „V roce 1986…“ dá `rok_1986` a nic nehlásí jako ztrátu; „V roce 1990…“ dá JINÝ uzel; „s 92 lidmi“ se nemění a hlásí se dál |
 | T96 | vyslovený druhý podmět má vlastní uzel | „Petr přišel a Jana odešla.“ uloží dva výroky o DVOU uzlech a hlásí, že druhý podmět je VYSLOVENÝ; „Jan zpíval a tančil.“ dál o JEDNOM |
