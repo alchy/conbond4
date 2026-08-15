@@ -198,12 +198,20 @@ class ClosureIndex:
 
         #: Jméno → uzly, které ho doloženě nesou.
         self._named: dict[str, set[str]] = {}
+        #: `(jméno, uzel)` → VÝROK, který to spojení nese. Bez něj by
+        #: kanonizace uměla říct, že „Honza" míří na uzel `Jan`, ale ne
+        #: PROČ — a odpověď na otázku o Honzovi by se doložila faktem
+        #: o Janovi, mezi kterými čtenář nevidí spojnici.
+        self._naming_statement: dict[tuple[str, str], str] = {}
         for sid, a in facts:
             if a.predicate == P_NAME and not a.is_negated:
                 bearer, label = a.get_role("of"), a.get_role("value")
                 if bearer and label:
                     self._named.setdefault(label.target.id, set()).add(
                         bearer.target.id
+                    )
+                    self._naming_statement.setdefault(
+                        (label.target.id, bearer.target.id), sid
                     )
 
         for sid, a in facts:
@@ -538,6 +546,17 @@ class ClosureIndex:
         ztotožnit další zmínku s kterýmkoli z nich by bylo rozhodnutí,
         které člověk právě VÝSLOVNĚ odmítl udělat."""
         return sorted(self._named.get(name, set()))
+
+    def naming_statement(self, name: str, node_id: str) -> str | None:
+        """Výrok, kterým uzel to jméno DOSTAL — nebo `None`.
+
+        Kanonizace jmen je odvolatelný default (M‑2) a říká se nahlas; od
+        chvíle, kdy jméno může přijít z české věty (`name` z „X se jmenuje
+        Y"), ale nestačí to říct — musí být vidět, ČÍM. Jinak se odpověď
+        na otázku o „Honzovi" doloží faktem o „Janovi" a spojnice mezi
+        nimi zůstane jen v hlavě systému.
+        """
+        return self._naming_statement.get((name, node_id))
 
     def knows(self, node_id: str) -> bool:
         """Vystupuje ten uzel v nějakém aktivním výroku?

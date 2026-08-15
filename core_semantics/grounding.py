@@ -42,12 +42,14 @@ from typing import TYPE_CHECKING, Callable
 from .ast import (
     PLACE_ROLES,
     RELATION_SORTS,
+    ROLE_SORTS,
     TIME_ROLES,
     UNQUANTIFIED_ROLES,
     Atom,
     Entity,
     Group,
     Interval,
+    Label,
     Place,
     Quantifier,
     QueryStatus,
@@ -60,6 +62,7 @@ from .ast import (
 )
 from .cascade import (
     AWAITING_QUANTIFIER,
+    ROLE_SUBJECT,
     AWAITING_REFERENCE,
     Mention,
     Predication,
@@ -115,6 +118,10 @@ class Anchor:
     term: Term
     binding: BindingType
     detail: str = ""
+    #: Výroky, kterými je TOHLE ztotožnění doložené. U kanonizace jmen je
+    #: to výrok `name(of, value)`: bez něj by odpověď na otázku o „Honzovi"
+    #: citovala fakt o „Janovi" a spojnice mezi nimi by nikde nebyla.
+    cited: tuple[str, ...] = ()
 
     def __str__(self) -> str:
         note = f"{self.binding.value}{'; ' + self.detail if self.detail else ''}"
@@ -129,6 +136,16 @@ class Grounded:
     anchors: tuple[Anchor, ...] = ()
     notes: tuple[str, ...] = ()
     question: str | None = None
+
+    @property
+    def cited(self) -> tuple[str, ...]:
+        """Výroky, které zakotvení POUŽILO. Nejsou to premisy důkazu —
+        jsou to fakty, bez kterých by se dotaz vůbec netrefil na tenhle
+        uzel, a v citaci proto chybět nesmějí."""
+        found: list[str] = []
+        for anchor in self.anchors:
+            found.extend(anchor.cited)
+        return tuple(sorted(set(found)))
 
     @property
     def ok(self) -> bool:
@@ -165,11 +182,38 @@ def _sort_for(
         return Interval(term_id)
     if relation is Sort.PLACE:
         return Place(term_id)
+    if relation is Sort.LABEL:
+        return Label(term_id)
+    if relation is Sort.ENTITY:
+        return Entity(term_id)
     if role_name in PLACE_ROLES:
         return Place(term_id)
     if role_name in TIME_ROLES:
         return Interval(term_id)
     return Entity(term_id) if concrete else Group(term_id)
+
+
+def _presentational_subject(reading: RoleReading) -> bool:
+    """Prezentační „to" — podmět BEZ REFERENCE *(W‑29)*.
+
+    Táž vazba, kvůli které má shoda čísla úzkou výjimku („To je pes." i
+    „To jsou psi."): střední „to" tam nezastupuje počitatelný podmět a
+    neukazuje na uzel. Nemá tedy co zakotvit — a ptát se na to je otázka
+    bez odběratele, protože ať člověk odpoví cokoli, žádný uzel z toho
+    nevznikne.
+
+    Ohraničení je stejně tvrdé jako u té shody, a schválně: `ten` v jiné
+    pozici („ten pes") uzel MÍNÍ a doptat se na něj správné je.
+    """
+    mention = reading.mention
+    feats = dict(mention.feats)
+    return (
+        reading.name == ROLE_SUBJECT
+        and mention.lemma == "ten"
+        and feats.get("PronType") == "Dem"
+        and feats.get("Gender") == "Neut"
+        and feats.get("Number") == "Sing"
+    )
 
 
 #: `(uzel, druh vazby, dovysvětlení, otázka)`. Uzel `None` znamená doptání.
@@ -196,6 +240,15 @@ def _ground_role(
             "rozhodl jsi ty",
             None,
         )
+
+    if _presentational_subject(reading):
+        # W‑29. Prezentační „to" ve větě „To jsou všichni psi." NEODKAZUJE
+        # na nic — je to podmět bez reference, ne zájmeno, u kterého by
+        # aktivace pomohla. Ptát se na něj byla otázka BEZ ODBĚRATELE:
+        # ať člověk odpoví cokoli, žádný uzel z toho nevznikne a věta se
+        # tím nedokončí. Otázka, na kterou neexistuje správná odpověď, je
+        # horší než mlčení: říká člověku, že něco chybí, a přitom nechybí.
+        return _UNRESOLVED
 
     if mention.upos in UNSUPPORTED_UPOS:
         return (
@@ -415,9 +468,12 @@ def ground(predication: Predication, view: ResolvedGraphView) -> Grounded:
         if predication.relation is not None
         else None
     )
+    # Sort podle ROLE má přednost před sortem celé relace: `name` je
+    # první relace, jejíž strany nejsou na téže ose (uzel × nálepka).
+    per_role = ROLE_SORTS.get(predication.predicate, {})
     for reading in predication.roles:
         term, binding, detail, question = _ground_role(
-            reading, view, relation_sort
+            reading, view, per_role.get(reading.name, relation_sort)
         )
         if question:
             questions.append(question)
@@ -434,7 +490,21 @@ def ground(predication: Predication, view: ResolvedGraphView) -> Grounded:
                     + "]"
                 )
             continue
-        anchors.append(Anchor(reading.mention, term, binding, detail))
+        # ČÍM je ztotožnění doložené. Kanonizace jmen je odvolatelný
+        # default (M‑2) a říká se nahlas; od chvíle, kdy jméno může přijít
+        # z české věty („X se jmenuje Y"), ale nestačí to říct — musí být
+        # vidět, KTERÝ výrok tu spojnici nese, jinak se odpověď na otázku
+        # o „Honzovi" doloží faktem o „Janovi" a mezi nimi zeje díra.
+        justification = view.naming_statement(name_of(reading.mention), term.id)
+        anchors.append(
+            Anchor(
+                reading.mention,
+                term,
+                binding,
+                detail,
+                cited=(justification,) if justification else (),
+            )
+        )
         # Kvantifikátor nese JEN skupina. Individuum, místo ani čas ho
         # `RoleTerm` nepřipustí a je to správně: `∀` nad jedním uzlem nic
         # neznamená a `·` u vlastního jména taky ne — konkrétnost je

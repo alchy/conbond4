@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.14 · 15. 8. 2026
+**Verze jádra:** 0.1.15 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.15 | § 8 — CITACE SAHÁ I NA ZAKOTVENÍ: odpověď, která se na uzel dostala přes JMÉNO, cituje i výrok, kterým je to jméno navázané. Zakotvení není premisa důkazu, ale bez něj by se dotaz netrefil, takže „odpověď o Honzovi doložená faktem o Janovi“ nechává spojnici jen v hlavě systému. K tomu `name` z české věty („X se jmenuje Y“) se stranami z DEPRELŮ a `ROLE_SORTS` pro relace, jejichž strany nejsou na téže ose; § 13 T65 | 15. 8. 2026 |
 | 0.1.14 | § 5.1 — POPŘENÍ Z UZAVŘENÍ CITUJE I VÝČET, ne jen prohlášení: u jediné výjimky z I‑21 je „nad čím se zavíralo“ ta půlka, kterou čtenář potřebuje k ověření, a bez ní se závěr zkontrolovat nedá. K tomu uzavření světa Z ČESKÉ VĚTY jako NÁVRH (nikdy dosazení) a tah `!∀`, který se nic neučí a jde odvolat; § 13 T64 | 15. 8. 2026 |
 | 0.1.13 | § 9 — ČEKAJÍCÍ KONSTRUKCE ZASTAVÍ ZÁPIS stejně jako čekající kvantifikátor, a tvar, na jehož význam se čeká, visí na PREDIKACI, ne ve stopě: stopa je log jednoho tahu, takže odpověď na cokoli jiného otázku zahodila a věta se zapsala jako obyčejný vztah `být` — zápis pod přiznanou neznalostí (INV‑11); § 13 T63 | 15. 8. 2026 |
 | 0.1.12 | § 9 — `InconsistentOrder` jako pojmenované selhání ZÁPISU: hrana, která by uzavřela uspořádání do kruhu, se odmítá u `attach`, ne až u dotazu; k tomu IREFLEXIVITA `before` (smyčka na sebe je kruh o jednom uzlu) a otevřená otázka o `CONFLICT` variantě; § 13 T62 | 15. 8. 2026 |
@@ -1050,6 +1051,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T65 | pojmenování z české věty | „Jan se jmenuje taky Honza.“ zapíše `name(of:Jan, value:Honza)`, strany podle DEPRELŮ (dvě čtení, jeden výsledek); „Je Honza učitel?“ dá před tím `U` a po něm `A` s citací faktu I výroku o jménu; bez zvratného „se“ to pojmenování není; odvolání jména vrátí `U` |
 | T64 | uzavření světa z české věty | „To jsou všichni psi.“ NEZAPÍŠE nic a ptá se; po tahu `!∀` je `complete(pes)` v bázi; „Je Mourek pes?“ dá před tím `U` a po něm `N` s důkazem citujícím PROHLÁŠENÍ I VÝČET; odvolání vrátí `U`; člen uzavřené skupiny dál `A`; žádné pravidlo `complete` nevyrobí |
 | T63 | otevřená otázka na konstrukci zastaví zápis | „Praha je součástí Plzně.“ + odpověď na KVANTIFIKÁTOR → nezapsáno a otázka na relaci POŘÁD TAM; po odpovědi na relaci zapsáno `contains(part:Praha, whole:Plzeň)`; desátý dialog zapíše `contains` i `within` a jedna otázka potřebuje OBA s důkazem citujícím oba zápisy |
 | T62 | kruh v uspořádání se odmítá u zápisu | `before(b,a)` po `before(a,b)` → `AttachError`, který JMENUJE výroky kruhu; `before(a,a)` odmítnuto vždy; báze po odmítnutí dál odpovídá; H‑3 v uzávěru zůstává jako druhá obrana |

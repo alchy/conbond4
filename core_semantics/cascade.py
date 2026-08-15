@@ -65,12 +65,13 @@ RELATION_ROLES: dict[Operation, tuple[str, str]] = {
     Operation.SAME_AS: ("left", "right"),
     Operation.CONTAINS: ("part", "whole"),
     Operation.WITHIN: ("part", "whole"),
+    Operation.NAME: ("of", "value"),
 }
 
 #: Relace, jejichž fillery NEJSOU skupiny, takže kvantifikátor nenesou
 #: (§ 3.6). `RoleTerm` by ho u nich ani nepřipustil.
 UNQUANTIFIED_RELATIONS: frozenset[Operation] = frozenset(
-    {Operation.BEFORE, Operation.CONTAINS, Operation.WITHIN}
+    {Operation.BEFORE, Operation.CONTAINS, Operation.WITHIN, Operation.NAME}
 )
 
 
@@ -120,6 +121,16 @@ class RoleReading:
     determiner: Mention | None = None
     #: Odkud se kvantifikátor vzal — do stopy a do vysvětlení (I‑14).
     source: str = ""
+    #: Role, jejíž význam je ZNÁMÝ, ale kanonické jméno už v téhle větě
+    #: někdo zabral *(W‑20)*. Vlastní pole, ne poznámka v `source`:
+    #: `source` vlastní ten, kdo roli naposled sáhl, takže kvantifikátorové
+    #: patro značku o krok dál přepsalo a otázka se ptala dál. Táž lekce
+    #: jako B‑17 — stav, na kterém někdo staví, musí mít vlastní místo.
+    #:
+    #: Není to táž věc jako povrchová role bez významu, a splynout to
+    #: nesmí: u téhle se ptát nemá na co — odpověď systém zná a je to
+    #: právě ta, která koliduje.
+    collided: bool = False
     #: Tvar, na který se čeká odpověď, dokud `quantifier` chybí.
     pending: StructuralSignature | None = None
     #: NA CO se čeká. Dvě otevřené role nemusí čekat na totéž: holé jméno
@@ -987,9 +998,21 @@ CANONICAL_ROLES: frozenset[str] = (
 )
 
 def surface_roles(predication: Predication) -> tuple[str, ...]:
-    """Role, které zůstaly POVRCHOVÉ — tvar bez významu."""
+    """Role, které zůstaly POVRCHOVÉ — tvar BEZ VÝZNAMU.
+
+    Role, jejíž význam se ví a jen se srazila s jinou toutéž (`v+Loc`
+    i `v+Acc` → `kdy`), sem NEPATŘÍ *(W‑20)*. Ptát se na ni znamená ptát
+    se na něco, co systém zná, a jediná odpověď, kterou by člověk mohl
+    dát, je ta, která kolizi způsobila — otázka bez odběratele.
+    """
     return tuple(
-        sorted({r.name for r in predication.roles if r.name not in CANONICAL_ROLES})
+        sorted(
+            {
+                r.name
+                for r in predication.roles
+                if r.name not in CANONICAL_ROLES and not r.collided
+            }
+        )
     )
 
 
@@ -1051,6 +1074,19 @@ def role_mapping_tier(lexicon: Lexicon) -> Tier:
                     taken.discard(role.name)
                     taken.add(options[0].canonical)
                     roles.append(replace(role, name=options[0].canonical))
+                    continue
+                if len(options) == 1:
+                    # ZNÁMÁ role, jejíž kanonické jméno už někdo v téhle
+                    # větě zabral *(W‑20)*. Není to neznalost a hlásit ji
+                    # jako neznalost je nepravda: systém odpověď zná a je
+                    # to právě ta, která koliduje. Věta se stejně
+                    # nezakotví — ale z jiného důvodu, a ten se má říct.
+                    notes.append(
+                        f"[KOLIZE: „{role.name}“ i jiná role téže věty "
+                        f"znamenají „{options[0].canonical}“ — jedna věta "
+                        f"nemůže mít tutéž roli dvakrát]"
+                    )
+                    roles.append(replace(role, collided=True))
                     continue
                 if role.name not in CANONICAL_ROLES:
                     # Tvar, který nikdo nepojmenoval. Mlčet by znamenalo
@@ -1361,6 +1397,94 @@ def relation_tier(lexicon: Lexicon) -> Tier:
                 notes.append(note)
             decided.append(Candidate(proposed, origin=candidate.origin))
         return tuple(decided), "; ".join(notes) if notes else None
+
+    return tier
+
+
+def naming_shape(reading: Reading) -> "_Naming | None":
+    """Konstrukce „X **se jmenuje** Y" — nebo `None`.
+
+    Rozhodnutelná ze stavby, a proto se DOSAZUJE, ne ptá. Je to táž úvaha
+    jako u `PROPN` v podmětu holé spony (N‑2d): tam je slovní druh signál
+    individua, tady je zvratné `jmenovat se` lexikálně o pojmenování a
+    druhé čtení nemá. Ptát se „co ta věta tvrdí?" by byla otázka bez
+    odběratele — v nabídce vztahů dvou tříd správná odpověď není.
+
+    **Strany se berou z DEPRELŮ, ne z pořadí kandidátů.** Generátor u téhle
+    věty vyrobí dvě čtení, protože obě jména jsou v nominativu; kdyby se
+    tvar rozhodoval podle toho, které přišlo první, zapsalo by se jednou
+    `name(Jan, Honza)` a podruhé `name(Honza, Jan)` — a to je rozdíl mezi
+    „Jan má přezdívku Honza" a opakem.
+    """
+    root = next((t for t in reading.tokens if t.head == 0), None)
+    if root is None or root.lemma != "jmenovat":
+        return None
+    children = [t for t in reading.tokens if t.head == root.index]
+    if not any(t.deprel.startswith("expl") for t in children):
+        # Bez zvratného „se" je „jmenovat" jmenovat DO funkce, ne nazývat
+        # se — a to je docela jiné tvrzení.
+        return None
+    subject = next((t for t in children if t.deprel == "nsubj"), None)
+    obj = next((t for t in children if t.deprel == "obj"), None)
+    if subject is None or obj is None:
+        return None
+    return _Naming(subject=subject.index, value=obj.index)
+
+
+@dataclass(frozen=True, slots=True)
+class _Naming:
+    """Tokeny, které v pojmenování tvoří strany. Drží se INDEXY, ne jména
+    rolí: která role se jmenuje `kdo`, se mezi kandidáty liší, a právě
+    v tom je celá dvojznačnost, kterou tohle patro rozhoduje."""
+
+    subject: int
+    value: int
+
+
+def naming_tier() -> Tier:
+    """POJMENOVÁNÍ ze stavby věty — poslední jádrový predikát, ke kterému
+    čeština nevedla.
+
+    `name` není další relace v řadě: je to jediný predikát, který spojuje
+    UZEL s tím, jak se mu ŘÍKÁ, a proto na něm visí kanonizace jmen. Dokud
+    ho uměla zapsat jen vnitřní cesta (rozdělení uzlu), nedal se z jazyka
+    dostat alias — a alias je přesně to, kvůli čemu `name` v jádře je.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        found = naming_shape(reading)
+        if found is None:
+            return candidates, None
+        decided: list[Candidate] = []
+        for candidate in candidates:
+            by_token = {
+                role.mention.token_index: role.name
+                for role in candidate.predication.roles
+            }
+            left = by_token.get(found.subject)
+            right = by_token.get(found.value)
+            if left is None or right is None:
+                continue
+            construction = Construction(
+                shape="jmenovat_se", left=left, right=right
+            )
+            decided.append(
+                Candidate(
+                    as_relation(candidate.predication, Operation.NAME, construction),
+                    origin=candidate.origin,
+                )
+            )
+        if not decided:
+            return candidates, None
+        # Kandidáti, kteří si role `kdo`/`co` prohodili, se přepíší na TÝŽ
+        # atom — protože strany určuje DEPREL, ne pořadí čtení. Zůstat
+        # dvojznačná by věta neměla: dvojznačná není.
+        unique: dict[str, Candidate] = {}
+        for candidate in decided:
+            unique.setdefault(str(candidate.predication), candidate)
+        return tuple(unique.values()), "[STAVBA: „jmenovat se“ → jádrová relace name]"
 
     return tier
 

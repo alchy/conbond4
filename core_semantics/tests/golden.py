@@ -896,6 +896,64 @@ M5 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# N · pojmenování (dvanáctý akceptační dialog)
+# --------------------------------------------------------------------------
+#
+# N2 je jediná věta v sadě, u které generátor vyrobí DVĚ čtení a rozhodne
+# je DEPREL, ne pořadí: obě jména jsou v nominativu, takže „kdo" a „co" si
+# je mezi sebou prohodí. Kdyby se strany braly podle pořadí kandidátů,
+# zapsalo by se jednou `name(Jan, Honza)` a podruhé pravý opak.
+
+N1 = Golden(
+    dialogue="N",
+    text="Jan je učitel.",
+    tokens=(
+        tok(1, "Jan", "Jan", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(3, "učitel", "učitel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="member(elem:·Jan, group:·učitel)",
+)
+
+N2 = Golden(
+    dialogue="N",
+    text="Jan se jmenuje taky Honza.",
+    tokens=(
+        tok(1, "Jan", "Jan", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(2, "se", "se", "PRON", 3, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+        tok(3, "jmenuje", "jmenovat", "VERB", 0, "root", Aspect="Imp,Perf", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(4, "taky", "taky", "PART", 5, "advmod:emph"),
+        tok(5, "Honza", "Honza", "PROPN", 3, "obj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(6, ".", ".", "PUNCT", 3, "punct"),
+    ),
+    predication="name(of:Jan, value:Honza)",
+    point=(
+        "zvratné „jmenovat se“ je lexikálně o pojmenování a druhé čtení "
+        "nemá, takže se konstrukce DOSAZUJE — táž úvaha jako `PROPN` "
+        "v podmětu holé spony (N‑2d). Ptát se „co ta věta tvrdí?“ by byla "
+        "otázka bez odběratele: v nabídce vztahů dvou tříd správná "
+        "odpověď není"
+    ),
+)
+
+N3 = Golden(
+    dialogue="N",
+    text="Je Honza učitel?",
+    tokens=(
+        tok(1, "Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+        tok(2, "Honza", "Honza", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(3, "učitel", "učitel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+        tok(4, "?", "?", "PUNCT", 3, "punct"),
+    ),
+    #: V PRÁZDNÉ bázi je „Honza" prostě uzel „Honza". Že se v doméně
+    #: ztotožní s Janem, není vlastnost rozboru — je to důsledek toho, co
+    #: v bázi leží, a měří to sada dialogů.
+    predication="member(elem:·Honza, group:·učitel)",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
@@ -905,6 +963,7 @@ CORPUS: tuple[Golden, ...] = (
     K2, K3, K4, K5,
     L1, L2, L3, L4,
     M1, M2, M3, M4, M5,
+    N1, N2, N3,
 )
 
 

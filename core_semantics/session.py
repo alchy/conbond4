@@ -72,6 +72,7 @@ from .cascade import (
     as_relation,
     complete_question,
     completeness_tier,
+    naming_tier,
     relation_question,
     relation_shape,
     relation_tier,
@@ -616,6 +617,10 @@ class Session:
             # se člověk nejdřív doptal na kvantifikátor role `co`, a ta by
             # vzápětí přestala existovat.
             relation_tier(self.lexicon),
+            # Pojmenování PŘED uzavřením i před ztracenou rolí: přepisuje
+            # role na jádrové (`of`/`value`), takže co přijde po něm, už
+            # vidí hotovou jádrovou relaci.
+            naming_tier(),
             # Uzavření světa až ZA relací: patro jen navrhuje a nikdy nic
             # nedosazuje, takže pořadí nemění čtení — mění jen to, v jakém
             # pořadí se člověk ptá.
@@ -746,7 +751,9 @@ class Session:
             derived=derived,
         )
 
-    def _question(self, index: int, turn: Turn) -> TurnResult:
+    def _question(
+        self, index: int, turn: Turn, grounding_cited: Sequence[str] = ()
+    ) -> TurnResult:
         assert turn.query is not None
         engine = self.engine()
         result = engine.ask(turn.query)
@@ -758,7 +765,11 @@ class Session:
             if result.status is QueryStatus.UNKNOWN
             else ()
         )
-        lines = list(self._render_answer(report, gap_lines=gap_lines))
+        lines = list(
+            self._render_answer(
+                report, gap_lines=gap_lines, grounding_cited=grounding_cited
+            )
+        )
         offered = self._offer_bridge(turn, result, lines)
         return TurnResult(
             index=index,
@@ -1078,7 +1089,9 @@ class Session:
         if grounded.formula is None:
             return None
         if predication.mood is Mood.QUESTION:
-            return self._question(index, asks(turn.text, grounded.formula))
+            return self._question(
+                index, asks(turn.text, grounded.formula), grounded.cited
+            )
         if predication.mood is Mood.ASSERTION:
             if predication.relation is Operation.DISJOINT:
                 # SPRÁVNÝMI DVEŘMI (N‑2). Oddělenost se nezapisuje přes
@@ -1639,7 +1652,11 @@ class Session:
         return turn.bridge
 
     def _render_answer(
-        self, report: AuditReport, *, gap_lines: Sequence[str] = ()
+        self,
+        report: AuditReport,
+        *,
+        gap_lines: Sequence[str] = (),
+        grounding_cited: Sequence[str] = (),
     ) -> list[str]:
         lines = [f"→ {report.verdict}"]
         if report.reason:
@@ -1653,16 +1670,30 @@ class Session:
             lines.extend(f"  {line.render()}" for line in negative)
         for item in gap_lines or report.gap:
             lines.append(f"  {item}")
-        if report.cited:
-            lines.append(f"[doloženo: {', '.join(report.cited)}]")
+        # Citace = premisy důkazu PLUS to, čím se dotaz na uzly vůbec
+        # trefil. Zakotvení není premisa — je to krok PŘED důkazem — ale
+        # vynechat ho znamená ukázat odpověď na otázku o „Honzovi"
+        # doloženou faktem o „Janovi" a spojnici nechat jen v hlavě
+        # systému. Od chvíle, kdy jméno přichází z české věty, je to
+        # doložitelný výrok jako každý jiný, a doložit se má.
+        cited = sorted(set(report.cited) | set(grounding_cited))
+        if cited:
+            lines.append(f"[doloženo: {', '.join(cited)}]")
         return lines
 
-    def _render_reason(self, proof: Proof | None) -> list[str]:
+    def _render_reason(
+        self, proof: Proof | None, grounded: "Grounded | None" = None
+    ) -> list[str]:
+        """Citace = premisy důkazu PLUS to, čím se dotaz na uzly vůbec
+        trefil. Zakotvení není premisa — je to krok před důkazem — ale
+        vynechat ho znamená ukázat odpověď na otázku o „Honzovi" doloženou
+        faktem o „Janovi" a spojnici nechat jen v hlavě systému."""
         if proof is None:
             return []
         lines = ["  protože:"]
         lines.extend(
             f"  {line.render()}" for line in self.presenter.render_proof(proof)
         )
-        lines.append(f"[doloženo: {', '.join(sorted(proof.leaves()))}]")
+        cited = set(proof.leaves()) | set(grounded.cited if grounded else ())
+        lines.append(f"[doloženo: {', '.join(sorted(cited))}]")
         return lines

@@ -949,6 +949,61 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-32",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "POJMENOVÁNÍ se čte ze stavby „X se jmenuje Y“ a strany určuje "
+            "DEPREL, ne pořadí kandidátů: obě jména jsou v nominativu, "
+            "takže podle pořadí by se jednou zapsalo `name(Jan, Honza)` "
+            "a podruhé pravý opak. Bez zvratného „se“ to pojmenování NENÍ "
+            "(jmenovat DO funkce). Konstrukce se DOSAZUJE, neptá se — "
+            "`jmenovat se` druhé čtení nemá (táž úvaha jako N‑2d) — a do "
+            "menu holé spony `name` NEPATŘÍ, protože to je vztah uzlu "
+            "a nálepky, ne dvou tříd. Strany mají RŮZNÝ sort (`of` uzel, "
+            "`value` nálepka), takže jeden sort na celou relaci nestačí. "
+            "Odpověď, která se na uzel dostala přes jméno, CITUJE i výrok, "
+            "kterým je to jméno na uzel navázané: zakotvení není premisa, "
+            "ale bez něj by se dotaz netrefil"
+        ),
+        anchor="core_semantics.cascade:naming_tier",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_sides_come_from_deprels_not_from_candidate_order",
+            "test_without_the_reflexive_it_is_not_naming",
+            "test_the_construction_is_substituted_not_asked",
+            "test_naming_is_not_in_the_bare_copula_menu",
+            "test_the_two_sides_get_different_sorts",
+            "test_before_the_naming_the_alias_is_a_stranger",
+            "test_after_the_naming_the_alias_reaches_the_node",
+            "test_the_answer_cites_the_statement_that_links_the_name",
+            "test_the_link_is_revocable_like_any_other_statement",
+        ),
+    ),
+    Clause(
+        id="S-33",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "OTÁZKA BEZ ODBĚRATELE SE NEPTÁ. Role, jejíž význam je znám a "
+            "jen se kanonickým jménem srazila s jinou toutéž, se NEHLÁSÍ "
+            "jako neznámá — je to kolize, ne neznalost, a jediná odpověď, "
+            "kterou by člověk mohl dát, je právě ta, která ji způsobila "
+            "(W‑20). Prezentační „to“ ve „To jsou všichni psi.“ NEODKAZUJE "
+            "na nic, takže se na jeho referenci neptá (W‑29); určitý popis "
+            "(„ten pes“) uzel MÍNÍ a doptat se na něj správné zůstává. "
+            "Značka kolize má VLASTNÍ pole, ne poznámku v `source`: to "
+            "pole vlastní ten, kdo roli naposled sáhl, a přepsal by ji "
+            "(táž lekce jako B‑17)"
+        ),
+        anchor="core_semantics.cascade:surface_roles",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_known_role_whose_canonical_name_collides_is_not_reported_missing",
+            "test_the_collision_mark_survives_the_later_tiers",
+            "test_the_presentational_subject_is_not_asked_about",
+            "test_a_demonstrative_that_does_mean_a_node_is_still_asked_about",
+        ),
+    ),
+    Clause(
         id="S-31",
         boundary=SESSION_STORAGE,
         promise=(

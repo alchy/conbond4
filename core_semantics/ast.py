@@ -569,6 +569,18 @@ RELATION_SORTS: dict[str, Sort] = {
     P_CONTAINS: Sort.PLACE,
 }
 
+#: Relace, jejichž strany mají RŮZNÝ sort — a proto nestačí jeden sort na
+#: celou relaci.
+#:
+#: `RELATION_SORTS` říká „tahle relace mluví o časové ose", což u
+#: `before`/`within`/`contains` platí pro obě strany naráz. `name` je
+#: první relace, kde to neplatí: `of` je UZEL, `value` je NÁLEPKA. Slít je
+#: do jednoho sortu by znamenalo, že jméno je porovnatelné s uzlem, který
+#: ho nese — a přesně tomu má sortové typování bránit.
+ROLE_SORTS: dict[str, dict[str, Sort]] = {
+    P_NAME: {"of": Sort.ENTITY, "value": Sort.LABEL},
+}
+
 #: Predikáty, které naučené pravidlo NESMÍ mít v nenegované hlavě (I‑16).
 #:
 #: **Je to širší množina než `KERNEL_PREDICATES`, a ten rozdíl je celý

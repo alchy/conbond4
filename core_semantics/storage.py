@@ -143,6 +143,9 @@ class ResolvedGraphView:
     def nodes_named(self, name: str) -> list[str]:
         return self.index.nodes_named(name)
 
+    def naming_statement(self, name: str, node_id: str) -> str | None:
+        return self.index.naming_statement(name, node_id)
+
     def known_members(self, group_id: str) -> list[str]:
         return self.index.known_members(group_id)
 

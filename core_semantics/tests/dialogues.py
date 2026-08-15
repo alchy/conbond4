@@ -1360,6 +1360,94 @@ CLOSURE = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 12 · Jan a Honza — POJMENOVÁNÍ, poslední jádrový predikát
+# --------------------------------------------------------------------------
+
+NAMING = Dialogue(
+    name="Jan a Honza",
+    source="„Jan je učitel. Jan se jmenuje taky Honza. … Je Honza učitel?“",
+    shapes=(
+        ("PROPN", "Sing", "Nom", "nsubj", Operation.SELF),
+        ("PROPN", "Sing", "Nom", "obj", Operation.SELF),
+        ("NOUN", "Sing", "Nom", "root", Operation.SELF),
+    ),
+    steps=(
+        Step(
+            text="Jan je učitel.",
+            reading=sentence(
+                w("Jan", "Jan", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("učitel", "učitel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Jan, group:·učitel)",
+            writes="member(elem:Jan, group:·učitel)",
+            point="fakt o uzlu, na který se doména bude ptát JINÝM jménem",
+        ),
+        Step(
+            text="Je Honza učitel?",
+            reading=sentence(
+                w("Je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("Honza", "Honza", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("učitel", "učitel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w("?", "?", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Honza, group:·učitel)",
+            answers="U",
+            point=(
+                "PŘED pojmenováním. „Honza“ je zatím CIZÍ uzel — kanonizace "
+                "jmen ho s Janem neztotožní, protože nemá čím. Bez tohohle "
+                "kroku by se nedalo poznat, jestli `A` o dva kroky dál "
+                "způsobil zápis jména, nebo jestli tam bylo pořád"
+            ),
+        ),
+        Step(
+            text="Jan se jmenuje taky Honza.",
+            reading=sentence(
+                w("Jan", "Jan", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("se", "se", "PRON", 3, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+                w("jmenuje", "jmenovat", "VERB", 0, "root", Aspect="Imp,Perf", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("taky", "taky", "PART", 5, "advmod:emph"),
+                w("Honza", "Honza", "PROPN", 3, "obj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="name(of:Jan, value:Honza)",
+            writes="name(of:Jan, value:Honza)",
+            point=(
+                "POSLEDNÍ JÁDROVÝ PREDIKÁT, KTERÝ SE NAUČIL PSÁT ČESKY. "
+                "Generátor vyrobí DVĚ čtení, protože obě jména jsou "
+                "v nominativu — strany rozhoduje DEPREL, ne pořadí: kdyby "
+                "se braly podle pořadí, zapsalo by se jednou „Jan má "
+                "přezdívku Honza“ a podruhé pravý opak. Konstrukce se "
+                "DOSAZUJE, nezeptá se: `jmenovat se` je lexikálně "
+                "o pojmenování a druhé čtení nemá (táž úvaha jako N‑2d)"
+            ),
+        ),
+        Step(
+            text="Je Honza učitel?",
+            reads="member(elem:·Honza, group:·učitel)",
+            answers="A",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Táž otázka jako "
+                "o dva kroky dřív dá teď `A` — a důkaz cituje OBOJE: fakt "
+                "o Janovi i VÝROK, kterým se „Honza“ na Jana váže. Bez té "
+                "druhé citace by čtenář viděl odpověď na otázku o Honzovi "
+                "doloženou faktem o Janovi a spojnici by nikde nenašel"
+            ),
+        ),
+    ),
+    note=(
+        "Dvanáctý akceptační dialog a poslední jádrový predikát. `name` "
+        "uměla dosud zapsat jen VNITŘNÍ cesta — rozdělení uzlu — takže se "
+        "z jazyka nedal dostat alias, přestože alias je přesně to, kvůli "
+        "čemu `name` v jádře je. Doména zároveň měří, že se citace "
+        "nezastavuje na premisách důkazu: zakotvení není premisa, ale bez "
+        "něj by se dotaz na tenhle uzel vůbec netrefil."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -1372,4 +1460,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     IDENTITY,
     INCLUSION,
     CLOSURE,
+    NAMING,
 )

@@ -1,6 +1,153 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — B‑17 zavřeno v příčině, desátý dialog stojí, sedm z devíti jádrových relací píše česká věta
+## Status: 🟢 PASS — uzavření světa z české věty, celý kruh; a nález, který je cennější než sama doména
+
+**Kolo #69.** 877 testů zelených, `mypy --strict` čistý na 59 souborech,
+doložky **62/62**, živá parita **42/42**, dialogy 11 / 29 / 20, gate
+*Farmaka* `N` s doložkou `s0005`, nula `RECALL_FAILURE`, celá stálá
+regrese zelená. **Deset starých domén se závěry beze změny.** Jádro
+0.1.14, hlavička i changelog **sedí** (W‑28 zavřena).
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Celý kruh, měřený mnou
+
+```
+» Rex je pes.            ✓ [s0001]
+» Alík je pes.           ✓ [s0002]
+» Mourek je kocour.      ✓ [s0003]
+» Je Mourek pes?         → NEVÍM
+» To jsou všichni psi.   ◐ ? Mám „pes“ prohlásit za UZAVŘENOU skupinu? Znamená to,
+                              že o každém, kdo v dosavadním výčtu není, budu nadále
+                              odpovídat NE, ne NEVÍM …
+« Ano, uzavři to.        ✓ [s0004] complete(group:·pes)
+» Je Mourek pes?         → NE
+     - skupina je uzavřená, a tenhle prvek v ní není
+       - řekls: complete(group:·pes)
+       - řekls: member(elem:Rex, group:·pes)
+       - řekls: member(elem:alík, group:·pes)
+» Počkej, ještě nějací jsou.   ✓ odvoláno [s0004]
+» Je Mourek pes?         → NEVÍM
+```
+
+**Ta otázka před uzavřením je nejlepší věta, jakou tenhle systém dnes
+umí říct.** Neptá se „potvrzuješ?", ale **vysvětlí, co si tím člověk
+kupuje** — že se z `U` stane `N`. U jediné výjimky z I‑21 je to přesně
+ta míra, která se od programu čeká.
+
+**Nález, který Builder udělal sám a je cennější než sama doména:**
+popření z uzavření dřív citovalo **jen prohlášení**, ne výčet. Prohlášení
+říká „už nikdo další", ale **neříká, kdo v té skupině je** — bez výčtu
+si čtenář nemá jak ověřit, že dotazovaný v něm opravdu není. Teď cituje
+obojí.
+
+**Nejnebezpečnější případ jsem si našel sám a drží:** `enumeration_of`
+jde přes `member_proof`, ne přes surový index, takže **nepřímé členství
+je součástí výčtu**:
+
+```
+Punt ∈ štěně,  štěně ⊆ pes,  complete(pes)
+   Je Punt pes?     → ANO         ← uzavření ho NEzahodilo
+   Je Mourek pes?   → NE
+     - řekls: complete(group:·pes) · member(Rex, pes)
+       · subset(štěně, pes) · member(Punt, štěně)
+```
+
+Kdyby výčet bral jen přímé členy, uzavření by **vyrobilo nepravdivé
+`N`** o Puntovi. Nevyrobí.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓
+ireflex ✓ · opačná ✓ · W-19 ✓ · W-24 ✓
+pravidlo s `complete` v hlavě → UnsafeRule ✓ (obě cesty)
+jádrové krokem: 8 z 9, zbývá `name`
+```
+
+---
+
+## Zásah do tvrdého patra: SCHVALUJI, a tady je proč
+
+Builder sáhl do patra shody čísla — na tom mi záleží nejvíc ze všeho,
+co v tomhle kole udělal, protože tvrdá patra jsou to, co brání systému
+uhodnout. **Výjimku jsem proto proměřil na šířku sám:**
+
+```
+» Přednáška byla v pondělí.   → NEVÍM, jak to čtu   [shoda čísla] → zbývá 0   ✓ dál padá
+» Psi byla v pondělí.         → NEVÍM, jak to čtu   [shoda čísla] → zbývá 0   ✓ dál padá
+» Obsahuje citron vitamíny?   ✓ přečteno … [PROČ: shoda čísla] → zbývá 1      ✓ filtr pracuje
+» To jsou všichni psi.        ◐ projde                                        ✓
+» To je pes.                  ◐ projde                                        ✓
+```
+
+**Výjimka je opravdu úzká** — visí na lemmatu `ten` s `PronType=Dem`,
+`Neut`, `Sing`, a všechno ostatní patro drží. Věcně má pravdu: střední
+„to" v prezentační vazbě **nezastupuje počitatelný podmět** a v čísle se
+neshoduje; „To je pes." i „To jsou psi." jsou obojí česky správně.
+Zamítnout gramatickou větu je pro tenhle systém horší chyba než ji
+pustit — pokud se u toho nic **nedomýšlí**, a nedomýšlí.
+
+**Delegaci, kterou hlásí, beru a je správná:** tah `!∀` se **nic neučí**.
+Ostatní tahy učí tvar, protože význam tvaru je vlastnost jazyka —
+**uzavření světa vlastnost jazyka není**, je to epistemický stav
+mluvčího o jedné skupině v jednom okamžiku. Že někdo dnes dopočítal své
+psy, neopravňuje zavřít tytéž psy za měsíc. Kdyby se to učilo jako tvar,
+bylo by to nejhorší tiché rozhodnutí v celém systému.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑29 (nová, Builder ji hlásí sám a je zapsaná v doméně jako `limit`)
+· stopa se u „To jsou všichni psi." ptá i „na koho odkazuje To".**
+V prezentační vazbě „to" **neodkazuje na nic** — je to podmět bez
+reference — takže je to **otázka bez správné odpovědi**. Táž třída jako
+W‑20. Že to nechtěl opravovat na konci kola v jiné vrstvě, je správné
+rozhodnutí.
+
+**W‑20, W‑23, W‑25, W‑26** leží dál podle dohody. **W‑28 zavřena.**
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: `name` z české věty — poslední jádrový predikát,
+a s ním úklid otázek bez odběratele (W‑20, W‑29).**
+
+**Proč spolu:** `name` je přesně relace mezi **uzlem a jeho
+pojmenováním**, a obě otevřené drobnosti jsou otázky, které se ptají na
+**referenci tam, kde žádná není** nebo kde ji systém už zná. Je to
+jedna vrstva, ne dvě.
+
+**Gate:** sada zapisuje krokem **osm z devíti**; `name` je poslední —
+a jeho česká cesta je zároveň to, co dá „to" v prezentační vazbě
+odpověď „na nic se neptám, tenhle podmět nikoho neoznačuje".
+
+**Můj counterexample — bez něj neschválím:** nová doména zapíše `name`
+**z české věty**; otázka, která potřebuje **spojení jména s uzlem**,
+odpoví s důkazem citujícím ten zápis; **„To jsou všichni psi." se už
+neptá na referenci „To"** a doména to má jako krok, ne jako `limit`;
+stopa u `Gen`/`v+Loc` přestane hlásit `[CHYBÍ: co znamená role …]` tam,
+kde odpověď zná (W‑20); jedenáct domén se závěry beze změny (a když se
+některý změní, **napiš to**); `complete` kruh `U → N → odvolání → U`
+beze změny; nepřímý člen po uzavření **pořád `A`**; gate *Farmaka*
+`N`/`s0005`; parita ≥ 42/42; nula `RECALL_FAILURE`; testy zelené;
+„Přednáška byla v pondělí." i „Pondělí je před pondělím." se **pořád
+nezapíšou**.
+
+---
+
+## ARCHIV — kolo #68
+
+### Status: 🟢 PASS — B‑17 zavřeno v příčině, desátý dialog stojí, sedm z devíti jádrových relací píše česká věta
 
 **Kolo #68.** 852 testů zelených, `mypy --strict` čistý na 58 souborech,
 doložky **61/61**, živá parita **37/37**, dialogy 10 / 25 / 17, gate

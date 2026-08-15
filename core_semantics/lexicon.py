@@ -48,6 +48,11 @@ class Operation(Enum):
     #: `·` — role mluví o TOM konkrétním uzlu, ne o skupině. Jádro to zná
     #: jako `Quantifier.SELF` a bez něj nejde do role dosadit individuum.
     SELF = "self"
+    #: `name(of, value)` — POJMENOVÁNÍ uzlu. Do `RELATIONAL` ZÁMĚRNĚ
+    #: nepatří: menu holé spony nabízí vztahy dvou TŘÍD, kdežto tohle je
+    #: vztah uzlu a jeho nálepky. Nabídnout ho u „Kočka je savec." by byla
+    #: položka, na kterou tam nejde správně odpovědět.
+    NAME = "name"
     #: Určitost, NE kvantifikace. „to auto" neotvírá skupinový fillér, ale
     #: odkazuje na už existující uzel — a rozřešit ten odkaz je práce V3
     #: (§ 6.12, dialog F: „určitý popis rozřešen při attach").
@@ -94,6 +99,7 @@ MENU: tuple[tuple[Operation, str], ...] = (
     (Operation.SUBSET, "je podskupinou"),
     (Operation.DISJOINT, "tyhle dvě skupiny se vylučují"),
     (Operation.SAME_AS, "je to týž uzel pod jiným jménem"),
+    (Operation.NAME, "tomu uzlu se takhle říká"),
     (Operation.COMPLETE, "to jsou všichni, které skupina má"),
     (Operation.BEFORE, "to první je na časové ose dřív"),
     (Operation.CONTAINS, "to druhé zahrnuje to první jako MÍSTO"),
