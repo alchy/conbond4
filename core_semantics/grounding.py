@@ -198,12 +198,26 @@ class Discourse:
                 continue
             feats = dict(mention.feats)
             if any(
-                key in want and key in feats and want[key] != feats[key]
+                key in want
+                and key in feats
+                and not (_values(want[key]) & _values(feats[key]))
                 for key in ("Gender", "Number")
             ):
                 continue
             found.append((mention, term))
         return tuple(found)
+
+
+def _values(feature: str) -> frozenset[str]:
+    """Hodnoty jednoho rysu. UD je píše i jako výčet — „Narodila" nese
+    `Gender=Fem,Neut`, protože tvar je pro obojí týž.
+
+    Porovnává se PRŮNIKEM, ne rovností: prázdný průnik znamená, že se ty
+    dva tvary shodnout NEMOHOU, a jen tehdy kandidát vypadne. Rovnost by
+    zahodila kandidáta, který se shodnout může — a to by z vodítka udělalo
+    filtr, který rozhoduje.
+    """
+    return frozenset(feature.split(","))
 
 
 #: Zájmena, která odkazují do PŘEDCHOZÍHO textu. Osobní a přivlastňovací
@@ -291,6 +305,8 @@ def _resolve_anaphor(reading: RoleReading, discourse: Discourse) -> _Resolution:
     odjinud znamená tvrdit, že text odkazuje tam, kde nic nestojí.
     """
     mention = reading.mention
+    if reading.dropped:
+        return _offer(reading, discourse, missing=True)
     if mention.lemma not in ANAPHORIC_LEMMAS:
         return (
             None,
@@ -300,26 +316,43 @@ def _resolve_anaphor(reading: RoleReading, discourse: Discourse) -> _Resolution:
             f"navázat — odkazuje mimo text, ne do něj. Řekni to prosím "
             f"jménem.",
         )
+    return _offer(reading, discourse, missing=False)
+
+
+def _offer(
+    reading: RoleReading, discourse: Discourse, *, missing: bool
+) -> _Resolution:
+    """Nabídka antecedentů — společná pro zájmeno i pro vynechaný podmět.
+
+    Jedna funkce schválně: příčina je táž (sezení zná text, ne jen tah)
+    a pravidla jsou táž (návrh, nikdy dosazení; shoda zužuje, nerozhoduje;
+    mimo předchozí větu se nesahá). Dvě kopie by se rozešly a jedna z nich
+    by dřív nebo později začala hádat.
+    """
+    mention = reading.mention
+    what = (
+        f"Věta nemá podmět — „{mention.form}“ ho nevyslovil."
+        if missing
+        else f"Na koho odkazuje „{mention.form}“?"
+    )
     offered = discourse.candidates(mention)
     if not offered:
         return (
             None,
             BindingType.GROUP,
             "",
-            f"Na koho odkazuje „{mention.form}“? V předchozí větě nikdo "
-            f"takový nestojí — a nabídnout uzel odjinud by znamenalo "
-            f"tvrdit, že text odkazuje tam, kde nic není. Řekni to prosím "
-            f"jménem.",
+            f"{what} V předchozí větě nikdo takový nestojí — a nabídnout "
+            f"uzel odjinud by znamenalo tvrdit, že text odkazuje tam, kde "
+            f"nic není. Řekni to prosím jménem.",
         )
     which = ", ".join(f"„{m.form}“ ({t.id})" for m, t in offered)
     return (
         None,
         BindingType.GROUP,
         "",
-        f"Na koho odkazuje „{mention.form}“? Z předchozí věty to podle "
-        f"shody rodu a čísla může být {which}. Rozhodnout to musíš ty — "
-        f"shoda je vodítko, ne důkaz, a ztotožnit uzly mlčky je "
-        f"nejdražší chyba, jakou můžu udělat.",
+        f"{what} Z předchozí věty to podle shody rodu a čísla může být "
+        f"{which}. Rozhodnout to musíš ty — shoda je vodítko, ne důkaz, "
+        f"a ztotožnit uzly mlčky je nejdražší chyba, jakou můžu udělat.",
     )
 
 
@@ -358,7 +391,7 @@ def _ground_role(
         # horší než mlčení: říká člověku, že něco chybí, a přitom nechybí.
         return _UNRESOLVED
 
-    if mention.upos in UNSUPPORTED_UPOS:
+    if reading.dropped or mention.upos in UNSUPPORTED_UPOS:
         return _resolve_anaphor(reading, discourse or Discourse())
 
     if reading.awaiting == AWAITING_QUANTIFIER:

@@ -1588,6 +1588,143 @@ DISCOURSE = Dialogue(
 )
 
 
+# --------------------------------------------------------------------------
+# 14 · Jan se narodil — VĚTA BEZ PODMĚTU (český pro‑drop)
+# --------------------------------------------------------------------------
+
+PRODROP = Dialogue(
+    name="Jan se narodil",
+    source="„Jan je učitel. … Narodil se v Petrovicích. … Narodil se Jan v Plzni?“",
+    shapes=(
+        ("PROPN", "Sing", "Nom", "nsubj", Operation.SELF),
+        ("PROPN", "Plur", "Nom", "nsubj", Operation.SELF),
+        ("PROPN", "Plur", "Loc", "obl", Operation.SELF),
+        ("PROPN", "Sing", "Loc", "obl", Operation.SELF),
+        ("PROPN", "Sing", "Gen", "nmod", Operation.SELF),
+        ("NOUN", "Sing", "Nom", "root", Operation.SELF),
+        ("NOUN", "Sing", "Ins", "root", Operation.SELF),
+    ),
+    roles=(("v+Loc", "kde"),),
+    steps=(
+        Step(
+            text="Jan je učitel.",
+            reading=sentence(
+                w("Jan", "Jan", "PROPN", 3, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("je", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Sing", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("učitel", "učitel", "NOUN", 0, "root", Animacy="Anim", Case="Nom", Gender="Masc", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            reads="member(elem:·Jan, group:·učitel)",
+            writes="member(elem:Jan, group:·učitel)",
+            point="jediná věta domény, která podmět VYSLOVÍ",
+        ),
+        Step(
+            text="Narodila se v Praze.",
+            reading=sentence(
+                w("Narodila", "narodit", "VERB", 0, "root", Aspect="Perf", Gender="Fem,Neut", Number="Plur,Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("se", "se", "PRON", 1, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Praze", "Praha", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 1, "punct"),
+            ),
+            asks=(
+                "ROD SE KONTROLUJE. „Narodila“ nese `Gender=Fem,Neut`, "
+                "v předchozí větě stojí Jan v mužském rodě — průnik je "
+                "prázdný, takže se NENABÍDNE NIKDO. Kdyby se rod "
+                "nekontroloval, systém by tu Jana nabídl a člověk by "
+                "odpověď jen odklepl"
+            ),
+            point=(
+                "rys může nést VÍC hodnot („Fem,Neut“), protože tvar je "
+                "pro obojí týž — porovnává se PRŮNIKEM, ne rovností. "
+                "Rovnost by zahodila kandidáta, který se shodnout MŮŽE, "
+                "a z vodítka by udělala filtr, který rozhoduje"
+            ),
+        ),
+        Step(
+            text="Narodil se v Petrovicích.",
+            reading=sentence(
+                w("Narodil", "narodit", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("se", "se", "PRON", 1, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+                w("v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+                w("Petrovicích", "Petrovice", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+                w(".", ".", "PUNCT", 1, "punct"),
+            ),
+            asks=(
+                "PODMĚT VE VĚTĚ NENÍ VŮBEC — ne že by byl zájmenem. "
+                "Systém navrhne Jana z předchozí věty a ZEPTÁ SE; do "
+                "textu se nepřidávají slova, která tam nejsou, takže "
+                "zmínkou té role je sám PŘÍSUDEK: rod a číslo jsou na něm"
+            ),
+            point=(
+                "DŘÍV SE TAHLE VĚTA ZAPSALA jako `narodit(kde:Petrovice)`, "
+                "tedy jako fakt O NIKOM, a nic to neřeklo. To je horší "
+                "vada než neumět pro‑drop: v encyklopedické próze by se "
+                "do báze ukládaly dekapitované věty jedna za druhou"
+            ),
+        ),
+        Step(
+            text="Myslím Jana.",
+            decides_reference=("kdo", "Jan"),
+            writes="narodit(kde:Petrovice, kdo:Jan)",
+            point=(
+                "TÁŽ ODPOVĚĎ (`→=`) jako u zájmena, protože je to TÁŽ "
+                "otázka: o kom to platí. Řešení má týž tvar, protože "
+                "příčina je táž — sezení zná text, ne jen tah"
+            ),
+        ),
+        Step(
+            text="Petrovice jsou součástí Plzně.",
+            reading=sentence(
+                w("Petrovice", "Petrovice", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Geo", Number="Plur"),
+                w("jsou", "být", "AUX", 3, "cop", Aspect="Imp", Mood="Ind", Number="Plur", Person="3", Polarity="Pos", Tense="Pres", VerbForm="Fin", Voice="Act"),
+                w("součástí", "součást", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+                w("Plzně", "Plzeň", "PROPN", 3, "nmod", Case="Gen", Gender="Fem", NameType="Geo", Number="Sing"),
+                w(".", ".", "PUNCT", 3, "punct"),
+            ),
+            asks="tvar „být součástí“ je dvojznačný a ptá se (B‑17)",
+            point="článek, bez kterého by závěr domény neplynul",
+        ),
+        Step(
+            text="Je to místo uvnitř místa.",
+            answers_relation_here=Operation.CONTAINS,
+            writes="contains(part:Petrovice, whole:Plzeň)",
+            point="`→⊆1` — per‑větná relace, tvar se neučí (N‑11)",
+        ),
+        Step(
+            text="Narodil se Jan v Plzni?",
+            reading=sentence(
+                w("Narodil", "narodit", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+                w("se", "se", "PRON", 1, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+                w("Jan", "Jan", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+                w("v", "v", "ADP", 5, "case", AdpType="Prep", Case="Loc"),
+                w("Plzni", "Plzeň", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+                w("?", "?", "PUNCT", 1, "punct"),
+            ),
+            reads="narodit(kde:Plzeň, kdo:·Jan)",
+            answers="A",
+            point=(
+                "ZÁVĚR DOMÉNY JE PODMÍNKA, NE PRÓZA. Nikdo neřekl, že se "
+                "Jan narodil v Plzni — plyne to z faktu, který se do báze "
+                "dostal PŘES VĚTU BEZ PODMĚTU, a ze zahrnutí míst. Důkaz "
+                "cituje OBA zápisy, a ten první by bez rozhodnutí o tom, "
+                "o kom věta mluví, vůbec nevznikl"
+            ),
+        ),
+    ),
+    note=(
+        "Čtrnáctý akceptační dialog a druhá polovina téže vrstvy jako "
+        "třináctý. V přirozeném textu je věta bez podmětu ČASTĚJŠÍ NEŽ "
+        "ZÁJMENO — životopisný odstavec je jí plný. Do tohohle kola se "
+        "taková věta zapisovala BEZ PODMĚTU, tedy jako fakt o nikom, a "
+        "nic to neřeklo; to je horší vada než neumět pro‑drop. Řešení má "
+        "týž tvar jako u zájmena, protože příčina je táž: kandidát se "
+        "navrhuje z předchozí zakotvené věty, nikdy nedosazuje, a rod "
+        "a číslo na přísudku je VODÍTKO, NE DŮKAZ."
+    ),
+)
+
+
 DIALOGUES: tuple[Dialogue, ...] = (
     ICE_CREAM,
     TRANSPORT,
@@ -1602,4 +1739,5 @@ DIALOGUES: tuple[Dialogue, ...] = (
     CLOSURE,
     NAMING,
     DISCOURSE,
+    PRODROP,
 )

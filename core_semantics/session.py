@@ -74,6 +74,7 @@ from .cascade import (
     anaphora_tier,
     completeness_tier,
     naming_tier,
+    prodrop_tier,
     relation_question,
     relation_shape,
     relation_tier,
@@ -638,6 +639,10 @@ class Session:
             # Odkaz PŘED kvantifikátorem: role, která čeká na antecedent,
             # se na kvantifikátor ptát nemá — rozhodne ho ten antecedent.
             anaphora_tier(),
+            # Vynechaný podmět AŽ ZA anaforou: obojí ústí do téhož
+            # rozhodnutí, ale pro‑drop se pozná až podle toho, že podmět
+            # v predikaci opravdu není.
+            prodrop_tier(),
             # Uzavření světa až ZA relací: patro jen navrhuje a nikdy nic
             # nedosazuje, takže pořadí nemění čtení — mění jen to, v jakém
             # pořadí se člověk ptá.

@@ -949,6 +949,34 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-35",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "VĚTA BEZ PODMĚTU (český pro‑drop) se NEZAPÍŠE DEKAPITOVANÁ. "
+            "Dřív se „Narodil se v Praze.“ uložila jako `narodit(kde:…)`, "
+            "tedy jako fakt O NIKOM, a nic to neřeklo — v encyklopedické "
+            "próze by se takové věty ukládaly jedna za druhou. Podmět "
+            "v predikaci VZNIKNE a ČEKÁ na rozhodnutí; zmínkou je sám "
+            "PŘÍSUDEK, protože rod a číslo jsou na něm a do textu se "
+            "nepřidávají slova, která tam nejsou. Kandidát se NAVRHUJE "
+            "z předchozí zakotvené věty a rod se KONTROLUJE: rys s víc "
+            "hodnotami („Fem,Neut“) se porovnává PRŮNIKEM, ne rovností, "
+            "takže vodítko kandidáty zužuje a nerozhoduje. Přísudek, "
+            "který o podmětu neříká nic, nenabídne nikoho"
+        ),
+        anchor="core_semantics.cascade:prodrop_tier",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_subjectless_sentence_is_no_longer_written_headless",
+            "test_the_candidate_is_offered_from_the_previous_sentence",
+            "test_the_gender_on_the_predicate_is_checked",
+            "test_a_multi_valued_feature_is_compared_by_intersection",
+            "test_nothing_is_written_before_the_subject_is_decided",
+            "test_after_the_decision_the_fact_lands_on_that_node",
+            "test_a_predicate_that_says_nothing_about_the_subject_offers_nobody",
+        ),
+    ),
+    Clause(
         id="S-34",
         boundary=CASCADE_SESSION,
         promise=(

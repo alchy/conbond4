@@ -319,3 +319,160 @@ def test_the_transcript_prints() -> None:
     assert status is not None
     echo(f"» {ASK_TEXT}  → {status.name}")
     echo("=" * 72)
+
+
+# --------------------------------------------------------------------------
+# PRO‑DROP — věta bez podmětu (0.1.17)
+# --------------------------------------------------------------------------
+#
+# Druhá polovina téže vrstvy, a v přirozeném textu ČASTĚJŠÍ NEŽ ZÁJMENO:
+# životopisný odstavec je jí plný. Podmět tam NENÍ VŮBEC — ne že by byl
+# zájmenem.
+#
+# Co se dělo předtím, byla horší vada než neumět pro‑drop: věta se zapsala
+# jako `narodit(kde:Praha)`, tedy jako fakt O NIKOM, a nic to neřeklo.
+
+BORN_M = Reading(
+    tokens=(
+        w(1, "Narodil", "narodit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        w(2, "se", "se", "PRON", 1, "expl:pv", Case="Acc", Reflex="Yes"),
+        w(3, "v", "v", "ADP", 4, "case", Case="Loc"),
+        w(4, "Praze", "Praha", "PROPN", 1, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+        w(5, ".", ".", "PUNCT", 1, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+BORN_F = Reading(
+    tokens=(
+        w(1, "Narodila", "narodit", "VERB", 0, "root", Gender="Fem,Neut", Number="Plur,Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        w(2, "se", "se", "PRON", 1, "expl:pv", Case="Acc", Reflex="Yes"),
+        w(3, "v", "v", "ADP", 4, "case", Case="Loc"),
+        w(4, "Praze", "Praha", "PROPN", 1, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+        w(5, ".", ".", "PUNCT", 1, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+ASK_BORN = Reading(
+    tokens=(
+        w(1, "Narodil", "narodit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        w(2, "se", "se", "PRON", 1, "expl:pv", Case="Acc", Reflex="Yes"),
+        w(3, "Jan", "Jan", "PROPN", 1, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+        w(4, "v", "v", "ADP", 5, "case", Case="Loc"),
+        w(5, "Praze", "Praha", "PROPN", 1, "obl", Case="Loc", Gender="Fem", Number="Sing"),
+        w(6, "?", "?", "PUNCT", 1, "punct"),
+    ),
+    provenance=STAMP,
+)
+
+BORN_M_TEXT = "Narodil se v Praze."
+BORN_F_TEXT = "Narodila se v Praze."
+ASK_BORN_TEXT = "Narodil se Jan v Praze?"
+
+
+def prodrop_oracle() -> _Recorded:
+    return _Recorded(
+        {
+            TEACHER_TEXT: TEACHER,
+            BORN_M_TEXT: BORN_M,
+            BORN_F_TEXT: BORN_F,
+            ASK_BORN_TEXT: ASK_BORN,
+        }
+    )
+
+
+def prodrop_session() -> Session:
+    session = Session(lexicon=lexicon())
+    session.utter(TEACHER_TEXT, prodrop_oracle())
+    return session
+
+
+def test_a_subjectless_sentence_is_no_longer_written_headless() -> None:
+    """PŮVODNÍ VADA. Věta se zapsala jako `narodit(kde:Praha)` — fakt
+    o nikom — a nic to neřeklo. V encyklopedické próze by se do báze
+    ukládaly dekapitované věty jedna za druhou a poznat by to nešlo."""
+    session = prodrop_session()
+    result = session.utter(BORN_M_TEXT, prodrop_oracle())
+    assert result.statement_id is None
+    assert result.predication is not None
+    role = result.predication.role("kdo")
+    assert role is not None, "podmět musí v predikaci VZNIKNOUT, i když ho věta nevyslovila"
+
+
+def test_the_candidate_is_offered_from_the_previous_sentence() -> None:
+    session = prodrop_session()
+    question = session.utter(BORN_M_TEXT, prodrop_oracle()).question
+    assert question is not None
+    assert "nemá podmět" in question and "Jan" in question
+
+
+def test_the_gender_on_the_predicate_is_checked() -> None:
+    """PROTIPŘÍKLAD. „Narodila" nese `Gender=Fem,Neut`, Jan je Masc —
+    průnik je prázdný, takže se nenabídne nikdo. Kdyby se rod
+    nekontroloval, systém by Jana nabídl a člověk by odpověď jen odklepl."""
+    session = prodrop_session()
+    question = session.utter(BORN_F_TEXT, prodrop_oracle()).question
+    assert question is not None
+    assert "Jan" not in question
+    assert "nikdo takový nestojí" in question
+
+
+def test_a_multi_valued_feature_is_compared_by_intersection() -> None:
+    """Rys může nést VÍC hodnot, protože tvar je pro obojí týž. Rovnost by
+    zahodila kandidáta, který se shodnout MŮŽE, a z vodítka by udělala
+    filtr, který rozhoduje."""
+    from core_semantics.cascade import Mention
+
+    context = Discourse(
+        mentions=(
+            (
+                Mention(lemma="Marie", form="Marie", token_index=1, upos="PROPN",
+                        feats=(("Gender", "Fem"), ("Number", "Sing"))),
+                Entity("Marie"),
+            ),
+        )
+    )
+    ambiguous = Mention(
+        lemma="narodit", form="Narodila", token_index=1, upos="VERB",
+        feats=(("Gender", "Fem,Neut"), ("Number", "Plur,Sing")),
+    )
+    assert len(context.candidates(ambiguous)) == 1
+
+
+def test_nothing_is_written_before_the_subject_is_decided() -> None:
+    session = prodrop_session()
+    before = len(session.program())
+    session.utter(BORN_M_TEXT, prodrop_oracle())
+    assert len(session.program()) == before
+
+
+def test_after_the_decision_the_fact_lands_on_that_node() -> None:
+    session = prodrop_session()
+    pending = session.utter(BORN_M_TEXT, prodrop_oracle())
+    assert pending.predication is not None
+    answer = session.play(
+        decides_reference("Myslím Jana.", pending.predication, "kdo", "Jan")
+    )
+    assert answer.statement_id is not None
+    assert any("kdo:Jan" in line for line in answer.lines)
+    assert (
+        session.utter(ASK_BORN_TEXT, prodrop_oracle()).status
+        is QueryStatus.PROVEN_TRUE
+    )
+
+
+def test_a_predicate_that_says_nothing_about_the_subject_offers_nobody() -> None:
+    """Přísudek bez rodu a čísla nedává ani vodítko. Nabízet bez něj
+    kohokoli by bylo hádání, ne návrh."""
+    bare = Reading(
+        tokens=(
+            w(1, "Prší", "pršet", "VERB", 0, "root", Polarity="Pos"),
+            w(2, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    text = "Prší."
+    session = prodrop_session()
+    result = session.utter(text, _Recorded({text: bare}))
+    assert result.predication is None or result.predication.role("kdo") is None

@@ -1,6 +1,120 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — DEVĚT Z DEVÍTI jádrových relací píše česká věta
+## Status: 🟢 PASS — zájmeno se ptá, nedosazuje; kontext textu je v jádře, ne v předzpracování
+
+**Kolo #71.** 924 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **65/65**, živá parita **48/48**, dialogy 13 / 34 / 23, gate
+*Farmaka* `N`/`s0005`, nula `RECALL_FAILURE`, celá stálá regrese zelená.
+**Dvanáct starých domén se závěry beze změny.** Jádro 0.1.16.
+
+**Architectural Health Score: 9,5 / 10**
+
+---
+
+## Měřeno mnou — celý oblouk
+
+```
+» Jan je učitel.            ✓ [s0001]
+» Ona bydlí v Praze.        ◐ NEZAPSÁNO, NIKDO NENABÍDNUT
+     ? Na koho odkazuje „Ona“? V předchozí větě nikdo takový nestojí — a nabídnout
+       uzel odjinud by znamenalo tvrdit, že text odkazuje tam, kde nic není.
+» On bydlí v Petrovicích.   ◐ NEZAPSÁNO, nabídne Jana
+     ? Z předchozí věty to podle shody rodu a čísla může být „Jan“. Rozhodnout to
+       musíš ty — shoda je vodítko, ne důkaz, a ztotožnit uzly mlčky je nejdražší
+       chyba, jakou můžu udělat.
+« Myslím Jana.              ✓ [s0002] bydlet(kde:Petrovice, kdo:Jan)
+» Petrovice jsou součástí Plzně. + →⊆1 contains   ✓ [s0006]
+» Bydlí Jan v Plzni?        → ANO   [doloženo: s0002, s0006]
+```
+
+**Ta odpověď je celý smysl kola:** fakt, který se do báze dostal **přes
+zájmeno**, unese dotaz i přes zahrnutí míst — a v citaci je vidět obojí.
+
+**Příčina byla pojmenovaná správně a je to nová informace, ne nová
+inference:** sezení znalo **tah**, ne **text**. `Discourse` se posouvá
+jen po větě, která se **opravdu zakotvila** — věta, u které se systém
+ptá, ještě není doříčená, a nabízet z ní antecedenty by znamenalo
+odkazovat na uzly, o kterých se teprve rozhoduje. To je jemné a je to
+správně.
+
+**Tři zákazy, které si beru za své a schvaluji jako delegaci:**
+
+1. **Ptá se i při jediném kandidátovi.** Shoda rodu a čísla je vodítko
+   struktury textu, ne důkaz. Celá M‑2 stojí na rozdílu mezi „trefil
+   jsem týž uzel" a „člověk řekl, že to je týž".
+2. **Kandidát mimo předchozí větu se nenabídne.**
+3. **Skupina se nenabídne nikdy** — „Jan je učitel." nabízí Jana, ne
+   „učitele"; ztotožnit zájmeno s třídou by z individua udělalo druh.
+
+**Zmizelá duplicitní otázka je nález téže třídy jako W‑20 a W‑29:**
+kaskáda se ptala na kvantifikátor role, na kterou se už ptalo zakotvení
+— člověk nevěděl, kterou z těch dvou odpovídá.
+
+**Přepsaný starý test jsem si prohlédl a NENÍ oslabený.**
+`test_pronoun_is_refused_out_loud` drží `statement_id is None`,
+`question is not None` i `program() == ()` a **nově pinuje i důvod**
+(„V předchozí větě nikdo takový nestojí"). Fixoval dřív hlášku
+„Zájmena zatím neumím", což byla přesně ta mez, kterou tohle kolo ruší
+— přepsat ji bylo nutné a udělal to správně: zúžil tvrzení, nezrušil ho.
+
+```
+B-1 ✓ · B-2 ✓ · dialogB ✓ · disjoint→N ✓ · CONFLICT ✓ · stráže 6/6 ✓
+same_as ✓ · M-1 ✓ · G-3 ✓ · OR ✓ · I-16 ✓ · ∀→∃ U/N ✓ · ireflex ✓
+opačná ✓ · W-19 ✓ · W-24 ✓ · complete ✓ · jádrové krokem 9/9
+```
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑31 (mez, Builder ji hlásí sám) · umí jen `on/jeho/její/jejich`.**
+Pro‑drop („Narodil se v Praze." bez podmětu) a shoda rodu na přísudku
+jako vodítko k podmětu — obojí člověk jmenoval **vedle** zájmen — v tomhle
+kole nejsou. Je to **další krok téže vrstvy**, ne jiná vrstva.
+
+**W‑23, W‑25, W‑26, W‑30** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: PRO‑DROP — věta bez podmětu.**
+
+**Proč právě to a proč teď:** je to druhá polovina téže vrstvy, kterou
+tohle kolo otevřelo, a **v přirozeném textu je častější než zájmeno**.
+Životopisný odstavec je jí plný: *„Narodil se v Malých Svatoňovicích."*,
+*„Zemřel 25. prosince 1938."* — podmět tam **není vůbec**, ne že by byl
+zájmenem.
+
+**Architektonická příčina je táž a řešení musí být téhož tvaru:**
+kandidát se **navrhuje z předchozí zakotvené věty**, nikdy nedosazuje,
+a rod a číslo na přísudku (`byl` × `byla` × `byli`) je **vodítko, ne
+důkaz** — přesně jako u zájmena. Historicky to tak řešil i conBond2:
+`Kor=prodrop` / `Ent=<entita>` jako **aktivace viditelná v datech**,
+s vypsaným počtem zásahů a s tím, kolik z nich potvrdila shoda rodu.
+Nepřidávat do textu slova, která tam nejsou.
+
+**Můj counterexample — bez něj neschválím:** dvouvětá doména, kde druhá
+věta **nemá podmět**; systém navrhne kandidáta z předchozí věty
+a **zeptá se**; bez odpovědi **nezapíše nic**; po odpovědi zapíše na
+týž uzel a otázka dá `A` s citací obou výroků i zakotvení; věta bez
+podmětu, kde předchozí věta kandidáta nemá, **nenabídne nikoho**;
+**rod se kontroluje** — po „Jan je učitel." se u *„Narodila se v Praze."*
+Jan **nenabídne**; třináct domén se závěry beze změny; devět z devíti
+jádrových relací dál píše česká věta; gate *Farmaka* `N`/`s0005`;
+parita ≥ 48/48; nula `RECALL_FAILURE`; testy zelené.
+
+---
+
+## ARCHIV — kolo #70
+
+### Status: 🟢 PASS — DEVĚT Z DEVÍTI jádrových relací píše česká věta
 
 **Kolo #70.** 904 testů zelených, `mypy --strict` čistý na 60 souborech,
 doložky **64/64**, živá parita **45/45**, dialogy 12 / 31 / 22, gate

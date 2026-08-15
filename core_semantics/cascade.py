@@ -121,6 +121,12 @@ class RoleReading:
     determiner: Mention | None = None
     #: Odkud se kvantifikátor vzal — do stopy a do vysvětlení (I‑14).
     source: str = ""
+    #: Role, kterou věta VŮBEC NEVYSLOVILA — český pro‑drop *(0.1.17)*.
+    #: Zmínkou je PŘÍSUDEK, protože rod a číslo jsou na něm; je to
+    #: vodítko, ne důkaz, stejně jako u zájmena. Vlastní pole ze stejného
+    #: důvodu jako `collided`: značka, na které někdo staví, nesmí ležet
+    #: v poli, které vlastní jiný krok.
+    dropped: bool = False
     #: Role, jejíž význam je ZNÁMÝ, ale kanonické jméno už v téhle větě
     #: někdo zabral *(W‑20)*. Vlastní pole, ne poznámka v `source`:
     #: `source` vlastní ten, kdo roli naposled sáhl, takže kvantifikátorové
@@ -1405,6 +1411,80 @@ def relation_tier(lexicon: Lexicon) -> Tier:
 #: ve 3. osobě; první a druhá osoba míří na účastníky rozhovoru, ne do
 #: textu, a tam by antecedent hledat nešlo.
 ANAPHORIC_LEMMAS = ("on", "jeho", "její", "jejich")
+
+
+def prodrop_tier() -> Tier:
+    """VĚTA BEZ PODMĚTU — český pro‑drop *(0.1.17)*.
+
+    **V přirozeném textu je to častější než zájmeno.** Životopisný odstavec
+    je toho plný: „Narodil se v Malých Svatoňovicích." Podmět tam NENÍ
+    VŮBEC — ne že by byl zájmenem.
+
+    **Co se dělo předtím, byla horší vada než neumět pro‑drop.** Věta se
+    zapsala jako `narodit(kde:Praha)`, tedy jako fakt O NIKOM, a nic to
+    neřeklo. V encyklopedické próze by se do báze ukládaly dekapitované
+    věty jedna za druhou a poznat by to nešlo.
+
+    **Řešení je téhož tvaru jako u zájmena, protože příčina je táž.**
+    Kandidát se NAVRHUJE z předchozí zakotvené věty, nikdy nedosazuje, a
+    rod a číslo na přísudku (byl × byla × byli) je VODÍTKO, NE DŮKAZ.
+    Do textu se nepřidávají slova, která tam nejsou: zmínkou role je sám
+    přísudek, protože právě on tu shodu nese.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        root = next((t for t in reading.tokens if t.head == 0), None)
+        if root is None or root.upos not in ("VERB", "AUX"):
+            return candidates, None
+        if any(t.head == root.index and t.deprel == "nsubj" for t in reading.tokens):
+            return candidates, None
+        feats = dict(root.feats)
+        if "Gender" not in feats and "Number" not in feats:
+            # Přísudek, který o podmětu nic neříká, nedává ani vodítko.
+            # Nabízet bez něj kohokoli by bylo hádání.
+            return candidates, None
+        marked: list[Candidate] = []
+        for candidate in candidates:
+            if candidate.predication.role(ROLE_SUBJECT) is not None:
+                marked.append(candidate)
+                continue
+            gap = RoleReading(
+                ROLE_SUBJECT,
+                Mention(
+                    lemma=root.lemma,
+                    form=root.form,
+                    token_index=root.index,
+                    upos=root.upos,
+                    feats=root.feats,
+                ),
+                awaiting=AWAITING_REFERENCE,
+                dropped=True,
+                source="podmět věta nevyslovila; rod a číslo nese přísudek",
+            )
+            marked.append(
+                Candidate(
+                    replace(
+                        candidate.predication,
+                        # Kanonické setřídění podle JMÉNA role — dvě
+                        # stejná čtení musí být týž objekt (I‑22).
+                        roles=tuple(
+                            sorted(
+                                (*candidate.predication.roles, gap),
+                                key=lambda role: role.name,
+                            )
+                        ),
+                    ),
+                    origin=candidate.origin,
+                )
+            )
+        return marked and tuple(marked) or candidates, (
+            f"[BEZ PODMĚTU: „{root.form}“ ho nevyslovil — čeká se na "
+            f"rozhodnutí, o kom to platí]"
+        )
+
+    return tier
 
 
 def anaphora_tier() -> Tier:

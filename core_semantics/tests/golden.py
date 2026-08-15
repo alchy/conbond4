@@ -1010,6 +1010,71 @@ O3 = Golden(
 )
 
 
+# --------------------------------------------------------------------------
+# P · věta bez podmětu (čtrnáctý akceptační dialog)
+# --------------------------------------------------------------------------
+#
+# Podmět se v predikaci OBJEVÍ, přestože ho věta nevyslovila — a jeho
+# zmínkou je sám PŘÍSUDEK, protože rod a číslo jsou na něm. Proto se ve
+# čtení píše `kdo:narodit`: do textu se nepřidávají slova, která tam
+# nejsou. Že se ta role musí NAJÍT, je celý rozdíl proti stavu, kdy se
+# věta zapsala bez podmětu jako fakt o nikom.
+
+P1 = Golden(
+    dialogue="P",
+    text="Narodil se v Petrovicích.",
+    tokens=(
+        tok(1, "Narodil", "narodit", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(2, "se", "se", "PRON", 1, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        tok(4, "Petrovicích", "Petrovice", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Plur"),
+        tok(5, ".", ".", "PUNCT", 1, "punct"),
+    ),
+    predication="narodit(kdo:narodit, v+Loc:Petrovice)",
+    asks=(
+        "podmět věta NEVYSLOVILA a v prázdné bázi není koho nabídnout — "
+        "systém to řekne a nic si nedomýšlí"
+    ),
+)
+
+P2 = Golden(
+    dialogue="P",
+    text="Narodila se v Praze.",
+    tokens=(
+        tok(1, "Narodila", "narodit", "VERB", 0, "root", Aspect="Perf", Gender="Fem,Neut", Number="Plur,Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(2, "se", "se", "PRON", 1, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+        tok(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+        tok(4, "Praze", "Praha", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+        tok(5, ".", ".", "PUNCT", 1, "punct"),
+    ),
+    predication="narodit(kdo:narodit, v+Loc:·Praha)",
+    asks="týž tvar v ženském rodě — rys nese VÍC hodnot („Fem,Neut“)",
+    point=(
+        "parser dává u tohohle tvaru `Gender=Fem,Neut` a "
+        "`Number=Plur,Sing`, protože tvar je pro všechny ty možnosti týž. "
+        "Sada to FIXUJE tak, jak to skutečný parser dělá — a shoda se "
+        "proto porovnává průnikem, ne rovností"
+    ),
+)
+
+P3 = Golden(
+    dialogue="P",
+    text="Narodil se Jan v Plzni?",
+    tokens=(
+        tok(1, "Narodil", "narodit", "VERB", 0, "root", Aspect="Perf", Gender="Masc", Number="Sing", Polarity="Pos", Tense="Past", VerbForm="Part", Voice="Act"),
+        tok(2, "se", "se", "PRON", 1, "expl:pv", Case="Acc", PronType="Prs", Reflex="Yes", Variant="Short"),
+        tok(3, "Jan", "Jan", "PROPN", 1, "nsubj", Animacy="Anim", Case="Nom", Gender="Masc", NameType="Giv", Number="Sing"),
+        tok(4, "v", "v", "ADP", 5, "case", AdpType="Prep", Case="Loc"),
+        tok(5, "Plzni", "Plzeň", "PROPN", 1, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+        tok(6, "?", "?", "PUNCT", 1, "punct"),
+    ),
+    #: TÁŽ SLOVESNÁ STAVBA, ale podmět VYSLOVENÝ — patro pro‑drop se sem
+    #: nesmí plést. Kdyby přidalo roli i tady, vznikl by druhý podmět.
+    predication="narodit(kdo:·Jan, v+Loc:·Plzeň)",
+    asks="„v+Loc“ je v prázdném lexikonu pořád jen tvar, ne význam",
+)
+
+
 #: Celá sada v pořadí dialogů. Pořadí je součást zlatého transkriptu.
 CORPUS: tuple[Golden, ...] = (
     A1, A2, B1, C1, D1, D2, D3, E1, E2, F1, F2, G1, G2, G3, G4, G5,
@@ -1021,6 +1086,7 @@ CORPUS: tuple[Golden, ...] = (
     M1, M2, M3, M4, M5,
     N1, N2, N3,
     O1, O2, O3,
+    P1, P2, P3,
 )
 
 
