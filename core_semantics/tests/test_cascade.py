@@ -1627,3 +1627,61 @@ def test_a_passive_subject_is_still_asked_about() -> None:
     predication = generate(reading)[0].predication
     assert "nsubj:pass" in surface_roles(predication)
     assert "co" not in {r.name for r in predication.roles}
+
+
+def test_a_prepositional_genitive_is_not_an_attribute() -> None:
+    """„Další synonyma **vesmíru** u starověkých **filozofů**" *(W‑58)*.
+
+    První genitiv je přívlastek, druhý je PŘEDLOŽKOVÁ FRÁZE — „synonyma
+    filozofů" ta věta netvrdí. Rozdíl je v rozboru: u předložkové fráze
+    visí dítě s `deprel=case`. Nálezeno DIFFEM KORPUSU po opravě W‑58,
+    ne úvahou: dokud se přívlastek přehlížel kvůli shodě lemmat, tahle
+    přeexponovaná stráž se nikdy neuplatnila.
+    """
+    from core_semantics.cascade import genitive_attributes
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Synonyma", "synonymum", "NOUN", 5, "nsubj", Case="Nom", Number="Plur"),
+            _token(2, "vesmíru", "vesmír", "NOUN", 1, "nmod", Case="Gen", Number="Sing"),
+            _token(3, "u", "u", "ADP", 4, "case", Case="Gen"),
+            _token(4, "filozofů", "filozof", "NOUN", 1, "nmod", Case="Gen", Number="Plur"),
+            _token(5, "byla", "být", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(6, ".", ".", "PUNCT", 5, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = generate(reading)[0].predication
+    najdene = genitive_attributes(reading, predication)
+    assert [g for _, g, _ in najdene] == ["vesmír"], (
+        "„u filozofů“ je okolnost, ne přívlastek — tvrdit „synonyma "
+        "filozofů“ je o té větě nepravda"
+    )
+
+
+def test_a_prepositional_genitive_does_not_hide_the_construction() -> None:
+    """TÁŽ PODMÍNKA NA DRUHÉM MÍSTĚ, a proto je to jedna funkce.
+
+    „**Podle** některých teorií je vesmír součástí **systému**." má dva
+    genitivy, ale jen jeden HOLÝ. Konstrukce „X je součástí Y" počítá,
+    kolik jich věta má — a když se do počtu vzala i předložková fráze,
+    věta o konstrukci přišla jen proto, že nesla okolnost navíc. Cesta
+    ke `contains` tím byla zavřená a nikdo to nevěděl.
+    """
+    from core_semantics.cascade import relation_shape
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Podle", "podle", "ADP", 2, "case", Case="Gen"),
+            _token(2, "teorií", "teorie", "NOUN", 5, "obl", Case="Gen", Number="Plur"),
+            _token(3, "vesmír", "vesmír", "NOUN", 5, "nsubj", Case="Nom", Number="Sing"),
+            _token(4, "je", "být", "AUX", 5, "cop", Number="Sing", Polarity="Pos"),
+            _token(5, "součástí", "součást", "NOUN", 0, "root", Case="Ins", Gender="Fem", Number="Sing"),
+            _token(6, "systému", "systém", "NOUN", 5, "nmod", Case="Gen", Number="Sing"),
+            _token(7, ".", ".", "PUNCT", 5, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = generate(reading)[0].predication
+    found = relation_shape(predication, reading)
+    assert found is not None and found.shape == "cop:součást+Gen"

@@ -637,6 +637,25 @@ def base_deprel(deprel: str) -> str:
     return deprel.split(":", 1)[0]
 
 
+def is_bare_genitive(token: Token, reading: Reading) -> bool:
+    """Genitiv BEZ PŘEDLOŽKY — jediný, který je přívlastkem *(W‑58)*.
+
+    „synonyma **vesmíru**" je přívlastek; „**u** starověkých filozofů" je
+    předložková fráze, tedy okolnost, a tvrdit „synonyma filozofů" je
+    o té větě nepravda. Rozdíl je v ROZBORU: u předložkové fráze visí
+    dítě s `deprel=case`.
+
+    **Jedno pravidlo pro dvě místa.** Táž otázka padá u přívlastku
+    i u konstrukce jádrové relace („X je druh Y"), kde se počítá, kolik
+    genitivů věta má — a „podle některých teorií" tam počítat nemá, jinak
+    věta o konstrukci přijde jen proto, že nese okolnost navíc. Dvě kopie
+    téhle podmínky by se rozešly a nikdo by nevěděl která platí.
+    """
+    if token.feat("Case") != "Gen":
+        return False
+    return _preposition_of(token, reading) is None
+
+
 def _preposition_of(token: Token, reading: Reading) -> Token | None:
     """Předložka závislá na tokenu (`deprel=case`) — nebo `None`."""
     for child in reading.children(token.index):
@@ -1694,7 +1713,8 @@ def relation_shape(
         for role in predication.roles
         if role is not subject
         and role is not complement
-        and role.mention.feat("Case") == "Gen"
+        and (token := _token_at(role.mention.token_index, reading)) is not None
+        and is_bare_genitive(token, reading)
     ]
     if len(genitive) == 1:
         # „X je druh Y" — pravá strana je přívlastek, ne jmenná část.
@@ -2556,7 +2576,7 @@ def genitive_attributes(
     )
     najdene: list[tuple[str, str, int]] = []
     for token in reading.tokens:
-        if token.deprel != "nmod" or dict(token.feats).get("Case") != "Gen":
+        if token.deprel != "nmod" or not is_bare_genitive(token, reading):
             continue
         head = _token_at(token.head, reading)
         if head is None or head.upos not in ("NOUN", "PROPN"):

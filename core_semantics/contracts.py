@@ -1100,7 +1100,13 @@ CONTRACTS: tuple[Clause, ...] = (
             "a je čitelná ze STAVU, ne ze stromu: genitiv, který si "
             "nárokuje ČEKAJÍCÍ JÁDROVÁ RELACE („Petrovice jsou součástí "
             "Plzně.“), přívlastek NENÍ — je to jedna její strana a bez "
-            "něj by odpověď `→⊆` neměla s čím pracovat (W‑58)"
+            "něj by odpověď `→⊆` neměla s čím pracovat. A přívlastek je "
+            "jen HOLÝ GENITIV: „u starověkých filozofů“ je předložková "
+            "fráze, tedy okolnost, a „synonyma filozofů“ ta věta netvrdí "
+            "— rozdíl je v rozboru (`deprel=case`). Táž podmínka platí "
+            "i v konstrukci jádrové relace, kde se počítá, kolik genitivů "
+            "věta má: jedna funkce pro obě místa, protože dvě kopie by se "
+            "rozešly (W‑58)"
         ),
         anchor="core_semantics.cascade:genitive_attributes",
         entry=".utter(",
@@ -1114,6 +1120,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_genitive_is_either_an_attribute_or_a_role",
             "test_a_pending_kernel_relation_keeps_its_genitive",
             "test_no_mention_is_in_the_reading_twice",
+            "test_a_prepositional_genitive_is_not_an_attribute",
+            "test_a_prepositional_genitive_does_not_hide_the_construction",
         ),
     ),
     Clause(
