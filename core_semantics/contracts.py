@@ -1811,6 +1811,34 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-21",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "UZEL, JEHOŽ JMÉNO JE VLASTNÍM PREFIXEM JMÉNA V TEXTU, SE "
+            "NEZAPÍŠE MLČKY *(W‑75)*. „Bydlí v Rožnově **pod "
+            "Radhoštěm**.“ dá `·Rožnov` — vlastní jméno, které v textu "
+            "takhle NESTOJÍ; je to táž třída jako W‑72, jen z druhé "
+            "strany. SLOŽIT TO NEJDE: druhý díl má PŘEDLOŽKU, takže se "
+            "od genitivního dílu („Hradec Králové“) liší a spojit ho "
+            "znamená koupit si jméno domněnkou. MLČET SE ALE TAKY "
+            "NESMÍ, a zvlášť ne mlčet ŠPATNOU OTÁZKOU: dosud se systém "
+            "ptal „jakou roli hraje „Radhoštěm““ — výzva, ať člověk "
+            "k větě přilepí ÚČASTNÍKA, KTERÝ V NÍ NENÍ, tedy táž rodina "
+            "jako W‑73 („vypadá to jako odpověď a není“). Díl jména se "
+            "proto jako ztracený člen NEHLÁSÍ, hlásí se JMÉNO NEÚPLNÉ "
+            "i s tím, co by uzel nesl, a zápis to BLOKUJE — uzel se "
+            "zkráceným jménem je tvrzení o textu, ne mez. Co se "
+            "složilo (holý genitiv, O‑20), neúplné NENÍ"
+        ),
+        anchor="core_semantics.cascade:partial_name_tier",
+        entry="cascade(",
+        enforced_by=(
+            "test_a_name_the_node_carries_only_partly_is_said_out_loud",
+            "test_a_composed_name_is_not_reported_as_partial",
+            "test_a_part_of_a_name_is_not_asked_about_as_a_role",
+        ),
+    ),
+    Clause(
         id="O-20",
         boundary=ORACLE_CASCADE,
         promise=(

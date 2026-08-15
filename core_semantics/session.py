@@ -73,6 +73,7 @@ from .cascade import (
     RoleReading,
     lost_role_tier,
     mention_of,
+    partial_name_tier,
     sharing_tier,
     share_question,
     open_roles_question,
@@ -938,6 +939,10 @@ class Session:
             # souřadnou DRUHOU VĚTOU, protože ta se ptá téhož stromu
             # a odpověď na jednu z nich nesmí druhou přepsat.
             sharing_tier(),
+            # NEÚPLNÉ JMÉNO *(W‑75)*. Hned za sdílením: obojí se ptá
+            # HOTOVÝCH rolí a obojí nesmí dosadit — jedno rozdělení
+            # věty, druhé jméno uzlu.
+            partial_name_tier(),
             coordination_tier(self.lexicon),
             # KONZISTENCE S BÁZÍ JE AŽ TADY, a je to VĚDOMÁ ODCHYLKA od
             # pořadí v § 5.2 („…→ konzistence s bází → naučené vzory…").
@@ -1558,6 +1563,11 @@ class Session:
         # tedy tvrdit něco, co v ní není. Rozdělit ji mlčky na dvě je
         # táž vada z druhé strany.
         pending_share = bool(predication.pending_share)
+        # TÝŽ DŮVOD U NEÚPLNÉHO JMÉNA *(W‑75)*. Uzel, jehož jméno je
+        # VLASTNÍM PREFIXEM jména v textu, je tvrzení o textu, ne mez —
+        # zapsat ho znamená uložit individuum, které se ve větě
+        # nejmenuje.
+        pending_name = bool(predication.pending_name)
         # TÝŽ DŮVOD U ROLE, KTERÁ ČEKÁ NA JÁDROVÉ JMÉNO *(B‑19)*. Věta
         # s povrchovou rolí z vedlejší věty by se zapsala teď a po
         # odpovědi `→@` ZNOVU — v bázi by ležely dva výroky o téže větě
@@ -1587,6 +1597,7 @@ class Session:
             or pending_relation
             or pending_complete
             or pending_share
+            or pending_name
             or pending_role_name
             else self._route(index, turn, predication, grounded)
         )

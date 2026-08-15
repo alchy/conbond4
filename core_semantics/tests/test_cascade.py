@@ -3114,3 +3114,46 @@ def test_a_composed_name_part_is_not_reported_as_an_attribute() -> None:
     reading = _name_with_second_part("nmod", "Gen")
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
     assert genitive_attributes(reading, predication) == ()
+
+
+def test_a_name_the_node_carries_only_partly_is_said_out_loud() -> None:
+    """UZEL, JEHOŽ JMÉNO JE VLASTNÍM PREFIXEM JMÉNA V TEXTU *(W‑75)*.
+    „v Rožnově **pod Radhoštěm**" dá `·Rožnov` — vlastní jméno, které
+    v textu takhle nestojí. Složit to nejde (druhý díl má PŘEDLOŽKU,
+    takže od genitivního dílu W‑72 se liší), ale mlčet se nesmí."""
+    from core_semantics.cascade import partial_name_tier
+
+    reading = _name_with_second_part("nmod", "Ins", preposition=True)
+    predication = cascade(
+        reading, tiers=(*HARD_TIERS, partial_name_tier())
+    ).survivors[0].predication
+    assert predication.pending_name, "neúplné jméno se musí ohlásit"
+    uzel, cele, _ = predication.pending_name[0]
+    assert uzel == "Hradec"
+    assert "Králové" in cele
+
+
+def test_a_composed_name_is_not_reported_as_partial() -> None:
+    """PROTIPŘÍKLAD: co se složilo (holý genitiv, W‑72), neúplné není."""
+    from core_semantics.cascade import partial_name_tier
+
+    reading = _name_with_second_part("nmod", "Gen")
+    predication = cascade(
+        reading, tiers=(*HARD_TIERS, partial_name_tier())
+    ).survivors[0].predication
+    assert predication.pending_name == ()
+
+
+def test_a_part_of_a_name_is_not_asked_about_as_a_role() -> None:
+    """OTÁZKA, NA KTEROU PRAVDIVÁ ODPOVĚĎ NEEXISTUJE, SE NEPTÁ *(W‑75)*.
+    „Radhoštěm" není účastník děje; vyzvat člověka, ať mu dá roli, znamená
+    přilepit k větě tvrzení, které v ní není — táž rodina jako W‑73."""
+    from core_semantics.cascade import dropped_tokens, partial_name_tier
+
+    reading = _name_with_second_part("nmod", "Ins", preposition=True)
+    predication = cascade(
+        reading, tiers=(*HARD_TIERS, partial_name_tier())
+    ).survivors[0].predication
+    assert all(
+        token.form != "Králové" for token in dropped_tokens(reading, predication)
+    )

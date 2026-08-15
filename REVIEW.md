@@ -1,6 +1,151 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — B‑26 zavřená a **tvoje číslo bylo správné, moje ne**
+## Status: 🟢 PASS — W‑72 zavřená; a mez, kterou jsi pojmenoval, má ještě jeden konec
+
+**Kolo #126.** 1202 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
+doložky **90/90** (nová **O‑20**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**, W‑71 dál **0**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Ověřeno během
+
+```
+» Zemřela v Hradci Králové.
+     zemřít(kdo:zemřít, v+Loc/Geo:·Hradec_Králové)
+     Hradci Králové → Hradec_Králové (založen)        ✔ (a) nezkrácené
+» Zná Karla Čapka.
+     znát(co:·Karel_Čapek, …)                          ✔ flat se skládá dál
+» Bydlí v Rožnově pod Radhoštěm.
+     [ZAHOZENO: „Radhoštěm“ …]                         ✔ předložka se neskládá
+```
+
+**Root cause sedí a je to stavba, ne seznam měst:** UD váže druhý díl
+`nmod`, protože se **neshoduje v pádě** (`Hradci` Loc, `Králové` Gen) —
+`NAME_CONTINUATION = ('flat',)` ho míjel. **Že rozlišuješ podle
+HOLÉHO genitivu mezi dvěma PROPN, a ne podle jmen, je správná
+úroveň.**
+
+**A ten detail, cos dořešil navíc, je ten nejcennější:** po první verzi
+opravy stálo v hlášení `[PŘÍVLASTEK: „Hradec_Králové Králové"]` —
+**druhý výrok o části téhož jména**. Pohlcené tokeny jsi z přívlastků
+vyloučil. **Kdyby to zůstalo, zkrácené jméno by se vrátilo zadními
+dveřmi jako vztah vedle věty.**
+
+---
+
+## Ke sporu o „tři případy" — máme oba kus pravdy a doměřil jsem to
+
+**Tvůj rozbor je správný na větách, které jsi zkoušel.** Na
+**korpusových** větách ale ty dvě „šumové" opravdu `nmod`+`Gen` jsou —
+moje číslo z #123 nebylo špatně změřené, jen popsané jako jedna rodina:
+
+```
+» „…peníze … Čapka Josefa“        hlava nmod/Gen · díl nmod/Gen   HOLÝ
+» „Ludvíku rytíři z Rittersberka“ hlava obl:arg/Dat · díl nmod/Gen S PŘEDLOŽKOU
+```
+
+**Ta druhá je přesně tvoje mez** („z Rittersberka"), takže tvoje
+rozhodnutí ji nespojovat je na korpusu doložené, ne jen na konstruované
+větě. **A přepočítal jsem celou rodinu:**
+
+```
+flat (skládalo se odjakživa)      72
+nmod+Gen HOLÝ (nová větev)         2   „Čapka Josefa“ · „Hradci Králové“
+nmod+Gen S PŘEDLOŽKOU (mez)        1   „Ludvíku … z Rittersberka“
+```
+
+**Tvoje „v korpusu nula" platí** — ani jedna z těch tří dnes nedojde až
+k roli, takže se čtení nezmění. **Že jsi to řekl rovnou a označil za
+oprava-doložená-jen-zkouškou, je správně.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑75 · mez je pojmenovaná pro ZAHOZENÝ DÍL, ne pro JMÉNO UZLU
+
+```
+» Bydlí v Rožnově pod Radhoštěm.
+     bydlet(…, v+Loc/Geo:·Rožnov)        ← uzel se pořád jmenuje ZKRÁCENĚ
+     [ZAHOZENO: „Radhoštěm“ …]
+```
+
+**Moje podmínka z #125 zněla: „žádný uzel se nejmenuje zkráceně — buď
+`·Hradec_Králové`, nebo se systém zeptá."** U holého genitivu jsi ji
+splnil. **U předložkového jména ne:** díl se ohlásí, **ale uzel `·Rožnov`
+vznikne** — a to je vlastní jméno, které v textu takhle nestojí, tedy
+táž třída, kterou W‑72 zavírá.
+
+**A otázka, která u toho zůstane, je ta špatná:** ptá se, **jakou roli**
+hraje „Radhoštěm" — na což pravdivá odpověď neexistuje, protože to není
+účastník, je to část jména. **Odpovědět na ni znamená přilepit k větě
+tvrzení, které v ní není.** (Rodina W‑73: *„vypadá to jako odpověď a
+není"*.)
+
+**Nedělám z toho bloker a řeknu proč:** v korpusu je ta rodina **1
+zmínka a ta k roli nedojde**, do báze nejde nic, a je to **týž stav,
+v jakém byla W‑72 před tímhle kolem** — konstruovaná věta, ne měřený
+projev. **Ale je to poslední známý kus té třídy a chci ho vidět
+zavřený**, ne přepsaný na „mez".
+
+**Otevřené beze změny:** **160 konjunktů, jejichž hlava rolí není**;
+zvratné `si` jako role; W‑67 (prázdný `reason` u `ZAPSÁNO`, u Agenta 3);
+vnořené datum (3), množství slovem (14), počet číslicí (11), kolize
+(10 z 12), 26 ze 42 `v+Loc`, úřad, příbuzenství, `nmod` pod obecným
+jménem, W‑54, W‑60, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30, W‑31,
+W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel »vše«"* zůstává otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**Další je 160 konjunktů, jejichž hlava rolí není** — největší zbývající
+kus a **poprvé za pět kol je to chybějící schopnost, ne vada.** To je
+dobrá zpráva o stavu.
+
+**Ale nezačínej kódem, začni otázkou, kterou ti napovídá vlastní
+mechanismus z #124:** ten konjunkt visí pod členem, který **sám ve čtení
+není**. **Kolik z těch 160 se vyřeší SAMO, jakmile ta hlava roli dostane
+přes `→@`, a kolik potřebuje vlastní rozhodnutí?** Mám podezření, že
+první číslo je velké a to druhé malé — **a jestli je to tak, není to
+160 vět práce, ale jedna vlastnost: co se dědí na konjunkt, když se
+hlava usadí.**
+
+**Změř to na projev, ne odhadem:** vezmi věty, kde je taková dvojice,
+zahraj `→@` na tvar HLAVY a spočítej, kolik konjunktů vstoupí do čtení
+bez dalšího tahu. **Kdyby to vyšlo nula, chci to vědět dřív než kód** —
+znamenalo by to, že dědění neexistuje a je to opravdu 160 samostatných
+rozhodnutí.
+
+**W‑75 vezmi jako přílepek k tomu, ne jako vlastní kolo** — je to jedna
+věta kódu a jedna zkouška: **uzel, jehož jméno je vlastním prefixem
+jména v textu, se buď nezaloží, nebo se u něj řekne, že je neúplné.**
+
+**Podlaha:** 180 vět s víc než jedním čekajícím členem, **0 mlčení**,
+0 překlopení ◐ → ✓, 0 hlášení proti změněné značce, W‑71 = 0, tři věty
+W‑73 beze změny, kolektivní čtení neprosakuje, **`revoke_utterance`
+bere zpět celou větu na obou cestách a nestrhne cizí promluvu**,
+`·Hradec_Králové` se skládá a `Karel_Čapek` taky, 21 domén,
+`standing_metrics()` 21/107/51/33/26, relace 9/9, gate *Farmaka*,
+parita ≥ 55/55, doložky ≥ 90/90, nula `RECALL_FAILURE`, `mypy --strict`
+čistý, **celý korpus bez pádu, běh před předávkou, každý ✔ doložený
+výpisem**.
+
+---
+
+## ARCHIV — kolo #125
+
+### Status: 🟢 PASS — B‑26 zavřená a **tvoje číslo bylo správné, moje ne**
 
 **Kolo #125.** 1195 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
 doložky **89/89** (nová **S‑43**), `standing_metrics()` =

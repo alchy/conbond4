@@ -234,6 +234,17 @@ class Predication:
     #: nerozdělit mlčky taky. Zápis to proto BLOKUJE jako
     #: `pending_relation` (B‑17).
     pending_share: tuple[tuple[str, str, int], ...] = ()
+    #: JMÉNO, KTERÉ UZEL NESE JEN ZČÁSTI *(W‑75)*, jako `(uzel, celé,
+    #: token)`. „v Rožnově **pod Radhoštěm**" dá uzel `·Rožnov` — vlastní
+    #: jméno, které v textu takhle NESTOJÍ. Složit to nejde: druhý díl má
+    #: PŘEDLOŽKU a od genitivního dílu („Hradec Králové", W‑72) se tím
+    #: liší, takže by to bylo jméno koupené domněnkou.
+    #:
+    #: Mlčet se ale taky nesmí, a zvlášť ne mlčet ŠPATNOU OTÁZKOU: ptát
+    #: se „jakou roli hraje „Radhoštěm“" znamená vyzvat člověka, ať k té
+    #: větě přilepí účastníka, který v ní není. Zápis to BLOKUJE — uzel
+    #: se zkráceným jménem je tvrzení o textu, ne mez.
+    pending_name: tuple[tuple[str, str, int], ...] = ()
     #: DRUHÁ PREDIKACE téže promluvy *(W‑71)*. „Jeho stav se zlepšil, ale
     #: musel ulehnout." jsou DVĚ VĚTY; první nese druhou, protože si ji
     #: druhá půjčuje o jedinou věc — PODMĚT. Vlastní pole, ne druhý
@@ -3119,6 +3130,10 @@ def dropped_tokens(reading: Reading, predication: Predication) -> tuple[Token, .
     # otázkou. Hlásit ho k tomu ještě jako ztrátu by znamenalo ptát se
     # dvakrát na dvě různé věci o jednom slově.
     used |= {token for _, _, token in predication.pending_share}
+    # DÍL JMÉNA NENÍ ZTRACENÝ ČLEN *(W‑75)*. Ptát se, jakou roli hraje
+    # „Radhoštěm", znamená vyzvat člověka, ať k větě přilepí účastníka,
+    # který v ní není — otázka, na kterou pravdivá odpověď neexistuje.
+    used |= {token for _, _, token in predication.pending_name}
     return tuple(
         token
         for token in reading.tokens
@@ -3598,6 +3613,71 @@ def shared_fillers(
             continue
         najdene.append((ve_cteni[head.index], token.form, token.index))
     return tuple(najdene)
+
+
+def partial_names(
+    reading: Reading, predication: Predication
+) -> tuple[tuple[str, str, int], ...]:
+    """Jména, ze kterých uzel nese jen PRVNÍ DÍL *(W‑75)*.
+
+    `PROPN` pod `PROPN` vázané `nmod`, které se nesloží, protože není
+    HOLÉ — „Rožnov **pod** Radhoštěm". Genitivní díl (W‑72) se skládá
+    a sem nepatří; tenhle se složit nedá a uzel by tiše nesl prefix.
+    """
+    najdene: list[tuple[str, str, int]] = []
+    for role in predication.roles:
+        mention = role.mention
+        if mention.upos != "PROPN":
+            continue
+        for child in reading.children(mention.token_index):
+            if child.upos != "PROPN" or base_deprel(child.deprel) != "nmod":
+                continue
+            if child.index in role.absorbed:
+                continue
+            najdene.append(
+                (mention.lemma, f"{mention.form} … {child.form}", child.index)
+            )
+    return tuple(najdene)
+
+
+def partial_name_note(predication: Predication) -> str | None:
+    """Hlášení o neúplném jméně *(W‑75)*. NENÍ to otázka: odpověď, která
+    by z „Radhoštěm" udělala roli, by k větě přilepila účastníka, který
+    v ní není."""
+    if not predication.pending_name:
+        return None
+    parts = ", ".join(
+        f"„{cele}“ (uzel by nesl jen „{uzel}“)"
+        for uzel, cele, _ in predication.pending_name
+    )
+    return (
+        f"[JMÉNO NEÚPLNÉ: {parts} — druhý díl má předložku, takže se "
+        f"nesloží; zapsat uzel se zkráceným jménem by bylo tvrzení "
+        f"o textu, které v něm nestojí]"
+    )
+
+
+def partial_name_tier() -> Tier:
+    """Patro, které neúplné jméno POJMENUJE a nedosadí *(W‑75)*."""
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        notes: list[str] = []
+        out: list[Candidate] = []
+        for candidate in candidates:
+            found = partial_names(reading, candidate.predication)
+            if not found:
+                out.append(candidate)
+                continue
+            upraveny = replace(candidate.predication, pending_name=found)
+            zprava = partial_name_note(upraveny)
+            if zprava:
+                notes.append(zprava)
+            out.append(Candidate(upraveny, origin=candidate.origin))
+        return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
 
 
 def share_question(predication: Predication) -> str | None:

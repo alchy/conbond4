@@ -161,7 +161,7 @@ def test_session_wires_the_learned_role_mappings() -> None:
     lexikonu, ne jako chybějící zapojení.
     """
     session = Session(lexicon=golden_lexicon())
-    assert len(session.tiers()) == 19
+    assert len(session.tiers()) == 20
     reading = session.utter("Auta jezdí po dálnici.", oracle())
     assert reading.predication is not None
     assert reading.predication.role("kudy") is not None
