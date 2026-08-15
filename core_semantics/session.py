@@ -1531,7 +1531,19 @@ class Session:
         # s otevřenou rolí by na `role()` spadlo na `UnquantifiedRole`,
         # a čtení, ze kterého vypadl kus věty, není celá věta. V obou
         # případech je odevzdané míň, než ta značka říká.
-        partial = question is not None or has_dropped(stale_stopa)
+        # NEÚPLNÉ JMÉNO JE TAKY CHYBĚJÍCÍ KUS VĚTY *(W‑76)*. Rozhodnuto
+        # vědomě, ne opomenuto: „Rožnov pod Radhoštěm je město." nesla
+        # `✓ přečteno` a o dva řádky níž `[JMÉNO NEÚPLNÉ: uzel by nesl
+        # jen „Rožnov"]`. Značka `✓` slibuje, že CELÁ VĚTA je ve čtení —
+        # a „Radhoštěm" v něm není. Je to táž věta jako u B‑25: čtení,
+        # ze kterého vypadl kus věty, není celá věta. Že se to nedostane
+        # do báze (zápis je blokovaný) je jiná otázka než co ta značka
+        # o čtení TVRDÍ.
+        partial = (
+            question is not None
+            or has_dropped(stale_stopa)
+            or bool(predication.pending_name)
+        )
         mark = "◐ přečteno, neúplné" if partial else "✓ přečteno"
         lines = [*prefix, f"{mark}  {predication}"]
         lines.extend(f"  {step}" for step in stale_stopa)

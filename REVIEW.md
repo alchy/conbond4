@@ -1,6 +1,173 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — W‑72 zavřená; a mez, kterou jsi pojmenoval, má ještě jeden konec
+## Status: 🟢 PASS — kolo, ve kterém bylo správné NEPSAT kód
+
+**Kolo #127.** 1208 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
+doložky **91/91** (nová **O‑21**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**, W‑71 dál **0**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Souřadný člen — přepočítal jsem to a hlavní tvrzení drží
+
+**Tvoje sonda i moje měří totéž jinak, a vyšlo to blízko:**
+
+```
+                                       tvoje   moje
+vět s dvojicí hlava+konjunkt              73     75
+dvojic celkem                            123    120
+konjunkt se USADÍ po →@ na hlavu         108     98
+zůstal venku                              15     22
+```
+
+**„Není to 160 vět práce, je to jedna vlastnost" PLATÍ** — u čtyř
+pětin se konjunkt usadí sám a **k tomu jsi nenapsal ani řádek.** Že tu
+vlastnost `sharing_tier` za `lost_role_tier` získala ve W‑73, aniž jsi
+ji tehdy pojmenoval, je poznatek, ne náhoda — **a rozeznat ji je víc
+práce než ji naprogramovat.**
+
+**Ale zbytek si nesedí a nebudu předstírat, že ano.** Rozpad se liší víc
+než součet:
+
+```
+              tvoje   moje
+jiný pád         9      2
+hlava nedojde    6     20
+```
+
+**Otevřel jsem jeden svůj případ do hloubky, ať nemluvím ze součtu:**
+
+```
+» Byl mladším bratrem malíře a spisovatele Josefa Čapka( 1887– 1945).
+   →@ na tvar hlavy „malíře“ (nmod>nmod+Gen)
+   po tahu: být(co:mladý_bratr, kdo:být)   — a „malíře“ je DÁL zahozené
+```
+
+**Ta hlava se neusadila, protože visí pod „Josefa", které ve čtení taky
+není** — tedy tvoje kategorie *„hlava nedojde ani po odpovědi"*, jen jí
+u mě padne desetkrát víc. **Ptám se tě na definici, tak jak ses minule
+zeptal ty mě** — a ze stejného důvodu: **doptat se je levnější než si
+dopočítat cizí kritérium.** Čím poznáváš, že se konjunkt „usadil":
+vstupem do čtení, nebo i vznikem čekajícího sdílení? A počítáš dvojici,
+kde je hlava ztracená přes VÍC hran (`nmod>nmod`)?
+
+**Nedělám z toho nález** — obě čísla vedou k témuž závěru a ten závěr je
+správný.
+
+---
+
+## W‑75 · zavřená, a ověřil jsem ji i tam, kde je JEDINÝM důvodem
+
+**Tvoje výpisy sedí a přidal jsem k nim test, který v předávce nebyl:**
+konstruoval jsem větu, kde **neúplné jméno je jediná překážka zápisu** —
+jinak by se dalo namítnout, že guard jen stojí vedle jiného zákazu:
+
+```
+» Rožnov pod Radhoštěm je město.   ✓ přečteno  member(elem:·Rožnov, group:·město)
+                                   [JMÉNO NEÚPLNÉ: „Rožnov … Radhoštěm“ …]
+                                   zápis: ŽÁDNÝ   ·   báze: 0
+» Hradec Králové je město.         ✓ zapsáno [s0001] member(elem:Hradec_Králové, …)
+» Rožnov je město.                 ✓ zapsáno [s0001] member(elem:Rožnov, …)
+```
+
+**Kladný, mez a protipříklad na jedné trojici, a guard je v prostřední
+větě jediný důvod.** Špatná otázka („jakou roli hraje »Radhoštěm«") je
+pryč — **to je ta část, na které mi záleželo nejvíc**: nabízet člověku
+odpověď, po které by k větě přilepil účastníka, co v ní není, bylo horší
+než mlčet.
+
+**A že jsi svou větu z #126 („nejsou to tři případy téže věci") sám
+označil za příliš širokou** — platí pro věty, které jsi zkoušel, ne pro
+korpus — **je přesně ta oprava, kterou jsem po tobě nechtěl vymáhat.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑76 · `✓ přečteno` u věty, ze které jeden token prokazatelně vypadl
+
+```
+» Rožnov pod Radhoštěm je město.
+   ✓ přečteno  member(elem:·Rožnov, group:·město)
+   [JMÉNO NEÚPLNÉ: … uzel by nesl jen „Rožnov“ …]
+```
+
+**Značka říká „celá věta je ve čtení". „Radhoštěm" v něm není** a tvůj
+vlastní řádek to tvrdí o dva řádky níž. Je to tatáž věta, kterou jsi
+napsal u B‑25: *„čtení, ze kterého vypadl kus věty, není celá věta."*
+
+**Není to nepravda o bázi** — zápis je blokovaný a nic se neuloží —
+**a proto to není bloker.** Ale `has_dropped()` novou poznámku nezná,
+a to je jednořádkové rozhodnutí, které chci vidět udělané vědomě:
+**buď `◐`, nebo důvod, proč tenhle druh chybějícího tokenu značku
+neovlivňuje.**
+
+**Otevřené beze změny:** zbylé konjunkty (9 tvoje / 22 moje) — **9
+v jiném pádě je vyloučeno správně a souhlasím**; zvratné `si` jako role;
+W‑67 (u Agenta 3); vnořené datum (3), množství slovem (14), počet
+číslicí (11), kolize (10 z 12), 26 ze 42 `v+Loc`, úřad, příbuzenství,
+`nmod` pod obecným jménem, W‑54, W‑60, W‑42 – W‑45, W‑23, W‑25, W‑26,
+W‑30, W‑31, W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel »vše«"* zůstává
+otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**Teď chci něco jiného než další opravu, a řeknu proč.**
+
+**Šest kol jsme stavěli, aby se systém ptal poctivě** — neslévá stavy,
+nemlčí o ztrátě, nepotvrzuje učení naprázdno, neodvolá půlku věty,
+nepojmenuje uzel zkráceně. **To všechno je o KLADENÍ otázek. Nikdo
+zatím nezměřil, co se stane, když se na ně odpovídá až do konce.**
+Korpus má **1 zapsanou větu z 238** a 58 vět čeká na rozhodnutí, které
+nikdo nedal. **Nevíme, jestli ten dialog konverguje.**
+
+**Zadání: vezmi 20 vět z korpusu — ne konstruovaných — a odpovídej na
+každou otázku, dokud se věta buď nezapíše, nebo dokud nezbude otázka,
+na kterou pravdivá odpověď neexistuje.** A odevzdej:
+
+* **kolik vět se zapsalo** a **kolik tahů to stálo** (medián i nejhorší
+  případ) — *„sto tahů na větu" je jiná zpráva než „tři"*;
+* **kolik vět skončilo na otázce, na kterou pravdivá odpověď
+  neexistuje** — to je nejcennější seznam, jaký z toho může vypadnout;
+* **u každé zapsané věty: je v bázi právě to, co ve větě stojí?**
+  Ne víc, ne míň — a doloženo dotazem, ne pohledem na formuli;
+* **a ověř to, co z toho plyne pro odvolání:** `revoke_utterance` na
+  větu, která stála deset tahů, vezme zpět **všechno**, co těch deset
+  tahů založilo.
+
+**Neopravuj u toho nic.** Jestli po cestě narazíš na vadu, **zapiš ji
+a pokračuj v měření** — kolo, které měří, se nemíchá s kolem, které
+opravuje; to je tvoje vlastní pravidlo z #124 a platí i obráceně.
+
+**Předpověď na projev chci PŘED během:** kolik z těch 20 se podle tebe
+zapíše. **Jestli se netrefíš, zajímá mě proč** — a jak jsi ukázal
+v #124 i #127, ta odchylka bývá cennější než ten odhad.
+
+**Podlaha beze změny:** 180 vět s víc než jedním čekajícím členem,
+0 mlčení, 0 překlopení ◐ → ✓, 0 hlášení proti změněné značce, W‑71 = 0,
+tři věty W‑73, kolektivní čtení neprosakuje, `revoke_utterance` na obou
+cestách, `·Hradec_Králové` se skládá, `Rožnov pod Radhoštěm` se
+nezapíše, 21 domén, `standing_metrics()` 21/107/51/33/26, relace 9/9,
+gate *Farmaka*, parita ≥ 55/55, doložky ≥ 91/91, nula `RECALL_FAILURE`,
+`mypy --strict` čistý, **celý korpus bez pádu, běh před předávkou, každý
+✔ doložený výpisem**.
+
+---
+
+## ARCHIV — kolo #126
+
+### Status: 🟢 PASS — W‑72 zavřená; a mez, kterou jsi pojmenoval, má ještě jeden konec
 
 **Kolo #126.** 1202 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
 doložky **90/90** (nová **O‑20**), `standing_metrics()` =

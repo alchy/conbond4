@@ -470,3 +470,29 @@ def test_a_single_filler_asks_nothing_about_sharing() -> None:
     result = Session(lexicon=golden.golden_lexicon()).utter(text, oracle)
     assert "dohromady" not in (result.question or "")
     assert result.statement_id is not None
+
+
+def test_an_incomplete_name_keeps_the_partial_mark() -> None:
+    """ZNAČKA MLUVÍ O ČTENÍ, NE O BÁZI *(W‑76)*. „Rožnov pod Radhoštěm
+    je město." nesla `✓ přečteno` a o dva řádky níž `[JMÉNO NEÚPLNÉ]` —
+    jenže `✓` slibuje, že CELÁ VĚTA je ve čtení, a „Radhoštěm" v něm
+    není. Že se to nezapíše, je jiná otázka než co ta značka tvrdí."""
+    from core_semantics.tests import golden
+
+    text = "Rožnov pod Radhoštěm je město."
+    reading = Reading(
+        tokens=(
+            _token(1, "Rožnov", "Rožnov", "PROPN", 5, "nsubj", Case="Nom", Gender="Masc", NameType="Geo", Number="Sing"),
+            _token(2, "pod", "pod", "ADP", 3, "case", AdpType="Prep", Case="Ins"),
+            _token(3, "Radhoštěm", "Radhošť", "PROPN", 1, "nmod", Case="Ins", Gender="Masc", NameType="Geo", Number="Sing"),
+            _token(4, "je", "být", "AUX", 5, "cop", Number="Sing", Polarity="Pos"),
+            _token(5, "město", "město", "NOUN", 0, "root", Case="Nom", Gender="Neut", Number="Sing"),
+            _token(6, ".", ".", "PUNCT", 5, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    result = Session(lexicon=golden.golden_lexicon()).utter(text, oracle)
+    assert result.lines[0].startswith("◐"), "chybějící kus věty patří do značky"
+    assert any("JMÉNO NEÚPLNÉ" in line for line in result.lines)
+    assert result.statement_id is None

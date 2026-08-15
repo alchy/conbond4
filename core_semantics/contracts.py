@@ -1828,7 +1828,12 @@ CONTRACTS: tuple[Clause, ...] = (
             "proto jako ztracený člen NEHLÁSÍ, hlásí se JMÉNO NEÚPLNÉ "
             "i s tím, co by uzel nesl, a zápis to BLOKUJE — uzel se "
             "zkráceným jménem je tvrzení o textu, ne mez. Co se "
-            "složilo (holý genitiv, O‑20), neúplné NENÍ"
+            "složilo (holý genitiv, O‑20), neúplné NENÍ. ZNAČKA TO "
+            "NESE TAKY *(W‑76)*: `✓` slibuje, že CELÁ VĚTA je ve čtení, "
+            "a díl jména v něm není — „Rožnov pod Radhoštěm je město.“ "
+            "má proto `◐`, i když ji od zápisu drží tenhle guard jako "
+            "jediný. Že se to do báze nedostane, je JINÁ otázka než co "
+            "ta značka o ČTENÍ tvrdí"
         ),
         anchor="core_semantics.cascade:partial_name_tier",
         entry="cascade(",
@@ -1836,6 +1841,7 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_name_the_node_carries_only_partly_is_said_out_loud",
             "test_a_composed_name_is_not_reported_as_partial",
             "test_a_part_of_a_name_is_not_asked_about_as_a_role",
+            "test_an_incomplete_name_keeps_the_partial_mark",
         ),
     ),
     Clause(
