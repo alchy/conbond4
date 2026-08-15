@@ -1,6 +1,119 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — nepravda o nadpisech je pryč; a táž stráž ji umí vyrobit znovu o slovní druh vedle
+## Status: 🟢 PASS — audit našel pět míst a ty jsi je nespojil; to je ta správná odpověď
+
+**Kolo #103.** 1111 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**. Jádro 0.1.40, HEAD `a27ee76`, strom čistý. **Korpus
+`20bca27 → a27ee76`: verdikt 0, čtení 0, hlášení 0** — čekal jsem nulu
+a nula to je, protože ten tvar v korpusu není.
+
+**Architectural Health Score: 9,6 / 10.**
+
+---
+
+## Ověřeno reprodukcí
+
+```
+» Obezita: Zvířata byla vyšetřena veterinářem.   NADPIS ANO   ← trpná apozice, opraveno
+» Obezita, nemoc.                                 NADPIS NE    ← protipříklad drží
+» Obezita: Domácí mazlíčci trpí nadváhou.         NADPIS ANO   ← beze změny
+» Úrazy způsobené pády.                           JMENNÁ FRÁZE ← beze změny
+```
+
+**Test nad zdrojem je namístě a odůvodnil sis ho správně:** chování by
+prošlo i s kopií, dokud by někdo nepřidal třetí tvar přísudku. **Že
+odstřihává komentáře**, aby netrestal vysvětlení, proč ta kopie byla
+špatně, je detail, který ukazuje, že jsi promyslel i to, jak ten test
+zestárne.
+
+---
+
+## Audit: nejlepší kus kola je to, co jsi NESPOJIL
+
+Vypsals pět míst a **čtyři z nich jsi odmítl spojit s odůvodněním, které
+je věcné, ne opatrné**: neptají se *„je tohle přísudek?"*, ptají se
+*„je tohle spona?"* — **jiná otázka, na kterou `_is_predicate`
+neodpovídá**.
+
+**A změřils, jestli je to živá vada nebo riziko:**
+
+```
+cop  61 výskytů v korpusu · ŽÁDNÝ podtyp
+aux  45 výskytů           · 36 z toho aux:pass
+```
+
+**Souhlasím s tvým závěrem i s tím, že jsi ho nechal ležet.** Přepsat
+pět míst „pro jistotu" v kole, které mělo být malé, by bylo přesně to,
+co u tebe jinak blokuji. **Latentní riziko se má zapsat, ne preventivně
+opravovat.**
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑65 uzavřena.
+
+---
+
+## Semantic Warnings
+
+**W‑66 · čtyři místa porovnávají `cop` přesnou shodou** — latentní,
+změřeno (0 podtypů v korpusu). **Rozhodnutí: neopravovat teď**, zapsáno
+jako riziko s číslem. Uvolní se, až v korpusu podtyp `cop` vznikne, nebo
+až se sáhne na některé z těch čtyř míst z jiného důvodu.
+
+**Otevřené beze změny:** B (4), C (2), 10 z 12 kolizí, 26 ze 42 `v+Loc`,
+číslovka v čase, W‑60, agens, úřad, příbuzenství, `nmod` pod obecným
+jménem, W‑54, `cb-wiki.py` (dvojí text i zkrácený `reason`, u Agenta 3),
+W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41.
+
+---
+
+## Stav korpusu po dvaceti kolech — a co z něj plyne pro směr
+
+```
+NEPŘEČTENO 16 · PTÁ SE 220 · CHYBA 2 · ZAPSÁNO 0
+sám blokuje:  role 40 · rozbor 11 · role_nenalezena 4 · segmentace 2 · kvantifikace 1 · morfologie 1
+otázek na větu: medián 3 · ≤1 otázka u 71 vět · ≥3 otázky u 143
+```
+
+**`NEPŘEČTENO` kleslo 49 → 16** za dvacet kol a **ani jednou to nebylo
+tím, že by se ubralo z přísnosti**. To je ta část, která šla.
+
+**Co nešlo:** `ZAPSÁNO` je strukturálně 0 (#100) a **medián tří otázek
+na větu se nehnul**. Systém umí čím dál přesněji říct, **co neví** —
+a to je pořád tatáž vzdálenost od toho, aby něco věděl.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: `rozbor` — 11 vět, které blokuje SAMA.** Vyskočila z 5 na
+11 tím, jak ubyly ostatní rodiny, a je teď po `role` druhá největší.
+
+**Nejdřív rozklad, teprve pak oprava** — jako u `role_nenalezena` v #101,
+a ze stejného důvodu: **11 vět může být 11 příčin**. Chci vidět, **kolik
+z nich je vada čtení a kolik je vlastnost textu** (nadpisy, fragmenty,
+tabulky), dřív než napíšeš řádek kódu. **Jestli je většina druhá,
+je správná odpověď to říct a směr opustit** — ne ho dotlačit.
+
+**Můj counterexample, psaný jako vlastnost:** **žádná věta se nesmí stát
+čitelnou tím, že se sleví z toho, co systém o sobě tvrdí** —
+`NEPŘEČTENO` smí klesnout jen tam, kde se dá ukázat, **co se v té větě
+nově přečetlo**; `ZAPSÁNO` zůstává na nule, dokud role nedostanou jméno
+od člověka; dvacet jedna domén se závěry beze změny; jádrové relace 9/9;
+gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`;
+doložky ≥ 79/79; `mypy --strict` čistý; **korpus přeměřen s diffem po
+větách**.
+
+---
+
+## ARCHIV — kolo #102
+
+### Status: 🟢 PASS — W‑64, nadpis se pojmenuje
 
 **Kolo #102.** 1109 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **79/79**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

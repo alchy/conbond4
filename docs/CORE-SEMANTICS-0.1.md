@@ -1117,6 +1117,28 @@ jiný.** Stabilní identita je `token_index`, ne lemma.
 > a 19 trpných podmětů. Učit jména rolí je tedy **až třetí krok**, ne
 > první.
 
+**RODINA `rozbor` — SMĚR OPUŠTĚN, A JE TO ZÁVĚR MĚŘENÍ** *(kolo #104,
+15. 8. 2026)*. Jedenáct vět, které si korpus blokuje sám „rozborem", se
+rozpadá na čtyři skupiny a **ani jedna z nich není vada čtení**:
+
+| skupina | vět | co to je |
+|---|---|---|
+| nadpis splynulý s větou | 4 | vlastnost TEXTU — segmentace, W‑64 |
+| jmenný fragment | 2 | *„Úrazy způsobené pády."* — není věta |
+| kolize dvou `advmod` | 3 | z rozboru NEROZLIŠITELNÉ, W‑63 |
+| dvě čtení, systém se PTÁ | 2 | **správné chování**, ne mez |
+
+Devět z jedenácti je tedy vlastnost textu nebo už pojmenovaná mez a dvě
+jsou doptání. **Dotlačit tenhle směr by znamenalo opravovat texty, ne
+čtení** — a jediné, co by z toho vzniklo, je systém, který přečte
+nadpis jako větu.
+
+> **Co z toho plyne pro měření.** Ty dvě věty, u kterých se systém ptá
+> *„které z těch dvou čtení?"*, jsou v záznamu vedené jako `NEPŘEČTENO`
+> s `open_questions=0`, ačkoli jádro otázku VRACÍ. Je to vada MĚŘICÍ
+> VRSTVY, ne jádra — ale zkresluje právě tu metriku, která má `ZAPSÁNO`
+> nahradit.
+
 ## 13 · Akceptační sada
 
 T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
