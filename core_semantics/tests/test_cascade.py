@@ -2668,3 +2668,63 @@ def test_the_year_is_recognised_in_one_place_only() -> None:
     )
     assert "year_under(" in kod
     assert "NumType" not in kod
+
+
+def test_a_date_is_one_mention() -> None:
+    """W‑75. „9. ledna 1890" je JEDEN časový údaj — dokud se „9." hlásila
+    jako ztracený člen, tvrdil systém o textu totéž, co tvrdil
+    o letopočtu před W‑74."""
+    from core_semantics.cascade import date_parts_under
+
+    reading = Reading(
+        tokens=(
+            _token(1, "narodil", "narodit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "9.", "9.", "NUM", 3, "nummod", NumForm="Digit", NumType="Card"),
+            _token(3, "ledna", "leden", "NOUN", 1, "obl", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(4, "1890", "1890", "NUM", 3, "nummod", NumForm="Digit", NumType="Card"),
+            _token(5, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    assert [t.form for t in date_parts_under(reading.tokens[2], reading)] == ["9.", "1890"]
+    predication = generate(reading)[0].predication
+    zminky = {r.mention.lemma for r in predication.roles}
+    assert "9._leden_1890" in zminky
+    assert dropped_tokens(reading, predication) == ()
+
+
+def test_a_count_is_not_a_date_part() -> None:
+    """PROTIPŘÍKLAD, a je to celý důvod, proč se stráž kouká na TEČKU
+    a ne na hlavu: rozbor „9." a „92" NEROZLIŠÍ ničím jiným — obě jsou
+    `NumForm=Digit`, `NumType=Card`, `nummod`. Rozeznat je podle toho,
+    že nad jednou stojí měsíc, by znamenalo mít v kódu SEZNAM MĚSÍCŮ."""
+    from core_semantics.cascade import date_parts_under
+
+    reading = Reading(
+        tokens=(
+            _token(1, "mluvil", "mluvit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(2, "s", "s", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+            _token(3, "92", "92", "NUM", 4, "nummod", NumForm="Digit", NumType="Card"),
+            _token(4, "lidmi", "člověk", "NOUN", 1, "obl", Case="Ins", Number="Plur"),
+            _token(5, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    assert date_parts_under(reading.tokens[3], reading) == ()
+
+
+def test_a_quantity_word_is_not_a_date_part() -> None:
+    """A množství SLOVEM („tři typy", „pět měsíců") taky ne — je to
+    vlastní úloha a do složení zmínky nepatří."""
+    from core_semantics.cascade import date_parts_under
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Existují", "existovat", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(2, "tři", "tři", "NUM", 3, "nummod", Case="Nom", NumForm="Word", NumType="Card"),
+            _token(3, "typy", "typ", "NOUN", 1, "nsubj", Case="Nom", Gender="Masc", Number="Plur"),
+            _token(4, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    assert date_parts_under(reading.tokens[2], reading) == ()

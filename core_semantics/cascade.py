@@ -479,8 +479,8 @@ def titled_name_of(token: Token, reading: Reading) -> tuple[Token, ...]:
 
 
 def _composed_mention(token: Token, reading: Reading) -> Mention:
-    rok = year_under(token, reading)
-    if rok is not None:
+    datum = date_parts_under(token, reading)
+    if datum:
         # LETOPOČET JE SOUČÁST ZMÍNKY *(W‑74)*. „v roce 1986" a „v roce
         # 1990" dávaly OBĚ uzel `rok` — tedy jeden uzel pro všechny roky
         # — a číslo se hlásilo jako ZTRACENÝ ČLEN. Obojí bylo nepravdivé:
@@ -490,9 +490,12 @@ def _composed_mention(token: Token, reading: Reading) -> Mention:
         # Skládá se, ne přidává jako role: je to táž volba jako
         # u víceslovného jména (B‑21). „rok 1986" není hlava s členem,
         # je to JEDNA ZMÍNKA jednoho období.
+        # Pořadí je pořadí TEXTU: „9. ledna 1890" dá `9._leden_1890`,
+        # ne přeházené díly. Zmínka má znít jako ta část věty.
+        kusy = sorted((token, *datum), key=lambda t: t.index)
         return Mention(
-            lemma=f"{token.lemma}_{rok.lemma}",
-            form=f"{token.form} {rok.form}",
+            lemma="_".join(t.lemma for t in kusy),
+            form=" ".join(t.form for t in kusy),
             token_index=token.index,
             upos=token.upos,
             feats=token.feats,
@@ -601,7 +604,7 @@ def _nominal(token: Token, reading: Reading, name: str) -> RoleReading:
         absorbed=tuple(t.index for t in attributes_of(token, reading))
         + tuple(t.index for t in name_parts_of(token, reading))
         + tuple(t.index for t in titled_name_of(token, reading))
-        + ((rok.index,) if (rok := year_under(token, reading)) else ())
+        + tuple(t.index for t in date_parts_under(token, reading))
         + ((possessive.index,) if possessive else ()),
         awaiting=AWAITING_REFERENCE if possessive else "",
     )
@@ -724,6 +727,43 @@ GEO_SIGNAL = "Geo"
 #: dítě („v roce **1935**", „v letech **1910** – 1911"). Lemma `rok` by
 #: byl seznam slov; číslo pod ním je stavba.
 YEAR_SIGNAL = "rok"
+
+
+def date_parts_under(token: Token, reading: Reading) -> tuple[Token, ...]:
+    """ČÍSLA JEDNOHO ČASOVÉHO ÚDAJE — „**9.** ledna **1890**" *(W‑75)*.
+
+    Vrací je v pořadí textu, protože tak se skládají do zmínky.
+
+    **Dvě čísla, jedno pravidlo.** LETOPOČET pozná čtyřciferná
+    `NumType=Card` (W‑74); ŘADOVOU ČÍSLOVKU pozná TEČKA V ZÁPISU —
+    „9.", „25.", „26." — a je to vlastnost TOKENU, ne slovník: čeština
+    píše řadovou číslovku číslicí s tečkou vždycky.
+
+    **A právě proto se nekouká na hlavu.** Rozbor „9." a „92" NEROZLIŠÍ
+    ničím jiným: obě jsou `NumForm=Digit`, `NumType=Card`, `nummod`
+    (ověřeno na živé službě). Rozeznat je podle toho, že nad jednou
+    stojí měsíc, by znamenalo mít v kódu SEZNAM MĚSÍCŮ — druhý slovník
+    vedle parserova, přesně to, co se u letopočtu odmítlo.
+
+    **POČET tudy neprojde**: „s 92 lidmi", „21 let", „86 000 pádů" nemají
+    ani čtyři číslice, ani tečku, a hlásí se dál jako ztracený člen.
+    Množství slovem („tři typy", „pět měsíců") taky ne — je to vlastní
+    úloha a do složení zmínky nepatří.
+    """
+    najdene = [
+        child
+        for child in reading.children(token.index)
+        if base_deprel(child.deprel) == "nummod"
+        and dict(child.feats).get("NumType") == "Card"
+        and (
+            (child.lemma.isdigit() and len(child.lemma) == 4)
+            or (
+                dict(child.feats).get("NumForm") == "Digit"
+                and child.form.endswith(".")
+            )
+        )
+    ]
+    return tuple(sorted(najdene, key=lambda t: t.index))
 
 
 def year_under(token: Token, reading: Reading) -> Token | None:

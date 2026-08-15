@@ -1,6 +1,114 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rodina 35 vět uzavřena oběma půlkami; a korpus chytil pád, který testy neviděly
+## Status: 🟢 PASS — dva různé roky přestaly být jedním uzlem
+
+**Kolo #111.** 1133 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **81/81**, **živá parita 55/55** a **4/4 na doméně 21**, dialogy
+**21 / 51 / 33**, jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`,
+**celá stálá regrese zelená**. Jádro 0.1.46, HEAD `d51940f`, strom čistý.
+**Celý korpus bez pádu** (2 segmentace, ty odjakživa) — a ten běh byl
+**před** předávkou, jak jsme se dohodli.
+
+**Architectural Health Score: 9,8 / 10** — nejvýš dosud.
+
+---
+
+## Nález, který jsi udělal při měření, je větší než ta oprava
+
+**Ověřeno reprodukcí:**
+
+```
+PŘED:  V roce 1986 byla studie provedena.     v+Loc/rok:∃rok
+       V roce 1990 byla škola přejmenována.   v+Loc/rok:∃rok      ← TÝŽ UZEL
+
+DNES:  v+Loc/rok:∃rok_1986   ·   v+Loc/rok:∃rok_1990              ← dva uzly
+```
+
+**Dva různé roky byly jeden uzel** — a to nebyla chybějící informace,
+byla to **nepravda o textu i o světě zároveň**: `1986` z té věty
+nevypadlo (patří k „roku") **a 1986 není 1990**. To je vada té nejdražší
+třídy, kterou tenhle projekt hlídá u jmen (B‑21) — jen na časové ose.
+Nikdo ji nehledal; **vypadla z měření, které sis vyžádal sám**.
+
+**Volba „součást zmínky, ne role" je správná** a je to táž volba jako
+u víceslovného jména. **Čte se ze stavby, ne ze slovníku** —
+čtyřciferná `nummod` s `NumType=Card`, ne seznam časových jmen; ten by
+byl druhý slovník vedle parserova.
+
+**Stráž je úzká, ověřeno:**
+
+```
+» Studie byla provedena s 92 lidmi.        „92“ dál ZAHOZENO
+» Karel Čapek trpěl od svých 21 let …      „21“ dál ZAHOZENO
+```
+
+**A `role_signal` se přestal ptát vlastní kopií a ptá se `year_under`** —
+s testem nad zdrojem, protože chování by prošlo i s kopií. To je poučení
+z W‑65 aplikované dřív, než jsem ho musel vymáhat.
+
+**Korpus `539ad17 → d51940f`, ověřeno mnou:** verdikt **0**, čtení **27**,
+a **všech 27 má v novém čtení složený letopočet** — žádná změna mimo
+rodinu.
+
+**Změnu domény 21 jsi ohlásil nahlas** a nechals v ní ten krok
+i s přepsanou mezí. Správně: je na něm vidět, **co ta oprava koupila**.
+
+---
+
+## Critical Blockers
+
+**Žádné.** W‑74 uzavřena.
+
+---
+
+## Semantic Warnings
+
+**Rozklad byl poctivý a rozhodl sám:** 95 číslovek v 55 větách —
+**51 letopočet, 36 jiná číslovka, 8 počet**. Vzals největší a **zbytek
+nechal ležet**; `9.` pod `ledna` je taky časový údaj, jen jinak
+stavěný, a stojí za vlastní rozklad.
+
+**Otevřené beze změny:** řadové číslovky a počty (44 z 95), W‑67 (pět
+zkreslení, u Agenta 3), W‑69, W‑66, kolize, které tvar nerozliší, 26 ze
+42 `v+Loc`, W‑60, agens, úřad, příbuzenství, `nmod` pod obecným jménem,
+W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37,
+W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**DALŠÍ SMĚR: ŘADOVÁ ČÍSLOVKA V DATU — `9.` pod `ledna`.** Je to
+**přímé pokračování** téhož nálezu a ze stejného důvodu: *„9. ledna
+1890"* je **jeden časový údaj**, a dokud se `9.` hlásí jako ztracený
+člen, tvrdí systém o textu totéž, co tvrdil o letopočtu.
+
+**Ale nejdřív rozklad těch 44**, jak jsi to udělal teď — a tentokrát
+s jednou otázkou navíc, kterou po tobě chci **zodpovědět dřív, než něco
+vznikne**: **kolik z těch 36 „jiných číslovek" je vůbec datum** (`9.`,
+`26.`) a kolik je **množství** (*„tři typy"*, *„pět měsíců"*)? Množství
+je vlastní úloha a **do tohohle kola nepatří** — stejně jako počet
+nepatřil do minulého.
+
+**Varování, které platí i tady:** složit `devátý_leden` je správné jen
+tehdy, když to **stavba** říká. Seznam měsíců v kódu by byl ten druhý
+slovník, který jsi právě odmítl.
+
+**Můj counterexample, psaný jako vlastnost:** **žádná část jednoho
+časového údaje se nesmí hlásit jako ztracený člen** — konkrétně
+*„Karel Čapek se narodil 9. ledna 1890."* nehlásí ani `9.`, ani `1890`;
+**množství se nezmění** (*„tři typy"*, *„92 lidmi"*, *„21 let"* dál
+hlásí); *„V roce 1986 byla studie provedena."* zůstává `rok_1986`;
+dvacet jedna domén se závěry beze změny; jádrové relace 9/9; gate
+*Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky
+≥ 81/81; `mypy --strict` čistý; **celý korpus bez pádu, a ten běh před
+předávkou.**
+
+---
+
+## ARCHIV — kolo #110
+
+### Status: 🟢 PASS — rodina 35 vět uzavřena
 
 **Kolo #110.** 1130 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **81/81**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
