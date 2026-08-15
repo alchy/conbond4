@@ -28,6 +28,7 @@ heuristika.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from enum import Enum
@@ -598,6 +599,24 @@ class Lexicon:
         return tuple(
             sorted(self._by_key.values(), key=lambda p: p.key())
         )
+
+    def fingerprint(self) -> str:
+        """Otisk VÝCHOZÍHO STAVU lexikonu *(W‑51)*.
+
+        Od chvíle, kdy je lexikon výchozím stavem přehrání (B‑20), platí
+        determinismus jen PODMÍNĚNĚ: „týž žurnál a týž výchozí stav".
+        Který to byl, ale žurnál dosud neříkal — dvě přehrání téhož
+        žurnálu s různým lexikonem vypadala obě autoritativně a nic je
+        nerozlišilo.
+
+        **Identita běhu nesmí být nic, co se dá dvakrát obsadit.** Táž
+        lekce, kterou měřicí vrstva přijala u otisku revize; tady stačí
+        otisk lexikonu.
+
+        Počítá se ze `to_json()`, které je setříděné a deterministické —
+        druhá serializace by se s ním dřív nebo později rozešla.
+        """
+        return hashlib.sha256(self.to_json().encode("utf-8")).hexdigest()[:16]
 
     def to_json(self) -> str:
         return json.dumps(

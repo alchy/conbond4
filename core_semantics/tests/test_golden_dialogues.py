@@ -351,3 +351,43 @@ def test_a_sentence_level_answer_does_not_leak_into_the_next_sentence() -> None:
     assert "jíst(co:∀steak" not in written
     asked = [step.text for step, result in played if result.question is not None]
     assert "Petr jedl steak." in asked
+
+
+def test_replay_with_a_different_lexicon_says_so() -> None:
+    """W‑51. Od chvíle, kdy je lexikon výchozím stavem přehrání (B‑20),
+    platí determinismus jen PODMÍNĚNĚ — „týž žurnál a týž výchozí stav".
+    Který to byl, ale žurnál neříkal: dvě přehrání téhož žurnálu s různým
+    lexikonem vypadala obě autoritativně a nic je nerozlišilo.
+
+    Neshoda přehrání NEZASTAVÍ — lexikon se legitimně rozrůstá učením
+    a odmítnutí by nutilo ho uměle ořezávat — ale TIŠE PROJÍT NESMÍ."""
+    from core_semantics.tests.dialogues import SUBORDINATE
+
+    _, session = play(SUBORDINATE)
+
+    stejny = Session.replay(session.journal, lexicon=SUBORDINATE.lexicon())
+    assert stejny.program() == session.program()
+    assert stejny.notes == [], "shodný lexikon se neohlašuje — není co říct"
+
+    jiny = Session.replay(session.journal)
+    assert jiny.notes, "jiný výchozí lexikon musí být SLYŠET"
+    assert "JINÝ LEXIKON" in jiny.notes[0]
+    assert jiny.program() != session.program(), (
+        "kdyby se báze shodovala, nebylo by co hlásit — a test by neměřil "
+        "nic"
+    )
+
+
+def test_the_fingerprint_lives_in_the_journal_not_in_the_session() -> None:
+    """Otisk musí PŘEŽÍT ULOŽENÍ, takže patří k tahu, ne k sezení. Razí se
+    na PRVNÍ tah: lexikon se během dialogu rozrůstá, a otisk na pozdějším
+    tahu by říkal něco jiného než „s čím se začínalo"."""
+    from core_semantics.tests.dialogues import SUBORDINATE
+
+    _, session = play(SUBORDINATE)
+    otisky = [t.lexicon_fingerprint for t in session.journal]
+    assert otisky[0], "první tah nese otisk"
+    assert all(not o for o in otisky[1:]), (
+        "další tahy ho nenesou — jinak by se razil rostoucí lexikon"
+    )
+    assert otisky[0] == SUBORDINATE.lexicon().fingerprint()

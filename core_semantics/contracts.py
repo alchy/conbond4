@@ -1102,6 +1102,31 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-38",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "ŽURNÁL NESE OTISK VÝCHOZÍHO LEXIKONU. Od chvíle, kdy je "
+            "lexikon výchozím stavem přehrání (B‑20), platí determinismus "
+            "jen PODMÍNĚNĚ (týž žurnál a týž výchozí stav) a KTERÝ to "
+            "byl, žurnál dosud neříkal: dvě přehrání téhož žurnálu "
+            "s různým lexikonem vypadala obě autoritativně a nic je "
+            "nerozlišilo. Otisk leží v ŽURNÁLU, ne v sezení, takže "
+            "přežije uložení, a razí se na PRVNÍ tah — lexikon se během "
+            "dialogu učením rozrůstá, takže pozdější otisk by říkal něco "
+            "jiného než to, s čím se začínalo. Neshoda přehrání NEZASTAVÍ "
+            "(lexikon se legitimně rozrůstá a odmítnutí by nutilo ořezávat "
+            "ho uměle), ale TIŠE PROJÍT NESMÍ: identita běhu nesmí být "
+            "nic, co se dá dvakrát obsadit (W‑51)"
+        ),
+        anchor="core_semantics.session:Session.check_journal_lexicon",
+        entry="replay(",
+        enforced_by=(
+            "test_replay_with_a_different_lexicon_says_so",
+            "test_the_fingerprint_lives_in_the_journal_not_in_the_session",
+            "test_dialogue_is_replayable",
+        ),
+    ),
+    Clause(
         id="S-37",
         boundary=SESSION_STORAGE,
         promise=(

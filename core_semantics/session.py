@@ -266,6 +266,13 @@ class Turn:
     other: Term | None = None
     #: Nová jména při rozdělení uzlu (`!÷`).
     split_into: tuple[str, str] | None = None
+    #: OTISK VÝCHOZÍHO LEXIKONU, se kterým tah vznikl *(W‑51)*. Leží
+    #: v ŽURNÁLU, ne v sezení, takže přežije uložení — a přehrání s jiným
+    #: lexikonem se pozná. Bez něj platil determinismus jen podmíněně
+    #: („týž žurnál a týž výchozí stav"), ale KTERÝ výchozí stav to byl,
+    #: žurnál neříkal: dvě přehrání téhož žurnálu s různým lexikonem
+    #: vypadala obě autoritativně a nic je nerozlišilo.
+    lexicon_fingerprint: str = ""
     #: Tvar, na který odpovídá tah `→∀`, a zvolená operace.
     shape: StructuralSignature | None = None
     operation: Operation | None = None
@@ -632,6 +639,9 @@ class Session:
         self.presenter = XAIPresenter(self.kb, profile)
         self.journal: list[Turn] = []
         self.results: list[TurnResult] = []
+        #: Hlášky, které nepatří k žádnému tahu — dnes jen upozornění na
+        #: jiný výchozí lexikon při přehrání *(W‑51)*.
+        self.notes: list[str] = []
         self._pending: Rule | None = None
         #: `LEX` je program vedle `ONTO` a `DIA`, takže patří do sezení,
         #: ne do volání. Jinak by dvě věty téhož dialogu mohly být čteny
@@ -645,6 +655,9 @@ class Session:
         #: navázat. Je to nová INFORMACE, ne nová inference — nic se z ní
         #: neodvozuje, jen se z ní NABÍZEJÍ kandidáti.
         self._discourse = Discourse()
+        #: Otisk lexikonu, se kterým sezení ZAČALO. Bere se hned, protože
+        #: později už bude jiný — dialog se učí.
+        self._opening_fingerprint = self.lexicon.fingerprint()
 
     def tiers(self) -> tuple[Tier, ...]:
         """Patra kaskády v pořadí § 5.2: tvrdé filtry → konzistence s bází
@@ -718,6 +731,13 @@ class Session:
 
     def play(self, turn: Turn) -> TurnResult:
         index = len(self.journal) + 1
+        # OTISK VÝCHOZÍHO LEXIKONU DO ŽURNÁLU *(W‑51)*. Razí se na PRVNÍ
+        # tah, ne na každý: lexikon se během dialogu legitimně rozrůstá
+        # učením, takže otisk na pozdějším tahu by říkal něco jiného než
+        # „s čím se začínalo" — a přesně to je ten výchozí stav, na kterém
+        # determinismus přehrání stojí.
+        if not self.journal and not turn.lexicon_fingerprint:
+            turn = replace(turn, lexicon_fingerprint=self._opening_fingerprint)
         self.journal.append(turn)
         handler = {
             TurnKind.ASSERT: self._assert,
@@ -783,8 +803,38 @@ class Session:
         `replay` chová deterministicky (I‑4).
         """
         session = cls(profile=profile, lexicon=lexicon)
+        session.check_journal_lexicon(journal)
         session.run(journal)
         return session
+
+    def check_journal_lexicon(self, journal: Sequence[Turn]) -> str | None:
+        """Sedí výchozí lexikon na ten, se kterým žurnál vznikl? *(W‑51)*
+
+        **Neshoda přehrání NEZASTAVÍ, ale ŘEKNE SE.** Rozhodnutí padlo
+        takhle, a ne na odmítnutí, protože lexikon se legitimně ROZRŮSTÁ:
+        přehrát starý žurnál v sezení, které se mezitím naučilo víc, je
+        normální provoz, ne chyba, a odmítnutí by nutilo lexikon uměle
+        ořezávat. Zapsat se nemůže nic špatného — nanejvýš se přečte VÍC
+        vět než tehdy, protože se mezitím naučil tvar.
+
+        **Tiše to projít ale nesmí.** Dvě přehrání téhož žurnálu s různým
+        lexikonem vypadala obě autoritativně a nic je nerozlišilo; to je
+        táž vada, kterou měřicí vrstva vyřešila otiskem revize. Identita
+        běhu nesmí být nic, co se dá dvakrát obsadit.
+        """
+        razeny = next(
+            (turn.lexicon_fingerprint for turn in journal if turn.lexicon_fingerprint),
+            "",
+        )
+        if not razeny or razeny == self._opening_fingerprint:
+            return None
+        varovani = (
+            f"[JINÝ LEXIKON: žurnál vznikl s otiskem {razeny}, přehrává se "
+            f"s {self._opening_fingerprint} — přehrání pokračuje, ale "
+            f"determinismus (I‑4) platí jen pro týž výchozí stav]"
+        )
+        self.notes.append(varovani)
+        return varovani
 
     # -- výstup ------------------------------------------------------------
 

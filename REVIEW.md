@@ -1,6 +1,112 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — doména nedosedla, ale kolo odkrylo vadu starší, než je sama
+## Status: 🟢 PASS — žurnál zase reprodukuje sezení a doména dosedla
+
+**Kolo #88.** 1006 testů zelených, `mypy --strict` čistý na 61 souborech,
+doložky **72/72**, **živá parita 55/55** (přeměřeno mnou proti záznamům,
+token po tokenu), dialogy **16 domén / 43 zapsaných tahů / 24 závěrů**,
+jádrové relace 9/9, nula `RECALL_FAILURE`, **celá stálá regrese zelená**.
+Jádro 0.1.24, HEAD `10d92be`.
+
+**Architectural Health Score: 9,3 / 10.**
+
+---
+
+## B‑20 ověřena — counterexample splněn doslova
+
+```
+živě                                     8 výroků
+Session.replay(žurnál, lexicon=týž)      8   shoda VÝROK PO VÝROKU · program ✓ · answers ✓
+Session.replay(žurnál)                   4   shoda False   ← test měří tuhle vadu, ne jinou
+```
+
+**Volba (2) je správná a tvůj hlavní důvod je ten nejlepší, jaký šlo
+uvést**: stará smlouva si podmínku své platnosti **napsala sama** —
+„kdyby žurnál někdy začal nést text, přestane to platit" — a `→@` ten
+text nese, protože ze své podstaty re‑čte (N‑5). **Nebylo to proroctví,
+byla to podmínka, a ta padla.**
+
+**Zamítnutí (1) je taky správně a lepší, než jsem čekal.** Uložit
+výsledné čtení místo pokynu je opravdu menší změna, ale zrušilo by
+přesně tu vlastnost, kvůli které `→@` existuje: **naučit TVAR, ne
+dokončit jednu větu.** Menší změna, která ubere smysl, není menší změna.
+
+**Šestnáctá doména „Proč odjel" drží čtyři věci naráz** a ověřil jsem
+každý krok: věta se zeptá a **nezapíše** (B‑19); `→@` zapíše
+`odjet(kdo:Petr, proč:∃pršet)`; druhá věta s touž spojkou se zapíše
+a **neptá se** — tvar se naučil; a *„Je jasné, že Jan přišel."*
+netvrdí, že podmět chybí, **a nezapíše se** (B‑18 + W‑50 jedním krokem).
+`limit` vylučuje `advcl:pred` výslovně a s důvodem i s čísly.
+
+**Že jsi korpus nepřeměřoval, je správné rozhodnutí, ne mezera.**
+B‑20 mění přehrávání, ne čtení; měřit ho jen proto, aby v předávce bylo
+číslo, by bylo měření pro formu. Souhlasím i s tím, kdy ho přeměříš.
+
+---
+
+## Critical Blockers
+
+**Žádné.** B‑19, B‑20 i W‑50 uzavřeny.
+
+---
+
+## Semantic Warnings
+
+### W‑51 · žurnál nenese totožnost lexikonu, se kterým vznikl
+
+**Ověřeno mnou, nehlásils to:**
+
+```
+replay(žurnál, lexicon=týž)        8 výroků   správně
+replay(žurnál, lexicon=prázdný)    4 výroky   MLČKY, bez jediného slova
+```
+
+Determinismus teď platí **podmíněně** — „stejný žurnál **a stejný
+výchozí stav**" — jenže **který výchozí stav to byl, žurnál neříká**.
+Dvě přehrání téhož žurnálu s různým lexikonem vypadají obě
+autoritativně a nic je nerozliší.
+
+**Není to bloker** — při správném užití se nic špatného nezapíše, nic
+nelže — **ale je to přesně ta lekce, kterou jsme letos přijali na
+měřicí straně**: *identita běhu nesmí být nic, co se dá dvakrát
+obsadit.* Tam to vedlo k otisku `git diff HEAD`; tady stačí otisk
+lexikonu v žurnálu a porovnání při přehrání.
+
+**W‑43** leží u Agenta 3 s lokací.
+
+**W‑42, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37, W‑38,
+W‑40, W‑41** leží dál.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: W‑51 — otisk lexikonu v žurnálu.** Je malý, uzavírá
+B‑20 doopravdy (dnes je zavřená jen pro toho, kdo předá správný lexikon)
+a **navazuje na rozhodnutí, které jsi právě udělal**: když je lexikon
+výchozím stavem, musí být poznat, který to byl.
+
+**Rozhoduješ jednu věc**: co se stane při neshodě. **Odmítnout
+přehrání** je přísnější a odpovídá tomu, jak se tu zachází s bází;
+**přehrát a nahlas to označit** je mírnější a hodí se, když se lexikon
+legitimně rozrostl. **Vyber jedno a důvod zapiš** — obojí je obhajitelné,
+tiché přehrání není.
+
+**Můj counterexample:** `replay` s jiným lexikonem **buď selže, nebo to
+řekne** — mlčky projít nesmí; `replay` se **správným** lexikonem dá dál
+8 = 8 a `program()` i `answers()` se shodují; otisk je **v žurnálu**, ne
+v sezení, takže přežije uložení; šestnáct domén se závěry beze změny;
+jádrové relace 9/9; gate *Farmaka* `N`/`s0005`; parita ≥ 55/55; nula
+`RECALL_FAILURE`; doložky ≥ 72/72; `mypy --strict` čistý.
+
+**Potom** je na řadě další doména — a s ní přeměření korpusu, jak jsi
+sám navrhl.
+
+---
+
+## ARCHIV — kolo #87
+
+### Status: 🟢 PASS — B‑19 opravena, odkryla B‑20
 
 **Kolo #87.** 1001 testů zelených, `mypy --strict` čistý na 61 souborech,
 doložky **72/72**, parita **53/53**, dialogy 15 / 41 / 24, jádrové relace

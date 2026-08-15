@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.24 · 15. 8. 2026
+**Verze jádra:** 0.1.25 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.25 | § 10 — ŽURNÁL NESE OTISK VÝCHOZÍHO LEXIKONU: determinismus platí od 0.1.24 jen podmíněně (týž žurnál a týž výchozí stav), ale který to byl, žurnál neříkal. Otisk se razí na PRVNÍ tah a při neshodě se přehrání NEZASTAVÍ — lexikon se legitimně rozrůstá — ale ŘEKNE SE to; tiché přehrání je zakázané; § 13 T75 | 15. 8. 2026 |
 | 0.1.24 | § 10 — ŽURNÁL NEREPRODUKUJE SEZENÍ SÁM: tahy, které RE-ČTOU (`→@`), nesou text a čtou ho lexikonem, který v tu chvíli platí, ale potvrzené tvary domény v žurnálu nikdy nebyly. `Session.replay` proto bere LEXIKON jako pojmenovaný parametr a stará smlouva „lexikon není parametr“ se přepisuje — předpověděla si to sama; § 13 T74 | 15. 8. 2026 |
 | 0.1.23 | § 9 — ROLE BEZ JÁDROVÉHO JMÉNA ZASTAVÍ ZÁPIS: patro pro vedlejší větu udělalo ze ztraceného členu ROLI, ale zábranu zápisu mu nedalo, takže odpověď `→@` zapsala větu PODRUHÉ — jednou s povrchovým jménem role, podruhé s naučeným, a ten první výrok by nikdo neodvolal; § 13 T73 | 15. 8. 2026 |
 | 0.1.22 | § 5.2 — PODMĚT VYJÁDŘENÝ CELOU VĚTOU (`csubj`) je VYSLOVENÝ podmět: tvrdit o „Je jasné, že Jan přišel.“, že podmět nemá, je nepravdivý výrok o textu, a systém na jeho základě zval člověka dosadit podmět tam, kde jeden stojí. Mlčet by bylo taky nepřesné, takže se řekne PŘESNĚ TO — rozdíl mezi „neřečeno“ a „řečeno, neumím“; § 13 T72 | 15. 8. 2026 |
@@ -1082,6 +1083,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T55 | odpověď na doptání je tah | `→∀` naučí tvar a znovu přečte větu; `turns_to_learn` to změří |
 | T56 | pořadí těla neurčuje význam | všech 6 permutací téhož pravidla dá `N`, TÝŽ normální tvar i TÝŽ důkaz |
 | T57 | neuspořádatelné pravidlo padne u zápisu | `subset(X,Y)` bez vazače → `UnsafeRule` při `attach_rule`, ne `EvaluationError` při dotazu; báze zůstane bez pravidla |
+| T75 | žurnál nese otisk výchozího lexikonu | přehrání se SHODNÝM lexikonem dá 8 = 8 a mlčí; přehrání s JINÝM projde, ale ohlásí „[JINÝ LEXIKON: … determinismus platí jen pro týž výchozí stav]“; otisk leží na prvním tahu žurnálu, ne v sezení |
 | T74 | žurnál se přehraje s výchozím lexikonem | dialog Petr/`→@` proč/Jan dá po `Session.replay(žurnál, lexicon=…)` TOUŽ bázi výrok po výroku (8 = 8) i tytéž odpovědi; bez lexikonu 4 a Petrova věta chybí — takže test měří právě tuhle vadu |
 | T73 | role bez jádrového jména zastaví zápis | „Petr odjel, protože pršelo.“ se NEZAPÍŠE, dokud se `advcl:protože` nepojmenuje; po `→@` je věta v bázi PRÁVĚ JEDNOU, s naučeným jménem role |
 | T72 | podmět vyjádřený celou větou | „Je jasné, že Jan přišel.“ NETVRDÍ, že podmět nemá, a nenabízí antecedent; řekne, že podmětem je celá věta vedlejší a že ji zatím dosadit neumí; „Byl pohřben v Praze.“ se dál ptá; „Bylo chladno.“ se dál neptá |
