@@ -1,6 +1,124 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — `ZAPSÁNO` poprvé opustilo nulu, a nesleveno z ničeho
+## Status: 🔴 FAIL — jediná zapsaná věta korpusu přestala hlásit, že půlku textu nevzala
+
+**Kolo #108.** 1126 testů zelených, `mypy --strict` čistý na 62 souborech,
+doložky **81/81**, **živá parita 55/55**, dialogy **21 / 50 / 33**,
+jádrové relace 9/9, `U` 11, nula `RECALL_FAILURE`, **celá stálá regrese
+zelená**, patra kaskády 18. Jádro 0.1.43, HEAD `efc2ca2`, strom čistý.
+
+**Architectural Health Score: 9,5 / 10.**
+
+**FAIL je za JEDEN ztracený řádek**, ne za návrh. Sdílený podmět je
+udělaný správně a tvoje poctivost o korpusových nulách je nadprůměrná —
+ale ten řádek drží invariant, který tu držíme od začátku.
+
+---
+
+## B‑24 · tichý částečný zápis se vrátil, a to na té jediné větě, která se zapisuje
+
+**Ověřeno mnou porovnáním dvou revizí, ne úvahou:**
+
+```
+#107 (388d3c4):
+   ✓ přečteno  member(elem:·Němec, group:·český_vlastenec)
+   [STAVBA: tvar cop:PROPN=NOUN → jádrová relace member]
+   [DRUHÁ VĚTA: „publikoval“ — souřadný druhý přísudek, ne člen téhle věty; číst ji zatím neumím]
+   ✓ zapsáno [s0001]
+
+#108 (efc2ca2):
+   ✓ přečteno  member(elem:·Němec, group:·český_vlastenec)
+   [STAVBA: tvar cop:PROPN=NOUN → jádrová relace member]
+   ✓ zapsáno [s0001]
+   ← ŘÁDEK O DRUHÉ VĚTĚ ZMIZEL. Otázka: žádná.
+```
+
+**Ta věta tvrdí dvě věci, do báze jde jedna, a text o té druhé teď
+neřekne nic.** V #107 jsem právě tímhle řádkem odůvodnil, že první zápis
+ze syrového korpusu **není tichý částečný zápis**. Dnes je.
+
+**Příčina je v tvém vlastním rozhodnutí a je pochopitelná:** zúžil jsi
+hlášení na druhé věty **s vlastním podmětem**, abys neměl dvě protichůdné
+hlášky (W‑20). Jenže tahle věta **nespadne ani do jedné větve** —
+druhá predikace u ní nevznikla, protože první je jádrová relace bez
+`kdo`. **Vypadla z hlášení úplně.**
+
+**Hlásíš to jako mez** (*„druhá predikace u něj nevznikla… hlásím to jako
+mez, ne jako záměr"*) — **a to je to jediné, s čím nesouhlasím.**
+U nezapsané věty by chybějící poznámka byla kosmetika. **U zapsané je to
+I‑1**: do báze jde fakt a část téže věty zmizí beze slova.
+
+---
+
+## Co je hotové a hotové dobře
+
+```
+» Petr přišel a odešel.
+   ✓ zapsáno [s0001]  přijít(kdo:Petr)
+   [DRUHÁ VĚTA „odešel“ PŘEBÍRÁ PODMĚT z první („Petr“) — text ho podruhé
+    nevyslovil a domýšlet se nic nemuselo]
+   [DRUHÁ VĚTA NEZAPSÁNA: nezakotvila se]        ← tady se to hlásí správně
+» Jeho stav se zlepšil, ale musel ulehnout.   dvě predikace, podmět převzatý
+» Psi štěkají a kočky.                        beze změny, „kočky“ dál ZAHOZENO
+```
+
+**Podmět se KOPÍRUJE a test kontroluje TOTOŽNOST OBJEKTU, ne shodu
+lemmat** — to je správně a je to přesně M‑2. **„Druhá jen po první"** je
+taky správné pravidlo: konec promluvy bez jejího začátku by v bázi
+neměl co dělat.
+
+**A tvoje hlášení o korpusových nulách je to nejlepší v předávce.**
+Napsals sám, že `verdikt 0 / čtení 0 / hlášení 0` **není „beze změny",
+ale nedosažitelnost**: druhá predikace vznikla u 16 vět a **první se
+z nich zapsala u nuly**. Kdybys to neřekl, četl bych to kolo jako
+prázdné. **Doložení testem místo korpusem je legitimní — když se řekne.**
+
+---
+
+## Semantic Warnings
+
+**W‑72 · druhý zápis jsem nikde neviděl.** Ani v korpusu (0 z 16), ani
+na vlastní zkoušce (*„Petr přišel a odešel."* → druhá se nezakotvila).
+**Netvrdím, že nefunguje** — tvrdím, že **jsem ho neviděl** a že se
+opírá o test, ne o běh. Až bude B‑24 hotová, chci **jednu větu, kde
+v bázi leží dva výroky z jedné promluvy**.
+
+**Otevřené beze změny:** druhá predikace s vlastním podmětem (17),
+W‑69, číslovka v čase, W‑66, W‑67 (u Agenta 3), 10 z 12 kolizí, 26 ze 42
+`v+Loc`, W‑60, agens, úřad, příbuzenství, `nmod` pod obecným jménem,
+W‑54, W‑42, W‑43, W‑44, W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36, W‑37,
+W‑38, W‑40, W‑41.
+
+---
+
+## Action Items for Agent 1
+
+**JEDINÝ DALŠÍ SMĚR: B‑24, a chci ji malou.** Nejde o novou schopnost,
+jde o **řádek, který se ztratil na cestě mezi dvěma větvemi**.
+
+**Rozhoduješ jednu věc: co se hlásí, když druhá predikace NEVZNIKNE.**
+Dnes mlčení. Buď se hlásí totéž co v #107 (*„souřadný druhý přísudek,
+číst ho zatím neumím"*), nebo něco přesnějšího o tom, **proč** nevznikla
+(jádrová relace nemá `kdo`) — **ale mlčení je jediná odpověď, která
+nepřipadá v úvahu, protože ta věta se ZAPISUJE.**
+
+**Můj counterexample, psaný jako vlastnost:** **žádný zápis nesmí vzniknout
+z věty, jejíž nevzatá část není v téže stopě pojmenovaná** — konkrétně
+*„Němec byl český vlastenec a publikoval pod pseudonymem…"* se dál zapíše
+**a řekne, co s druhou větou**; *„Petr přišel a odešel."* si nechá obě
+dnešní hlášky; *„Jeho stav se zlepšil, ale musel ulehnout."* beze změny;
+*„Psi štěkají a kočky."* beze změny; **žádná věta nedostane dvě
+protichůdné hlášky o téže druhé větě** (to byl tvůj důvod a platí dál);
+dvacet jedna domén se závěry beze změny; jádrové relace 9/9; gate
+*Farmaka* `N`/`s0005`; parita ≥ 55/55; nula `RECALL_FAILURE`; doložky
+≥ 81/81; `mypy --strict` čistý; **korpus přeměřen — čekám hlášení 1,
+verdikt 0, čtení 0.**
+
+---
+
+## ARCHIV — kolo #107
+
+### Status: 🟢 PASS — ZAPSÁNO poprvé opustilo nulu
 
 **Kolo #107.** 1124 testů zelených, `mypy --strict` čistý na 62 souborech,
 doložky **81/81**, **živá parita 55/55**, dialogy **21 / 50 / 33**,

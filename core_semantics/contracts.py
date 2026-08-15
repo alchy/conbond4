@@ -1450,7 +1450,16 @@ CONTRACTS: tuple[Clause, ...] = (
             "tvrdilo, že „zlepšil se“ a „musel ulehnout“ je jeden děj. "
             "Zábrany platí na obě stejně (B‑19) a hlásí se JEN ta druhá "
             "věta, kterou číst NEUMÍME — jinak by systém o jedné věci "
-            "řekl dvě věci, které si odporují (W‑20)"
+            "řekl dvě věci, které si odporují (W‑20). PODMÍNKA JE „NENÍ "
+            "PŘEČTENÁ“, NE „MÁ VLASTNÍ PODMĚT“: zúžení na vlastní podmět "
+            "propustilo třetí případ — větu, u které druhá predikace "
+            "nevznikla, protože první čtení je JÁDROVÁ RELACE a `kdo` "
+            "v ní není. Ta věta se ZAPISUJE, takže mlčení o její druhé "
+            "půlce je TICHÝ ČÁSTEČNÝ ZÁPIS (I‑1); u nezapsané věty by to "
+            "byla kosmetika (B‑24). A patro souřadnosti běží AŽ ZA "
+            "KVANTIFIKÁTOREM: půjčuje se HOTOVÁ role, protože role bez "
+            "kvantifikátoru se do jádra nedostane a druhý zápis by nikdy "
+            "nevznikl (W‑72)"
         ),
         anchor="core_semantics.cascade:second_predications",
         entry="cascade(",
@@ -1461,6 +1470,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_second_sentence_is_named_in_the_trace",
             "test_the_second_sentence_borrows_the_subject_from_the_first",
             "test_a_second_sentence_with_its_own_subject_is_left_alone",
+            "test_a_written_sentence_always_names_its_unread_half",
+            "test_one_utterance_can_write_two_statements",
         ),
     ),
     Clause(

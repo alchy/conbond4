@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.43 · 15. 8. 2026
+**Verze jádra:** 0.1.44 · 15. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.44 | § 5.2 — ZAPSANÁ VĚTA VŽDY POJMENUJE SVOU NEVZATOU PŮLKU: podmínka je „není přečtená“, ne „má vlastní podmět“ — jinak vznikne TICHÝ ČÁSTEČNÝ ZÁPIS. A patro souřadnosti běží AŽ ZA kvantifikátorem, protože se půjčuje HOTOVÁ role; do té doby se druhá věta nikdy nezapsala; § 13 T95
 | 0.1.43 | § 5.2 — DRUHÁ VĚTA SE SDÍLENÝM PODMĚTEM se čte a zapisuje ZVLÁŠŤ: podmět se BERE z první věty téže promluvy a v hlášení je řečeno odkud; kopíruje se táž zmínka, nezakládá se druhá. Věty, kde má druhá vlastní podmět (17 z 35), se dál jen hlásí; § 13 T94
 | 0.1.42 | § 5.2 — SOUŘADNÝ DRUHÝ PŘÍSUDEK je DRUHÁ VĚTA, ne ztracený člen: „a brzy musel znovu ulehnout“ není člen první věty a ptát se na jeho roli je výzva dosadit druhou větu jako člen první. Číst se to zatím nezačne — PŘIZNANÁ MEZ. Změřeno 35 vět z 238, z toho 18 sdílí podmět a 17 má vlastní; § 13 T93
 | 0.1.41 | § 6.8 — ZVRATNÉ ZÁJMENO neodkazuje ven z věty: systém se u „si“ ptal na odkaz a pak tu odpověď neměl kam přijmout, protože role čeká na kvantifikátor. Otázka bez tahu je horší než mlčení; rozhoduje `Reflex=Yes` z rozboru; § 13 T92
@@ -1211,6 +1212,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T95 | zapsaná věta pojmenuje nevzatou půlku | „Němec byl český vlastenec a publikoval.“ se zapíše A ŘEKNE, co s druhou větou; „Jan zpíval a tančil.“ uloží do báze DVA výroky z jedné promluvy, oba o témž uzlu |
 | T94 | druhá věta si půjčí podmět | „Stav se zlepšil, ale musel ulehnout.“ dá DVĚ predikace, druhá má `kdo` z první a je to v hlášení řečeno; „Stav se zlepšil, ale lékař váhal.“ se nezmění; „Psi štěkají a kočky.“ se nezmění |
 | T93 | druhý přísudek je druhá věta | „Stav se zlepšil, ale musel ulehnout.“ nehlásí „musel“ jako ztracený člen a v přepisu stojí, že je to DRUHÁ VĚTA, kterou zatím neumíme číst; „Psi štěkají a kočky.“ hlásí „kočky“ jako člen dál |
 | T92 | zvratné zájmeno není anafora | „V prosinci 1938 si Karel Čapek přivodil chřipku.“ se už neptá „na koho odkazuje si“ — zbude jen otázka na kvantifikátor, která tah MÁ; „Byl pohřben…“ se dál ptá na podmět |

@@ -2365,7 +2365,13 @@ def test_the_second_sentence_is_named_in_the_trace() -> None:
     stopa = chr(10).join(cascade(vlastni).trace)
     assert "DRUHÁ VĚTA" in stopa and "váhal" in stopa
     assert "číst ji zatím neumím" in stopa
-    sdileny = chr(10).join(cascade(_two_clauses()).trace)
+    # A u SDÍLENÉHO podmětu se to NEŘÍKÁ — tam se čte. Bez patra
+    # souřadnosti se ale čte i tady, takže se zkouší s ním *(B‑24)*.
+    from core_semantics.cascade import coordination_tier
+
+    sdileny = chr(10).join(
+        cascade(_two_clauses(), tiers=(*HARD_TIERS, coordination_tier())).trace
+    )
     assert "číst ji zatím neumím" not in sdileny
 
 
@@ -2407,3 +2413,99 @@ def test_a_second_sentence_with_its_own_subject_is_left_alone() -> None:
     )
     verdict = cascade(reading, tiers=(*HARD_TIERS, coordination_tier()))
     assert verdict.survivors[0].predication.second is None
+
+
+def test_a_written_sentence_always_names_its_unread_half() -> None:
+    """B‑24. Zúžení hlášení na druhé věty s VLASTNÍM podmětem propustilo
+    TŘETÍ PŘÍPAD: větu, u které druhá predikace nevznikla z jiného důvodu
+    — první čtení je JÁDROVÁ RELACE a `kdo` v ní není, takže se podmět
+    nemá o co opřít.
+
+    **Ta věta se ZAPISUJE**, takže mlčení o její druhé půlce je TICHÝ
+    ČÁSTEČNÝ ZÁPIS: do báze jde fakt a část téže věty zmizí beze slova
+    (I‑1). U nezapsané věty by chybějící poznámka byla kosmetika.
+
+    Jde celou cestou přes `.utter(`, protože jádrovou relaci dosazuje až
+    patro relace — na holé kaskádě ta věta `kdo` ještě má a případ by
+    vůbec nenastal."""
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session
+    from core_semantics.tests import golden
+
+    veta = Reading(
+        tokens=(
+            _token(1, "Němec", "Němec", "PROPN", 4, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "byl", "být", "AUX", 4, "cop", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "český", "český", "ADJ", 4, "amod", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(4, "vlastenec", "vlastenec", "NOUN", 0, "root", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(5, "a", "a", "CCONJ", 6, "cc"),
+            _token(6, "publikoval", "publikovat", "VERB", 4, "conj", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(7, ".", ".", "PUNCT", 4, "punct"),
+        ),
+        provenance="test",
+    )
+
+    class _Recorded:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(text=text, readings=(veta,))
+
+    session = Session(lexicon=golden.golden_lexicon())
+    result = session.utter("Němec byl český vlastenec a publikoval.", _Recorded())
+    assert result.statement_id is not None, "ta věta se zapisuje"
+    hlaseni = chr(10).join((*result.lines, *result.trace))
+    assert "DRUHÁ VĚTA" in hlaseni and "publikoval" in hlaseni, (
+        "a právě proto se druhá půlka MUSÍ pojmenovat"
+    )
+
+
+def test_one_utterance_can_write_two_statements() -> None:
+    """W‑72 — reviewer chtěl VIDĚT dva výroky z jedné promluvy, ne test,
+    který tvrdí, že by mohly být.
+
+    Chytilo se tím i POŘADÍ PATER: patro souřadnosti běželo PŘED
+    kvantifikátorem, takže si druhá věta půjčovala roli BEZ
+    kvantifikátoru — a role bez kvantifikátoru se do jádra nedostane
+    (`UnquantifiedRole`), takže druhý zápis nikdy nevznikl."""
+    from core_semantics.oracle import Utterance
+    from core_semantics.session import Session
+
+    veta = Reading(
+        tokens=(
+            _token(1, "Jan", "Jan", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "zpíval", "zpívat", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, "a", "a", "CCONJ", 4, "cc"),
+            _token(4, "tančil", "tančit", "VERB", 2, "conj", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+
+    class _Recorded:
+        provenance = "test"
+
+        def parse(self, text: str) -> Utterance:
+            return Utterance(text=text, readings=(veta,))
+
+    lexicon = czech_seed()
+    lexicon.add(
+        LearnedPattern(
+            trigger=Trigger(
+                lemma="", upos="PROPN", number="Sing", case="Nom", deprel="nsubj"
+            ),
+            operation=Operation.SELF,
+            learned_from="test W‑72",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    session = Session(lexicon=lexicon)
+    session.utter("Jan zpíval a tančil.", _Recorded())
+    zapsane = [
+        str(s.formula)
+        for s in session.kb.active()
+        if not str(s.formula).startswith(("member(", "role("))
+    ]
+    assert zapsane == ["zpívat(kdo:Jan)", "tančit(kdo:Jan)"], (
+        "dva výroky z JEDNÉ promluvy, oba o TÉMŽE uzlu"
+    )

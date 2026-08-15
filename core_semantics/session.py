@@ -791,10 +791,6 @@ class Session:
             # za přívlastkem, protože je to táž třída věci — něco, co ve
             # větě stojí vedle predikace — a taky nic neblokuje.
             title_tier(),
-            # Druhá věta se sdíleným podmětem (W‑71). AŽ ZA anaforou
-            # a pro‑dropem: podmět první věty musí být hotový dřív, než
-            # si ho druhá půjčí — jinak by si půjčila rozdělanou roli.
-            coordination_tier(),
             # Vedlejší věta jako role hlavní predikace. Za přívlastkem:
             # obojí reifikuje, ale tohle přidává ROLI, takže musí běžet
             # dřív, než se počítají ztracené členy.
@@ -811,6 +807,13 @@ class Session:
             # Kvantifikátor až po přejmenování rolí: patro se ptá lexikonu
             # na TVAR role, a ten se do poslední chvíle může změnit.
             quantifier_tier(self.lexicon),
+            # Druhá věta se sdíleným podmětem AŽ ZA KVANTIFIKÁTOREM
+            # *(W‑71, opraveno B‑24)*. Pořadí je věcné: půjčuje se HOTOVÁ
+            # role, a role bez kvantifikátoru se do jádra nedostane
+            # (`UnquantifiedRole`), takže druhá věta se dřív NEZAKOTVILA
+            # a zápis z ní nikdy nevznikl. Chytilo se to až tím, že
+            # reviewer chtěl VIDĚT dva výroky z jedné promluvy.
+            coordination_tier(),
             # KONZISTENCE S BÁZÍ JE AŽ TADY, a je to VĚDOMÁ ODCHYLKA od
             # pořadí v § 5.2 („…→ konzistence s bází → naučené vzory…").
             #

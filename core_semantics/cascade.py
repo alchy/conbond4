@@ -3571,17 +3571,34 @@ def cascade(
     # se ptal, jak se ta role jmenuje. Odpověď na to neexistuje: „a brzy
     # musel znovu ulehnout" NENÍ člen první věty. Číst se to zatím
     # nezačne a je to PŘIZNANÁ MEZ, ne rozhodnutí o textu.
-    # HLÁSÍ SE JEN TA, KTEROU NEUMÍME *(W‑71)*. Druhá věta se sdíleným
-    # podmětem se od téhle chvíle ČTE, takže tvrdit o ní „číst ji zatím
-    # neumím" by byly dvě hlášky o jedné věci, které si odporují — a to
-    # je horší než jedna (W‑20).
-    druhe = [t for t in second_predications(reading) if _own_subject(t, reading)]
+    # HLÁSÍ SE KAŽDÁ, KTEROU JSME NEVZALI *(B‑24)*. Podmínka je „NENÍ
+    # PŘEČTENÁ", ne „má vlastní podmět": zúžení na vlastní podmět
+    # propustilo třetí případ — větu, u které druhá predikace nevznikla
+    # z JINÉHO důvodu (jádrová relace nemá `kdo`, o co by se podmět
+    # opřel). Ta věta se ZAPISUJE, takže mlčení o její druhé půlce je
+    # TICHÝ ČÁSTEČNÝ ZÁPIS: do báze jde fakt a část téže věty zmizí
+    # beze slova (I‑1).
+    #
+    # Bere se z PŘEŽIVŠÍHO ČTENÍ, ne z rozboru: kdo druhou větu vzal,
+    # ví jen kandidát — a dvě protichůdné hlášky o jedné věci by byly
+    # horší než jedna (W‑20).
+    vzate = {
+        c.predication.second.predicate
+        for c in candidates
+        if c.predication.second is not None
+    }
+    druhe = [t for t in second_predications(reading) if t.lemma not in vzate]
     if druhe:
+        duvod = (
+            "s VLASTNÍM podmětem"
+            if all(_own_subject(t, reading) for t in druhe)
+            else "bez podmětu, o který by se dala opřít"
+        )
         trace.append(
             "[DRUHÁ VĚTA: "
             + ", ".join(f"„{t.form}“" for t in druhe)
-            + " — souřadný druhý přísudek s VLASTNÍM podmětem, ne člen "
-            "téhle věty; číst ji zatím neumím]"
+            + f" — souřadný druhý přísudek {duvod}, ne člen téhle věty; "
+            "číst ji zatím neumím]"
         )
     if len(candidates) == 1:
         note = _dropped_note(reading, candidates[0].predication)
