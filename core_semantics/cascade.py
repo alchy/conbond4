@@ -750,8 +750,15 @@ def _quantified(subject: "Mention", reading: Reading) -> bool:
 CONJUNCTIVE_LEMMAS = ("a", "i")
 
 
-def _coordinated(subject: "Mention", reading: Reading) -> bool:
-    """Žádá tahle koordinace podmětu MNOŽNÉ číslo? *(W‑35)*
+def _coordinated(subject: "Mention", reading: Reading) -> bool | None:
+    """Koordinace podmětu: `True` = ŽÁDÁ plurál, `False` = plurál i shoda
+    s členem jsou obojí správně, `None` = koordinace tu není *(W‑35)*.
+
+    **Tři stavy, ne dva, a je to nutné.** Kdyby se „koordinace, která
+    plurál nežádá" slila s „žádná koordinace", spadla by taková věta na
+    obyčejné porovnání s PRVNÍM ČLENEM — a „Nad hrobem **promluvili**
+    básník Josef Hora, …" by padla na tom, že „básník" je singulár.
+    Přesně to se stalo při prvním zúžení a měření to ukázalo.
 
     „Karel Čapek **a** jeho bratr Josef **byli** aktéry…" Přísudek je
     v plurálu podle CELÉ koordinace, ale UD dává jako `nsubj` první člen
@@ -779,19 +786,17 @@ def _coordinated(subject: "Mention", reading: Reading) -> bool:
         if token.head == subject.token_index and token.deprel == "conj"
     ]
     if not members:
-        return False
-    head = _predicate_head(reading)
-    if head is not None and head[1].index < subject.token_index:
-        # Přísudek stojí PŘED podmětem — čeština tu připouští shodu
-        # s nejbližším členem, takže plurál žádat nelze.
-        return False
+        return None
     marks = [
         token.lemma
         for member in members
         for token in reading.tokens
         if token.head == member.index and token.deprel == "cc"
     ]
-    return bool(marks) and all(mark in CONJUNCTIVE_LEMMAS for mark in marks)
+    scita = bool(marks) and all(mark in CONJUNCTIVE_LEMMAS for mark in marks)
+    head = _predicate_head(reading)
+    predikat_vzadu = head is None or head[1].index > subject.token_index
+    return scita and predikat_vzadu
 
 
 def agreement_tier(
@@ -857,20 +862,26 @@ def agreement_tier(
             if not (number_ok and gender_ok):
                 mismatched.append("kvantifikovaného podmětu")
                 continue
-        elif _coordinated(subject, reading):
-            # KOORDINOVANÝ PODMĚT. Číslo je vlastnost CELÉ koordinace:
-            # dva a víc členů dá plurál bez ohledu na to, že UD označí
-            # jako `nsubj` jeden z nich v singuláru.
+        elif (koordinace := _coordinated(subject, reading)) is not None:
+            # KOORDINOVANÝ PODMĚT. Číslo je vlastnost CELÉ koordinace, ne
+            # jejího prvního členu — a co přesně žádá, závisí na tom, jestli
+            # koordinace SČÍTÁ a kde stojí přísudek.
             #
             # ROD SE TU NEOVĚŘUJE, A JE TO PŘIZNANÁ MEZ, ne opomenutí.
             # Čeština ho u koordinace neřeší průnikem, ale pravidly
             # (muž + žena → mužský životný), a to pravidlo celé nemám.
             # Hádat ho by znamenalo tichý default na místě, kde se
-            # rozhoduje o zahození čtení — a to je horší než přiznaná
-            # neúplnost. Číslo samo přitom celou třídu B odblokuje
-            # a minimální pár „Petr a Pavel četl." dál drží.
-            number_ok = agrees("Plur", verb_number)
+            # rozhoduje o zahození čtení — horší než přiznaná neúplnost.
             gender_ok = True
+            if koordinace:
+                number_ok = agrees("Plur", verb_number)
+            else:
+                # Disjunkce nebo přísudek před podmětem: čeština připouští
+                # OBOJÍ — plurál podle celku i shodu s členem. Přijímá se
+                # tedy obojí a odmítá se jen to, co není ani jedno.
+                number_ok = agrees("Plur", verb_number) or agrees(
+                    subject.feat("Number"), verb_number
+                )
             if not number_ok:
                 mismatched.append("koordinovaného podmětu")
                 continue

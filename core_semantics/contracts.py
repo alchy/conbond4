@@ -1032,6 +1032,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_disjunction_does_not_demand_the_plural",
             "test_a_conjunction_still_demands_the_plural",
             "test_a_predicate_before_the_subject_may_agree_with_the_nearest",
+            "test_a_coordination_that_does_not_demand_the_plural_still_accepts_it",
+            "test_the_three_states_are_distinguishable",
             "test_a_coordinated_subject_with_a_singular_predicate_still_falls",
             "test_the_gender_of_a_coordination_is_a_declared_limit",
             "test_a_quantified_subject_is_not_treated_as_a_coordination",

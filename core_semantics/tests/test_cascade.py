@@ -705,7 +705,9 @@ def test_the_two_branches_never_swap_places() -> None:
         subject = generate(reading)[0].predication.role(ROLE_SUBJECT)
         assert subject is not None
         assert _quantified(subject, reading) is je_kvantifikace
-        assert _coordinated(subject, reading) is je_koordinace
+        # `_coordinated` má TŘI stavy; tady stačí, že u kvantifikace
+        # koordinaci nenajde vůbec (`None`) a u koordinace ano.
+        assert (_coordinated(subject, reading) is not None) is je_koordinace
 
 
 # --------------------------------------------------------------------------
@@ -845,3 +847,41 @@ def test_a_quantified_subject_is_not_treated_as_a_coordination() -> None:
     survivors, why = agreement_tier(generate(reading), reading)
     assert survivors == ()
     assert why is not None and "STŘEDNÍM JEDNOTNÉM" in why
+
+
+def test_a_coordination_that_does_not_demand_the_plural_still_accepts_it() -> None:
+    """TŘI STAVY, NE DVA. Když koordinace plurál NEŽÁDÁ (disjunkce nebo
+    přísudek před podmětem), nesmí věta spadnout na obyčejné porovnání
+    s PRVNÍM ČLENEM — „Nad hrobem **promluvili** básník Josef Hora, …" má
+    plurál a je správně. Přijímá se obojí; odmítá se jen to, co není ani
+    jedno.
+
+    Přesně tenhle případ vyrobilo první zúžení a našlo ho až měření na
+    korpusu, ne úvaha."""
+    reading = Reading(
+        tokens=(
+            _token(1, "promluvili", "promluvit", "VERB", 0, "root", Number="Plur", Gender="Masc"),
+            _token(2, "básník", "básník", "NOUN", 1, "nsubj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(3, "a", "a", "CCONJ", 4, "cc"),
+            _token(4, "spisovatel", "spisovatel", "NOUN", 2, "conj", Case="Nom", Number="Sing", Gender="Masc"),
+            _token(5, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    survivors, why = agreement_tier(generate(reading), reading)
+    assert survivors, why
+
+
+def test_the_three_states_are_distinguishable() -> None:
+    """`None` (koordinace tu není) se nesmí slít s `False` (je tu, ale
+    plurál nežádá). Kdyby se slily, spadne druhý případ na porovnání
+    s prvním členem — a to je ta vada, kterou tenhle stav odděluje."""
+    from core_semantics.cascade import _coordinated
+
+    zada = _coordinated_clause("četli", {"Number": "Plur", "Gender": "Masc"})
+    nezada = _coordination_with("či", "četl", {"Number": "Sing", "Gender": "Masc"})
+    bez = _quantified_clause("přišlo", {"Number": "Sing", "Gender": "Neut"})
+    for reading, ocekavano in ((zada, True), (nezada, False), (bez, None)):
+        subject = generate(reading)[0].predication.role(ROLE_SUBJECT)
+        assert subject is not None
+        assert _coordinated(subject, reading) is ocekavano
