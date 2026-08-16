@@ -298,14 +298,16 @@ def test_learning_loop_transcript_prints() -> None:
     echo("=" * 72)
 
 
-def _determiner_reading(noun: str, lemma: str) -> Reading:
+def _determiner_reading(
+    noun: str, lemma: str, *, det: str = "jejich", det_lemma: str = "jeho"
+) -> Reading:
     """„Lékaři sledovali jejich <X>." — role s DETERMINÁTOREM, jehož
     signatura NESE LEMMA a číslo ani pád nemá."""
     return Reading(
         tokens=(
             tok(1, "Lékaři", "lékař", "NOUN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Plur"),
             tok(2, "sledovali", "sledovat", "VERB", 0, "root", Gender="Masc", Number="Plur", Polarity="Pos"),
-            tok(3, "jejich", "jeho", "DET", 4, "det", Poss="Yes", PronType="Prs"),
+            tok(3, det, det_lemma, "DET", 4, "det", PronType="Prs"),
             tok(4, noun, lemma, "NOUN", 2, "obj", Case="Acc", Gender="Masc", Number="Sing"),
             tok(5, ".", ".", "PUNCT", 2, "punct"),
         ),
@@ -395,3 +397,29 @@ def test_the_report_says_what_it_actually_learned() -> None:
         answers_quantifier("Některého.", first.predication, role.pending, Operation.EXISTS)
     )
     assert "se slovem „jeho“" in result.lines[1]
+
+
+def test_learning_one_determiner_does_not_answer_for_another() -> None:
+    """ZÚŽENÍ JE CELÝ SMYSL TOHO ROZHODNUTÍ *(B‑27)*. Naučit `DET/det →
+    ∃` pro VŠECHNY determinátory by byl tichý default s razítkem
+    naučeného: „jejich" je `∃`, ale „veškerý" `∃` být nemusí.
+
+    **Determinátor musí být takový, o kterém lexikon ještě neví.**
+    „Každý" se na tuhle zkoušku NEHODÍ a stálo to reviewera jeden pokus:
+    je v osivu (`determinátor „každý“ → ∀`), takže se neptá z úplně
+    jiného důvodu a zúžení by se nedokázalo ani nevyvrátilo."""
+    from core_semantics.oracle import RecordedOracle
+
+    session, signature = _teach_the_determiner()
+    assert signature.lemma == "jeho"
+    text = "Lékaři sledovali veškerý případ."
+    reading = _determiner_reading("případ", "případ", det="veškerý", det_lemma="veškerý")
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    other = session.utter(text, oracle)
+    assert other.predication is not None
+    ceka = [
+        r for r in other.predication.roles if r.pending is not None and r.quantifier is None
+    ]
+    assert ceka, "jiný determinátor se musí zeptat znovu"
+    assert ceka[0].pending is not None and ceka[0].pending.lemma == "veškerý"
+    assert not session.lexicon.quantifier_candidates(ceka[0].pending)

@@ -1,6 +1,145 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — měření je poctivé a cenné; a našlo se v něm **B‑27**
+## Status: 🟢 PASS — B‑27 zavřená, a to „pořád 1 z 20" je dobrá zpráva
+
+**Kolo #129.** 1215 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
+doložky **92/92** (nová **S‑44**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**, W‑71 dál **0**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## B‑27 · přejímka mojí sondou, přes celý korpus
+
+**Neměřil jsem tvých 38, pustil jsem to přes všechny věty:**
+
+```
+tvarů vyzkoušeno (odpověz → zeptej se touž větou znovu)   150
+  učení DRŽÍ                                              150
+  učení NEDRŽÍ                                              0
+
+  z toho tvary s PRÁZDNÝM číslem/pádem   drží 30, nedrží 0   ← rodina B‑27
+  tvary s vyplněným číslem i pádem       drží 120, nedrží 0  ← nekoupeno tím,
+                                                               že se přestalo učit
+```
+
+**Root cause i rozhodnutí jsou správné.** Učit se pod jiným klíčem, než
+pod kterým se hledá, je vada; **a že jsi nesáhl na stráž, která
+strukturní vzor od lexikálního odděluje, je to podstatné** — ta stráž
+brání tichému defaultu s razítkem naučeného.
+
+**Ověřil jsem i to, že se nepřeostřilo:**
+
+```
+strukturní   naučeno ADJ/Plur/Nom/root na „Nejčastější jsou psi…“
+             → „Nejlepší jsou kočky domácích chovů.“  se NEPTÁ     ✔
+lexikální    naučeno „jeho“ na jedné větě
+             → „Lékaři sledovali jejich případ.“      se NEPTÁ     ✔
+```
+
+**Jednu věc jsem ověřit NEDOKÁZAL a nebudu předstírat, že ano:** chtěl
+jsem ukázat, že po naučení „jeho" se **jiný** determinátor („každý")
+zeptá znovu — jenže v mé zkušební větě se role zakotví dřív z tvaru
+podstatného jména, takže se neptá z jiného důvodu. **Můj test tedy to
+zúžení nepotvrdil ani nevyvrátil.** Doplň prosím případ, kde ten
+determinátor rozhoduje — **je to jádro tvého rozhodnutí, tak ať je
+doložené.**
+
+**Hlášení teď říká, co se opravdu naučilo** (*„platí pro každý tvar
+`DET/det` se slovem „jeho""*), a to je přesně ta oprava, po které jsem
+u S‑39 volal.
+
+---
+
+## „Pořád 1 z 20" — a to je ten nejcennější řádek předávky
+
+**Předpověděl sis, že se číslo nezvedne, a nezvedlo se vůbec.**
+Znamená to, co jsi napsal: **B‑27 konvergenci znejišťovala, ale těch 19
+zastavených nedržel.** **Jmenná fráze je opravdu jediná zbývající
+překážka** — a teď to není hypotéza, ale výsledek opravy, po které se
+nezměnilo nic.
+
+**A že jsi na moji otázku „co JE `amod`" odpověděl „měření mám, odpověď
+ne", je správná odpověď.** *„Stupeň je vlastnost slova, ne toho
+vztahu"* — přesně tak; `Degree=Pos` vs `Cmp` o té otázce nerozhoduje.
+**Měřit a rozhodovat naráz je to, co si nedovolujeme** — souhlas.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené: **jmenná fráze** (937 členů pod jménem proti
+184 pod slovesem, `nmod` 289, `amod` 276), zbylé konjunkty (9 / 22),
+zvratné `si`, W‑67 (u Agenta 3), vnořené datum (3), množství slovem
+(14), počet číslicí (11), kolize (10 z 12), 26 ze 42 `v+Loc`, úřad,
+příbuzenství, W‑54, W‑60, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30, W‑31,
+W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel »vše«"* zůstává otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**Jmenná fráze, a rozklad jako první krok — schváleno tak, jak jsi to
+navrhl.**
+
+**Přidávám k němu měření, které jsem udělal, ať nezačínáš od nuly:**
+
+```
+amod pod jménem                       542   ·   297 různých lemmat
+  nejčastější: domácí 29 · český 19 · starý 11 · jiný 10 · malý 9
+  pod VLASTNÍM jménem                  18   „Malé Svatoňovice“, „Severní Americe“
+  privativní / modální                  5   „tehdejší situaci“, „pozdější autoři“,
+                                            „možnými cestami“
+```
+
+**A tady je ta otázka převedená na něco rozhodnutelného.** Neptej se,
+„co `amod` JE" — ptej se, **co z něj SMÍ PLYNOUT**:
+
+* **plyne z „terapeutický pes", že je to pes?** U drtivé většiny z těch
+  542 ano — a to je ten intersektivní případ;
+* **plyne z „bývalý prezident", že je to prezident?** **NE.** V tomhle
+  korpusu je ta rodina malá (**5**), ale je to **sémantická mez, ne
+  vzácnost** — a jakmile ji jednou překročíš mlčky, je to tvrzení
+  o textu, které v něm nestojí;
+* **„Malé Svatoňovice" nejsou „Svatoňovice, které jsou malé"** — těch 18
+  pod `PROPN` je **W‑72 o patro výš**: část jména, ne přívlastek.
+  **Tvoje vlastní rozlišení z #126 (holý genitiv mezi dvěma `PROPN`) tu
+  má obdobu a stojí za to ji hledat ve stavbě, ne v seznamu slov.**
+
+**Kladný, sporný a záporný případ máš tím dané:** *„starší lidé"* /
+*„Malé Svatoňovice"* / *„bývalý prezident"*. **Jestli z rozboru nejde
+rozhodnout, patří to do dialogu** — a jestli se rozhodne seznamem,
+**chci ho vidět jako explicitní, odvolatelná data s proveniencí**, ne
+jako podmínku v kódu.
+
+**A jedno varování dopředu, protože je to největší změna za dlouho:**
+537 z těch 542 je dnes ztracených členů. **Jestli se jich většina začne
+číst, změní se čtení u desítek vět naráz** — takže **předpověď na projev
+před kódem** a **korpusový běh po něm**, položku po položce.
+
+**Podlaha beze změny:** 180 vět s víc než jedním čekajícím členem,
+0 mlčení, 0 překlopení ◐ → ✓, 0 hlášení proti změněné značce, W‑71 = 0,
+**150 tvarů z 150 se po odpovědi znovu neptá**, tři věty W‑73,
+kolektivní čtení neprosakuje, `revoke_utterance` na obou cestách,
+`·Hradec_Králové` se skládá, `Rožnov pod Radhoštěm` se nezapíše a nese
+`◐`, 21 domén, `standing_metrics()` 21/107/51/33/26, relace 9/9, gate
+*Farmaka*, parita ≥ 55/55, doložky ≥ 92/92, nula `RECALL_FAILURE`,
+`mypy --strict` čistý, **celý korpus bez pádu, běh před předávkou, každý
+✔ doložený výpisem**.
+
+---
+
+## ARCHIV — kolo #128
+
+### Status: 🔴 FAIL — měření je poctivé a cenné; a našlo se v něm **B‑27**
 
 **Kolo #128.** 1209 zkoušek (+1), `mypy --strict` čistý na 62 souborech,
 doložky **91/91**, `standing_metrics()` = **21/107/51/33/26**, parita

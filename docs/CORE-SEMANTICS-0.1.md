@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.62 · 16. 8. 2026
+**Verze jádra:** 0.1.63 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.63 | § 12 — ROZKLAD PŘÍVLASTKU VE JMENNÉ FRÁZI: tři různé věci (část jména 18, přivlastnění 11, přívlastek třídy ~513), a u té třetí rozbor odpověď NEMÁ — „terapeutický pes“ a „bývalý prezident“ jsou znak za znakem stejné |
 | 0.1.62 | § 5.2 — CO SE NAUČÍ, MUSÍ JÍT NAJÍT: spouštěč se stavěl bez `lemma`, takže se vzor uložil jako strukturní a signatura s lemmatem ho nenašla — táž věta se ptala podruhé. 47 tvarů z 206 se tím nikdy nenaučilo natrvalo; § 13 T112 |
 | 0.1.61 | § 5.2 — UZEL SE ZKRÁCENÝM JMÉNEM SE NEZAPÍŠE MLČKY: předložkový druhý díl („Rožnov pod Radhoštěm“) se složit nedá, ale hlásí se jako NEÚPLNÉ JMÉNO a zápis blokuje; falešná otázka na roli dílu zmizela; § 13 T111 |
 | 0.1.60 | § 5.2 — UZEL SE NEJMENUJE ZKRÁCENĚ: druhý díl jména v holém genitivu (`nmod` pod `PROPN`) se skládá, takže „v Hradci Králové“ dá `·Hradec_Králové`, ne `·Hradec`; § 13 T110 |
@@ -1052,6 +1053,40 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**PŘÍVLASTEK VE JMENNÉ FRÁZI — ROZKLAD PŘED NÁVRHEM** *(kolo #130,
+16. 8. 2026)*. Po měření z #128 je jmenná fráze JEDINÁ zbývající
+překážka: pod jménem visí 937 členů proti 184 pod slovesem. Otázka
+„co `amod` JE" se rozhodnout nedá; přeložená na **co z něj smí plynout**
+ano — a rozpadá se na tři různé věci, ne na jednu:
+
+| co to je | kolik | pozná to rozbor? |
+|---|---|---|
+| ČÁST JMÉNA — „**Malé** Svatoňovice" | 18 | **ANO**, hlava je `PROPN` |
+| PŘIVLASTNĚNÍ — „**Čapkova** rodina" | 11 | **ANO**, `Poss=Yes` |
+| PŘÍVLASTEK TŘÍDY — „terapeutický pes" | ~513 | **NE** |
+
+**Ta třetí je ta podstatná a rozbor na ni odpověď nemá.** „Terapeutický
+pes" a „bývalý prezident" mají rozbor ZNAK ZA ZNAKEM TÝŽ
+(`Animacy=Anim, Case=Nom, Degree=Pos, Gender=Masc, Number=Sing,
+Polarity=Pos`) — a přitom z prvního plyne, že je to pes, a z druhého, že
+to prezident NENÍ. `Degree` je vlastnost SLOVA, ne toho vztahu:
+„starší lidé" je `Cmp`, ale o podtypu to neříká nic.
+
+**Co z toho plyne pro návrh** (a je to teprve návrh, ne rozhodnutí):
+složit přívlastek do JMÉNA TŘÍDY (`terapeutický_pes`) NETVRDÍ nic — je
+to jen jméno uzlu. Tvrzení „je to pes" je `subset`, tedy VLASTNÍ TAH
+(`→⊆`), který už existuje. Mez by tím byla poctivá: čte se, co ve větě
+stojí, a co z toho plyne, se neodvozuje mlčky.
+
+**Doloženo měřením, kde ta hranice dnes leží:** ze 542 `amod` pod jménem
+je 182 už POHLCENÝCH do zmínky (fráze přímo pod rolí), 277 ZTRACENÝCH
+(fráze vnořená hlouběji) a 59 jinde. Skládání tedy není nová schopnost,
+je to TÁŽ schopnost o patro níž.
+
+> **Předpověď na projev bude potřeba PŘED kódem a po položkách**: 277
+> ztracených členů, které by se začaly číst, mění čtení u desítek vět
+> naráz — je to největší jediná změna za dlouho.
 
 **SOUŘADNÝ ČLEN — DRUHÝ UZEL TÉŽE ROLE, NE DRUHÁ ROLE** *(rozklad
 kola #123, 16. 8. 2026)*. Je to největší jediná věc, která v korpusu
