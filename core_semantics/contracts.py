@@ -1197,11 +1197,25 @@ CONTRACTS: tuple[Clause, ...] = (
             "— rozdíl je v rozboru (`deprel=case`). Táž podmínka platí "
             "i v konstrukci jádrové relace, kde se počítá, kolik genitivů "
             "věta má: jedna funkce pro obě místa, protože dvě kopie by se "
-            "rozešly (W‑58)"
+            "rozešly (W‑58). "
+            "ŘETĚZ, NE JEDNA HRANA *(W‑80)*: hlava přívlastku může být "
+            "sama přívlastkem („péči lékaře **pacienta**“), a dokud se "
+            "ptalo jen ROLÍ, zůstal takový člen venku — žádná odpověď se "
+            "k němu nedostala, protože jeho hlava byla taky venku. "
+            "Přidávají se proto TRANZITIVNĚ hlavy spojené `nmod` s HOLÝM "
+            "genitivem; tím se rekurze SAMA ZASTAVÍ NA HRANICI VĚTY, "
+            "protože klauzální hrana taková není a vtáhnout členy "
+            "vedlejší věty by znamenalo tvrdit, že jsou účastníky téhle "
+            "(W‑70). ROZSAH MĚŘENÍ: 80 % zbylých jmenných slov visí pod "
+            "členem, který je sám venku (kolo #140), ALE projev téhle "
+            "hrany je jen 16 zbytků — řetěz přes `conj` je vlastní "
+            "rozhodnutí a postavený NENÍ"
         ),
         anchor="core_semantics.cascade:genitive_attributes",
         entry=".utter(",
         enforced_by=(
+            "test_a_genitive_under_a_genitive_is_reported_too",
+            "test_the_chain_stops_at_a_clause",
             "test_the_sentence_is_written_even_though_the_attribute_waits",
             "test_the_attribute_is_not_reported_as_a_dropped_member",
             "test_the_second_statement_needs_the_answer",

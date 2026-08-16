@@ -3415,3 +3415,57 @@ def test_a_word_the_parser_could_not_classify_is_still_material() -> None:
     zbyle = {t.form for t in unaccounted_tokens(reading, predication)}
     assert "aloe" in zbyle, "co rozbor nezařadil, není proto beze stopy"
     assert "a" not in zbyle, "spojka je značka, ne materiál"
+
+
+def _genitive_chain() -> Reading:
+    """„Vyžadují péči lékaře pacienta." — genitiv POD genitivem: `lékaře`
+    visí pod `péči` (role) a `pacienta` pod `lékaře`, tedy pod členem,
+    který sám ve čtení NENÍ."""
+    return Reading(
+        tokens=(
+            _token(1, "Vyžadují", "vyžadovat", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(2, "péči", "péče", "NOUN", 1, "obj", Case="Acc", Gender="Fem", Number="Sing"),
+            _token(3, "lékaře", "lékař", "NOUN", 2, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(4, "pacienta", "pacient", "NOUN", 3, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_genitive_under_a_genitive_is_reported_too() -> None:
+    """ŘETĚZ, NE JEDNA HRANA *(W‑80)*. `pacienta` visí pod `lékaře`, tedy
+    pod členem, který ve čtení NENÍ — a dokud se ptalo jen rolí, zůstal
+    venku a žádná odpověď se k němu nedostala, protože jeho hlava byla
+    taky venku. Změřeno v #140: 80 % zbylých jmenných slov visí pod
+    členem, který je sám venku."""
+    from core_semantics.cascade import genitive_attributes
+
+    reading = _genitive_chain()
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    hlavy = {genitiv for _, genitiv, _ in genitive_attributes(reading, predication)}
+    assert "lékař" in hlavy, "první patro se hlásilo už dřív"
+    assert "pacient" in hlavy, "druhé patro se musí ohlásit taky"
+
+
+def test_the_chain_stops_at_a_clause() -> None:
+    """REKURZE SE ZASTAVÍ NA HRANICI VĚTY *(W‑70)*. Vtáhnout členy
+    vedlejší věty znamená tvrdit, že jsou účastníky téhle — hranice je
+    ve STAVBĚ: přidávají se jen hlavy spojené `nmod` s HOLÝM genitivem,
+    a klauzální hrana taková není."""
+    from core_semantics.cascade import genitive_attributes
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Vyžadují", "vyžadovat", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(2, "péči", "péče", "NOUN", 1, "obj", Case="Acc", Gender="Fem", Number="Sing"),
+            _token(3, "kterou", "který", "PRON", 4, "obj", Case="Acc", Gender="Fem", Number="Sing", PronType="Rel"),
+            _token(4, "doporučil", "doporučit", "VERB", 2, "acl:relcl", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(5, "lékaře", "lékař", "NOUN", 4, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(6, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    hlavy = {genitiv for _, genitiv, _ in genitive_attributes(reading, predication)}
+    assert "lékař" not in hlavy, "přes vedlejší větu se řetěz nepřenese"

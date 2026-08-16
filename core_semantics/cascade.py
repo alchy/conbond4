@@ -3268,6 +3268,33 @@ def genitive_attributes(
         role.mention.token_index: role.mention.lemma
         for role in predication.roles
     }
+    # ŘETĚZ, NE JEDNA HRANA *(W‑80)*. „…péče majitele a veterinárního
+    # **lékaře**" — `lékaře` visí pod `veterinárního`, tedy pod členem,
+    # který sám ve čtení NENÍ, jen se o něm mluví jako o přívlastku.
+    # Dokud se ptalo jen rolí, zůstalo `lékaře` venku a ŽÁDNÁ odpověď
+    # se k němu nedostala: jeho hlava byla taky venku.
+    #
+    # Změřeno (kolo #140): 80 % zbylých jmenných slov visí pod členem,
+    # který je sám venku, a dvě třetiny z nich jsou dál než JEDNU
+    # hranu — záplata na jednu hranu by uvolnila menšinu.
+    #
+    # NENÍ TO NOVÁ SCHOPNOST, je to táž do hloubky. A ZASTAVÍ SE SAMA
+    # NA HRANICI VĚTY: přidávají se jen hlavy spojené `nmod` s holým
+    # genitivem, což je jmenná hrana; přes `acl`, `advcl` ani `xcomp`
+    # se nepřejde, takže vedlejší věta se nevtáhne (W‑70).
+    zmena = True
+    while zmena:
+        zmena = False
+        for token in reading.tokens:
+            if token.index in ve_cteni:
+                continue
+            if base_deprel(token.deprel) != "nmod" or not is_bare_genitive(
+                token, reading
+            ):
+                continue
+            if token.head in ve_cteni:
+                ve_cteni[token.index] = token.lemma
+                zmena = True
     # CO SE SLOŽILO DO JMÉNA, PŘÍVLASTEK UŽ NENÍ *(W‑72)*. „v Hradci
     # Králové" dá jeden uzel `·Hradec_Králové`; ohlásit k tomu ještě
     # vztah „Hradec_Králové Králové" znamená tvrdit, že vedle věty stojí
