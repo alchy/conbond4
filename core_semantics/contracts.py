@@ -1940,6 +1940,43 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-56",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "PRIVLASTEK SE UKAZUJE TVAREM Z VETY, NE LEMMATEM *(W-96)*. "
+            "Hlava se od W-77 ukazovala povrchem, DOPLNEK lemmatem, "
+            "takze hlaseni znelo „Cesta do PRAHA“, „Chov ZVIRE“, "
+            "„Studie provedena INSTITUT“ — text, ktery v zadne vete "
+            "nestoji. Je to taz trida jako W-93: system rika o vlastnim "
+            "vstupu neco, co neni pravda. "
+            "PREDLOZKA SE BERE Z ROZBORU, kdyz je k dispozici, a z TVARU "
+            "jinak: tvar nese LEMMA predlozky, takze „SE psy“ by "
+            "v hlaseni stalo jako „s psy“ — vokalizovanou podobu zna "
+            "jen text. "
+            "IDENTITA UZLU SE TIM NEHNE: do baze jde dal LEMMA, protoze "
+            "„alergii na penicilin“ a „alergie na penicilinu“ musi "
+            "padnout na TYZ uzel (W-77). Meni se to, co system RIKA, ne "
+            "co dela — ztraty, zapisy i pocet privlastku zustaly. "
+            "BEZ ROZBORU SE TVAR NEHADA a volajici si necha lemma; "
+            "odvodit tvar z lemmatu by byla taz vada o patro niz. "
+            ". ROZSAH MERENI: korpus 238 vet, TAZ POPULACE NA OBOU "
+            "REVIZICH (c06fb1d -> tento strom): rozlisitelnych doplnku "
+            "178 (tam, kde se tvar od lemmatu lisi), TVAREM 8 -> 178, "
+            "lemmatem 170 -> 0. Ztrat pod pohlcenym clenem 17, zapsanych "
+            "13, privlastku 211 — vse beze zmeny. "
+            "MEZ: doplnek se ukazuje BEZ SVYCH VLASTNICH PRIVLASTKU "
+            "(„s zviraty“ misto „s domacimi zviraty“) — jina rodina, "
+            "hlasi se a nestavi. "
+        ),
+        anchor="core_semantics.cascade:attribute_filler_surface",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_attribute_shows_the_form_from_the_sentence",
+            "test_the_node_keeps_the_lemma_even_though_the_report_shows_the_form",
+            "test_without_the_parse_the_report_keeps_the_lemma",
+        ),
+    ),
+    Clause(
         id="S-55",
         boundary=CASCADE_SESSION,
         promise=(

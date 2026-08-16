@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.84 · 16. 8. 2026
+**Verze jádra:** 0.1.85 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,34 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**PŘÍVLASTEK SE UKAZUJE TVAREM Z VĚTY** *(W‑96, kolo #156)*.
+
+Hlava se od W‑77 ukazovala povrchem, **doplněk lemmatem** — takže
+hlášení znělo „Cesta do **Praha**", „Chov **zvíře**", „Studie provedená
+**institut**". Takový text v žádné větě nestojí; je to táž třída jako
+W‑93, kdy systém říká o vlastním vstupu něco, co není pravda. Změřeno:
+**178 z 211 přívlastků**, tedy 84 %.
+
+Předložka se bere z rozboru, když je k dispozici: tvar nese LEMMA
+předložky, takže „**se** psy" by v hlášení stálo jako „s psy".
+
+**Identita uzlu se tím nehne.** Do báze jde dál lemma — „alergii na
+penicilin" i „alergie na penicilinu" musí padnout na týž uzel. Mění se
+to, co systém ŘÍKÁ, ne co dělá; ztráty (17), zápisy (13) i počet
+přívlastků (211) zůstaly.
+
+Předpověď a skutečnost, táž populace na obou revizích (`git archive
+c06fb1d`): rozlišitelných doplňků 178, **tvarem 8 → 178, lemmatem
+170 → 0**.
+
+MEZ, KTERÁ SE HLÁSÍ A NESTAVÍ: doplněk se ukazuje bez svých vlastních
+přívlastků („s **zvířaty**" místo „s domácími zvířaty") — jiná rodina.
+
+**A ČTRNÁCTÁ ZKRATKA VE VLASTNÍM MĚŘIDLE, CHYCENÁ PŘED PŘEDÁVKOU:** první
+sonda hledala lemma jako PODŘETĚZEC hlášení, takže „pozornost" našla
+uvnitř správného tvaru „pozornosti" a napočítala 81 zbylých vad, které
+neexistují. Měřit se to musí obráceně — jestli v hlášení stojí TVAR.
 
 **ÚSEK POZNÁ SPOJKA, NE TO, ŽE JSOU OBOJÍ LETOPOČTY** *(B‑30, kolo #155)*.
 

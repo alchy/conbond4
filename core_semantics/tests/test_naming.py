@@ -947,3 +947,52 @@ def test_without_the_parse_the_question_claims_no_case_at_all() -> None:
     otazka = attribute_question(result.predication)
     assert otazka is not None
     assert "genitiv" not in otazka and "pád Ins" not in otazka
+
+
+# --------------------------------------------------------------------------
+# Přívlastek se ukazuje tvarem z věty — W‑96
+# --------------------------------------------------------------------------
+
+
+def test_the_attribute_shows_the_form_from_the_sentence() -> None:
+    """„Cesta do PRAHA" V ŽÁDNÉ VĚTĚ NESTOJÍ *(W‑96)*.
+
+    Hlava se od W‑77 ukazuje povrchem, doplněk se ukazoval LEMMATEM.
+    Je to táž třída jako W‑93: systém říká o vlastním vstupu něco, co
+    není pravda. Změřeno: 178 z 211 přívlastků korpusu, tedy 84 %."""
+    from core_semantics.cascade import attribute_question
+
+    reading = _participle()
+    session, oracle = _participle_session(reading)
+    result = session.utter(PARTICIPLE_TEXT, oracle)
+    assert result.predication is not None
+    otazka = attribute_question(result.predication, reading)
+    assert otazka is not None
+    assert "„Rizika spojená s zvířaty“" in otazka
+    assert "zvíře" not in otazka, "lemma do popisu nepatří"
+
+
+def test_the_node_keeps_the_lemma_even_though_the_report_shows_the_form() -> None:
+    """IDENTITA UZLU SE TÍM NEHNE *(W‑96)*. „alergii na penicilin"
+    i „alergie na penicilinu" musí padnout na TÝŽ uzel, jinak by se báze
+    rozpadla po pádech. Mění se to, co systém ŘÍKÁ, ne co dělá."""
+    from core_semantics.session import names_attribute
+
+    session, oracle = _prepositional_session()
+    result = session.utter(ALLERGY, oracle)
+    assert result.predication is not None
+    session.play(
+        names_attribute("Je to na co.", "alergie", "penicilin", "na co",
+                        "nmod:na+Acc")
+    )
+    zapsane = [str(st.formula) for st in session.kb.active()]
+    assert any("alergie(na co:∀penicilin)" in f for f in zapsane)
+
+
+def test_without_the_parse_the_report_keeps_the_lemma() -> None:
+    """Bez rozboru se tvar NEHÁDÁ — volající si nechá lemma. Odvodit tvar
+    z lemmatu by byla táž vada o patro níž (týž závěr jako u pádu
+    v W‑93)."""
+    from core_semantics.cascade import attribute_filler_surface
+
+    assert attribute_filler_surface(5, None) == ""

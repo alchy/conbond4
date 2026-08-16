@@ -3646,15 +3646,54 @@ def head_surface(predication: Predication, lemma: str) -> str:
     return lemma
 
 
-def attribute_label(head: str, filler: str, shape: str) -> str:
+def attribute_filler_surface(token_index: int, reading: Reading | None) -> str:
+    """Doplněk přívlastku tak, jak stojí ve VĚTĚ *(W‑96)*.
+
+    Hlava se od W‑77 ukazuje povrchem, doplněk se ukazoval LEMMATEM —
+    takže hlášení znělo „Cesta do **Praha**", „Chov **zvíře**", „Studie
+    provedená **institut**". Takový text v žádné větě nestojí a je to
+    táž třída jako W‑93: **systém říká o vlastním vstupu něco, co není
+    pravda.** Změřeno: 178 z 211 přívlastků, tedy 84 %.
+
+    **Identita uzlu se tím nehne.** Do báze jde dál LEMMA — „alergii na
+    penicilin" i „alergie na penicilinu" musí padnout na týž uzel,
+    jinak by se báze rozpadla po pádech (W‑77). Mění se to, co systém
+    ŘÍKÁ, ne co dělá.
+
+    Bez rozboru se vrací prázdno a volající si nechá lemma: hádat tvar
+    z lemmatu by byla táž vada o patro níž.
+    """
+    if reading is None:
+        return ""
+    token = _token_at(token_index, reading)
+    return token.form if token is not None else ""
+
+
+def _preposition_surface(token_index: int, reading: Reading | None) -> str:
+    """Předložka doplňku tak, jak stojí ve větě *(W‑96)*."""
+    if reading is None:
+        return ""
+    token = _token_at(token_index, reading)
+    if token is None:
+        return ""
+    found = _preposition_of(token, reading)
+    return found.form if found is not None else ""
+
+
+def attribute_label(
+    head: str, filler: str, shape: str, preposition: str = ""
+) -> str:
     """Přívlastek tak, jak stojí ve větě — s předložkou, když ji má.
 
-    Předložka se bere Z TVARU, ne z hlášení: `nmod:na+Acc` dá „na", a
-    kdyby se skládala jinde, rozešly by se popis a to, co se učí.
+    Předložka se bere z ROZBORU, když je k dispozici, a z TVARU jinak.
+    Tvar nese LEMMA předložky, takže „**se** psy" by v hlášení stálo
+    jako „s psy" — vokalizovanou podobu zná jen text *(W‑96)*. Kdyby se
+    skládala ještě někde třetí, rozešly by se popis a to, co se učí.
     """
     if not shape:
         return f"{head} {filler}"
-    return f"{head} {shape.split(':', 1)[1].split('+', 1)[0]} {filler}"
+    z_tvaru = shape.split(":", 1)[1].split("+", 1)[0]
+    return f"{head} {preposition or z_tvaru} {filler}"
 
 
 def attribute_question(
@@ -3685,8 +3724,8 @@ def attribute_question(
     if not predication.pending_attribute:
         return None
     parts = [
-        f"„{attribute_label(head_surface(predication, hlava), doplnek, tvar)}“"
-        for hlava, doplnek, _, tvar in predication.pending_attribute
+        f"„{attribute_label(head_surface(predication, hlava), attribute_filler_surface(index, reading) or doplnek, tvar, _preposition_surface(index, reading))}“"
+        for hlava, doplnek, index, tvar in predication.pending_attribute
     ]
     bez_tvaru = [
         token_index
@@ -3992,8 +4031,8 @@ def attribute_tier() -> Tier:
             notes.append(
                 "[PŘÍVLASTEK: "
                 + ", ".join(
-                    f"„{attribute_label(head_surface(candidate.predication, h), g, tvar)}“"
-                    for h, g, _, tvar in found
+                    f"„{attribute_label(head_surface(candidate.predication, h), attribute_filler_surface(index, reading) or g, tvar, _preposition_surface(index, reading))}“"
+                    for h, g, index, tvar in found
                 )
                 + " — vztah vedle věty, čeká se na jméno role]"
             )
