@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.71 · 16. 8. 2026
+**Verze jádra:** 0.1.72 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.72 | § 12 — změřeno, jestli podstrom přijde s tím, co vstoupí do čtení: 80 % zbytků visí pod členem, který je sám venku, a nejbližší člen ve čtení je od dvou třetin vzdálený víc než jednu hranu — je to ŘETĚZ, ne jedna hrana |
 | 0.1.71 | § 12 — rozpad 50 vět, které se nezapíšou ani po vyčerpání dialogu: 22 drží `[ZAHOZENO]`, kterou odpověď neodstranila (S-39 jako překážka zápisu), 16 čekající sdílení, 12 zakotvení |
 | 0.1.70 | § 5.2 — částečný zápis se ptá OBOJÍHO, co vynechávám i ODKUD: pod záporným přísudkem se monotonie obrací (`¬(P∧Q)` ⊬ `¬P`), takže záporná věta se částečně nezapíše; § 13 T117 |
 | 0.1.69 | § 5.2 — ČÁSTEČNÝ ZÁPIS: zapíše se to, čemu systém rozumí, nepojmenovaná okolnost zůstane otevřená; vylučuje TŘÍDA OPERÁTORŮ z lexikonu (odvolatelná data), doplnění částečný výrok ODVOLÁ; § 13 T116 |
@@ -1061,6 +1062,31 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**PŘIJDE PODSTROM S TÍM, CO VSTOUPÍ DO ČTENÍ? — MĚŘENÍ, NE NÁVRH**
+*(kolo #140)*. Po vyčerpání dialogu (odpověď na každý ztracený tvar,
+pak na povrchovou roli, pak na kvantifikátor) zůstává ve 150 větách
+vypsaná ztráta. Z 726 JMENNÝCH zbytků:
+
+| kde ten zbytek visí | kolik |
+|---|---|
+| pod členem, který do čtení **VSTOUPIL** — neměl tam zůstat | 142 (19 %) |
+| pod členem, který je **SÁM VENKU** — potřebuje řetěz | **584 (80 %)** |
+
+**Převažuje (b), a to čtyřnásobně.** Není to tedy jedna vlastnost („co
+vstoupí, přivede si své"), je to ŘETĚZ — a jeho délka je změřená:
+
+    1 hrana   246      4 hrany   39
+    2 hrany   161      5 hran    12
+    3 hrany    81      6 hran     4
+                       ke členu ve čtení NEVEDE   41
+
+**Nejbližší člen ve čtení je od dvou třetin zbytků vzdálený víc než
+jednu hranu**, takže záplata na jednu hranu by uvolnila necelou
+polovinu a zbytek by nechala vypadat stejně.
+
+> Změřeno bez hypotézy, co s tím. Že (a) není nula, znamená, že tam
+> jedna malá vlastnost taky je — ale sama by řešila pětinu.
 
 **PADESÁT VĚT, KTERÉ SE NEZAPÍŠOU ANI PO VYČERPÁNÍ DIALOGU** *(měření
 kola #139)*. Po částečném zápisu (W‑79) drží 55 vět korpusu ZTRACENÝ
