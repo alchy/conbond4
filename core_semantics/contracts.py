@@ -954,6 +954,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "korpusu dnes nevadí, ale „téměř zemřel“ neimplikuje "
             "„zemřel“. Nepojmenovaná role se do báze NEDOSTANE ani "
             "částečně, a dotaz na ni dá `U`, ne `A` a ne `N`"
+            ". ROZSAH MĚŘENÍ: odvozeno z 154 vět korpusu, ve kterých zákaz "
+            "držela POVRCHOVÁ ROLE, a z KLADNÝCH čtení; monotonie pod "
+            "jinými operátory než zápor a modalita ověřená NENÍ. "
         ),
         anchor="core_semantics.cascade:partial_write",
         entry=".utter(",
@@ -991,6 +994,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "se dál učí strukturně a zobecňuje jako dřív — změřeno: "
             "38 tvarů z 38 (32 strukturních, 6 lexikálních) po odpovědi "
             "znovu neptá"
+            ". ROZSAH MĚŘENÍ: 38 tvarů korpusu (32 strukturních, 6 lexikálních) "
+            "a determinátory z osiva; chování u tvaru, který nese lemma I "
+            "číslo a pád naráz, ověřené není. "
         ),
         anchor="core_semantics.session:Session._answer_quantifier",
         entry=".play(",
@@ -1544,6 +1550,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "o kterých se ví dopředu. PODTYP SE NEZAHAZUJE (N‑1): ptá se "
             "„je to KANDIDÁT na sponu“, ne co ta spona znamená. `aux` "
             "spona není a základ se bere celý, ne jako předpona"
+            ". ROZSAH MĚŘENÍ: 61 spon korpusu a NULA podtypů — projev opravy je "
+            "0 a drží ji jen zkouška. "
         ),
         anchor="core_semantics.cascade:is_copula",
         entry="generate(",
@@ -1910,6 +1918,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "jsou členy TÉHLE věty (W‑70) — a 2 slova uvnitř fráze, "
             "která je sama hlášena jen zčásti. Slovo, které ve čtení "
             "JE, se do účtu nedostane: dvojí hlášení 0 z 220 vět"
+            ". ROZSAH MĚŘENÍ: 220 přečtených vět korpusu kritériem „tvar ani "
+            "lemma se neobjeví v hlášení“; věty NEPŘEČTENÉ (135 slov) se "
+            "měřily zvlášť a hlásí se u nich CELEK. "
         ),
         anchor="core_semantics.cascade:unaccounted_tokens",
         entry="cascade(",
@@ -1945,6 +1956,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "ROZSAH: tahle doložka drží TY DVĚ RODINY, ne celek — "
             "celek hlídá O‑24 (účet). Doložka, která slibuje víc než "
             "kód, je horší než žádná, protože se o ni příští kolo opře"
+            ". ROZSAH MĚŘENÍ: 282 němých tokenů korpusu, z toho 277 `amod` "
+            "a 5 `Poss=Yes`; jiné slovní druhy se do téhle doložky neměřily. "
         ),
         anchor="core_semantics.cascade:_nominal",
         entry="cascade(",
@@ -1982,6 +1995,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "týž rozbor), takže se neskládá a ten člen se HLÁSÍ. Díly "
             "jména se řadí podle POZICE V TEXTU, ne podle toho, kdo je "
             "hlava"
+            ". ROZSAH MĚŘENÍ: 542 `amod` pod jménem v korpusu (18 pod `PROPN`, "
+            "11 `Poss=Yes`); rozlišení podle VELKÉHO PÍSMENE stojí na "
+            "11 jménech proti 7 přívlastkům a NA ZAČÁTKU VĚTY neplatí. "
         ),
         anchor="core_semantics.cascade:dropped_tokens",
         entry="cascade(",
@@ -2050,6 +2066,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "toho jména. V korpusu je projev 0 (43 `flat` se skládá "
             "správně a `nmod` pod zmínkou role tam není ani jednou), "
             "takže tohle drží JEN zkouška"
+            ". ROZSAH MĚŘENÍ: 3 výskyty `PROPN` s genitivním `PROPN` pod `nmod` "
+            "v korpusu; v ŽÁDNÉM z nich nedojde ke zmínce role, takže "
+            "tuhle doložku drží JEN zkouška. "
         ),
         anchor="core_semantics.cascade:name_parts_of",
         entry="cascade(",
@@ -2118,6 +2137,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "přísudkem (jádro drží jeden term na roli a to se nemění); "
             "„dohromady“ dá JEDEN uzel a žádnou skupinu neuzavírá. Věta "
             "s jedním členem v roli se na sdílení neptá"
+            ". ROZSAH MĚŘENÍ: 85 souřadných členů v témž pádě, 120 vět korpusu; "
+            "distributivita se měřila na rozboru TŘÍ vět a v rozboru "
+            "NENÍ. "
         ),
         anchor="core_semantics.cascade:sharing_tier",
         entry=".play(",
@@ -2147,6 +2169,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "(„Králové“, „plic“, „bratra“, „senátu“, „světla“) a je 0. "
             "Přívlastek členu, který ve čtení JEŠTĚ NENÍ, se dál "
             "nehlásí — visel by na něčem, o čem věta nemluví"
+            ". ROZSAH MĚŘENÍ: 5 vět korpusu, kde po odpovědi zmlkl závislý "
+            "člen; měřeno tvarem I lemmatem, protože tvarem samým vyšlo "
+            "špatně. "
         ),
         anchor="core_semantics.session:Session.tiers",
         entry=".play(",
@@ -2213,6 +2238,9 @@ CONTRACTS: tuple[Clause, ...] = (
             "člen zůstal mimo — a dodá, že mapování platí dál; kdyby "
             "člen chyběl z JINÉHO důvodu, řekne se i to, že se neví "
             "proč. Tah, který zabral, o nezměněném čtení MLČÍ"
+            ". ROZSAH MĚŘENÍ: 1388 ztracených členů korpusu; „naprázdno“ se "
+            "měřilo jménem role, které je v té větě VOLNÉ — s napevno "
+            "zvoleným jménem vychází jiné číslo (212). "
         ),
         anchor="core_semantics.session:_pointless_answer",
         entry=".play(",
