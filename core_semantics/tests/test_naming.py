@@ -996,3 +996,49 @@ def test_without_the_parse_the_report_keeps_the_lemma() -> None:
     from core_semantics.cascade import attribute_filler_surface
 
     assert attribute_filler_surface(5, None) == ""
+
+
+def test_a_nested_head_shows_the_form_too() -> None:
+    """HLAVA PŘÍVLASTKU NEMUSÍ BÝT ROLE *(W‑98)*.
+
+    „riziko **vzniku** cukrovky" má dva přívlastky nad sebou: `vznik` je
+    doplněk toho prvního a hlava toho druhého, takže mezi rolemi není
+    a `head_surface` na něj nedosáhl — hlášení říkalo „vznik cukrovky"
+    místo „vzniku cukrovky". Táž vada jako W‑96, jen o jedno místo
+    vlevo.
+
+    **Hledá se v tom, co patro právě NAŠLO**, ne v
+    `predication.pending_attribute`: tam se to zapíše až o krok dál,
+    takže dotaz na predikaci by v patře vracel prázdno a vada by zůstala
+    přesně tam, kde je vidět."""
+    from core_semantics.cascade import genitive_attributes, head_surface
+
+    # «Hmotnost zvyšuje riziko vzniku cukrovky.» — dva přívlastky nad
+    # sebou: `vznik` je doplněk prvního a hlava druhého.
+    reading = Reading(
+        tokens=(
+            w(1, "Hmotnost", "hmotnost", "NOUN", 2, "nsubj",
+              Case="Nom", Gender="Fem", Number="Sing"),
+            w(2, "zvyšuje", "zvyšovat", "VERB", 0, "root",
+              Number="Sing", Polarity="Pos"),
+            w(3, "riziko", "riziko", "NOUN", 2, "obj",
+              Case="Acc", Gender="Neut", Number="Sing"),
+            w(4, "vzniku", "vznik", "NOUN", 3, "nmod",
+              Case="Gen", Gender="Masc", Number="Sing"),
+            w(5, "cukrovky", "cukrovka", "NOUN", 4, "nmod",
+              Case="Gen", Gender="Fem", Number="Sing"),
+            w(6, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    session, oracle = _prepositional_session()
+    predication = session.utter(ALLERGY, oracle).predication
+    assert predication is not None
+
+    nalezene = genitive_attributes(reading, predication)
+    assert head_surface(predication, "vznik", reading, nalezene) == "vzniku", (
+        "hlava, která je sama doplňkem, se ukáže tvarem z věty"
+    )
+    assert head_surface(predication, "vznik", None, nalezene) == "vznik", (
+        "bez rozboru se tvar nehádá"
+    )

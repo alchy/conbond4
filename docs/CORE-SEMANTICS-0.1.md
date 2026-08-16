@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.85 · 16. 8. 2026
+**Verze jádra:** 0.1.86 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,34 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**HLAVA PŘÍVLASTKU NEMUSÍ BÝT ROLE** *(W‑98, kolo #157)*.
+
+„riziko **vzniku** cukrovky" má dva přívlastky nad sebou: `vznik` je
+doplněk toho prvního a hlava toho druhého, takže mezi rolemi není
+a `head_surface` na něj nedosáhl — hlášení říkalo „vznik cukrovky".
+Je to táž vada jako W‑96, jen o jedno místo vlevo.
+
+**Reviewerova předpověď potvrzena: je to JEDNA CESTA, ne rodina.** Ze
+všech 33 hlav, které se ukazovaly lemmatem, je 30 vnořených a 3 jsou
+nerozlišitelné (lemma = tvar); mezi rozlišitelnými (22) je vnořená
+hlava ve **všech** případech.
+
+Hledá se v tom, co patro právě NAŠLO, ne v `predication.pending_attribute`
+— tam se to zapíše až o krok dál, takže dotaz na predikaci by v patře
+vracel prázdno a vada by zůstala přesně tam, kde je vidět.
+
+Táž sonda na obou revizích (`git archive d85f4b9`): vnořených hlav
+rozlišitelných 22, **tvarem 2 → 22, lemmatem 20 → 0**; ztráty 17,
+zápisy 13, přívlastků 211 beze změny.
+
+**PATNÁCTÁ ZKRATKA VE VLASTNÍM MĚŘIDLE, CHYCENÁ PŘED PŘEDÁVKOU:** první
+sonda hledala tvar KDEKOLI v řádku hlášení a vyšlo jí 22 : 0 už PŘED
+opravou — protože tentýž tvar tam stál jako DOPLNĚK jiného přívlastku
+téže věty. Měřit se to musí POZIČNĚ, tedy jestli položka hlášení tím
+tvarem začíná. Je to táž rodina jako čtrnáctá (podřetězec) a jako
+reviewerova třináctá (jednotka měření): **měřidlo si samo zvolilo
+jednotku, která nerozlišuje to, na co se ptá.**
 
 **PŘÍVLASTEK SE UKAZUJE TVAREM Z VĚTY** *(W‑96, kolo #156)*.
 

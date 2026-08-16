@@ -1964,9 +1964,23 @@ CONTRACTS: tuple[Clause, ...] = (
             "178 (tam, kde se tvar od lemmatu lisi), TVAREM 8 -> 178, "
             "lemmatem 170 -> 0. Ztrat pod pohlcenym clenem 17, zapsanych "
             "13, privlastku 211 — vse beze zmeny. "
+            "A HLAVA NEMUSI BYT ROLE *(W-98)*. „riziko VZNIKU cukrovky“ "
+            "ma dva privlastky nad sebou: `vznik` je doplnek toho prvniho "
+            "a hlava toho druheho, takze mezi rolemi neni a hlaseni o nem "
+            "mluvilo lemmatem. Taz vada, jen o jedno misto vlevo, a JEDNA "
+            "CESTA, ne rodina: zmereno, ze vsech 22 rozlisitelnych "
+            "pripadu v korpusu je prave tahle vnorena hlava. "
+            "HLEDA SE V TOM, CO PATRO PRAVE NASLO, ne "
+            "v `predication.pending_attribute` — tam se to zapise az "
+            "o krok dal, takze dotaz na predikaci by v patre vracel "
+            "prazdno a vada by zustala presne tam, kde je videt. "
             "MEZ: doplnek se ukazuje BEZ SVYCH VLASTNICH PRIVLASTKU "
             "(„s zviraty“ misto „s domacimi zviraty“) — jina rodina, "
             "hlasi se a nestavi. "
+            ". ROZSAH MERENI W-98: vnorenych hlav rozlisitelnych 22, "
+            "TVAREM 2 -> 22, lemmatem 20 -> 0 (taz sonda na obou "
+            "revizich, d85f4b9 -> tento strom); ztraty 17, zapisy 13, "
+            "privlastku 211 beze zmeny. "
         ),
         anchor="core_semantics.cascade:attribute_filler_surface",
         entry=".utter(",
@@ -1974,6 +1988,7 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_attribute_shows_the_form_from_the_sentence",
             "test_the_node_keeps_the_lemma_even_though_the_report_shows_the_form",
             "test_without_the_parse_the_report_keeps_the_lemma",
+            "test_a_nested_head_shows_the_form_too",
         ),
     ),
     Clause(

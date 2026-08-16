@@ -3632,17 +3632,42 @@ def genitive_attributes(
     return tuple(najdene)
 
 
-def head_surface(predication: Predication, lemma: str) -> str:
-    """Jak hlava přívlastku stála ve VĚTĚ *(W‑77)*.
+def head_surface(
+    predication: Predication,
+    lemma: str,
+    reading: Reading | None = None,
+    attributes: tuple[tuple[str, str, int, str], ...] = (),
+) -> str:
+    """Jak hlava přívlastku stála ve VĚTĚ *(W‑77, W‑98)*.
 
     Hlava je zmínka ze čtení, takže její identita je lemmatická
     (`různý_míra`) — a hlášení `[PŘÍVLASTEK: „různý_míra péče"]` je pak
     text, který v žádné větě nestojí. Povrch se bere z TÉŽE zmínky, ne
     přepisem podtržítek: „různý míra" by byl tvar, který čeština nemá.
+
+    **A hlava nemusí být ROLE** *(W‑98)*. „riziko **vzniku** cukrovky" má
+    dva přívlastky nad sebou: `vznik` je doplněk toho prvního a hlava
+    toho druhého, takže mezi rolemi není a hlášení o něm mluvilo
+    lemmatem — „vznik cukrovky" místo „vzniku cukrovky". Je to táž vada
+    jako W‑96, jen o jedno místo vlevo, a je to JEDNA CESTA: změřeno,
+    že všech 22 rozlišitelných případů v korpusu je právě tahle vnořená
+    hlava, ne rodina.
     """
     for role in predication.roles:
         if role.mention.lemma == lemma:
             return role.mention.form
+    if reading is not None:
+        # HLEDÁ SE V PŘEDANÉM SEZNAMU, ne v `predication.pending_attribute`:
+        # patro hlášení skládá z toho, co právě NAŠLO, a do predikace to
+        # zapíše až o krok dál. Ptát se predikace by v patře vracelo
+        # prázdno a vada by zůstala právě tam, kde je vidět.
+        for _, doplnek, token_index, _ in (
+            attributes or predication.pending_attribute
+        ):
+            if doplnek == lemma:
+                token = _token_at(token_index, reading)
+                if token is not None:
+                    return token.form
     return lemma
 
 
@@ -3724,7 +3749,7 @@ def attribute_question(
     if not predication.pending_attribute:
         return None
     parts = [
-        f"„{attribute_label(head_surface(predication, hlava), attribute_filler_surface(index, reading) or doplnek, tvar, _preposition_surface(index, reading))}“"
+        f"„{attribute_label(head_surface(predication, hlava, reading), attribute_filler_surface(index, reading) or doplnek, tvar, _preposition_surface(index, reading))}“"
         for hlava, doplnek, index, tvar in predication.pending_attribute
     ]
     bez_tvaru = [
@@ -4031,7 +4056,7 @@ def attribute_tier() -> Tier:
             notes.append(
                 "[PŘÍVLASTEK: "
                 + ", ".join(
-                    f"„{attribute_label(head_surface(candidate.predication, h), attribute_filler_surface(index, reading) or g, tvar, _preposition_surface(index, reading))}“"
+                    f"„{attribute_label(head_surface(candidate.predication, h, reading, found), attribute_filler_surface(index, reading) or g, tvar, _preposition_surface(index, reading))}“"
                     for h, g, index, tvar in found
                 )
                 + " — vztah vedle věty, čeká se na jméno role]"
