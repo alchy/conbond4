@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.90 · 16. 8. 2026
+**Verze jádra:** 0.1.91 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,67 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**KVANTIFIKÁTOR NAUČENÝ JAKO TVAR — DVĚ MĚŘENÍ PŘED ROZHODNUTÍM**
+*(W‑102, kolo #162; žádná stavba)*.
+
+Reviewer našel touž nepravdu jako B‑31, jen druhou cestou: „Od Velkého
+třesku se **vesmír** rozšířil do dnešní podoby…" → `∀vesmír`, a po
+`subset(paralelní_vesmír, vesmír)` odpoví systém na „Rozšířil se
+paralelní vesmír?" ANO. Rozhodl to naučený tvar `NOUN/Sing/Nom/nsubj →
+∀`.
+
+**(a) JE TO JEDEN TVAR, NEBO RODINA?** Tvary, které v korpusu nesou
+kvantifikátor (golden lexikon):
+
+| tvar | výskytů |
+|---|---|
+| `NOUN/Sing/Nom/kdo → ∀` | **44** |
+| `NOUN/Plur/Nom/kdo → ∀` | 37 |
+| `NOUN/Sing/Acc/co → ∃` | 36 |
+| `PROPN/Sing/Nom/kdo → ·` | 33 |
+| `NOUN/Sing/Loc/v+Loc → ∃` | 17 |
+
+**Ten nejčastější je sporný ve většině svých výskytů.** Z prvních
+dvaadvaceti vět, kde stojí, je podle mého úsudku generických **šest**
+(„Zakopnutí … způsobuje", „Konzumace čokolády může být fatální",
+„Procházka se psem dokáže poskytnout", „Domácí zvíře … je zvíře
+chované", „Zvířecí terapie využívá", „Chov domácích zvířat může mít
+dopad"), kdežto zbylých šestnáct ∀ nechce:
+
+  · **∃**: „**Existuje** důkaz…", „Ke chřipce se přidal **zánět**
+    ledvin", „…zasáhla dům **povodeň**";
+  · **konkrétní uzel**: „**Slovo** robot vzniklo…", „…je v tomto domě
+    **památník** Karla Čapka", „**Studie provedená** institutem
+    zjistila", „Poté **rodina** odešla do Litomyšle", „**Babička** malou
+    Barunku ovlivnila".
+
+To rozdělení je **můj úsudek, ne měření** — a právě to je ta odpověď:
+generické × určité není vlastnost TVARU, je to vlastnost VĚTY, přesně
+jako u genitivu („chov zvířat" × „péče majitele", W‑39) a u `v+Loc`
+(„v Praze" × „v pondělí", § 12/1). **Není to jeden tvar, je to rodina.**
+
+**(b) NA ČEM STOJÍ TĚCH JEDENÁCT ZAPSANÝCH:**
+
+| lexikon | zapsáno |
+|---|---|
+| `golden_lexicon` (se čtrnácti naučenými tvary) | **11** |
+| tentýž bez `∀` tvarů podmětu | **8** |
+| `czech_seed` (bez naučených tvarů vůbec) | **3** |
+
+Reviewerova předpověď („skoro všechny") tedy **platí pro seed, ne pro
+samotné `∀`**: odebrat `∀` tvary stojí tři zápisy, odebrat všechny
+naučené tvary stojí osm z jedenácti. Ze zapsaných mají `∀` právě tři
+věty a jedna z nich (`∀vesmír`) je ta nepravda; druhá
+(`∀podobné_synonymum`) je sporná stejně.
+
+**A poznámka, která od teď patří ke každému korpusovému číslu:** měří se
+s `golden_lexicon`, tedy s lexikonem, který na otázku po kvantifikátoru
+UŽ ODPOVĚDĚL. „11 zapsaných a žádná nepravdivá" platí za předpokladu, že
+ta odpověď je správná — a u „vesmíru" správná není. Se `czech_seed` se
+systém ptá a nezapisuje.
+
+Rozhodnutí si vzal reviewer. **Nic se nestavělo.**
 
 **POD `∀` ZUŽUJE PŘÍVLASTEK DOMÉNU** *(B‑31, kolo #161 — pátá položka
 zákazu)*.
