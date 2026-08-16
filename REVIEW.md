@@ -1,6 +1,135 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **vrátil jsi mi moje rozhodnutí, a měls pravdu; moje znění bylo špatně**
+## Status: 🟢 PASS — **přeformulovals mou otázku a měls pravdu; rozhodnutí: ∀ Z OSIVA NEZAPISUJE**
+
+**Kolo #164.** 1344 zkoušek (+5), `mypy --strict` čistý na 65 souborech,
+doložky **110/110**, `standing_metrics()` = 21/107/51/33/26, **baterie
+20 ✔ / 0 ✘**, 11 zapsaných *(golden_lexicon)* / 3 *(czech_seed)*.
+
+**Architectural Health Score: 9,3 / 10.**
+
+---
+
+## Krok 1 · ověřeno, a je to přesně to pole, které chybělo
+
+```
+Auta jezdí po dálnici.                 kdo = ∀ / OSIVO
+Tučňák nelétá.                         kdo = ∀ / OSIVO
+Vegetarián nejí maso.                  kdo = ∀ / OSIVO   co = ∃ / OSIVO
+Vesmír se rozšířil do dnešní podoby.   kdo = ∀ / OSIVO
+
+czech_seed:  před odpovědí  kdo = None
+             po odpovědi    kdo = ∀ / AFIRMACE
+             táž věta znovu kdo = ∀ / NAUČENÝ TVAR
+             jiná věta      kdo = ∀ / NAUČENÝ TVAR
+```
+
+**„Žádná změna chování" ověřena:** 1344 zelených, korpus 11/3 beze změny.
+
+**A tvoje přeformulování otázky je správné a doložené:** zlaté věty
+berou `∀` **z osiva**, takže žádná afirmace je nezachrání a volba
+per‑věta × per‑lemma o té kolizi opravdu nerozhoduje. **Rozdíl dvou
+zkoušek proti třinácti společným — to je poměr, který mění zadání, a
+sám jsi ho spočítal.**
+
+**Přidávám k tomu jedno pozorování z výpisu:** po odpovědi se táž věta
+při novém vyslovení vrátí jako **naučený tvar**, ne jako afirmace.
+**Afirmace tedy dnes nepřežije ani vlastní větu** — což je přesně
+důvod, proč per‑věta shodí o dvě zkoušky víc než per‑lemma. Není to vada,
+je to hranice toho pole; ale kdo bude stavět licenci, musí to vědět.
+
+---
+
+## ROZHODNUTÍ (DELEGACE): `∀` z OSIVA nelicencuje ZÁPIS
+
+**Ptal ses správně, tak odpovídám bez vytáček: NE, `∀` ze seedu zapisovat
+nesmí.**
+
+**Důvod je ten, který drží od #162 a nezměnil se:** `∀` je jediný
+kvantifikátor, jehož chyba tvrzení **zesiluje**, a **osivo je odpověď,
+kterou nikdo nedal**. Mezi „nikdo to neřekl" a „člověk to potvrdil" musí
+být v zápisu rozdíl — jinak systém tvrdí na cizí účet.
+
+**A precedens je zase váš vlastní:** `v+Loc` v osivu **schválně není**,
+aby se systém zeptal (§ 12/1). **Neseedovat rozhodnutí, které patří větě,
+je v tomhle projektu už zavedená politika — jen se dosud nevztahovala na
+kvantifikátor.**
+
+### Ano, znamená to sáhnout na akceptační sadu — a je to něco jiného než co jsi odmítl
+
+**Tys odmítl přepsat sadu, aby prošla tvoje implementace. To bylo
+správně.** Tady se mění **specifikace**, a sada se mění s ní — vědomě,
+viditelně a rozhodnutím toho, kdo to rozhodnout smí. **Rozdíl je v tom,
+kdo komu ustupuje: tam kód sadě, tady sada rozhodnutí.**
+
+**Podmínky, bez kterých to neplatí:**
+
+1. **Zkoušky se opraví PŘIDÁNÍM TAHU, nikdy oslabením tvrzení.**
+   V každém z těch třinácti případů člověk odpoví přesně to, co osivo
+   hádalo (`∀`) — takže dialog bude o tah delší a bude pravdivější.
+   **Když se u některé zkoušky ukáže, že přidáním tahu projít nejde,
+   zastav a přijď — to by byl nález, ne detail.**
+2. **`turns_to_learn` se zhorší a MUSÍ TO BÝT V PŘEDÁVCE.** To číslo
+   dosud měřilo dialog, ve kterém byla jedna otázka předem zodpovězená
+   osivem. **Horší a pravdivé číslo je lepší než lepší a předplacené.**
+3. **`∃` a `·` z osiva se NEDOTÝKEJ.** Špatné `∃` oslabuje, `·` plyne
+   z `PROPN` v rozboru. **Zákaz je jen na `∀`, a to je celé jeho
+   odůvodnění** — napiš to do doložky celou větou.
+4. **`→∀` i `→∀1` zápis odemykají.** Kdyby ne, byla by to díra místo
+   otázky.
+
+### Tvoji třetí variantu ODMÍTÁM, a tvým vlastním argumentem
+
+„Blokovat `∀` ze seedu jen tam, kde je v téže větě čekající přívlastek"
+— **napsal jsi, že to zavání pravidlem šitým na testy, a máš pravdu.**
+Jestli je „vesmír" generický nebo určitý, s existencí jiné otevřené
+otázky v téže větě **nesouvisí ničím**. Byla by to korelace povýšená na
+kritérium. **Neměř to, nestav to.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+## Semantic Warnings
+
+**W‑102/W‑103 zůstává otevřená do postavení licence** — rozhodnutí je
+výš a je úplné, takže tohle je poslední kolo, kdy je to „čeká na
+rozhodnutí".
+
+**Otevřené beze změny:** 34 vět blokovaných restrikcí, apozice (101 ve
+41 větách), `flat` pod doplňkem (22), konjunkt přívlastku (14 + 11),
+souřadný přívlastek (8), `amod` pod doplňkem (9), doplněk přísudku (6),
+faktivita (9), určuje děj (změřeno prázdné), „30. a 40. letech“ (1),
+T72, W‑67, sentence‑initial přívlastek, zvratné `si`, W‑97 a
+W‑96‑bez‑rozboru.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Postav licenci: `∀` z osiva nezapisuje; `naučený tvar` ano jen
+tehdy, vznikl‑li z afirmace; `afirmace` ano; `∃` a `·` beze změny.**
+*(Per‑lemma × per‑věta rozhodni tak, aby prošly ty dvě zkoušky, které to
+rozlišuje — per‑lemma; a napiš do doložky, že je to **přiznaná
+aproximace** s protipříkladem „Pes štěká." × „Pes utekl.")*
+
+**2 · Třináct zkoušek oprav PŘIDÁNÍM TAHU** a v předávce uveď **starý
+a nový `turns_to_learn`** pro těch pět dialogů.
+
+**3 · Změř korpus oběma lexikony a čekej 11 → 8.** Když vyjde jinak, je
+to nález.
+
+**Podlaha:** žádná nepravda v bázi, doložky ≥ 110/110, baterie 20 ✔,
+B‑31 reprodukce končí `NEVÍM`, **a nově: „Rozšířil se paralelní vesmír
+do dnešní podoby?" musí skončit `NEVÍM`** — to je zkouška té licence.
+
+---
+
+## ARCHIV — kolo #163
+
+### Status: 🟢 PASS — **vrátil jsi mi moje rozhodnutí, a měls pravdu; moje znění bylo špatně**
 
 **Kolo #163** (postaveno, změřeno, vráceno; commit sahá jen na `docs/`).
 1339 zkoušek, `mypy --strict` čistý na 65 souborech, doložky **109/109**,
