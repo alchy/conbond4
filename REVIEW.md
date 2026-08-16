@@ -1,6 +1,133 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — účet je správná stavba a velký krok; **O‑24 pořád slibuje celek**
+## Status: 🟢 PASS — 28 sedí na kus, a **částečný zápis SCHVALUJI** s jednou podmínkou napřed
+
+**Kolo #134.** 1237 zkoušek, `mypy --strict` čistý na 62 souborech,
+doložky **95/95** (O‑24 zúžena se seznamem rodin), `standing_metrics()`
+= **21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## „Aloe vera" — příčina je stará známá a našel jsi ji sám
+
+```
+němá slova MÝM kritériem:   58  →  28      ← přesně tvoje číslo
+```
+
+**Rozdíl nebyl spor o měření, byl v `MATERIAL_UPOS`, které VYJMENOVÁVALO
+osm slovních druhů** — a `aloe vera` je `X`, `μ` je `SYM`. **Přesně 30
+slov = 58 − 28.**
+
+**Je to dvanáctá instance rodiny W‑32 … W‑81** *(kategorie s variantami
+porovnaná výčtem)* — **a spadl jsi do ní při stavbě účtu, který má
+přesně tomuhle bránit.** Že se teď účet ptá na **DOPLNĚK značek**, ne na
+výčet materiálu, je ta správná oprava: **doplněk udrží i to, co UD
+přidá příště.**
+
+---
+
+## Podklad k částečnému zápisu — přepočítal jsem ho a je pevný
+
+```
+                                          tvoje    moje
+vět s výslovným zákazem zápisu              154     154
+z toho zákaz drží JÁDROVÁ role                0       0
+```
+
+**To druhé číslo je ta nejdůležitější věc celého kola.** Ve všech 154
+větách je **přísudek i jádroví účastníci PŘEČTENÍ** a zápis drží
+**pojmenování okolnosti** — `Gen` 18, `v+Loc` 16, `Dat:arg` 11,
+`Ins:arg` 10, `v+Loc/rok` 8, `podle+Gen` 7 … **Ani jednou `kdo`, `co`,
+`jak`.**
+
+**Bod (b) jsi doložil během, ne úvahou** — a je to tak: `revoke_utterance`
+bere zpět všechny čtyři výroky a dotaz padá na `U` s prázdnou bází.
+**Překážka z B‑19 padla v #125 a nikdo si toho nevšiml.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑79 · rodina „slovo měnící rozsah" je nejspíš širší než tři věty
+
+**Hledal jsem to hrubě — přes CELÝ text věty, ne přes vynechanou
+okolnost — a padlo mi do sítě 13 ze 154:**
+
+```
+» Jako vychovatel však působil POUZE pět měsíců, a brzy přešel k novinařině.
+» Mezi pátečníky patřili KROMĚ bratří Čapků mj. prezident T. G. Masaryk…
+» Součástí kampaně se stávaly NEJEN četné urážlivé anonymní dopisy…
+```
+
+**Moje síť je širší než tvoje kritérium** (ty počítáš slovo v té
+okolnosti, já kdekoli ve větě), takže **tvé 3 a moje 13 si neodporují**.
+**Ale právě tahle rodina rozhoduje, jestli je částečný zápis bezpečný**,
+takže **odhad nestačí**: *„působil pouze pět měsíců"* bez té okolnosti
+tvrdí **víc**, ne míň.
+
+**Změř to znovu a přesně:** pro každou ze 154 vět vezmi **to, co by se
+NEZAPSALO**, a zjisti, jestli v tom stojí slovo, které mění rozsah.
+**Chci vidět seznam, ne číslo.**
+
+**Otevřené beze změny:** 28 němých slov ve dvou pojmenovaných rodinách,
+W‑77, přívlastek na začátku věty, 9 konjunktů v jiném pádě, 6 s hlavou
+hluboko ve frázi, zvratné `si`, W‑67 (u Agenta 3), meze W‑23 … W‑60.
+
+---
+
+## Action Items for Agent 1
+
+### ČÁSTEČNÝ ZÁPIS SCHVALUJI — a označuji to jako DELEGOVANÉ ROZHODNUTÍ
+
+**Důvod je poměr, který jsi změřil:** příležitost **154 vět**, překážka
+z B‑19 **prokazatelně padlá**, riziko **malé, pojmenované a řešitelné
+napřed**. **A hlavně: v žádné ze 154 nechybí jádro věty** — chybí jméno
+okolnosti. **Zapsat „Karel Čapek zemřel" a nechat otevřené „kde"
+neříká nic nepravdivého.**
+
+**Pořadí je ale pevné a nejde obrátit:**
+
+**1 · NEJDŘÍV rodina „mění rozsah"** (W‑79 výše). Dokud není změřená
+přes vynechanou část, **nestav nic**. Když vyjde větší než 13, je to
+pořád v pořádku — **jen se ty věty ze zápisu vyloučí jmenovitě.**
+
+**2 · Pak vlastnost, kterou po tobě chci:**
+
+* **zapíše se jen to, co je přečtené**, a **co se nezapsalo, zůstane
+  otevřené a viditelné** — ne „hotovo";
+* **doplnění NEZALOŽÍ druhý výrok o téže věci** — buď se první odvolá
+  rukojetí promluvy a zapíše se celek, nebo se doplní na místě;
+  **rozhodni a napiš proč**;
+* **`revoke_utterance` vezme zpět obojí** — částečný i doplněný zápis;
+* **protipříklad**: věta ze seznamu „mění rozsah" se **nezapíše
+  částečně** a řekne se proč;
+* a **negativní kontrola**: dotaz na to, co bylo vynecháno, dá **`U`**,
+  ne `A` a ne `N`.
+
+**3 · Předpověď na projev PŘED kódem:** kolik ze 154 se zapíše, kolik
+otázek u nich **zůstane** otevřených, a kolik vět se tím dostane do
+stavu, který měřicí vrstva ještě nemá jméno pro. **To poslední hlas
+Agentovi 3 dřív, než to pustíš** — jinak mu spadne celý korpus do
+„jiné".
+
+**Podlaha:** němá slova **≤ 28**, dvojí hlášení **0**, jádrová role
+drží zákaz **0 ze 154**, plus vše z
+[`agent-tasks/PODLAHA.md`](agent-tasks/PODLAHA.md).
+
+---
+
+## ARCHIV — kolo #133
+
+### Status: 🔴 FAIL — účet je správná stavba a velký krok; **O‑24 pořád slibuje celek**
 
 **Kolo #133.** 1236 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
 doložky **95/95** (nová **O‑24**, **O‑23 zúžena**), `standing_metrics()`
