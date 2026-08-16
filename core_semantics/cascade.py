@@ -1089,7 +1089,27 @@ def _role_for(token: Token, reading: Reading) -> str | None:
         # Okolnost se jmenuje z předložky a pádu, takže je na podtypu
         # nezávislá sama od sebe: `obl` i `obl:arg` dají „v+Acc".
         return surface_role(token, reading)
-    if base in ("xcomp", "ccomp"):
+    if base == "ccomp":
+        # PŘEDMĚTOVÁ KLAUZE JE PŘEDMĚT *(W‑89)*. `obj` a `ccomp` je TÁŽ
+        # POZICE, jednou obsazená jménem a jednou celou větou —
+        # „Studie zjistila TO." × „Studie zjistila, ŽE lidé umírají."
+        # Není to dohad o významu: je to táž úvaha, kterou `nsubj` dostal
+        # `kdo` a `obj` dostal `co`, jen o patro výš. Systém se dosud
+        # ptal „co znamená role ccomp" a odpověď na to je vlastnost
+        # ČEŠTINY, ne té věty.
+        #
+        # `xcomp` sem NEPATŘÍ a zůstává tvarem: je to DOPLNĚK, ne
+        # předmět („chtěl KOUPIT", „ukázalo se JAKO faktor"), a 44 z 57
+        # jeho výskytů v korpusu visí pod modálním slovesem, kde ho
+        # dávno bere složený přísudek (G‑1a).
+        return token.deprel if token.deprel != base else ROLE_OBJECT
+    # PODMĚTOVÁ KLAUZE (`csubj`) SEM ZÁMĚRNĚ NEPATŘÍ. Táž úvaha by pro
+    # ni platila, jenže „Je jasné, že Jan přišel." má vlastní rozhodnutí
+    # (T72, W‑45): systém řekne, že podmětem je celá vedlejší věta a že
+    # ji ZATÍM DOSADIT NEUMÍ. Dosadit ji tady by ten scénář změnilo, a to
+    # je rozhodnutí o jiné rodině — dvě věci v jednom kole si
+    # nedovolujeme. Zkoušeno, měřeno, vráceno.
+    if base == "xcomp":
         return token.deprel
     return None
 
@@ -4190,6 +4210,86 @@ def relative_reference_candidates(
     return tuple(hlava + ostatni)
 
 
+AWAITING_FACTIVITY = "pravdivost obsahu"
+
+
+def argument_clauses(reading: Reading) -> tuple[Token, ...]:
+    """Předmětové klauze — `ccomp` *(W‑90)*.
+
+    „Studie zjistila, **že lidé umírají**." Klauze je PŘEDMĚT slovesa
+    (W‑89), takže v hlavní predikaci leží jako reifikovaný děj
+    `co:umírat` — a její vlastní členy se dosud zahazovaly.
+    """
+    return tuple(
+        token for token in reading.tokens if base_deprel(token.deprel) == "ccomp"
+    )
+
+
+def argument_clause_tier(lexicon: Lexicon) -> Tier:
+    """Členy předmětové klauze se PŘEČTOU, ale nezapíšou *(W‑90)*.
+
+    **Obsah předmětové klauze NENÍ tvrzení mluvčího.** „Studie zjistila,
+    že lidé umírají…" NETVRDÍ, že lidé umírají — tvrdí, že to studie
+    zjistila. Tím se liší od vztažné věty (W‑85), která o svém uzlu
+    tvrdí: tady pravdivost obsahu závisí na ŘÍDÍCÍM SLOVESE. Je to táž
+    hranice jako W‑79, jen tím operátorem není částice, ale sloveso samo.
+
+    Klauze se proto připojí jako druhá predikace, aby se její členy daly
+    PŘEČÍST — dnešní ztráta — a rovnou se označí, že čeká na rozhodnutí
+    o pravdivosti obsahu. **Do báze nejde, dokud to rozhodnutí nepadne**,
+    a padnout má z LEXIKONU (faktivita řídícího slovesa), ne z kódu.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        klauze = argument_clauses(reading)
+        if not klauze:
+            return candidates, None
+        notes: list[str] = []
+        out: list[Candidate] = []
+        for candidate in candidates:
+            predication = candidate.predication
+            if predication.second is not None:
+                out.append(candidate)
+                continue
+            ve_cteni = {role.mention.token_index for role in predication.roles}
+            token = next((k for k in klauze if k.index in ve_cteni), None)
+            if token is None:
+                out.append(candidate)
+                continue
+            role = _clause_roles(token, reading, predication.mood, lexicon)
+            if not role:
+                out.append(candidate)
+                continue
+            druha = Predication(
+                predicate=token.lemma,
+                roles=tuple(
+                    sorted(
+                        (
+                            replace(r, awaiting=AWAITING_FACTIVITY)
+                            for r in role
+                        ),
+                        key=lambda r: r.name,
+                    )
+                ),
+                mood=predication.mood,
+            )
+            notes.append(
+                f"[PŘEDMĚTOVÁ KLAUZE „{token.form}“ — čte se, ale "
+                f"NEZAPISUJE: co v ní stojí, netvrdí věta, tvrdí to "
+                f"sloveso „{predication.predicate}“]"
+            )
+            out.append(
+                Candidate(
+                    replace(predication, second=druha), origin=candidate.origin
+                )
+            )
+        return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
+
+
 def relative_question(predication: Predication) -> str | None:
     """Otázka na to, KOHO se vztažná věta týká *(W‑85)*.
 
@@ -4480,7 +4580,10 @@ def unaccounted_tokens(
         # dvě hlášky o jedné věci, které si odporují.
         ucet.update(
             klauze.index
-            for klauze in relative_clauses(reading)
+            for klauze in (
+                *relative_clauses(reading),
+                *argument_clauses(reading),
+            )
             if klauze.lemma == predication.second.predicate
         )
     head = _predicate_head(reading)
@@ -4559,7 +4662,10 @@ def _reported_lost(
     if predication.second is not None:
         druha |= {
             klauze.index
-            for klauze in relative_clauses(reading)
+            for klauze in (
+                *relative_clauses(reading),
+                *argument_clauses(reading),
+            )
             if klauze.lemma == predication.second.predicate
         }
     if druha:

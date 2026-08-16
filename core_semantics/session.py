@@ -58,6 +58,8 @@ from .cascade import (
     AWAITING_REFERENCE,
     dropped_tokens,
     lost_shape,
+    AWAITING_FACTIVITY,
+    argument_clause_tier,
     relative_question,
     relative_tier,
     AWAITING_ROLE_NAME,
@@ -445,6 +447,33 @@ def declares_disjoint(text: str, first: GroupTerm, second: GroupTerm) -> Turn:
     return Turn(TurnKind.DISJOINT, text, pair=(first, second))
 
 
+def _pending_references(predication: Predication) -> tuple[PendingReference, ...]:
+    """Čekající odkazy z OBOU predikací tahu *(W‑88)*.
+
+    Skládá se to tady, ne v každé cestě zvlášť: dvě cesty k témuž číslu
+    se rozejdou a ten rozdíl se schová přesně tam, kde ho není vidět
+    (B‑28, potvrzeno znovu v #149).
+    """
+    nalezene: list[PendingReference] = []
+    for scope, cast in (("", predication), (predication.second.predicate
+                                            if predication.second else "",
+                                            predication.second)):
+        if cast is None:
+            continue
+        for role in cast.roles:
+            if role.awaiting != AWAITING_REFERENCE:
+                continue
+            nalezene.append(
+                PendingReference(
+                    scope=scope,
+                    role=role.name,
+                    form=role.mention.form,
+                    candidates=role.offered,
+                )
+            )
+    return tuple(nalezene)
+
+
 def names_attribute(
     text: str, head: str, filler: str, role_name: str, shape: str = ""
 ) -> Turn:
@@ -791,6 +820,21 @@ def confirms(text: str, *, accepted: bool = True) -> Turn:
 
 
 @dataclass(frozen=True, slots=True)
+class PendingReference:
+    """Odkaz, na který se čeká, i s tím, co systém nabídl *(W‑88)*.
+
+    `scope` říká, ČEHO se ten odkaz týká: prázdné u hlavní věty, jinak
+    přísudek druhé predikace. Bez toho by dvě role téhož jména ze dvou
+    predikací splynuly v jedno číslo.
+    """
+
+    scope: str
+    role: str
+    form: str
+    candidates: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class TurnResult:
     index: int
     turn: Turn
@@ -805,7 +849,17 @@ class TurnResult:
     utterance: str = ""
     status: QueryStatus | None = None
     report: AuditReport | None = None
+    #: NABÍDKA PRAVIDLA (most), ne kandidátů odkazu — jméno je starší než
+    #: `PendingReference` a svádí k záměně; kdo hledá kandidáty, hledá
+    #: `references`.
+    #: NABÍDKA PRAVIDLA (most), ne kandidátů odkazu — tohle jméno je
+    #: starší a svádí k záměně; kdo hledá kandidáty, hledá `references`.
     offered: Rule | None = None
+    #: ČEKAJÍCÍ ODKAZY I S KANDIDÁTY *(W‑88)*, z OBOU predikací tahu.
+    #: Bez tohohle pole se k nabídce zvenčí dostane jen ten, kdo ví, že
+    #: má sáhnout na `predication.second.roles[i].offered` — a měření,
+    #: které si musí najít cestu vnitřkem, měří vnitřek.
+    references: tuple[PendingReference, ...] = ()
     error: str | None = None
     #: Vybrané čtení u tahu, který vznikl z české věty.
     predication: Predication | None = None
@@ -953,6 +1007,10 @@ class Session:
             # roli z první věty, staví si vlastní a kvantifikátor si
             # dopočítá samo (`_clause_roles`).
             relative_tier(self.lexicon),
+            # PŘEDMĚTOVÁ KLAUZE *(W‑90)*. Hned za vztažnou: obojí staví
+            # druhou predikaci a místo je jedno. Vztažná jde první,
+            # protože ta se ZAPSAT smí — o svém uzlu tvrdí.
+            argument_clause_tier(self.lexicon),
             lost_role_tier(self.lexicon),
             # Genitivní přívlastek jako čekající DRUHÝ VÝROK. Nic
             # neblokuje: větě chybí přívlastek, ne predikát.
@@ -1744,6 +1802,7 @@ class Session:
                 predication=predication,
                 trace=turn.trace,
                 question=question,
+                references=_pending_references(predication),
                 # Nezodpovězená OTÁZKA je `U`, i když ztroskotala už na
                 # čtení. Z pohledu člověka se zeptal a odpověď nedostal,
                 # a `turns_to_learn` (§ 10) měří přesně tuhle vzdálenost —
@@ -1768,6 +1827,7 @@ class Session:
         # opravdu zapsalo: u nezapsané věty by to slibovalo dohledatelnost
         # něčeho, co v bázi není.
         uzel_radky = self._node_surfaces(predication, routed)
+        odkazy = _pending_references(predication)
         # TAH, KTERÝ ZAPSAL VÍC VÝROKŮ, JE VŠECHNY OHLÁSÍ *(B‑26)*. Bere
         # se to z BÁZE, ne se sbírá po cestě: každá cesta by si to jinak
         # nesla sama a ta, která by na to zapomněla, by mlčela — a mlčení
@@ -1792,6 +1852,7 @@ class Session:
             question=question,
             statements=zapsane,
             utterance=self._utterance,
+            references=odkazy,
         )
 
     def _remember_surfaces(self, predication: Predication, text: str) -> None:
@@ -1924,6 +1985,16 @@ class Session:
         # o uzlu `·který` — individuum, které nikdo nezaložil a které ve
         # světě není. Je to horší než ji nezapsat: hlavní věta je celá
         # i bez ní.
+        # OBSAH PŘEDMĚTOVÉ KLAUZE NENÍ TVRZENÍ VĚTY *(W‑90)*. Zapsat ho
+        # znamená tvrdit, co řekla studie, jako by to řekl mluvčí.
+        obsah = [r for r in druha.roles if r.awaiting == AWAITING_FACTIVITY]
+        if obsah:
+            return (
+                "  [PŘEDMĚTOVÁ KLAUZE NEZAPSÁNA: co v ní stojí, netvrdí "
+                "věta — tvrdí to sloveso, pod kterým visí. Jestli se to "
+                "tvrdit MÁ, je vlastnost toho slovesa (faktivita) a ta "
+                "patří do lexikonu, ne do kódu]",
+            )
         ceka = [r for r in druha.roles if r.awaiting == AWAITING_REFERENCE]
         if ceka:
             return (

@@ -175,4 +175,4 @@ def test_tiers_follow_the_base_between_turns() -> None:
     # Uzávěry nad bází nejsou tytéž objekty — kdyby byly, nesly by starý
     # pohled. Identita je tu jediné, co ten rozdíl umí ukázat.
     assert any(a is not b for a, b in zip(first, second))
-    assert len(first) == 21
+    assert len(first) == 22

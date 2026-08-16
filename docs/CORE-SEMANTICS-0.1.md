@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.79 · 16. 8. 2026
+**Verze jádra:** 0.1.80 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,51 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**ČEKAJÍCÍ ODKAZY VEN Z TAHU** *(W‑88, kolo #151)*.
+`TurnResult.references` nese `(scope, role, form, candidates)` z OBOU
+predikací. Do W‑88 seděli kandidáti jen na roli druhé predikace, takže se
+k nim zvenčí dostal jen ten, kdo věděl, že má sáhnout na
+`predication.second.roles[i].offered`; `TurnResult.offered` se přitom
+jmenuje podobně a je to nabídka PRAVIDLA. **Měření, které si musí najít
+cestu vnitřkem, měří vnitřek.**
+
+A hned první měření tím polem OPRAVUJE ČÍSLO Z #150: čekajících odkazů
+je **89**, ne 34. Těch 34 byly odkazy jen v DRUHÝCH predikacích;
+zbývajících 55 (z toho 64 celkem s prázdnou nabídkou) je většinou
+pro‑drop podmět hlavní věty. Dvě populace, dvě čísla — a v #150 stálo
+jen to užší.
+
+---
+
+**PŘEDMĚTOVÁ KLAUZE JE PŘEDMĚT A ČTE SE, ALE NEZAPISUJE** *(W‑89, W‑90)*.
+
+`obj` a `ccomp` je TÁŽ POZICE, jednou obsazená jménem a jednou celou
+větou — „Studie zjistila **to**." × „Studie zjistila, **že lidé
+umírají**." Klauze proto dostane jméno `co`; je to táž úvaha, kterou
+`nsubj` dostal `kdo`, jen o patro výš, a není to dohad o významu.
+
+**Podmětová klauze (`csubj`) sem záměrně nepatří.** „Je jasné, že Jan
+přišel." má vlastní rozhodnutí (T72, W‑45): systém řekne, že podmětem je
+celá vedlejší věta a že ji ZATÍM DOSADIT NEUMÍ. Zkoušeno, změřeno,
+vráceno — měnit ten scénář v kole o předmětové klauzi by byly dvě věci
+naráz.
+
+Členy klauze se **přečtou** (dosud se zahazovaly: 168 → 165 vět
+s hlášenou ztrátou), ale do báze nejde nic. Pravdivost obsahu závisí na
+řídícím slovese, což je táž hranice jako W‑79 — jen tím operátorem není
+částice, ale sloveso samo.
+
+**MĚŘENÍ FAKTIVITY PŘED STAVBOU** (zadání #151/3): 9 předmětových klauzí
+pod **6 různými slovesy** — „ukázat" 2, „ukazovat" 2, „předpokládat" 2,
+„zjistit" 1, „čekat" 1, „napsat" 1. Faktivních je z nich pět (ukázat,
+ukazovat, zjistit), nefaktivních čtyři. **Pět klauzí jsou jednotky, a na
+jednotky se podle pravidla z #144 nestaví.**
+
+A k tomu oprava vlastního argumentu z #150: jako příklad NEfaktivního
+slovesa jsem tam použil „zjistit", jenže „zjistit, že P" P implikuje —
+je faktivní. Princip drží (nefaktivní v korpusu jsou: předpokládat,
+čekat, napsat), příklad byl vybraný špatně.
 
 **TÁZACÍ PŘÍSLOVCE POJMENOVÁVÁ SVOU ROLI SAMO** *(W‑87, kolo #150)*.
 

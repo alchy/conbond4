@@ -1911,6 +1911,69 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-51",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "CEKAJICI ODKAZY I S KANDIDATY JSOU VEN Z TAHU *(W-88)*. "
+            "`TurnResult.references` nese `(scope, role, form, "
+            "candidates)` z OBOU predikaci tahu. Do W-88 sedeli kandidati "
+            "jen na roli DRUHE predikace, takze se k nim zvencí dostal "
+            "jen ten, kdo vedel, ze ma sahnout na "
+            "`predication.second.roles[i].offered` — a mereni, ktere si "
+            "musi najit cestu vnitrkem, meri vnitrek. `TurnResult.offered` "
+            "se pritom jmenuje podobne a je to NECO JINEHO (nabidka "
+            "PRAVIDLA), takze zamena byla na dosah. "
+            "Sklada se to na JEDNOM miste, ne v kazde ceste zvlast: dve "
+            "cesty k temuz cislu se rozejdou a ten rozdil se schova tam, "
+            "kde neni videt (B-28, potvrzeno znovu v #149). "
+            ". ROZSAH MERENI: korpus 238 vet — 89 cekajicich odkazu "
+            "celkem, z toho 64 s PRAZDNOU nabidkou (vetsinou pro-drop "
+            "podmet v hlavni vete); jen v druhych predikacich je jich 34 "
+            "s rozdelenim 0:9, 1:5, 2:8, 3:9, 4:1, 5:2. Ta dve cisla "
+            "meri RUZNE populace a v #150 bylo uvedeno jen to druhe. "
+        ),
+        anchor="core_semantics.session:PendingReference",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_pending_references_are_reachable_from_the_turn",
+            "test_a_reference_in_the_main_sentence_is_listed_too",
+        ),
+    ),
+    Clause(
+        id="S-52",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "PREDMETOVA KLAUZE JE PREDMET A CTE SE, ALE NEZAPISUJE "
+            "*(W-89, W-90)*. `obj` a `ccomp` je TAZ POZICE, jednou "
+            "obsazena jmenem a jednou celou vetou („Studie zjistila "
+            "TO.“ x „Studie zjistila, ZE lide umiraji.“), takze "
+            "klauze dostane jmeno `co` — je to taz uvaha, kterou `nsubj` "
+            "dostal `kdo`, jen o patro vys, a neni to dohad o vyznamu. "
+            "PODMETOVA klauze (`csubj`) sem ZAMERNE nepatri: „Je jasne, "
+            "ze Jan prisel.“ ma vlastni rozhodnuti (T72, W-45) — "
+            "system rekne, ze podmetem je cela vedlejsi veta a ze ji "
+            "ZATIM DOSADIT NEUMI. Zkouseno, zmereno, vraceno. "
+            "OBSAH PREDMETOVE KLAUZE NENI TVRZENI VETY. Cleny se "
+            "PRECTOU (dosud se zahazovaly), ale do baze nejde nic: "
+            "pravdivost obsahu zavisi na RIDICIM SLOVESE, coz je taz "
+            "hranice jako W-79 — jen tim operatorem neni castice, ale "
+            "SLOVESO SAMO. Jestli se to tvrdit MA, je vlastnost toho "
+            "slovesa (faktivita) a patri do LEXIKONU vedle "
+            "`ScopeOperator`, ne do kodu. "
+            ". ROZSAH MERENI: korpus 238 vet — 9 predmetovych klauzi "
+            "pod 6 ruznymi slovesy (ukazat 2, ukazovat 2, predpokladat "
+            "2, zjistit 1, cekat 1, napsat 1); vet s hlasenou ztratou "
+            "168 -> 165. Faktivita by se tykala peti z devíti, tedy "
+            "jednotek — pravidlo z #144 rika, ze se za to nestavi. "
+        ),
+        anchor="core_semantics.cascade:argument_clause_tier",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_clausal_object_is_an_object",
+            "test_the_object_clause_is_read_but_never_written",
+        ),
+    ),
+    Clause(
         id="S-50",
         boundary=CASCADE_SESSION,
         promise=(

@@ -312,3 +312,111 @@ def test_an_ordinary_adverb_is_still_manner() -> None:
     assert result.predication is not None
     assert result.predication.role("jak") is not None
     assert result.predication.role("rychle") is None
+
+
+# --------------------------------------------------------------------------
+# Nabídka ven z tahu — W‑88
+# --------------------------------------------------------------------------
+
+
+def test_the_pending_references_are_reachable_from_the_turn() -> None:
+    """MĚŘENÍ, KTERÉ SI MUSÍ NAJÍT CESTU VNITŘKEM, MĚŘÍ VNITŘEK *(W‑88)*.
+
+    Kandidáti seděli na roli DRUHÉ predikace, takže se k nim zvenčí
+    dostal jen ten, kdo věděl, že má sáhnout na
+    `predication.second.roles[i].offered`. `TurnResult.offered` se přitom
+    jmenuje podobně a je to něco jiného — nabídka PRAVIDLA."""
+    session, oracle = _session(
+        sentence("Muž", "muž", "Masc", "souseda", "soused")
+    )
+    result = session.utter(TEXT, oracle)
+    assert len(result.references) == 1
+    odkaz = result.references[0]
+    assert odkaz.scope == "odejít", "u druhé predikace je vidět, čeho se týká"
+    assert odkaz.role == "kdo"
+    assert odkaz.form == "který"
+    assert set(odkaz.candidates) == {"soused", "muž"}
+
+
+def test_a_reference_in_the_main_sentence_is_listed_too() -> None:
+    """Z OBOU predikací, ne jen z druhé — jinak by dvě cesty k témuž
+    číslu daly dvě různá čísla (B‑28, potvrzeno v #149).
+
+    Měří se na SKLÁDACÍ FUNKCI, protože obě půlky najednou vyrobí až
+    věta s pro‑dropem I vztažnou větou, a taková v hermetické sadě
+    není; tvrzení testu je „bere z obou", ne „takhle vypadá věta"."""
+    from core_semantics.cascade import AWAITING_REFERENCE, Mention, Predication, RoleReading
+    from core_semantics.session import _pending_references
+
+    def _role(name: str, form: str) -> RoleReading:
+        return RoleReading(
+            name,
+            Mention(lemma=form, form=form, token_index=1, upos="NOUN"),
+            awaiting=AWAITING_REFERENCE,
+            offered=("Jan",),
+        )
+
+    predication = Predication(
+        predicate="odejít",
+        roles=(_role("kdo", "on"),),
+        second=Predication(predicate="přijít", roles=(_role("kdo", "který"),)),
+    )
+    odkazy = _pending_references(predication)
+    assert {o.scope for o in odkazy} == {"", "přijít"}
+    assert all(o.candidates == ("Jan",) for o in odkazy)
+
+
+# --------------------------------------------------------------------------
+# Předmětová klauze — W‑89 a W‑90
+# --------------------------------------------------------------------------
+
+
+def _object_clause() -> Reading:
+    """«Studie zjistila, že lidé umírají.»"""
+    return Reading(
+        tokens=(
+            tok(1, "Studie", "studie", "NOUN", 2, "nsubj",
+                Case="Nom", Gender="Fem", Number="Sing"),
+            tok(2, "zjistila", "zjistit", "VERB", 0, "root",
+                Gender="Fem", Number="Sing", Polarity="Pos"),
+            tok(3, ",", ",", "PUNCT", 6, "punct"),
+            tok(4, "že", "že", "SCONJ", 6, "mark"),
+            tok(5, "lidé", "člověk", "NOUN", 6, "nsubj",
+                Case="Nom", Gender="Masc", Number="Plur"),
+            tok(6, "umírají", "umírat", "VERB", 2, "ccomp",
+                Number="Plur", Polarity="Pos"),
+            tok(7, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def test_a_clausal_object_is_an_object() -> None:
+    """`obj` A `ccomp` JE TÁŽ POZICE *(W‑89)*, jednou obsazená jménem
+    a jednou celou větou. Systém se dosud ptal „co znamená role ccomp",
+    a odpověď na to je vlastnost ČEŠTINY, ne té věty."""
+    session, oracle = _session(_object_clause())
+    result = session.utter("Studie zjistila, že lidé umírají.", oracle)
+    assert result.predication is not None
+    assert result.predication.role("co") is not None
+    assert result.predication.role("ccomp") is None
+
+
+def test_the_object_clause_is_read_but_never_written() -> None:
+    """OBSAH PŘEDMĚTOVÉ KLAUZE NENÍ TVRZENÍ VĚTY *(W‑90)*.
+
+    „Studie zjistila, že lidé umírají." netvrdí, že lidé umírají — tvrdí,
+    že to studie zjistila. Tím se to liší od vztažné věty, která o svém
+    uzlu TVRDÍ. Členy klauze se přesto PŘEČTOU: dosud se zahazovaly."""
+    session, oracle = _session(_object_clause())
+    result = session.utter("Studie zjistila, že lidé umírají.", oracle)
+    assert result.predication is not None
+    druha = result.predication.second
+    assert druha is not None and druha.predicate == "umírat"
+    assert druha.role("kdo") is not None, "člen klauze se přečetl"
+    assert all(
+        "umírat" not in str(st.formula) for st in session.kb.active()
+    ), "do báze nejde nic, dokud o pravdivosti obsahu nerozhodne lexikon"
+    assert not any(
+        "umírají" in line and "ZAHOZENO" in line for line in result.lines
+    ), "a nehlásí se zároveň jako ztráta"
