@@ -3786,6 +3786,51 @@ def attribute_tier() -> Tier:
     return tier
 
 
+def _clause_roles(
+    token: Token,
+    reading: Reading,
+    mood: Mood,
+    lexicon: Lexicon,
+) -> tuple[RoleReading, ...] | None:
+    """Role klauze z jejích DĚTÍ — sdílené pro souřadnou i vztažnou větu.
+
+    Vrací `None`, když se ta klauze přečíst nedá: dva členy padly na
+    jedno jméno a ani tvar je nerozlišil. Vybrat jeden z nich by byl
+    tichý default u role, kterou věta vyslovila dvakrát *(W‑63)*.
+
+    Kvantifikátor se dopočítává TADY, protože kvantifikátorové patro už
+    proběhlo — role bez něj se do jádra nedostane (`UnquantifiedRole`),
+    a přesně na tom padl druhý zápis u sdíleného podmětu *(W‑72)*.
+    """
+    deti = [
+        child
+        for child in reading.children(token.index)
+        if _role_for(child, reading) is not None
+        and base_deprel(child.deprel) not in ("cop", "aux")
+    ]
+    obsazena = collections.Counter(_role_for(child, reading) for child in deti)
+    vlastni = tuple(
+        _nominal(
+            child,
+            reading,
+            surface_role(child, reading)
+            if obsazena[_role_for(child, reading)] > 1
+            else (_role_for(child, reading) or ROLE_OBJECT),
+        )
+        for child in deti
+    )
+    if len({r.name for r in vlastni}) != len(vlastni):
+        return None
+    return tuple(
+        role
+        if role.quantifier is not None
+        or role.mention.upos not in QUANTIFIED_UPOS
+        or role.name in UNQUANTIFIED_ROLES
+        else _quantify(role, mood, reading, lexicon)[0]
+        for role in vlastni
+    )
+
+
 def second_predications(reading: Reading) -> tuple[Token, ...]:
     """SOUŘADNÝ DRUHÝ PŘÍSUDEK — druhá věta, ne ztracený člen *(W‑70)*.
 
@@ -4002,50 +4047,14 @@ def coordination_tier(lexicon: Lexicon) -> Tier:
         out: list[Candidate] = []
         for candidate in candidates:
             token = druhe[0]
-            deti = [
-                child
-                for child in reading.children(token.index)
-                if _role_for(child, reading) is not None
-                and base_deprel(child.deprel) not in ("cop", "aux")
-            ]
-            # DVA ČLENY, JEDNO JMÉNO — TÁŽ ÚVAHA JAKO W‑63, jen uvnitř
-            # druhé věty. „…chovat doma i venku." dá dvakrát `jak`
-            # a `Predication` duplicitní roli ODMÍTÁ — patro tedy nesmí
-            # takovou predikaci ani postavit. Vybrat jeden z těch dvou by
-            # byl tichý default u role, kterou věta vyslovila dvakrát,
-            # takže oba padnou na SVŮJ TVAR a systém se zeptá.
-            obsazena = collections.Counter(
-                _role_for(child, reading) for child in deti
+            vlastni = _clause_roles(
+                token, reading, candidate.predication.mood, lexicon
             )
-            vlastni = tuple(
-                _nominal(
-                    child,
-                    reading,
-                    surface_role(child, reading)
-                    if obsazena[_role_for(child, reading)] > 1
-                    else (_role_for(child, reading) or ROLE_OBJECT),
-                )
-                for child in deti
-            )
-            if len({r.name for r in vlastni}) != len(vlastni):
+            if vlastni is None:
                 # Ani tvar je nerozlišil — druhá věta se přečíst nedá
                 # a hlásí se jako nepřečtená (W‑70), ne že spadne.
                 out.append(candidate)
                 continue
-            # ROLE, KTEROU VYROBÍ PATRO, MUSÍ DOSTAT KVANTIFIKÁTOR *(W‑73)*.
-            # Kvantifikátorové patro už proběhlo, takže role vzniklé tady
-            # by zůstaly bez něj — a role bez kvantifikátoru se do jádra
-            # nedostane (`UnquantifiedRole`). Přesně na tomhle padl druhý
-            # zápis u sdíleného podmětu (W‑72); tady by padl znovu, jen
-            # o kus dál.
-            vlastni = tuple(
-                role
-                if role.quantifier is not None
-                or role.mention.upos not in QUANTIFIED_UPOS
-                or role.name in UNQUANTIFIED_ROLES
-                else _quantify(role, candidate.predication.mood, reading, lexicon)[0]
-                for role in vlastni
-            )
             vyslovený = next(
                 (r for r in vlastni if r.name == ROLE_SUBJECT), None
             )
@@ -4094,6 +4103,184 @@ def coordination_tier(lexicon: Lexicon) -> Tier:
     return tier
 
 
+def relative_clauses(reading: Reading) -> tuple[Token, ...]:
+    """Vztažné věty — `acl:relcl` *(W‑85)*.
+
+    „Podobnou společnost vyhledávají i lidé, **kteří nemají přiměřenou
+    sociální interakci**." Ta část NENÍ člen hlavní věty: je to DRUHÁ
+    PREDIKACE téže promluvy, která určuje JMÉNO. Dosud se celá zahodila
+    — změřeno 58 vztažných vět v korpusu, 210 hlášených ztrát uvnitř nich.
+
+    Čte se ze STAVBY (`acl:relcl`), ne ze spojky: „že" uvozuje `ccomp`
+    i `acl` a rozhodnout to slovem nejde.
+    """
+    return tuple(token for token in reading.tokens if token.deprel == "acl:relcl")
+
+
+def is_relative_pronoun(token: Token) -> bool:
+    """Vztažné zájmeno se pozná z RYSU, ne ze seznamu slov *(W‑85)*.
+
+    `PronType` u „který" je často `Int,Rel` — dva rysy najednou — takže
+    se čte PRŮNIKEM jako všude jinde (W‑32). Výčet lemmat by byl
+    třináctá instance téže vady (W‑32 … W‑83): „který", „jenž", „co",
+    „kdo", „jaký", „kolikátý" jsou jedna otevřená třída a seznam by ji
+    nikdy nepokryl.
+    """
+    return "Rel" in (token.feat("PronType") or "").split(",")
+
+
+def relative_reference_candidates(
+    predication: Predication, pronoun: Mention, head_index: int
+) -> tuple[str, ...]:
+    """Kandidáti, na které vztažné zájmeno může odkazovat *(W‑85)*.
+
+    **Shoda v rodě a čísle nabídku ZUŽUJE, ale NEROZHODUJE.** „dcera
+    souseda, **který** …" je přesně ten případ, kde by automat lhal:
+    tvar sedí na „souseda" i na „dceru" jinak, ale rozhodnout to umí jen
+    člověk. Hlava klauze jde v nabídce první, protože ji tam dal ROZBOR
+    — ne proto, že by byla pravděpodobnější.
+
+    Rys, který jedna strana nemá, shodu NERUŠÍ (průnik, W‑32): u „co"
+    rozbor rod ani číslo nedává, takže se nabídnou všichni.
+    """
+    def sedi(role: RoleReading) -> bool:
+        for rys in ("Gender", "Number"):
+            zajmeno = set(pronoun.feats and dict(pronoun.feats).get(rys, "").split(","))
+            nositel = set(dict(role.mention.feats).get(rys, "").split(","))
+            if zajmeno - {""} and nositel - {""} and not (zajmeno & nositel):
+                return False
+        return True
+
+    hlava = [
+        role.mention.lemma
+        for role in predication.roles
+        if role.mention.token_index == head_index
+    ]
+    ostatni = [
+        role.mention.lemma
+        for role in predication.roles
+        if role.mention.token_index != head_index and sedi(role)
+    ]
+    return tuple(hlava + ostatni)
+
+
+def relative_question(predication: Predication) -> str | None:
+    """Otázka na to, KOHO se vztažná věta týká *(W‑85)*.
+
+    Ptá se s NABÍDKOU, ne s odvozením: shoda v rodě a čísle kandidáty
+    zúžila, ale rozhodnout je umí jen člověk („dcera souseda, **který**
+    …"). Bez odpovědi klauze do báze nejde.
+    """
+    druha = predication.second
+    if druha is None:
+        return None
+    ceka = [r for r in druha.roles if r.awaiting == AWAITING_REFERENCE]
+    if not ceka:
+        return None
+    role = ceka[0]
+    nabidka = role.source.split("nabídka: ", 1)[-1] if "nabídka: " in role.source else ""
+    kdo = f" Nabízím: {nabidka}." if nabidka else ""
+    return (
+        f"A koho se týká ta vztažná věta — „{druha.predicate}“, role "
+        f"„{role.name}“ („{role.mention.form}“)?{kdo} "
+        "Dokud to nevím, tu klauzi nezapíšu."
+    )
+
+
+def relative_tier(lexicon: Lexicon) -> Tier:
+    """Vztažná věta jako DRUHÁ PREDIKACE s ČEKAJÍCÍM ODKAZEM *(W‑85)*.
+
+    Připojit klauzi a nechat její podmět nerozhodnutý by znamenalo
+    přilepit k větě predikaci, o které nevíme, o kom je — a to je horší
+    než ji zahodit. **Obojí proto přichází spolu**: klauze se připojí
+    jako druhá predikace (týž mechanismus jako u souřadného přísudku,
+    W‑71) a vztažné zájmeno se stane rolí, která ČEKÁ NA ODKAZ.
+
+    **Dokud odkaz nestojí, klauze do báze nejde.** Hlavní věta se
+    zapisuje dál — je celá i bez ní, stejně jako u přívlastku.
+
+    **Jen když je HLAVA té klauze ve čtení.** Jinak by se vztah pověsil
+    na něco, o čem věta nemluví — táž podmínka jako u přívlastku (W‑39).
+    A jen když souřadná druhá věta místo nezabrala: dvě druhé predikace
+    v jedné promluvě jsou dvě různé úlohy a smíchané kolo se neměří.
+    """
+
+    def tier(
+        candidates: tuple[Candidate, ...], reading: Reading
+    ) -> tuple[tuple[Candidate, ...], str | None]:
+        klauze = relative_clauses(reading)
+        if not klauze:
+            return candidates, None
+        notes: list[str] = []
+        out: list[Candidate] = []
+        for candidate in candidates:
+            predication = candidate.predication
+            if predication.second is not None:
+                out.append(candidate)
+                continue
+            ve_cteni = {role.mention.token_index for role in predication.roles}
+            token = next((k for k in klauze if k.head in ve_cteni), None)
+            if token is None:
+                out.append(candidate)
+                continue
+            role = _clause_roles(token, reading, predication.mood, lexicon)
+            if role is None:
+                out.append(candidate)
+                continue
+            zajmena = [
+                r
+                for r in role
+                if is_relative_pronoun(
+                    next(
+                        t
+                        for t in reading.tokens
+                        if t.index == r.mention.token_index
+                    )
+                )
+            ]
+            if not zajmena:
+                # Vztažná věta bez vztažného zájmena (6 z 58) — kdo je
+                # jejím podmětem, se z rozboru nepozná, a domýšlet se to
+                # nebude. Hlásí se dál jako ztráta.
+                out.append(candidate)
+                continue
+            nabidka = relative_reference_candidates(
+                predication, zajmena[0].mention, token.head
+            )
+            role = tuple(
+                replace(
+                    r,
+                    awaiting=AWAITING_REFERENCE,
+                    source=(
+                        "vztažné zájmeno — odkazuje na jméno z věty; "
+                        "nabídka: " + ", ".join(nabidka)
+                    ),
+                )
+                if r is zajmena[0]
+                else r
+                for r in role
+            )
+            druha = Predication(
+                predicate=token.lemma,
+                roles=tuple(sorted(role, key=lambda r: r.name)),
+                mood=predication.mood,
+            )
+            notes.append(
+                f"[VZTAŽNÁ VĚTA „{token.form}“ — druhá predikace téže "
+                f"promluvy, určuje „{next(t.form for t in reading.tokens if t.index == token.head)}“; "
+                f"role „{zajmena[0].name}“ ČEKÁ NA ODKAZ "
+                f"({', '.join(nabidka) if nabidka else 'kandidáta ve větě nemá'})]"
+            )
+            out.append(
+                Candidate(
+                    replace(predication, second=druha), origin=candidate.origin
+                )
+            )
+        return tuple(out), "; ".join(notes) if notes else None
+
+    return tier
+
+
 def lost_members(
     reading: Reading, predication: Predication
 ) -> tuple[tuple[Token, str], ...]:
@@ -4104,23 +4291,14 @@ def lost_members(
     fráze, tedy druhý výrok vedle věty. Hlásit ho jako ztrátu znamenalo
     zablokovat zápis věty, které nechybí predikát, ale přívlastek.
     """
-    attribute_tokens = {token for _, _, token, _ in genitive_attributes(reading, predication)}
-    # DRUHÁ VĚTA MEZI ZTRACENÉ ČLENY NEPATŘÍ *(W‑70)*. Ptát se na ni
-    # „jak se ta role jmenuje?" znamená vyzvat člověka, aby druhou větu
-    # dosadil jako člen první — a odpověď, která by tomu vyhověla,
-    # neexistuje. Nechává se i její podstrom: členy druhé věty jsou její,
-    # ne ztracené členy první.
-    druha = {t.index for t in second_predications(reading)}
-    if druha:
-        druha |= {
-            token.index
-            for token in reading.tokens
-            if _within_subtree(token, druha, reading)
-        }
+    # JEDEN SEZNAM PRO HLÁŠENÍ I PRO ÚČET *(B‑28)*. Tady stála KOPIE
+    # téhož filtru a při W‑85 se ty dvě kopie rozešly: `lost_members`
+    # už o připojené vztažné větě věděl a `_reported_lost` ne, takže se
+    # táž klauze zároveň připojila jako druhá predikace a ohlásila jako
+    # ztracený člen. Přesně ta vada, kterou B‑28 zavírala.
     return tuple(
         (token, lost_shape(token, reading))
-        for token in dropped_tokens(reading, predication)
-        if token.index not in attribute_tokens and token.index not in druha
+        for token in _reported_lost(reading, predication)
     )
 
 
@@ -4271,6 +4449,15 @@ def unaccounted_tokens(
         for role in predication.second.roles:
             ucet.add(role.mention.token_index)
             ucet.update(role.absorbed)
+        # PŘÍSUDEK DRUHÉ PREDIKACE JE TAKY ZAZNAMENANÝ *(W‑85)*. Účet
+        # o připojené vztažné větě hlásil „do čtení se to nedostalo",
+        # ačkoli se právě o řádek výš připojila jako druhá predikace —
+        # dvě hlášky o jedné věci, které si odporují.
+        ucet.update(
+            klauze.index
+            for klauze in relative_clauses(reading)
+            if klauze.lemma == predication.second.predicate
+        )
     head = _predicate_head(reading)
     if head is not None:
         ucet.update({head[0].index, head[1].index})
@@ -4333,7 +4520,23 @@ def _reported_lost(
     attribute_tokens = {
         token for _, _, token, _ in genitive_attributes(reading, predication)
     }
+    # DRUHÁ VĚTA MEZI ZTRACENÉ ČLENY NEPATŘÍ *(W‑70)*. Ptát se na ni
+    # „jak se ta role jmenuje?" znamená vyzvat člověka, aby druhou větu
+    # dosadil jako člen první — a odpověď, která by tomu vyhověla,
+    # neexistuje. Nechává se i její podstrom: členy druhé věty jsou její,
+    # ne ztracené členy první.
     druha = {t.index for t in second_predications(reading)}
+    # PŘIPOJENÁ VZTAŽNÁ VĚTA TAKY NE *(W‑85)*. Táž úvaha, jen se ptá
+    # VÝSLEDKU: klauze se vylučuje teprve tehdy, když se opravdu
+    # připojila. Nepřipojená (hlava mimo čtení, bez vztažného zájmena,
+    # místo zabrané souřadnou větou) se hlásí dál — mlčet o ní by
+    # znamenalo tvrdit, že se přečetla.
+    if predication.second is not None:
+        druha |= {
+            klauze.index
+            for klauze in relative_clauses(reading)
+            if klauze.lemma == predication.second.predicate
+        }
     if druha:
         druha |= {
             token.index

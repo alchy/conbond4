@@ -58,6 +58,8 @@ from .cascade import (
     AWAITING_REFERENCE,
     dropped_tokens,
     lost_shape,
+    relative_question,
+    relative_tier,
     AWAITING_ROLE_NAME,
     HARD_TIERS,
     QUANTIFIER_OF,
@@ -940,6 +942,17 @@ class Session:
             # teprve vznikne, se musí stihnout zkvantifikovat jako každá
             # jiná — jinak by odpověď zavřela jednu otázku a hned otevřela
             # druhou, na kterou by se systém zeptal až příště.
+            # VZTAŽNÁ VĚTA *(W‑85)*. PŘED počítáním ztracených členů, ze
+            # stejného důvodu jako `subordinate_tier`: co PŘIDÁVÁ
+            # predikaci, musí předcházet tomu, co ztráty počítá — jinak
+            # se táž klauze ohlásí zároveň jako připojená druhá věta
+            # a jako ztracený člen, a jedna z těch dvou vět je nepravda.
+            #
+            # Na rozdíl od souřadné druhé věty (W‑71) tohle patro
+            # NEPOTŘEBUJE běžet za kvantifikátorem: nepůjčuje si hotovou
+            # roli z první věty, staví si vlastní a kvantifikátor si
+            # dopočítá samo (`_clause_roles`).
+            relative_tier(self.lexicon),
             lost_role_tier(self.lexicon),
             # Genitivní přívlastek jako čekající DRUHÝ VÝROK. Nic
             # neblokuje: větě chybí přívlastek, ne predikát.
@@ -1564,6 +1577,10 @@ class Session:
                 # na to, co věta TVRDÍ, ne na jméno role, takže se ptá
                 # až po všem, co jména rolí ještě může změnit.
                 share_question(predication),
+                # KOHO SE TÝKÁ VZTAŽNÁ VĚTA *(W‑85)*. Až za sdílením:
+                # je to otázka o DRUHÉ predikaci, takže nesmí zdržovat
+                # nic, co rozhoduje o té první.
+                relative_question(predication),
                 grounded.question,
             )
             if part
@@ -1902,6 +1919,20 @@ class Session:
         druha = predication.second
         if druha is None or routed.statement_id is None:
             return ()
+        # DOKUD ODKAZ NESTOJÍ, KLAUZE DO BÁZE NEJDE *(W‑85)*. Zapsat
+        # predikaci, o které nevíme, o kom je, znamená uložit tvrzení
+        # o uzlu `·který` — individuum, které nikdo nezaložil a které ve
+        # světě není. Je to horší než ji nezapsat: hlavní věta je celá
+        # i bez ní.
+        ceka = [r for r in druha.roles if r.awaiting == AWAITING_REFERENCE]
+        if ceka:
+            return (
+                "  [VZTAŽNÁ VĚTA NEZAPSÁNA: role "
+                + ", ".join(f"„{r.name}“" for r in ceka)
+                + " čeká na odkaz. Připojit klauzi a nechat ten člen "
+                "nerozhodnutý by znamenalo zapsat tvrzení o uzlu, který "
+                "nikdo nezaložil]",
+            )
         if surface_roles(druha):
             return (
                 "  [DRUHÁ VĚTA NEZAPSÁNA: role "
@@ -1926,9 +1957,17 @@ class Session:
         druhy = druha.reading(ROLE_SUBJECT)
         prevzat = druhy is not None and druhy is prvni
         podmet = druha.role(ROLE_SUBJECT)
+        # A U VZTAŽNÉ VĚTY JE TO TŘETÍ MOŽNOST *(W‑85)*. „kteří" není
+        # podmět vyslovený podruhé — je to zájmeno, které na někoho
+        # UKAZUJE, a uzel určila ODPOVĚĎ člověka. Napsat u něj „uzel
+        # vzniká z něj" by bylo tvrzení o textu, které neplatí.
+        rozhodnut = druhy is not None and druhy.resolved
         odkud = (
             "PŘEBÍRÁ Z PRVNÍ, text ho podruhé nevyslovil"
             if prevzat
+            else f"je VZTAŽNÉ ZÁJMENO a uzel „{rozhodnut}“ určila ODPOVĚĎ, "
+            "ne rozbor"
+            if rozhodnut
             else "je VYSLOVENÝ podruhé, takže uzel vzniká z něj a "
             "nepřebírá se z první"
         )
@@ -2365,6 +2404,35 @@ class Session:
         """`→=` — člověk řekl, KTERÝ uzel se míní."""
         assert turn.predication is not None
         target = turn.predication.reading(turn.role_name)
+        # ODKAZ MŮŽE ČEKAT I V DRUHÉ PREDIKACI *(W‑85)*. Vztažná věta je
+        # druhá predikace téže promluvy a její podmět je právě ta role,
+        # na kterou se systém ptá; kdyby tah viděl jen hlavní větu,
+        # odpověď by neměla kam dopadnout a systém by se ptal donekonečna.
+        druha = turn.predication.second
+        if (
+            (target is None or target.awaiting != AWAITING_REFERENCE)
+            and druha is not None
+        ):
+            v_druhe = druha.reading(turn.role_name)
+            if v_druhe is not None and v_druhe.awaiting == AWAITING_REFERENCE:
+                rozhodnuta = replace(
+                    druha,
+                    roles=tuple(
+                        replace(role, resolved=turn.node_id, awaiting="")
+                        if role.name == turn.role_name
+                        else role
+                        for role in druha.roles
+                    ),
+                )
+                return self._settle(
+                    index,
+                    turn,
+                    replace(turn.predication, second=rozhodnuta),
+                    [
+                        f"✓ rozhodnuto  vztažná věta „{druha.predicate}“: "
+                        f"{turn.role_name} → {turn.node_id}"
+                    ],
+                )
         if target is None or target.awaiting != AWAITING_REFERENCE:
             return TurnResult(
                 index=index,

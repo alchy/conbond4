@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.77 · 16. 8. 2026
+**Verze jádra:** 0.1.78 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,55 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**VZTAŽNÁ VĚTA SE PŘIPOJÍ A ZEPTÁ SE, O KOM JE** *(W‑85, kolo #149)*.
+
+Klauze se dosud celá zahodila. Připojit ji a nechat její člen
+nerozhodnutý by ale znamenalo přilepit k větě predikaci, o které nevíme,
+o kom je — a to je horší než ji zahodit. **Obojí proto přichází spolu:**
+klauze se připojí jako DRUHÁ PREDIKACE téže promluvy (týmž mechanismem
+jako souřadný přísudek, W‑71) a vztažné zájmeno se stane rolí, která
+ČEKÁ NA ODKAZ.
+
+**Dokud odkaz nestojí, klauze do báze nejde.** Hlavní věta se zapisuje
+dál — je celá i bez ní, stejně jako u přívlastku.
+
+**Shoda v rodě a čísle nabídku ZUŽUJE, ale NEROZHODUJE.** „Sestra
+potkala souseda, **který** …" nabídne jen `soused`; „Muž potkal souseda,
+**který** …" nabídne oba a ptá se dál. Vztažné zájmeno se pozná z RYSU
+(`PronType` obsahuje `Rel`, čteno průnikem jako u W‑32), ne z výčtu
+lemmat — ten by byl třináctá instance téže vady (W‑32 … W‑83).
+
+PŘEDPOVĚĎ A SKUTEČNOST (předpověď zapsaná před kódem):
+
+| | předpověď | skutečnost |
+|---|---|---|
+| připojených klauzí | 27 | **25** (ve 24 větách) |
+| zápisů | 9 → 10 | **9 → 12** |
+| otevřených odkazů | 27 | **24** |
+
+Obě odchylky rozebrané po položkách. **27 → 25:** předpověď počítala jen
+podmínku „hlava je ve čtení" a nezapočítala dvě klauze, které padnou
+jinde — jedna nemá vztažné zájmeno V ROLI, druhá má dva členy jednoho
+jména (W‑63). 27 − 1 − 1 = 25 přesně. **+1 → +3:** předpověď vycházela
+z toho, že 17 z 18 vět blokuje ještě něco jiného, jenže část těch
+blokujících položek byla UVNITŘ klauze — po připojení přešly do druhé
+predikace a hlavní větu už neblokují. Chyba byla v tom, že jsem měřil
+stav PŘED změnou a předpokládal, že se změní jen ztráty.
+
+**Filtr ztrát existoval ve dvou kopiích** (`lost_members`
+a `_reported_lost`) a při téhle stavbě se rozešly: připojená klauze se
+zároveň hlásila jako druhá predikace i jako ztracený člen. Je to přesně
+vada, kterou zavíral B‑28; teď je jeden zdroj.
+
+ROZSAH: 197 klauzí v korpusu, z toho 58 vztažných a 52 s vztažným
+zájmenem; 477 ztrát uvnitř klauzí ve 94 větách (populace #145 měla 19,
+protože byla úzká — jen nezapsané věty se ztrátou). Nepřipojených
+vztažných klauzí zůstává 30 s hlavou MIMO čtení.
+
+MEZ: vztažné příslovce („kde") dostane od `_role_for` jméno role `jak`.
+Je to vada jinde a **hlásí se, neopravuje** — opravovat ji uvnitř
+tohohle kola by znamenalo měřit dvě věci naráz.
 
 **SLOŽENÝ UZEL SE ČTE TAK, JAK STÁL VE VĚTĚ** *(W‑77, kolo #148)*.
 

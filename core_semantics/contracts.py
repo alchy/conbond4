@@ -1884,6 +1884,54 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-48",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "VZTAZNA VETA JE DRUHA PREDIKACE TEZE PROMLUVY A JEJI ODKAZ "
+            "JE OTAZKA, NE ODVOZENI *(W-85)*. Klauze se dosud cela "
+            "zahodila. Pripojit ji a nechat jeji clen nerozhodnuty by "
+            "ale znamenalo prilepit k vete predikaci, o ktere nevime, "
+            "o kom je — a to je horsi nez ji zahodit; OBOJI proto "
+            "prichazi SPOLU. Pripojuje se tymz mechanismem jako souradny "
+            "prisudek (W-71), ne novym. "
+            "DOKUD ODKAZ NESTOJI, KLAUZE DO BAZE NEJDE. Hlavni veta se "
+            "zapisuje dal — je cela i bez ni, stejne jako u privlastku. "
+            "SHODA V RODE A CISLE NABIDKU ZUZUJE, ALE NEROZHODUJE: "
+            "„Sestra potkala souseda, KTERY…“ nabidne jen `soused`, "
+            "kdezto „Muz potkal souseda, KTERY…“ nabidne oba a pta se "
+            "dal. Vztazne zajmeno se pozna z RYSU (`PronType` obsahuje "
+            "`Rel`, cteno prunikem jako u W-32), ne z vyctu lemmat — ten "
+            "by byl trinacta instance teze vady (W-32 … W-83). "
+            "PRIPOJENA KLAUZE SE NESMI ZAROVEN HLASIT JAKO ZTRATA. Filtr "
+            "ztrat existoval ve DVOU KOPIICH (`lost_members` "
+            "a `_reported_lost`) a pri teto stavbe se rozesly — presne "
+            "vada, kterou zaviral B-28. Ted je jeden zdroj. "
+            "PODMINKA: hlava klauze musi byt VE CTENI (jinak by vztah "
+            "visel na necem, o cem veta nemluvi — jako u W-39) a misto "
+            "druhe predikace nesmi byt zabrane souradnou vetou. "
+            ". ROZSAH MERENI: korpus 238 vet — 197 klauzi celkem, z toho "
+            "58 vztaznych a 52 z nich nese vztazne zajmeno; 477 ztrat "
+            "uvnitr klauzi ve 94 vetach (populace #145 mela 19, protoze "
+            "byla uzka: jen nezapsane vety se ztratou). Projev: "
+            "PRIPOJENO 25 klauzi ve 24 vetach, ZAPSANO 9 -> 12, vet "
+            "s [ZAHOZENO] 181 -> 168, OTEVRENYCH ODKAZU 24. "
+            "MEZ: vztazne prislovce („kde“) dostane od `_role_for` "
+            "jmeno role `jak`; je to vada jinde a hlasi se, neopravuje. "
+        ),
+        anchor="core_semantics.cascade:relative_tier",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_clause_is_attached_as_a_second_predication",
+            "test_the_attached_clause_is_not_reported_as_lost_as_well",
+            "test_the_pronoun_waits_for_a_reference_and_the_system_asks",
+            "test_agreement_narrows_the_offer_but_never_decides",
+            "test_without_the_reference_the_clause_does_not_reach_the_base",
+            "test_the_answer_writes_the_clause_onto_the_named_node",
+            "test_the_relative_pronoun_is_recognised_by_its_feature",
+            "test_the_message_does_not_claim_the_node_came_from_the_parse",
+        ),
+    ),
+    Clause(
         id="S-47",
         boundary=CASCADE_SESSION,
         promise=(
