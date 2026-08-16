@@ -962,6 +962,8 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_omitted_role_is_unknown_not_false",
             "test_an_operator_that_changes_truth_blocks_the_partial_write",
             "test_completing_a_sentence_leaves_one_statement_and_a_history",
+            "test_a_negated_sentence_is_not_written_partially",
+            "test_the_same_sentence_without_negation_is_written_partially",
         ),
     ),
     Clause(

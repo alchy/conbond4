@@ -4023,6 +4023,26 @@ def partial_write(
     povrch = set(surface_roles(predication))
     if not povrch:
         return None, ""
+    # JE KONTEXT, ZE KTERÉHO VYNECHÁVÁM, KLADNÝ? *(B‑29)*
+    #
+    # „Vynechat okolnost dá tvrzení SLABŠÍ" platí pro KLADNÉ čtení: z
+    # `P ∧ Q` plyne `P`. POD NEGACÍ SE MONOTONIE OBRACÍ — z
+    # `¬(P ∧ Q)` NEPLYNE `¬P`, takže vypuštění konjunktu tvrzení
+    # ZESILUJE. „Manželství nebylo od počátku šťastné." je pravda
+    # i o manželství, které se později spravilo; zapsané
+    # `¬být(co:šťastný, kdo:manželství)` o něm tvrdí nepravdu — a byla
+    # to první věta, kterou částečný zápis uložil špatně.
+    #
+    # `ScopeOperator` to nechytil a nemohl: dívá se do VYNECHANÉ ČÁSTI,
+    # kdežto tenhle operátor stojí v PŘÍSUDKU. Kontrola se proto ptá
+    # obojího — co vynechávám I odkud.
+    #
+    # MODALITA NAD PŘÍSUDKEM PROBLÉM NENÍ a je to spočítané, ne
+    # odhadnuté: `◇(P ∧ Q) → ◇P` PLATÍ, takže „mohl bydlet v Praze"
+    # se částečně zapsat smí. Kdyby přibyla operace, která monotonii
+    # obrací (nutnost v negaci, „nikdy"), patří sem, ne do slovníku.
+    if predication.negated:
+        return None, "záporný přísudek — vynechání by tvrzení ZESÍLILO"
     if any(role.awaiting == AWAITING_ROLE_NAME for role in predication.roles):
         return None, "role čeká na jádrové jméno"
     zbyle = tuple(r for r in predication.roles if r.name not in povrch)

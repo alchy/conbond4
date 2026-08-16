@@ -516,3 +516,57 @@ def test_completing_a_sentence_leaves_one_statement_and_a_history() -> None:
         if str(st.formula).startswith("bydlet(")
     ]
     assert "doplněno" in duvody, "historie ukáže, že tam částečný výrok byl"
+
+
+def _negated_partial(negated: bool) -> Reading:
+    """„Manželství (ne)bylo od počátku šťastné." — jediná proměnná je
+    zápor na přísudku."""
+    return Reading(
+        tokens=(
+            w(1, "Manželství", "manželství", "NOUN", 5, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+            w(2, "nebylo" if negated else "bylo", "být", "AUX", 5, "cop", Gender="Neut", Number="Sing", Polarity="Neg" if negated else "Pos"),
+            w(3, "od", "od", "ADP", 4, "case", AdpType="Prep", Case="Gen"),
+            w(4, "počátku", "počátek", "NOUN", 5, "obl", Case="Gen", Gender="Masc", Number="Sing"),
+            w(5, "šťastné", "šťastný", "ADJ", 0, "root", Case="Nom", Degree="Pos", Gender="Neut", Number="Sing", Polarity="Pos"),
+            w(6, ".", ".", "PUNCT", 5, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def test_a_negated_sentence_is_not_written_partially() -> None:
+    """POD ZÁPOREM SE MONOTONIE OBRACÍ *(B‑29)*. „Vynechat okolnost dá
+    tvrzení SLABŠÍ" platí pro KLADNÉ čtení: z `P ∧ Q` plyne `P`. Z
+    `¬(P ∧ Q)` ale NEPLYNE `¬P` — „Manželství nebylo OD POČÁTKU
+    šťastné." je pravda i o manželství, které se později spravilo, a
+    zapsané `¬být(co:šťastný, kdo:manželství)` o něm tvrdí NEPRAVDU.
+
+    `ScopeOperator` to nechytil a nemohl: dívá se do VYNECHANÉ ČÁSTI,
+    kdežto tenhle operátor stojí v PŘÍSUDKU."""
+    from core_semantics.tests import golden
+
+    text = "Manželství nebylo od počátku šťastné."
+    oracle = RecordedOracle(
+        {text: Utterance(text=text, readings=(_negated_partial(True),))}
+    )
+    session = Session(lexicon=golden.golden_lexicon())
+    result = session.utter(text, oracle)
+    assert result.predication is not None and result.predication.negated
+    assert result.statement_id is None, "záporná věta se částečně nezapíše"
+    assert not list(session.kb.active())
+
+
+def test_the_same_sentence_without_negation_is_written_partially() -> None:
+    """PROTIPŘÍKLAD: bez záporu monotonie platí a věta se částečně
+    zapíše — oprava nesmí zavřít i kladné čtení."""
+    from core_semantics.tests import golden
+
+    text = "Manželství bylo od počátku šťastné."
+    oracle = RecordedOracle(
+        {text: Utterance(text=text, readings=(_negated_partial(False),))}
+    )
+    session = Session(lexicon=golden.golden_lexicon())
+    result = session.utter(text, oracle)
+    assert result.statement_id is not None
+    ulozene = [str(st.formula) for st in session.kb.active() if "šťastný" in str(st.formula)]
+    assert all("od+Gen" not in f for f in ulozene), "okolnost se nezapíše"
