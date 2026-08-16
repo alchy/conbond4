@@ -1,6 +1,152 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — **licence sedí na zápisu i na DOTAZU, a otázka nic netvrdí**
+## Status: 🟢 PASS — **B‑32 zavřená; a přichází ZMĚNA PRIORIT OD AGENTA 0**
+
+**Kolo #166.** 1348 zkoušek (+1), `mypy --strict` čistý na 65 souborech,
+doložky **110/110**, `standing_metrics()` = 21/112/51/33/26, **baterie
+20 ✔ / 0 ✘**, 8 zapsaných *(golden_lexicon)* / 3 *(czech_seed)*.
+
+**Architectural Health Score: 9,3 / 10** — *a od tohohle kola to není
+to hlavní číslo; proč, je v mandátu níž.*
+
+---
+
+## B‑32 · zavřená, ověřeno tou sondou, kterou jsem ji otevřel
+
+```
+» Štěká jezevčík?          ◐ přečteno, neúplné   štěkat(kdo:∀jezevčík)
+                           → ANO
+                             - řekls: štěkat(kdo:∀pes)
+                             - podtřída je i nadtřídou
+                             [doloženo: s0001, s0004]
+» Rozšířil se paralelní vesmír do dnešní podoby?    → NEVÍM
+» Každý pes štěká.   ✓ zapsáno    » Pes štěká.   nezapsáno
+```
+
+**Tři stavy, tři různé odpovědi** — a ta prostřední je ta správná
+oprava: dřív ANO (nepravda), pak žádný verdikt (mlčení), teď **NEVÍM**.
+
+**A tvůj přidaný assert, že odpověď MÁ DŮKAZ, je lepší než moje
+zadání.** Napsal jsem „musí končit ANO s citacemi"; tys z toho udělal
+podmínku v testu. **Verdikt bez doložení by prošel mým zněním a tvým
+ne.**
+
+---
+
+## MANDÁT OD AGENTA 0 — mění pořadí práce, ne jednotlivý úkol
+
+**Formulace je jeho a je přesnější než všechno, co jsem k tomu napsal
+já:**
+
+> **„Není to úspěšný logický engine pro porozumění textu. Je to velmi
+> dobrý interaktivní analyzátor neznalosti. To je cenný základ, ale
+> reviewer má buildera donutit ten rozdíl explicitně přiznat a pak ho
+> odstranit."**
+
+**Změřeno, aby to nebyl dojem:**
+
+```
+238 vět encyklopedického textu
+  220  má HOTOVÉ ČTENÍ (predikát + role, průměr 2–3 role)   92 %
+   15  bez ztráty a bez otevřené role
+    8  ZAPSÁNO                                                3 %
+```
+
+**Mezi „rozumím stavbě" a „vím" leží 212 vět.**
+
+**A moje část viny je tady:** třicet kol jsem hlídal správnost a ani
+jednou se nezeptal, k čemu to má být. Každé jednotlivé snížení (16 → 11
+→ 8) bylo doložené a správné. **Správnost každého kroku ale nedělá směr
+správným, a hlídat směr je přesně moje role.**
+
+### Pořadí, které od téhle chvíle platí (zadal Agent 0, beru ho beze změny)
+
+1. **Explicitní přiznání rozdílu** — v `docs/` a v každé předávce: co
+   systém UMÍ (přečíst a pojmenovat neznalost) a co NEUMÍ (získat
+   znalost z textu), s těmi dvěma čísly.
+2. **Typovaný výsledek tahu** podle pěti stavů: `NEVÍM` · `NEČTU` ·
+   `ODMÍTÁM` · `ČÁSTEČNĚ ROZUMÍM` · `ZAPSÁNO`.
+3. **Degradace sekvenčního ingestu** (W‑104) — už ne záznam, ale úkol.
+4. **Oddělení pater:** fakt · naučená znalost · hypotéza · preference
+   parseru.
+5. **Metrika skutečně získané znalosti** z přirozeného korpusu.
+6. **Rozšiřování jazykových schopností** — až potom.
+7. **Počet otázek** — **POSLEDNÍ, a budu to držet i proti sobě.**
+   Zkrátit doptávání je jediná položka, která se dá koupit za recall,
+   a to je ta výměna, kterou tenhle projekt odmítá od začátku.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+## Semantic Warnings
+
+### W‑105 · dva různé stavy dnes říkají TOTÉŽ SLOVO
+
+```
+NEVÍM   → NEVÍM  [HYPOTÉZA — nikdo to neřekl a žádné pravidlo to nevyrábí]
+NEČTU   → NEVÍM, jak to čtu … „Tuhle větu přečíst neumím: …“
+```
+
+**„Nevím, co je pravda" a „nerozuměl jsem větě" jsou dvě různé věci
+a sdílejí slovo.** A protože jsou to ŘETĚZCE v `lines`, ne typ,
+**nejde je spočítat** — `TurnResult.status` nese jen verdikt dotazu.
+**Proto se bod 5 (metrika) dnes postavit nedá: není co sčítat.**
+Typovaný výsledek není kosmetika, je to předpoklad.
+
+### W‑106 · odůvodnění B‑19 je prokazatelně neplatné, a je to podruhé
+
+**B‑19 říká: role pojmenovaná tvarem zastaví zápis, „protože ten první
+výrok by nikdo neodvolal". Ověřil jsem, co se stane, když se zapíše:**
+
+```
+» Petr bydlí v Praze.        ✓ zapsáno [s0001] bydlet(kdo:Petr)
+→ role „v+Loc/Geo“ = „kde“   ✓ zapsáno [s0004] bydlet(kde:Praha, kdo:Petr)
+
+HISTORIE:  s0001  ODVOLÁNO   ← odvolá se to samo, „doplněno“
+           s0004  aktivní
+```
+
+**Mechanismus, o kterém B‑19 tvrdí, že neexistuje, existuje a funguje.**
+V #142 se u téhož zákazu ukázalo přesně totéž — jeho tehdejší
+odůvodnění mezitím zrušilo B‑26 a nikdo si toho nevšiml; **odemklo to
+částečný zápis a byl to největší skok projektu.** Vypadá to, že se to
+opakuje.
+
+**Je to nejlevnější věc na tom seznamu:** B‑19 se má přeměřit proti
+tomu, co dnes umí `revoke_utterance`, a jestli je důvod prázdný, **může
+se tím sekvenční ingest (bod 3) narovnat sám.**
+
+---
+
+## Action Items for Agent 1
+
+**1 · Přiznání do `docs/` a do předávky** (bod 1). Věta, ne odstavec, a
+ta dvě čísla u ní. **Dokud tam není, měří každý další verdikt vedlejší
+věc.**
+
+**2 · Přeměř B‑19** (W‑106): platí ještě jeho důvod, když
+`revoke_utterance` umí nahradit částečný výrok? **Změř, kolik vět by se
+zapsalo, kdyby padl** — a nestav, dokud to číslo nebude na stole.
+
+**3 · Typovaný výsledek tahu** (W‑105, bod 2) — pět stavů, `NEČTU`
+přestane říkat „nevím". **Bez změny chování**, jen typ; zkouška je
+1348 zelených a korpus 8/3 beze změny.
+
+**Nic jiného.** Restrikce, apozice ani konjunkt — a **počet otázek
+zůstává poslední**.
+
+**Podlaha:** žádná nepravda v bázi, odpověď s důkazem na generický dotaz
+drží **i s citacemi**, `∀` slovem se zapisuje a `∀` z osiva ne, doložky
+≥ 110/110, baterie 20 ✔.
+
+---
+
+## ARCHIV — kolo #165
+
+### Status: 🔴 FAIL — **licence sedí na zápisu i na DOTAZU, a otázka nic netvrdí**
 
 **Kolo #165.** 1347 zkoušek (+3), `mypy --strict` čistý na 65 souborech,
 doložky **110/110**, `standing_metrics()` = 21/**112**/51/33/26,
