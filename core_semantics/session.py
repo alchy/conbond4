@@ -1755,11 +1755,27 @@ class Session:
         # aproximace**: „Pes štěká." × „Pes utekl." ukazuje, že ani lemma
         # to nerozhodne. Precedens politiky je vlastní: `v+Loc` v osivu
         # SCHVÁLNĚ NENÍ, aby se systém zeptal (§ 12/1).
+        # ZÁKAZ SE TÝKÁ TVRZENÍ, NE DOTAZU *(B‑32)*. Licence stojí na
+        # jediné větě: `∀` je jediný kvantifikátor, jehož chyba TVRZENÍ
+        # zesiluje. Otázka ale netvrdí nic — dotaz bázi nemění (I‑12) —
+        # takže na ní není co zesilovat a verdikt MUSÍ přijít.
+        #
+        # Do B‑32 zákaz sedĕl o vrstvu výš a bral s sebou přesně tu
+        # schopnost, kterou projekt ukazuje jako hlavní: „Štěká
+        # jezevčík?" zůstalo bez verdiktu, zatímco „Štěká KAŽDÝ
+        # jezevčík?" odpovědělo ANO — a to jedno slovo je v DOTAZU, ne
+        # v tom, co se zapisuje.
+        #
+        # Poctivost zůstává jinde a je vidět: vypíše se ČTENÍ
+        # (`✓ přečteno štěkat(kdo:∀jezevčík)`), takže je poznat, na jakou
+        # otázku systém odpověděl; a otázka „Platí to o KAŽDÉM…?" se
+        # klade dál jako nabídka zeptat se jinak.
         seed_forall = tuple(
             sorted(
                 role.name
                 for role in predication.roles
-                if role.quantifier is Quantifier.FOR_ALL
+                if predication.mood is Mood.ASSERTION
+                and role.quantifier is Quantifier.FOR_ALL
                 and role.quantifier_authority
                 not in (AUTHORITY_AFFIRMED, AUTHORITY_DETERMINER)
                 and role.mention.lemma not in self._affirmed_forall

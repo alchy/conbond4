@@ -1968,6 +1968,13 @@ CONTRACTS: tuple[Clause, ...] = (
             "nezapisuje“, zablokuje i to, co blokovat nema. "
             "DETERMINATOR JE VYSLOVENY, NE UHODNUTY: „KAZDY pes steka.“ "
             "rika `∀` slovem, takze zapis licencuje. "
+            "ZAKAZ SE TYKA TVRZENI, NE DOTAZU *(B-32)*: dotaz bazi "
+            "nemeni (I-12), takze na nem neni co zesilovat a VERDIKT "
+            "PRIJDE. „Steka jezevcik?“ zustalo do B-32 bez verdiktu, "
+            "kdezto „Steka KAZDY jezevcik?“ odpovedelo ANO — a to jedno "
+            "slovo je v DOTAZU, ne v tom, co se zapisuje. Poctivost drzi "
+            "jinde a je videt: vypise se CTENI, takze je poznat, na "
+            "jakou otazku system odpovedel. "
             "CTENI SE NEMENI a system se PTA (`seed_forall_question`), "
             "takze zakaz neni dira misto otazky; `→∀1` i `→∀` zapis "
             "ODEMYKAJI. Licence se vaze na LEMMA a je to PRIZNANA "
@@ -1992,6 +1999,7 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_a_seed_forall_does_not_reach_the_base",
             "test_an_affirmation_opens_the_write",
             "test_a_determiner_licenses_the_write",
+            "test_a_query_is_answered_even_when_the_forall_came_from_seed",
         ),
     ),
     Clause(

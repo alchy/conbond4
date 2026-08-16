@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.94 · 16. 8. 2026
+**Verze jádra:** 0.1.95 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,25 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**ZÁKAZ SE TÝKÁ TVRZENÍ, NE DOTAZU** *(B‑32, kolo #166)*.
+
+Licence z W‑103 seděla o vrstvu výš, než kam patří: blokovala i DOTAZ.
+Báze měla `∀` potvrzené slovem („Každý pes štěká.") a
+`subset(jezevčík, pes)`, a přesto „**Štěká jezevčík?**" zůstalo bez
+verdiktu, zatímco „Štěká **každý** jezevčík?" odpovědělo ANO — to jedno
+slovo je přitom v DOTAZU, ne v tom, co se zapisuje.
+
+**Licence stojí na jediné větě: `∀` je jediný kvantifikátor, jehož chyba
+TVRZENÍ zesiluje.** Otázka netvrdí nic — dotaz bázi nemění (I‑12) — takže
+na ní není co zesilovat a verdikt musí přijít. Poctivost drží jinde a je
+vidět: vypíše se ČTENÍ (`◐ přečteno štěkat(kdo:∀jezevčík)`), takže je
+poznat, na jakou otázku systém odpověděl, a otázka „Platí to o KAŽDÉM…?"
+zůstává jako nabídka zeptat se jinak.
+
+Trojice z verdiktu končí `ANO` s citacemi `s0001, s0004`; zákaz na
+tvrzení platí dál („Od Velkého třesku…" se nezapíše, báze zůstane
+prázdná).
 
 **`∀` Z OSIVA SE NEZAPISUJE** *(W‑103, kolo #165; rozhodnutí reviewera)*.
 

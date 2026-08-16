@@ -283,3 +283,46 @@ def test_a_determiner_licenses_the_write() -> None:
     kdo = result.predication.reading("kdo")
     assert kdo is not None and kdo.quantifier_authority == AUTHORITY_DETERMINER
     assert result.statement_id is not None, "vyslovené `∀` zápis licencuje"
+
+
+def test_a_query_is_answered_even_when_the_forall_came_from_seed() -> None:
+    """ZÁKAZ SE TÝKÁ TVRZENÍ, NE DOTAZU *(B‑32)*.
+
+    Licence stojí na jediné větě: `∀` je jediný kvantifikátor, jehož
+    chyba TVRZENÍ zesiluje. Otázka ale netvrdí nic — dotaz bázi nemění
+    (I‑12) — takže na ní není co zesilovat a verdikt musí přijít.
+
+    Do B‑32 zůstalo „Štěká jezevčík?" bez verdiktu, zatímco „Štěká
+    KAŽDÝ jezevčík?" odpovědělo ANO; to jedno slovo je přitom v DOTAZU,
+    ne v tom, co se zapisuje."""
+    from core_semantics.ast import Quantifier, QueryStatus, atom, role
+    from core_semantics.engine import Engine
+
+    # „Každý pes štěká." — `∀` řečené SLOVEM, tedy zapsatelné.
+    veta = Reading(
+        tokens=(
+            tok(1, "Každý", "každý", "DET", 2, "det",
+                Case="Nom", Gender="Masc", Number="Sing", PronType="Tot"),
+            tok(2, "pes", "pes", "NOUN", 3, "nsubj",
+                Case="Nom", Gender="Masc", Number="Sing"),
+            tok(3, "štěká", "štěkat", "VERB", 0, "root",
+                Number="Sing", Polarity="Pos"),
+            tok(4, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    session, _ = _session(podmet=Operation.FOR_ALL)
+    zapsano = session.utter("Každý pes štěká.", _Oracle(veta))
+    assert zapsano.statement_id is not None, "`∀` řečené slovem se zapíše"
+
+    session.kb.attach(
+        subset_of(Group("jezevčík"), Group("pes")),
+        provenance="test: jezevčík je druh psa",
+    )
+    verdikt = Engine(session.kb).ask(
+        atom("štěkat", role("kdo", Group("jezevčík"), Quantifier.FOR_ALL))
+    )
+    assert verdikt.status is QueryStatus.PROVEN_TRUE
+    assert verdikt.proof is not None and verdikt.proof.leaves(), (
+        "a odpověď má důkaz — to je ta schopnost, kterou zákaz bral"
+    )
