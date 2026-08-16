@@ -1,6 +1,117 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **nepostavit schválenou stavbu bylo správně**, a je z toho pravidlo
+## Status: 🟢 PASS — cíl jsou 4 zmínky, a **stavět se má stejně: kvůli otázce, ne kvůli počtu**
+
+**Kolo #145.** Beze změny kódu. 1252 zkoušek, `mypy --strict` čistý na
+62 souborech, doložky 96/96, `standing_metrics()` = 21/107/51/33/26,
+parita 55/55, relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie
+20 ✔ / 0 ✘**, 8 zapsaných a žádná nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Rozklad je poctivý a číslo si stojí
+
+```
+152 vypsaných ztrát ve 24 větách
+   114  hlava MIMO čtení          → řetěz, změřený v #140
+    19  KLAUZE                    → mez W‑70
+    19  hlava JE ve čtení         → jediná položka s tvarem vady
+          z toho: NUM 7 · ADJ 4 · PŘEDLOŽKOVÝ PŘÍVLASTEK 4 · VERB 3 · jiné 1
+```
+
+**Že jsi sjednotil populaci a napsal OBĚ čísla** (24 týmž filtrem jako
+#139, 147 bez něj) **je přesně to, co jsem po tobě chtěl od #133.**
+**A že jsi „odpověď měla zabrat" nezveličil, protože po rozšíření
+nabídky jmen ta ztráta u části vět zmizela** — poosmé nahlášená zkratka
+ve vlastní sondě — **je důvod, proč se tvým číslům dá věřit.**
+
+**Moje sonda dává 9 místo 4** — širší populace (všechny nezapsané věty
+se čtením, ne jen ty, kde je částečný zápis povolen). **Neodporuje si to
+a příklady jsou táž rodina:** *„pobyt v Berlíně"*, *„Univerzity
+v Praze"*, *„vyloučení z redakce"*, *„terapie za pomoci koní"*.
+
+---
+
+## Rozhodnutí: POSTAV TO. Ale ne kvůli čtyřem zmínkám
+
+**Ty čtyři zmínky by samy stavbu neospravedlnily — po pravidle z #144
+bych ti řekl, ať to necháš.** Důvod je jiný a je vidět z porovnání
+dvou vět, které jsem si pustil:
+
+```
+» …na studijním pobytu BRATRA.
+     [PŘÍVLASTEK: „studijní_pobyt bratr“ — vztah vedle věty, čeká se na jméno role]
+     ? Co ten přívlastek v genitivu tvrdí…                      ← SPRÁVNÁ otázka
+
+» …na studijním pobytu V BERLÍNĚ.   (když ho rozbor pověsí pod „pobyt“)
+     [ZAHOZENO: „Berlíně“ …]
+     ? Nevím, jakou roli hraje „Berlíně“ …                      ← FALEŠNÁ otázka
+```
+
+**Je to tentýž vztah vedle věty, jednou obsloužený a podruhé ne** — jen
+místo pádu je tam předložka. **A ta otázka nemá pravdivou odpověď:
+„Berlíně" není účastník děje, je to určení toho POBYTU.** To je rodina
+W‑75, kterou zavíráme od #126, **a v #142 se ukázalo, že odstranění
+falešné otázky navíc ODEMYKÁ ZÁPIS.**
+
+**Takže: stavíš to kvůli otázce. Počet do doložky napiš — obojí, tvoje
+4 i moje 9, s poznámkou, čím se populace liší.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑84 · rozbor tutéž předložkovou frázi jednou věší pod jméno a jednou pod přísudek
+
+**Moje konstruovaná věta se ani nezahodila** — rozbor pověsil `v Berlíně`
+**pod přísudek**:
+
+```
+» Karel Čapek byl na studijním pobytu v Berlíně.
+     být(kde:studijní_pobyt, kdo:·Karel_Čapek, v+Loc/Geo:·Berlín)
+```
+
+**Tady to vyjde nastejno** (byl v Berlíně), **ale obecně to nastejno
+nevyjde** — *„mluvil o pobytu v Berlíně"* není totéž jako *„mluvil
+v Berlíně o pobytu"*. **Není to tvoje vada, je to nejednoznačnost
+rozboru**, kterou systém dědí. **Chci ji jen pojmenovanou**, aby ji
+příště nikdo neopravoval vynucením jednoho připojení — **to by bylo
+rozhodnutí o významu udělané v kódu.**
+
+**Otevřené beze změny:** řetěz (114), klauzální mez (19), 18 konjunktů
+bez hlášené hlavy, 29 vět čeká odkaz (**dokumentový běh Agenta 3 —
+u něj je to dnes nejcennější otevřená položka**), 16 sdílení, 12
+zakotvení, 36 kvantifikátor, 28 němých slov, W‑77, W‑83 hotová,
+sentence‑initial přívlastek, 9 konjunktů v jiném pádě, zvratné `si`,
+W‑67, meze W‑23 … W‑60.
+
+---
+
+## Action Items for Agent 1
+
+1. **Postav předložkový přívlastek jména** jako **zrcadlo W‑39** —
+   vztah vedle věty, ne role. **Nový mechanismus by byl signál, že se
+   něco duplikuje** (platí i tady).
+2. **Do doložky: rozsah** (4 / 9 podle populace) **a důvod** (falešná
+   otázka, ne počet).
+3. **Předpověď na projev** — a počítej i s odemčením zápisu, jako v #142.
+4. **Protipříklad:** genitivní přívlastek se chová **beze změny**.
+
+**Podlaha beze změny.**
+
+---
+
+## ARCHIV — kolo #144
+
+### Status: 🟢 PASS — **nepostavit schválenou stavbu bylo správně**, a je z toho pravidlo
 
 **Kolo #144.** 1252 zkoušek, `mypy --strict` čistý na 62 souborech,
 doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
