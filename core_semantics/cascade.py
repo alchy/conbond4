@@ -3522,6 +3522,31 @@ def genitive_attributes(
     # vztah „Hradec_Králové Králové" znamená tvrdit, že vedle věty stojí
     # druhý výrok o něčem, co je součástí toho jména.
     pohlcene = {index for role in predication.roles for index in role.absorbed}
+    # ŘETĚZ PŘÍVLASTKŮ *(W‑101)*. Hlavou vztahu smí být i DOPLNĚK už
+    # nalezeného přívlastku: „riziko vzniku **cukrovky**" má `cukrovka`
+    # pod `vznik`, který sám ve čtení není — je to přívlastek. Do W‑101
+    # tam ten řetěz končil a všechno pod ním se zahodilo.
+    #
+    # Změřeno: 95 ztrát v 59 větách, tedy 84 % všech hlášených ztrát má
+    # hlavu mimo čtení a tohle je jejich největší jediná cesta (#159).
+    #
+    # NENÍ TO NOVÉ ROZHODNUTÍ O VÝZNAMU: je to týž vztah vedle věty jako
+    # W‑84, jen o patro hlouběji, a do báze jde pořád až po odpovědi.
+    # Skládá se to ITERACÍ, protože řetěz může mít víc pater — zastaví se
+    # sám, jakmile přestane přibývat.
+    zmena = True
+    while zmena:
+        zmena = False
+        for token in reading.tokens:
+            if token.index in ve_cteni or token.head not in ve_cteni:
+                continue
+            if token.deprel != "nmod" and not (
+                base_deprel(token.deprel) == "obl"
+                and _absorbed_participle(token.head, reading, pohlcene)
+            ):
+                continue
+            ve_cteni[token.index] = token.lemma
+            zmena = True
     # GENITIV, KTERÝ SI UŽ NÁROKUJE JÁDROVÁ RELACE, PŘÍVLASTEK NENÍ
     # *(W‑58)*. „Petrovice jsou součástí **Plzně**." a „byl prvním
     # předsedou **odboru**." mají STAVBU IDENTICKOU — u spony je jmenná

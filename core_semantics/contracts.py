@@ -1940,6 +1940,43 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-57",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "PRIVLASTEK SMI BYT HLAVOU DALSIHO PRIVLASTKU *(W-101)*. "
+            "„riziko vzniku problemu S JATRY“ ma `jatra` pod `problem`, "
+            "ten pod `vznik` a ten pod `riziko` — a jen to posledni je "
+            "ROLE. Do W-101 tam retez koncil a vsechno pod nim se "
+            "zahodilo. "
+            "NENI TO NOVE ROZHODNUTI O VYZNAMU: je to tyz vztah vedle "
+            "vety jako W-84, jen o patro hloubeji, a do baze jde porad az "
+            "po odpovedi — nova moznost nepravdy tedy nevznika. Sklada se "
+            "to ITERACI, protoze retez ma v korpusu az ctyri patra; "
+            "zastavi se sam, jakmile prestane pribyvat. "
+            "MEZ, KTERA SE HLASI: pod doplnkem se bere `nmod` (a `obl` "
+            "pod pricestim), ne cokoli. `flat`, `conj`, `appos` a `amod` "
+            "jsou vlastni rodiny a zustavaji ztratou — brat je by "
+            "znamenalo tvrdit, ze dil jmena nebo souradny clen je vztah "
+            "vedle vety. A 14 `nmod` zbyva pod KONJUNKTEM privlastku, "
+            "protoze konjunkty se pridavaji az za tim cyklem. "
+            ". ROZSAH MERENI: korpus 238 vet, TAZ POPULACE NA OBOU "
+            "REVIZICH (42d1a2c -> tento strom). UBYTEK: ztrat 735 -> 702 "
+            "(-33) ve 161 -> 154 vetach. CENA (W-100): polozek "
+            "[PRIVLASTEK] 211 -> 242 (median 1 -> 2 na vetu), tedy "
+            "otazek pribylo 31 a ztrat ubylo 33. ZISK: ZAPSANO 13 -> 16. "
+            "Predpoved rikala 95 ubytku a +95 otazek; byla spatne, "
+            "protoze populace „ztraty pod doplnkem“ zahrnovala i "
+            "deprely, ktere privlastkem byt nemuzou (`flat` 20, `conj` "
+            "10, `appos` 9, `amod` 7). "
+        ),
+        anchor="core_semantics.cascade:genitive_attributes",
+        entry=".utter(",
+        enforced_by=(
+            "test_an_attribute_may_head_another_attribute",
+            "test_the_chain_stops_where_the_relation_is_not_an_attribute",
+        ),
+    ),
+    Clause(
         id="S-56",
         boundary=CASCADE_SESSION,
         promise=(

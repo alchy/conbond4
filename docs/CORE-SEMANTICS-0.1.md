@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.88 · 16. 8. 2026
+**Verze jádra:** 0.1.89 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,46 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**PŘÍVLASTEK SMÍ BÝT HLAVOU DALŠÍHO PŘÍVLASTKU** *(W‑101, kolo #160)*.
+
+„riziko vzniku problémů **s játry**" má `játra` pod `problém`, ten pod
+`vznik` a ten pod `riziko` — a jen to poslední je ROLE. Do W‑101 tam
+řetěz končil a všechno pod ním se zahodilo. **Není to nové rozhodnutí
+o významu**: je to týž vztah vedle věty jako W‑84, jen o patro hlouběji,
+a do báze jde pořád až po odpovědi.
+
+PŘEDPOVĚĎ (zapsaná před kódem, včetně CENY podle W‑100) A SKUTEČNOST,
+táž populace na obou revizích (`git archive 42d1a2c`):
+
+| | předpověď | skutečnost |
+|---|---|---|
+| úbytek ztrát | 95 | **33** (735 → 702) |
+| vět se ztrátou | — | 161 → **154** |
+| cena: položek `[PŘÍVLASTEK]` | +95 (211 → ~307) | **+31** (211 → 242) |
+| medián položek na větu | 2 → 3 | 1 → **2** |
+| zápisů | +4 | **+3** (13 → **16**) |
+
+**Předpověď minula, protože populace zahrnovala i to, co přívlastkem být
+nemůže.** „Ztráty pod doplňkem" (95) obsahovaly `flat` 20, `conj` 10,
+`appos` 9 a `amod` 7 — vlastní rodiny; přívlastkem se smí stát jen `nmod`
+(a `obl` pod příčestím). Dosažitelné bylo 41, vyřešilo se 27 z nich a
+řetěz otevřel dalších 6 pater níž.
+
+**A CENA JE MENŠÍ NEŽ ÚBYTEK, i když jen o dvě:** otázek přibylo 31,
+ztrát ubylo 33. To samo o sobě není zisk — ten je v tom, že *ztráta*
+říká „pro tenhle vztah role není" a *přívlastek* říká „vztah tu je, jen
+nevím který"; první otázka odpověď nemá, druhá ano. Měřitelný zisk je
+**+3 zapsané věty**.
+
+MEZ, KTERÁ SE HLÁSÍ A NESTAVÍ: 14 `nmod` zbývá pod KONJUNKTEM
+přívlastku, protože konjunkty se přidávají až za tím cyklem; `flat` 22,
+`conj` 11, `appos` 9, `amod` 9 jsou vlastní rodiny.
+
+**A ŠESTNÁCTÁ ZKRATKA — TENTOKRÁT V TESTU, NE V SONDĚ:** první verze
+zkoušky brala predikaci z JINÉ věty (o alergii), takže hlava „riziko"
+nebyla mezi rolemi a párovalo se s „alergie". Test tvrdil něco jiného,
+než měřil — a našlo se to jen proto, že spadl.
 
 **TŘI RODINY ZMĚŘENÉ VEDLE SEBE — A HMOTA NENÍ V ŽÁDNÉ Z NICH**
 *(měření #159, žádná stavba)*.

@@ -1088,3 +1088,128 @@ def test_the_head_is_keyed_by_token_not_by_lemma() -> None:
     assert head_surface(
         predication, hlava, reading, nalezene, hlava_index
     ) == "slova", "tvar se bere z TOHO tokenu, ne z jiného výskytu lemmatu"
+
+
+# --------------------------------------------------------------------------
+# Řetěz přívlastků — W‑101
+# --------------------------------------------------------------------------
+
+
+def _chain() -> Reading:
+    """«Hmotnost zvyšuje riziko vzniku problémů s játry.» — čtyři patra."""
+    return Reading(
+        tokens=(
+            w(1, "Hmotnost", "hmotnost", "NOUN", 2, "nsubj",
+              Case="Nom", Gender="Fem", Number="Sing"),
+            w(2, "zvyšuje", "zvyšovat", "VERB", 0, "root",
+              Number="Sing", Polarity="Pos"),
+            w(3, "riziko", "riziko", "NOUN", 2, "obj",
+              Case="Acc", Gender="Neut", Number="Sing"),
+            w(4, "vzniku", "vznik", "NOUN", 3, "nmod",
+              Case="Gen", Gender="Masc", Number="Sing"),
+            w(5, "problémů", "problém", "NOUN", 4, "nmod",
+              Case="Gen", Gender="Masc", Number="Plur"),
+            w(6, "s", "s", "ADP", 7, "case", AdpType="Prep", Case="Ins"),
+            w(7, "játry", "játra", "NOUN", 5, "nmod",
+              Case="Ins", Gender="Neut", Number="Plur"),
+            w(8, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+CHAIN_TEXT = "Hmotnost zvyšuje riziko vzniku problémů s játry."
+
+
+def _chain_session(reading: Reading) -> tuple[Session, _Recorded]:
+    """Sezení pro TU větu — ne pro jinou.
+
+    První verze tohohle testu brala predikaci z věty o alergii, takže
+    hlava „riziko" nebyla mezi rolemi a párovalo se s „alergie". Test
+    tím měřil něco jiného, než tvrdil; spadl, a proto se to našlo."""
+    from core_semantics.lexicon import (
+        LearnedPattern,
+        Operation as _Operation,
+        PatternStatus,
+        Trigger,
+        czech_seed,
+    )
+
+    lexicon = czech_seed()
+    for case, deprel in (("Nom", "nsubj"), ("Acc", "obj")):
+        lexicon.add(
+            LearnedPattern(
+                trigger=Trigger(lemma="", upos="NOUN", number="Sing",
+                                case=case, deprel=deprel),
+                operation=_Operation.EXISTS,
+                learned_from="test",
+                status=PatternStatus.CONFIRMED,
+            )
+        )
+    return Session(lexicon=lexicon), _Recorded({CHAIN_TEXT: reading})
+
+
+def test_an_attribute_may_head_another_attribute() -> None:
+    """ŘETĚZ PŘÍVLASTKŮ *(W‑101)*.
+
+    „riziko vzniku problémů **s játry**" má `játra` pod `problém`, který
+    je pod `vznik`, který je pod `riziko` — a jen to poslední je role.
+    Do W‑101 tam řetěz končil a všechno pod ním se zahodilo; změřeno
+    v #159, že 84 % všech hlášených ztrát má hlavu mimo čtení a tohle je
+    jejich největší jediná cesta.
+
+    **Není to nové rozhodnutí o významu**: je to týž vztah vedle věty
+    jako W‑84, jen o patro hlouběji, a do báze jde pořád až po odpovědi."""
+    from core_semantics.cascade import genitive_attributes
+
+    reading = _chain()
+    session, oracle = _chain_session(reading)
+    predication = session.utter(CHAIN_TEXT, oracle).predication
+    assert predication is not None
+
+    dvojice = [
+        (hlava, doplnek)
+        for hlava, doplnek, _, _, _ in genitive_attributes(reading, predication)
+    ]
+    assert ("riziko", "vznik") in dvojice
+    assert ("vznik", "problém") in dvojice
+    assert ("problém", "játra") in dvojice, "čtvrté patro se skládá taky"
+
+
+def test_the_chain_stops_where_the_relation_is_not_an_attribute() -> None:
+    """MEZ, KTERÁ SE HLÁSÍ: pod doplňkem se bere `nmod` (a `obl` pod
+    příčestím), ne cokoli. `flat`, `conj`, `appos` a `amod` jsou vlastní
+    rodiny a zůstávají ztrátou — změřeno 75 v korpusu.
+
+    Kdyby se braly všechny deprely, znamenalo by to tvrdit, že díl jména
+    nebo souřadný člen je vztah vedle věty, a to o té větě neplatí."""
+    from core_semantics.cascade import genitive_attributes
+
+    reading = Reading(
+        tokens=(
+            w(1, "Hmotnost", "hmotnost", "NOUN", 2, "nsubj",
+              Case="Nom", Gender="Fem", Number="Sing"),
+            w(2, "zvyšuje", "zvyšovat", "VERB", 0, "root",
+              Number="Sing", Polarity="Pos"),
+            w(3, "riziko", "riziko", "NOUN", 2, "obj",
+              Case="Acc", Gender="Neut", Number="Sing"),
+            w(4, "vzniku", "vznik", "NOUN", 3, "nmod",
+              Case="Gen", Gender="Masc", Number="Sing"),
+            w(5, "cukrovky", "cukrovka", "NOUN", 4, "conj",
+              Case="Gen", Gender="Fem", Number="Sing"),
+            w(6, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    session, oracle = _chain_session(reading)
+    predication = session.utter(CHAIN_TEXT, oracle).predication
+    assert predication is not None
+
+    dvojice = [
+        (hlava, doplnek)
+        for hlava, doplnek, _, _, _ in genitive_attributes(reading, predication)
+    ]
+    assert ("riziko", "vznik") in dvojice
+    assert not any(hlava == "vznik" for hlava, _ in dvojice), (
+        "souřadný člen pod přívlastkem je jiná rodina"
+    )
