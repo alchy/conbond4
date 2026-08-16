@@ -4106,6 +4106,26 @@ def partial_write(
         return None, "záporný přísudek — vynechání by tvrzení ZESÍLILO"
     if any(role.awaiting == AWAITING_ROLE_NAME for role in predication.roles):
         return None, "role čeká na jádrové jméno"
+    # VALENČNÍ DOPLNĚNÍ SE VYNECHAT NESMÍ *(W‑82)*. Celé odůvodnění
+    # částečného zápisu se měřilo na OKOLNOSTECH: „ve všech 154 větách
+    # chybí jméno okolnosti, ne jádro věty". `obl:arg` ale rozbor značí
+    # jako ARGUMENT, ne okolnost — a pro argumenty to NEPLATÍ.
+    #
+    # Doloženo TÝMŽ testem, jakým se rozhodovaly okolnosti (plyne
+    # zbytek z původní věty?): „Zabýval se zkoumáním vesmíru." →
+    # `zabývat(Ins:arg:zkoumání, kdo:…)`, ale „Zabýval se." se NEDÁ
+    # PŘEČÍST VŮBEC; totéž „Trpěl nemocí." → „Trpěl." Zbytek tedy není
+    # SLABŠÍ TVRZENÍ, není to tvrzení. A u „vést k vzniku" → „vést“ se
+    # věta přečte, jenže znamená něco jiného.
+    #
+    # Je to tedy ČTVRTÁ POLOŽKA ZÁKAZU vedle záporu, podmínky a náhrady
+    # — a jediná, která se pozná z DEPRELU, ne ze slova.
+    valencni = sorted(name for name in povrch if ":arg" in name)
+    if valencni:
+        return None, (
+            "valenční doplnění " + ", ".join(f"„{n}“" for n in valencni)
+            + " — bez něj věta netvrdí míň, tvrdí něco jiného"
+        )
     zbyle = tuple(r for r in predication.roles if r.name not in povrch)
     if not zbyle or all(r.name not in CANONICAL_ROLES for r in zbyle):
         return None, "bez okolností by nezbylo jádro věty"

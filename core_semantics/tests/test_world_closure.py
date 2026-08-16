@@ -18,6 +18,8 @@ které jazyk nevede, se nedá odlišit od schopnosti, která nefunguje.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from core_semantics.ast import (
@@ -570,3 +572,53 @@ def test_the_same_sentence_without_negation_is_written_partially() -> None:
     assert result.statement_id is not None
     ulozene = [str(st.formula) for st in session.kb.active() if "šťastný" in str(st.formula)]
     assert all("od+Gen" not in f for f in ulozene), "okolnost se nezapíše"
+
+
+def _valency_partial() -> Reading:
+    """„Studium vedlo k vzniku." — okolnost značená `obl:arg`, tedy
+    ARGUMENT, ne příslovečné určení."""
+    return Reading(
+        tokens=(
+            w(1, "Studium", "studium", "NOUN", 2, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+            w(2, "vedlo", "vést", "VERB", 0, "root", Gender="Neut", Number="Sing", Polarity="Pos"),
+            w(3, "k", "k", "ADP", 4, "case", AdpType="Prep", Case="Dat"),
+            w(4, "vzniku", "vznik", "NOUN", 2, "obl:arg", Case="Dat", Gender="Masc", Number="Sing"),
+            w(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def test_a_valency_argument_is_not_omitted_by_a_partial_write() -> None:
+    """VALENČNÍ DOPLNĚNÍ SE VYNECHAT NESMÍ *(W‑82)*. Odůvodnění
+    částečného zápisu se měřilo na OKOLNOSTECH, ale `obl:arg` je
+    ARGUMENT. Týž entailmentový test odpovídá sám: „Zabýval se
+    zkoumáním." se čte, „Zabýval se." NE — zbytek není slabší tvrzení,
+    není to tvrzení."""
+    from core_semantics.tests import golden
+
+    text = "Studium vedlo k vzniku."
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(_valency_partial(),))})
+    session = Session(lexicon=golden.golden_lexicon())
+    result = session.utter(text, oracle)
+    assert result.statement_id is None
+    assert not list(session.kb.active())
+
+
+def test_a_circumstance_is_still_omitted() -> None:
+    """PROTIPŘÍKLAD: obyčejná okolnost (`obl`) se vynechává dál —
+    zákaz se nesmí rozlít na to, co se měřilo."""
+    from core_semantics.tests import golden
+
+    text = "Studium vedlo k vzniku."
+    reading = _valency_partial()
+    prosty = Reading(
+        tokens=tuple(
+            replace(t, deprel="obl") if t.deprel == "obl:arg" else t
+            for t in reading.tokens
+        ),
+        provenance=STAMP,
+    )
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(prosty,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    assert session.utter(text, oracle).statement_id is not None

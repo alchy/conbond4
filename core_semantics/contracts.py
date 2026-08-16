@@ -954,6 +954,16 @@ CONTRACTS: tuple[Clause, ...] = (
             "korpusu dnes nevadí, ale „téměř zemřel“ neimplikuje "
             "„zemřel“. Nepojmenovaná role se do báze NEDOSTANE ani "
             "částečně, a dotaz na ni dá `U`, ne `A` a ne `N`"
+            "VALENČNÍ DOPLNĚNÍ SE VYNECHAT NESMÍ *(W-82)*, a je to "
+            "ČTVRTÁ POLOŽKA ZÁKAZU vedle záporu, podmínky a náhrady — "
+            "jediná, která se pozná z DEPRELU, ne ze slova. Odůvodnění "
+            "částečného zápisu se měřilo na OKOLNOSTECH, ale `obl:arg` "
+            "rozbor značí jako ARGUMENT. Doloženo TÝMŽ entailmentovým "
+            "testem: sloveso bez svého doplnění se NEDÁ PŘEČÍST VŮBEC "
+            "(`Zabýval se.`, `Trpěl.`), takže zbytek není slabší "
+            "tvrzení — není to tvrzení; a `vést k vzniku` -> `vést` se "
+            "přečte, jenže znamená něco jiného. Obyčejná okolnost "
+            "(`obl`) se vynechává dál. "
             ". ROZSAH MĚŘENÍ: odvozeno z 154 vět korpusu, ve kterých zákaz "
             "držela POVRCHOVÁ ROLE, a z KLADNÝCH čtení; monotonie pod "
             "jinými operátory než zápor a modalita ověřená NENÍ. "
@@ -961,6 +971,8 @@ CONTRACTS: tuple[Clause, ...] = (
         anchor="core_semantics.cascade:partial_write",
         entry=".utter(",
         enforced_by=(
+            "test_a_valency_argument_is_not_omitted_by_a_partial_write",
+            "test_a_circumstance_is_still_omitted",
             "test_what_is_understood_is_written_and_the_rest_stays_open",
             "test_the_omitted_role_is_unknown_not_false",
             "test_an_operator_that_changes_truth_blocks_the_partial_write",
