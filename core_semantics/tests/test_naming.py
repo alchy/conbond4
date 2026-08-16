@@ -668,3 +668,114 @@ def test_a_shaped_attribute_never_borrows_the_name_of_a_circumstance() -> None:
     assert result.predication.pending_attribute != (), (
         "jméno okolnosti se na přívlastek nesmí přenést"
     )
+
+
+# --------------------------------------------------------------------------
+# Povrchový tvar složeného uzlu — W‑77
+# --------------------------------------------------------------------------
+
+
+def _composed(head_form: str, head_lemma: str, attr_form: str,
+              attr_lemma: str, *, attribute_first: bool) -> Reading:
+    """«<fráze> roste.» — přívlastek stojí před hlavou, nebo za ní."""
+    hlava, privlastek = (3, 2) if attribute_first else (2, 3)
+    return Reading(
+        tokens=tuple(sorted((
+            w(hlava, head_form, head_lemma, "NOUN", 1, "nsubj",
+              Case="Nom", Gender="Neut", Number="Plur"),
+            w(privlastek, attr_form, attr_lemma, "ADJ", hlava, "amod",
+              Case="Nom", Degree="Pos", Gender="Neut", Number="Plur"),
+            w(1, "rostou", "růst", "VERB", 0, "root",
+              Number="Plur", Polarity="Pos"),
+            w(4, ".", ".", "PUNCT", 1, "punct"),
+        ), key=lambda t: t.index)),
+        provenance=STAMP,
+    )
+
+
+def _composed_session(reading: Reading) -> tuple[Session, _Recorded]:
+    """Sezení, ve kterém se věta se složeným uzlem opravdu ZAPÍŠE."""
+    from core_semantics.lexicon import (
+        LearnedPattern,
+        Operation as _Operation,
+        PatternStatus,
+        Trigger,
+        czech_seed,
+    )
+
+    lexicon = czech_seed()
+    lexicon.add(
+        LearnedPattern(
+            trigger=Trigger(
+                lemma="", upos="NOUN", number="Plur", case="Nom",
+                deprel="nsubj"
+            ),
+            operation=_Operation.FOR_ALL,
+            learned_from="test",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    return Session(lexicon=lexicon), _Recorded({COMPOSED_TEXT: reading})
+
+
+COMPOSED_TEXT = "Zdravotní rizika rostou."
+
+
+def test_a_composed_node_keeps_the_word_order_of_the_sentence() -> None:
+    """POŘADÍ JE POŘADÍ TEXTU *(W‑77)*.
+
+    Pravidlo je napsané u data (W‑74) i u víceslovného jména (B‑21,
+    W‑78) a u přívlastku se nedrželo: lepil se PŘED hlavu bez ohledu na
+    to, kde stojí. „Zdravotní rizika **spojená** s domácími zvířaty"
+    tak dávalo uzel `zdravotní_spojený_riziko` a zmínku „Zdravotní
+    spojená rizika" — slovosled, který v té větě není. Změřeno na
+    korpusu: 20 zmínek z 215."""
+    from core_semantics.cascade import _composed_mention
+
+    za = _composed("rizika", "riziko", "spojená", "spojený",
+                   attribute_first=False)
+    zmínka = _composed_mention(za.tokens[1], za)
+    assert zmínka.lemma == "riziko_spojený"
+    assert zmínka.form == "rizika spojená"
+
+    pred = _composed("rizika", "riziko", "zdravotní", "zdravotní",
+                     attribute_first=True)
+    assert _composed_mention(pred.tokens[2], pred).form == "zdravotní rizika"
+
+
+def test_what_the_composed_node_was_in_the_sentence_is_retrievable() -> None:
+    """CO SE DÁ O SLOŽENÉM UZLU ZJISTIT *(W‑77)*. Dosud nic než jméno —
+    a `∀různý_míra` je to jediné, co člověk v bázi čte."""
+    reading = _composed("rizika", "riziko", "zdravotní", "zdravotní",
+                        attribute_first=True)
+    session, oracle = _composed_session(reading)
+    session.utter(COMPOSED_TEXT, oracle)
+    assert session.surface_of("riziko") is None, (
+        "nesložený uzel se nepamatuje — byla by to kopie textu"
+    )
+    povrch = session.surface_of("zdravotní_riziko")
+    assert povrch is not None
+    assert povrch == ("zdravotní rizika", COMPOSED_TEXT)
+
+
+def test_the_written_statement_says_what_its_composed_nodes_were() -> None:
+    """Řádek `[UZLY: …]` je u ZAPSANÉHO výroku, ne u nezapsané věty —
+    jinak by sliboval dohledatelnost něčeho, co v bázi není."""
+    reading = _composed("rizika", "riziko", "zdravotní", "zdravotní",
+                        attribute_first=True)
+    session, oracle = _composed_session(reading)
+    result = session.utter(COMPOSED_TEXT, oracle)
+    assert result.statement_id is not None, (
+        "test, který měří jen nezapsanou větu, tuhle větev nikdy nespustí"
+    )
+    uzly = [line for line in result.lines if "[UZLY:" in line]
+    assert uzly and "„zdravotní rizika“" in uzly[0]
+    assert "zdravotní_riziko" in uzly[0], "uzel i povrch, ne jen jeden"
+
+    # A PROTIPŘÍKLAD: věta, která se nezapsala, dohledatelnost neslibuje.
+    ceka, ceka_oracle = _prepositional_session()
+    ceka_vysledek = ceka.utter(ALLERGY, ceka_oracle)
+    assert ceka_vysledek.statement_id is not None
+    assert not [line for line in ceka_vysledek.lines if "[UZLY:" in line], (
+        "věta bez složeného uzlu ten řádek nemá"
+    )

@@ -847,6 +847,20 @@ class Session:
         #: a částečný zápis ho potřebuje: rozhodnutí „smí se to zapsat
         #: bez okolnosti?" se čte ze STROMU, ne z predikace.
         self._standing_reading: Reading | None = None
+        #: POVRCH SLOŽENÉHO UZLU *(W‑77)*, jako `uzel → (povrch, věta)`.
+        #: Identita uzlu je LEMMATICKÁ, protože „různou míru" a „různá
+        #: míra" musí být týž uzel — jenže pak je v bázi
+        #: `∀zdravotní_riziko_spojený` a to je jediné, co o něm člověk
+        #: čte. Povrch se proto pamatuje.
+        #:
+        #: **A NEZAPISUJE SE DO BÁZE**, protože to není tvrzení o SVĚTĚ,
+        #: ale o TEXTU: „takhle to stálo ve větě" není totéž co „tak se
+        #: to jmenuje" (`name` je pojmenování, které věta TVRDÍ — „Jan se
+        #: jmenuje taky Honza"), a zapsat obecné jméno jako jméno
+        #: individua by byla nepravda o tom, co ta věta říká. Sezení je
+        #: pro záznam o textu správné místo; z báze vede k té větě
+        #: `Statement.utterance` (B‑26).
+        self._surfaces: dict[str, tuple[str, str]] = {}
         #: `LEX` je program vedle `ONTO` a `DIA`, takže patří do sezení,
         #: ne do volání. Jinak by dvě věty téhož dialogu mohly být čteny
         #: podle jiných naučených vzorů a „diff naučeného" (§ 10) by nešel
@@ -1505,6 +1519,7 @@ class Session:
             self._offered_titles.setdefault(
                 (jmeno, titul), TitleOffer(sentence=turn.text)
             )
+        self._remember_surfaces(predication, turn.text)
         # PŘÍVLASTEK SE ZNÁMÝM TVAREM SE UŽ NEPTÁ *(W‑84)*. Je to táž
         # smyčka jako u ztraceného členu (I‑16): zeptat se → odpověď jako
         # TAH → naučit TVAR → další věta téže třídy se doplní sama. Jen
@@ -1732,6 +1747,10 @@ class Session:
         privlastek_radky = self._write_learned_attributes(
             index, naucene_privlastky, routed
         )
+        # CO JE TEN UZEL VE VĚTĚ *(W‑77)*. Vypisuje se jen u toho, co se
+        # opravdu zapsalo: u nezapsané věty by to slibovalo dohledatelnost
+        # něčeho, co v bázi není.
+        uzel_radky = self._node_surfaces(predication, routed)
         # TAH, KTERÝ ZAPSAL VÍC VÝROKŮ, JE VŠECHNY OHLÁSÍ *(B‑26)*. Bere
         # se to z BÁZE, ne se sbírá po cestě: každá cesta by si to jinak
         # nesla sama a ta, která by na to zapomněla, by mlčela — a mlčení
@@ -1744,12 +1763,66 @@ class Session:
         return replace(
             routed,
             turn=turn,
-            lines=(*lines, *routed.lines, *druha_radky, *privlastek_radky),
+            lines=(
+                *lines,
+                *routed.lines,
+                *druha_radky,
+                *privlastek_radky,
+                *uzel_radky,
+            ),
             predication=predication,
             trace=turn.trace,
             question=question,
             statements=zapsane,
             utterance=self._utterance,
+        )
+
+    def _remember_surfaces(self, predication: Predication, text: str) -> None:
+        """Zapamatuje povrch SLOŽENÝCH zmínek *(W‑77)*.
+
+        Jednoduché zmínky se nepamatují: `pes` je v bázi čitelné samo
+        a slovník by z toho udělal kopii celého textu.
+        """
+        for role in (
+            *predication.roles,
+            *(predication.second.roles if predication.second is not None else ()),
+        ):
+            if "_" not in role.mention.lemma:
+                continue
+            self._surfaces.setdefault(
+                role.mention.lemma, (role.mention.form, text)
+            )
+
+    def surface_of(self, node: str) -> tuple[str, str] | None:
+        """Jak složený uzel stál ve větě — `(povrch, věta)` *(W‑77)*.
+
+        Vrací `None` u uzlu, který systém složený neviděl. Není to
+        dopočet: je to záznam z chvíle, kdy se ta věta četla.
+        """
+        return self._surfaces.get(node)
+
+    def _node_surfaces(
+        self, predication: Predication, routed: TurnResult
+    ) -> tuple[str, ...]:
+        """Řádek „co je ten uzel ve větě" k zapsanému výroku *(W‑77)*."""
+        if routed.statement_id is None:
+            return ()
+        popis = [
+            f"„{lemma}“ = „{self._surfaces[lemma][0]}“"
+            for lemma in sorted(
+                {
+                    role.mention.lemma
+                    for role in predication.roles
+                    if "_" in role.mention.lemma
+                }
+            )
+            if lemma in self._surfaces
+        ]
+        if not popis:
+            return ()
+        return (
+            "  [UZLY: " + ", ".join(popis) + " — identita je lemmatická, "
+            "povrch je z té věty]",
         )
 
     def _settled_attributes(

@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.76 · 16. 8. 2026
+**Verze jádra:** 0.1.77 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,64 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**SLOŽENÝ UZEL SE ČTE TAK, JAK STÁL VE VĚTĚ** *(W‑77, kolo #148)*.
+
+Pořadí dílů je pořadí TEXTU. Pravidlo je napsané u data (W‑74) i
+u víceslovného jména (B‑21, W‑78) a u přívlastku se nedrželo: lepil se
+PŘED hlavu bez ohledu na pozici, takže „Zdravotní rizika **spojená**
+s domácími zvířaty" dávalo uzel `zdravotní_spojený_riziko` a zmínku
+„Zdravotní spojená rizika" — slovosled, který v té větě není. Změřeno:
+**215 složených zmínek v korpusu, z toho 20 mělo pořadí jiné než text**,
+všechny s příčestím za hlavou („Studie provedená", „Psi vycvičení",
+„Lidé pobývající").
+
+Identita uzlu zůstává **lemmatická** — „různou míru" a „různá míra" musí
+být týž uzel, jinak by se báze rozpadla po pádech. Proto se PAMATUJE
+povrch: `Session.surface_of(uzel)` vrací `(povrch, věta)`, zapsaný výrok
+nese řádek `[UZLY: …]` a hlášení přívlastku už taky nečte lemma uzlu
+(`„různý_míra péče"`), ale to, co ve větě stálo (`„různou míru péče"`).
+
+**POVRCH SE DO BÁZE NEZAPISUJE, a je to rozhodnutí.** Není to tvrzení
+o SVĚTĚ, ale o TEXTU: `name` je pojmenování, které věta TVRDÍ („Jan se
+jmenuje taky Honza"), a zapsat obecné jméno jako jméno individua by byla
+nepravda o tom, co ta věta říká. Z báze vede k té větě
+`Statement.utterance` (B‑26); povrch drží sezení. Všech **9 zapsaných
+vět** má dnes povrch uzlů čitelný.
+
+---
+
+**ROZKLAD KLAUZÍ — MĚŘENÍ, NE NÁVRH** *(zadání #148, před stavbou)*.
+
+**Ze 197 klauzí v korpusu se 159 (80 %) přečte jako samostatná věta.**
+Jádro klauzi UMÍ přečíst; co neumí, je spojit ji s větou, ve které visí.
+
+Rodiny se dělí podle toho, K ČEMU SE KLAUZE VÁŽE — tedy podle DEPRELU,
+ne podle spojky: „že" uvozuje `ccomp` i `acl` a rozhodnout to slovem
+nejde (dvanáct instancí W‑32 … W‑83).
+
+| rodina | klauzí | přečte se samostatně |
+|---|---|---|
+| je ARGUMENT slovesa (`ccomp`, `csubj`, `xcomp`) | 75 | 67 |
+| určuje JMÉNO (`acl`, `acl:relcl`) | 71 | 63 |
+| doplněk PŘÍSUDKU (`advcl:pred`) | 30 | 14 |
+| určuje DĚJ (`advcl`) | 21 | 15 |
+
+Ztrát uvnitř klauzí je **477 zmínek ve 94 větách** — tedy podstatně víc
+než 19 z populace #145, protože ta populace byla úzká (nezapsané věty se
+ztrátou).
+
+**Vztažná věta má vlastní druhou půlku úlohy.** Z 58 jich 52 nese
+vztažné zájmeno a to zájmeno ODKAZUJE NA HLAVU: „lidé, **kteří** nemají
+přiměřenou sociální interakci" se přečte jako `¬mít(kdo:·který, …)` —
+predikace se správnou stavbou a s uzlem, který nikdo nezaložil a který
+má být hlavou z věty nadřazené. Nosiče: `který/nsubj` 17×, `kde/advmod`
+7×, `který/nsubj:pass` 5×, `který/obj` 4×, `který/obl:arg` 4×,
+`co/nsubj` 4×.
+
+Sonda: `conbond4-utils/nalezy/rozklad_klauzi.py`. **Rozhodnutí, co
+s tím, tady záměrně není** — zadání znělo měřit a vrátit se před
+stavbou.
 
 **DOPLNĚK JMÉNA JE VZTAH TOHO JMÉNA, NE ROLE PŘÍSUDKU** *(W‑84, kolo #147;
 rozhodnutí o VÝZNAMU, delegované reviewerem)*.

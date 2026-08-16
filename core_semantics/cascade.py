@@ -628,10 +628,22 @@ def _composed_mention(token: Token, reading: Reading) -> Mention:
     parts = attributes_of(token, reading)
     if not parts:
         return _mention(token)
-    lemma = "_".join([*(p.lemma for p in parts), token.lemma])
+    # POŘADÍ JE POŘADÍ TEXTU *(W‑77)*. Pravidlo je napsané u data
+    # (W‑74) i u víceslovného jména (B‑21, W‑78) a tady se nedrželo:
+    # přívlastek se lepil PŘED hlavu bez ohledu na to, kde stojí.
+    # „Zdravotní rizika **spojená** s domácími zvířaty" tak dávalo uzel
+    # `zdravotní_spojený_riziko` a zmínku „Zdravotní spojená rizika" —
+    # tedy slovosled, který v té větě NENÍ. Změřeno na korpusu: 20
+    # zmínek z 215, všechny s příčestím za hlavou („Studie provedená",
+    # „Psi vycvičení", „Lidé pobývající").
+    #
+    # Identita uzlu zůstává LEMMATICKÁ, jen se skládá ve správném
+    # pořadí: „různou míru" a „různá míra" musí být týž uzel, jinak by
+    # se báze rozpadla po pádech.
+    dily = sorted([token, *parts], key=lambda t: t.index)
     return Mention(
-        lemma=lemma,
-        form=" ".join([*(p.form for p in parts), token.form]),
+        lemma="_".join(p.lemma for p in dily),
+        form=" ".join(p.form for p in dily),
         token_index=token.index,
         upos=token.upos,
         feats=token.feats,
@@ -3418,6 +3430,20 @@ def genitive_attributes(
     return tuple(najdene)
 
 
+def head_surface(predication: Predication, lemma: str) -> str:
+    """Jak hlava přívlastku stála ve VĚTĚ *(W‑77)*.
+
+    Hlava je zmínka ze čtení, takže její identita je lemmatická
+    (`různý_míra`) — a hlášení `[PŘÍVLASTEK: „různý_míra péče"]` je pak
+    text, který v žádné větě nestojí. Povrch se bere z TÉŽE zmínky, ne
+    přepisem podtržítek: „různý míra" by byl tvar, který čeština nemá.
+    """
+    for role in predication.roles:
+        if role.mention.lemma == lemma:
+            return role.mention.form
+    return lemma
+
+
 def attribute_label(head: str, filler: str, shape: str) -> str:
     """Přívlastek tak, jak stojí ve větě — s předložkou, když ji má.
 
@@ -3442,7 +3468,7 @@ def attribute_question(predication: Predication) -> str | None:
     if not predication.pending_attribute:
         return None
     parts = [
-        f"„{attribute_label(hlava, doplnek, tvar)}“"
+        f"„{attribute_label(head_surface(predication, hlava), doplnek, tvar)}“"
         for hlava, doplnek, _, tvar in predication.pending_attribute
     ]
     # HOLÝ GENITIV SE NEMĚNÍ ANI VE SLOVĚ. Je to protipříklad k W‑84:
@@ -3727,7 +3753,8 @@ def attribute_tier() -> Tier:
             notes.append(
                 "[PŘÍVLASTEK: "
                 + ", ".join(
-                    f"„{attribute_label(h, g, tvar)}“" for h, g, _, tvar in found
+                    f"„{attribute_label(head_surface(candidate.predication, h), g, tvar)}“"
+                    for h, g, _, tvar in found
                 )
                 + " — vztah vedle věty, čeká se na jméno role]"
             )

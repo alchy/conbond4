@@ -1884,6 +1884,44 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-47",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "SLOZENY UZEL SE CTE TAK, JAK STAL VE VETE *(W-77)*. "
+            "POradi dilu je poradi TEXTU — pravidlo napsane u data "
+            "(W-74) i u viceslovneho jmena (B-21, W-78) se u privlastku "
+            "nedrzelo: lepil se PRED hlavu bez ohledu na pozici, takze "
+            "„Zdravotni rizika SPOJENA s domacimi zviraty“ davalo uzel "
+            "`zdravotni_spojeny_riziko` a zminku „Zdravotni spojena "
+            "rizika“ — slovosled, ktery v te vete NENI. "
+            "IDENTITA UZLU ZUSTAVA LEMMATICKA: „ruznou miru“ a „ruzna "
+            "mira“ musi byt tyz uzel, jinak by se baze rozpadla po "
+            "padech. Proto se PAMATUJE POVRCH: `Session.surface_of(uzel)` "
+            "vraci `(povrch, veta)` a zapsany vyrok nese radek `[UZLY: "
+            "…]`; hlaseni privlastku uz taky necte lemma uzlu, ale to, "
+            "co ve vete stalo. "
+            "POVRCH SE DO BAZE NEZAPISUJE, a je to rozhodnuti: neni to "
+            "tvrzeni o SVETE, ale o TEXTU. `name` je pojmenovani, ktere "
+            "veta TVRDI („Jan se jmenuje taky Honza“); zapsat obecne "
+            "jmeno jako jmeno individua by byla nepravda o tom, co ta "
+            "veta rika. Z baze vede k te vete `Statement.utterance` "
+            "(B-26), povrch drzi sezeni. "
+            ". ROZSAH MERENI: korpus 238 vet — 215 slozenych zminek ve "
+            "cteni, z toho 20 melo poradi jine nez text (vsechny "
+            "s pricestim za hlavou: „Studie provedena“, „Psi "
+            "vycviceni“, „Lide pobyvajici“). Vsech 9 zapsanych vet "
+            "ma dnes povrch uzlu citelny. Jednoducha zminka se "
+            "nepamatuje — byla by to kopie textu. "
+        ),
+        anchor="core_semantics.session:Session.surface_of",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_composed_node_keeps_the_word_order_of_the_sentence",
+            "test_what_the_composed_node_was_in_the_sentence_is_retrievable",
+            "test_the_written_statement_says_what_its_composed_nodes_were",
+        ),
+    ),
+    Clause(
         id="S-46",
         boundary=CASCADE_SESSION,
         promise=(
