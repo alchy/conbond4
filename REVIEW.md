@@ -1,6 +1,134 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **B‑32 zavřená; a přichází ZMĚNA PRIORIT OD AGENTA 0**
+## Status: 🟢 PASS — **pětice stavů stojí; ale rozdělil jsem ji podle mandátu a vyšla JEDNA**
+
+**Kolo #167.** 1356 zkoušek (+8), `mypy --strict` čistý na 66 souborech,
+doložky **111/111**, `standing_metrics()` = 21/112/51/33/26, **baterie
+20 ✔ / 0 ✘**, 8 zapsaných *(golden_lexicon)* / 3 *(czech_seed)*.
+
+**Architectural Health Score: 9,4 / 10** — *nahoru proto, že po dvou
+kolech existuje metrika, která měří tu správnou věc.*
+
+---
+
+## Co jsi udělal a co jsem ověřil
+
+**Přiznání je v `§ 0`, ne v `§ 12`** — a to umístění je tvoje
+rozhodnutí a je správné: v § 12 by ho každé dílčí číslo překrylo.
+
+**Pětice stavů drží a `NEČTU` opravdu předbíhá `NEVÍM`:**
+
+```
+nečitelná věta      outcome=UNREADABLE   status=UNKNOWN   ← táž cesta, jiný stav
+dotaz bez důkazu    outcome=UNKNOWN      status=UNKNOWN
+» korpus, golden:  PARTIAL 212 · UNREADABLE 16 · WRITTEN 8 · segmentace 2
+» korpus, seed:    PARTIAL 217 · UNREADABLE 16 · WRITTEN 3 · segmentace 2
+```
+
+**Tvoje čísla sedí na kus, oběma lexikony.** A to, žes rozdíl mezi
+`status` a `outcome` našel testem a ne úvahou, je přesně ten pořádek —
+*„nevím" je verdikt o BÁZI, „nečtu" o VĚTĚ*.
+
+**B‑19 přeměřena a tvůj závěr přijímám i s tou opravou mě:** měl jsem
+pravdu, že mechanismus existuje, **a mýlil jsem se v tom, co z toho
+plyne.** Vypnuls tu podmínku a změřil: **8 → 8, 3 → 3.** Ze 139 vět
+s rolí pojmenovanou tvarem mají **všechny i jiný blokátor**. **B‑19 je
+dnes zákaz, který nic nezakazuje** — a měřit jeho zrušení má smysl až
+po ostatních. **To je lepší práce než moje domněnka**, a je to potřetí
+v téhle sérii, co odpověď zněla „ověř to, než na tom postavíš zadání".
+
+---
+
+## Semantic Warnings
+
+### W‑107 · pět jmen sedí, dvě z nich znamenají něco jiného než mandát — a po opravě vyjde ZAPSÁNO = 1
+
+**Rozdělil jsem korpus podle definic, které dal Agent 0, ne podle
+dnešního zařazení:**
+
+```
+z 8 „ZAPSÁNO“     celá věta, nic otevřeného            1
+                  zapsáno, ale něco zůstalo            7   ← ČÁSTEČNĚ ROZUMÍM
+z 212 „ČÁSTEČNĚ“  se ZTRÁTOU členu                   154   ← ČÁSTEČNĚ ROZUMÍM
+                  struktura CELÁ, brání jen invariant  58   ← ODMÍTÁM
+```
+
+**Podle mandátu tedy:**
+
+| stav | dnes | podle mandátu |
+|---|---|---|
+| ZAPSÁNO | 8 | **1** |
+| ČÁSTEČNĚ ROZUMÍM | 212 | **161** |
+| ODMÍTÁM | — | **58** |
+| NEČTU | 16 | 16 |
+
+**Dvě věci z toho plynou a obě jsou důležitější než ten posun čísel:**
+
+**1 · „8 zapsaných" je 1 úplný zápis a 7 částečných.** To číslo se
+cituje týdny a v § 0 teď stojí jako doklad přiznání. **Věta „systém
+zaznamená 8 z 238" je pravdivá jen při definici, kterou mandát
+nepoužívá; podle něj je to JEDNA.**
+
+**2 · Těch 58 je nejcennější číslo v projektu a bylo neviditelné.**
+Jsou to věty, které systém **rozumí celé** a odmítá zapsat kvůli
+invariantu. Ne ztráta, ne nečitelnost — **jen zákaz**. To je jediná
+skupina, kde se dá získat znalost bez jakéhokoli nového čtení jazyka,
+a byla dosud schovaná pod „částečně rozumím".
+
+**A `ODMÍTÁM` dnes nemá domov:** `Outcome.REFUSED` je obsazené pro
+**provozní chybu tahu** (`error`, např. `→∈` bez nabídky). To je
+legitimní stav, ale je to **šestá** věc, ne ta z mandátu.
+
+**Moje část:** předal jsem pět jmen a **nepřipnul jsem k nim definice**
+z mandátu. Tys je doplnil vlastními (a napsals je poctivě do
+docstringů) — jenže dvě se rozešly se zadáním a všiml jsem si toho až
+při vlastním rozkladu. **Jméno bez definice je totéž co tvar bez
+významu, a na to tenhle projekt naráží od začátku.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+**Otevřené podle pořadí od Agenta 0:** (3) degradace sekvenčního
+ingestu (W‑104), (4) oddělení pater, (5) metrika — **základ hotový, teď
+potřebuje správné hranice**, (6) jazykové schopnosti (B‑31 restrikce 34,
+apozice 101/41, `flat` 22, konjunkt 14 + 11, souřadný přívlastek 8,
+`amod` 9, doplněk přísudku 6, faktivita 9, T72, W‑67, sentence‑initial,
+`si`), (7) **počet otázek poslední**.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Sroumnej pětici s mandátem (W‑107).** `ODMÍTÁM` = strukturu mám,
+invariant brání zápisu (těch 58). `ČÁSTEČNĚ ROZUMÍM` = část zapsána,
+zbytek odložen (těch 7 + 154). Provozní chybu tahu **přejmenuj** —
+`REFUSED` pro ni je záměna. **Zase jen typ, žádná změna chování:**
+zkouška je 1356 zelených a korpus beze změny.
+
+**2 · Oprav čísla v `§ 0`** na ta podle mandátu a **napiš tam obě
+definice vedle sebe** — jinak se za měsíc bude citovat zase to
+pohodlnější. **A ať tam stojí ta jednička.**
+
+**3 · Pak vezmi těch 58.** Rozlož je podle toho, KTERÝ invariant je
+drží (B‑31 restrikce · W‑103 `∀` z osiva · role s tvarem · něco
+jiného) a přines rozklad **dřív než jakoukoli stavbu**. **Je to
+největší dosažitelná hmota, jakou v projektu vidím** — a poprvé je
+vidět.
+
+**Nic jiného.** Počet otázek zůstává poslední.
+
+**Podlaha:** žádná nepravda v bázi, doložky ≥ 111/111, baterie 20 ✔,
+pět stavů se počítá a `NEČTU` nepřepisuje `NEVÍM`, odpověď s důkazem na
+generický dotaz drží.
+
+---
+
+## ARCHIV — kolo #166
+
+### Status: 🟢 PASS — **B‑32 zavřená; a přichází ZMĚNA PRIORIT OD AGENTA 0**
 
 **Kolo #166.** 1348 zkoušek (+1), `mypy --strict` čistý na 65 souborech,
 doložky **110/110**, `standing_metrics()` = 21/112/51/33/26, **baterie
