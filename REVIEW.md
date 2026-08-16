@@ -1,6 +1,138 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **B‑31 zavřená; a našel jsem k ní SOUSEDA, který je pořád otevřený**
+## Status: 🟢 PASS — **rozhodnutí k W‑102 dávám, a je UŽŠÍ, než jsem čekal**
+
+**Kolo #162** (měření, nic postaveného). 1339 zkoušek, `mypy --strict`
+čistý na 65 souborech, doložky **109/109**, `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, 11 zapsaných *(golden_lexicon)*.
+
+**Architectural Health Score: 9,3 / 10.** *(Drží ho W‑102, dokud se
+nepostaví.)*
+
+---
+
+## Obě tvoje čísla sedí — přeměřeno oběma lexikony
+
+```
+golden_lexicon   zapsaných 11   kvantifikátory v zápisech: ∃ 10 · ∀ 3 · · 10
+czech_seed       zapsaných  3
+```
+
+**„Ze zapsaných mají ∀ právě tři věty" sedí na kus.** *(Můj počet vět
+s otázkou vyšel jinak než tvůj — 232/234 proti 149/205 — protože počítám
+JAKOUKOLI otázku a ty otázku NA KVANTIFIKÁTOR. Jiná jednotka, ne
+rozpor; závěr je týž.)*
+
+**A tvoje „skoro všechny platí pro SEED, ne pro samotné ∀" je oprava
+mojí předpovědi a je správná.** Předpověděl jsem pokles skoro na nulu;
+skutečnost je **11 → 8** za samotné `∀` a 11 → 3 za celý seed. **To je
+rozdíl, který mění rozhodnutí** — a proto se měří dřív, než se rozhoduje.
+
+---
+
+## Že jsi svůj rozklad označil za ÚSUDEK, ne měření, je to podstatné
+
+**Šest generických z dvaadvaceti je tvůj odhad a tys to napsal sám.**
+Nebudu o něj rozhodnutí opírat — a nemusím, protože stačí **jedna
+dvojice, kde není co odhadovat:**
+
+```
+» Pes štěká.                            tvar NOUN/Sing/Nom/nsubj → ∀pes     SPRÁVNĚ
+» Vesmír se rozšířil do dnešní podoby.  tvar NOUN/Sing/Nom/nsubj → ∀vesmír  NEPRAVDA
+```
+
+**Týž tvar, týž naučený vzor, jednou pravda a jednou ne.** To není
+statistika, to je protipříklad — a stačí na to, aby platilo, co jsi
+napsal: **generické × určité není vlastnost TVARU.**
+
+---
+
+## ROZHODNUTÍ k W‑102 (DELEGACE) — a je užší než „kvantifikátor se neučí"
+
+**Nezakazuju učení kvantifikátoru. Zakazuju jednu věc:**
+
+> **`∀`, které přišlo z NAUČENÉHO TVARU, se nesmí ZAPSAT.**
+> Čte se dál, ptá se dál — jen se z něj netvrdí.
+
+**Proč zrovna `∀` a proč zrovna zápis — asymetrie je věcná, ne
+opatrnická:**
+
+* **`∃` se splést smí:** špatné `∃` tvrzení OSLABUJE, a slabší tvrzení
+  není nepravda (týž důvod jako u částečného zápisu, W‑79).
+* **`·` neplyne z domněnky:** vlastní jméno je v rozboru (`PROPN`), ne
+  z výkladu věty.
+* **`∀` je jediné, jehož chyba tvrzení ZESILUJE** — a proto je jediné,
+  které potřebuje víc než tvar.
+
+**Precedens je tvůj vlastní a je přesný: B‑19.** Role, jejíž JMÉNO
+zůstalo tvarem, zápis zastaví — čte se, ptá se, ale netvrdí se z ní.
+**Tohle je táž věta o KVANTIFIKÁTORU.**
+
+**Cena je změřená a je tvoje: 11 → 8 zapsaných.** Přijímám ji.
+
+**Co se NESMÍ změnit:**
+* „Psi štěkají." → `∀pes` **ve čtení zůstává** a „Štěká jezevčík?" →
+  **ANO** musí platit dál, jakmile ten `∀` někdo potvrdí pro tu větu;
+* odpověď `→∀1` (kvantifikátor TÉHLE věty) zápis **odemyká** — jinak by
+  se z toho stala díra místo otázky;
+* `∃` a `·` z naučených tvarů se **nedotýkej**.
+
+**Zkouška, kterou to má mít:** ta minimální dvojice výš, a k ní sekvence
+z W‑102 končící `NEVÍM` místo `ANO`.
+
+**Co tímhle rozhodnutím NEROZHODUJU, a schválně:** jestli má naučený
+kvantifikátor smysl vůbec. Ta širší otázka stojí 11 → 3 a **její přínos
+změřený není**. Úzké pravidlo odstraní nepravdu za tři zápisy; široké by
+stálo osm a nikdo neví, co za to koupí. **Až bude důvod změřený,
+vrátíme se k tomu.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+## Semantic Warnings
+
+**W‑102 zůstává otevřená, dokud se to nepostaví** — rozhodnutí je výš.
+
+**A jedna věta k tomu, cos napsal o měření:** máš pravdu, že se
+`czech_seed`‑em nedá měřit pokrok ve čtení. Po téhle změně se to číslo
+stejně rozpadne na dvě a **je to zlepšení, ne ztráta**: „kolik vět systém
+PŘEČTE" a „kolik z nich smí TVRDIT". **Hlavní číslo projektu má být to
+první plus věta „a žádná nepravda", ne to druhé** — počet zapsaných je
+dobrý sluha a byl by špatný pán, jak se dvakrát ukázalo (#160, #161).
+
+**Otevřené beze změny:** 34 vět blokovaných restrikcí, apozice (101 ve
+41 větách), `flat` pod doplňkem (22), konjunkt přívlastku (14 + 11),
+souřadný přívlastek (8), `amod` pod doplňkem (9), doplněk přísudku (6),
+faktivita (9), určuje děj (změřeno prázdné), „30. a 40. letech“ (1),
+T72, W‑67, sentence‑initial přívlastek, zvratné `si`, W‑97 a
+W‑96‑bez‑rozboru.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Postav W‑102 přesně v tom užším znění:** `∀` z naučeného tvaru
+neblokuje čtení, blokuje ZÁPIS; `→∀1` ho odemyká; `∃` a `·` beze změny.
+**Do doložky napiš tu asymetrii celou** — bez ní si to někdo přečte jako
+„kvantifikátor se nezapisuje" a zablokuje i `∃`.
+
+**2 · Změř to znovu oběma lexikony a čekej 11 → 8.** Když vyjde něco
+jiného, je to nález, ne odchylka.
+
+**3 · U každého korpusového čísla piš, kterým lexikonem je měřené** —
+to už jsi slíbil sám a je to nejlepší výsledek tohohle kola.
+
+**Podlaha:** žádná nepravda v bázi, generické čtení drží, doložky
+≥ 109/109, baterie 20 ✔, B‑31 reprodukce končí `NEVÍM`.
+
+---
+
+## ARCHIV — kolo #161
+
+### Status: 🟢 PASS — **B‑31 zavřená; a našel jsem k ní SOUSEDA, který je pořád otevřený**
 
 **Kolo #161.** 1339 zkoušek (+7), `mypy --strict` čistý na 65 souborech,
 doložky **109/109**, `standing_metrics()` = 21/107/51/33/26, **baterie
