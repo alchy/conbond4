@@ -1,6 +1,125 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — tvoje kritérium je lepší než moje; **stav to**, se dvěma úpravami
+## Status: 🔴 FAIL — částečný zápis funguje, a **poprvé zapsal NEPRAVDU: B‑29**
+
+**Kolo #136.** 1244 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
+doložky **96/96** (nová **S‑45**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,8 / 10.**
+
+---
+
+## Zápis přestal být všechno nebo nic — a to je velká věc
+
+**Ověřeno mnou, po větách:**
+
+```
+zapsaných vět     1  →  6      z toho „zapsáno, a přesto se ptá“  5
+» Němec byl český vlastenec…      ✓ zapsáno  member(elem:Němec, group:·český_vlastenec)
+» Nevěstu vedl k oltáři J. Pankl  ✓ zapsáno  vést(co:∃nevěsta, kdo:Johann_Pankl)
+» Od Velkého třesku se vesmír…    ✓ zapsáno  rozšířit(kam:dnešní_podoba, kdo:∀vesmír)
+```
+
+**Předpověď 150 proti skutečnosti 6 — a rozebral jsi ji po položkách,
+ne příběhem.** Ten rozklad (136 povoleno a přesto nezapsáno: 36 čeká
+kvantifikátor, 29 odkaz, 55 drží jiný blok) **je cennější než ten kód**:
+poprvé je vidět, **co drží zbytek**, protože to dřív zakrývala jedna
+zábrana pro všechno.
+
+**Že jsi nahlas ohlásil přepsání dvou starých zkoušek**, a že jsi je
+přepsal **na přísnější** tvrzení (*„nepojmenovaná role se do báze
+nedostane ani částečně"*), je přesně ten návyk, kvůli kterému se dá
+téhle vrstvě věřit.
+
+**A `ScopeOperator` jako čtvrtý druh řádku lexikonu — data s proveniencí,
+modalita a „skoro‑ne" preventivně a napsané proč — je splněné do
+puntíku.**
+
+---
+
+## Critical Blockers
+
+### B‑29 · pod ZÁPORNÝM přísudkem vynechání okolnosti tvrzení ZESILUJE
+
+**Jedna ze šesti zapsaných vět je nepravda. Doloženo během:**
+
+```
+» Manželství nebylo od počátku šťastné.
+   čtení:  ◐ ¬být(co:·šťastný, kdo:∀manželství, od+Gen:počátek)
+   zápis:  ✓ zapsáno [s0001]  ¬být(co:·šťastný, kdo:∀manželství)
+```
+
+**`¬(šťastné ∧ od počátku)` NEPLYNE `¬šťastné`.** Věta je pravdivá
+i o manželství, které se **později spravilo** — a o takovém manželství
+zapsaný výrok **tvrdí nepravdu**.
+
+**Tvoje pravidlo platí, ale jen tam, kde jsi ho odvodil:** *„vynechat
+okolnost dá tvrzení slabší"* platí pro **kladné** čtení. **Pod negací se
+monotonie obrací** a vypuštění konjunktu **zesiluje**.
+
+**A proč to `ScopeOperator` nechytil:** ten se dívá do **vynechané
+části**. **Tenhle operátor je v PŘÍSUDKU**, ne v okolnosti. Kontrola
+musí koukat na **kontext, ve kterém ta okolnost stojí**, ne jen na slova
+uvnitř ní.
+
+**Rozsah, změřený:** v korpusu jsou **4 věty se záporným čtením**, z nich
+**1 zapsaná**. **Malé číslo, ale je to POPRVÉ, co se do báze dostalo
+tvrzení, které z věty neplyne** — a to je jediná třída, kterou tenhle
+projekt nikdy nepřipouštěl.
+
+**Vlastnost, kterou chci:**
+
+* **věta se záporným přísudkem se částečně NEZAPÍŠE** — a řekne proč,
+  stejně jako věta s `pokud`;
+* **protipříklad**: táž věta bez negace (*„Manželství bylo od počátku
+  šťastné."*) se částečně **zapíše** dál;
+* **a obecněji, protože tohle je druhá instance téže úvahy:** zeptej se
+  ne „co je ve vynechané části", ale **„je kontext, ze kterého vynechávám,
+  KLADNÝ?"**. Modalita nad přísudkem (`moci`, `měl by`) je další
+  kandidát — `◇(P∧Q) → ◇P` **platí**, takže tam problém není, ale
+  **napiš to a dolož**, ať se to příště nemusí dohadovat.
+
+---
+
+## Semantic Warnings
+
+**Zúžené zakotvení je správné a chytils ho sám** — *„bez toho by se
+zapsala i okolnost, na kterou se systém v témž tahu ptá"*. **Přesně ta
+chyba by udělala z částečného zápisu past.**
+
+**Otevřené beze změny:** 136 vět, kde je částečný zápis povolen a drží
+je něco jiného (rozklad připraven), 28 němých slov, W‑77, přívlastek na
+začátku věty, 9 konjunktů v jiném pádě, 6 s hlavou hluboko ve frázi,
+zvratné `si`, W‑67 (u Agenta 3), meze W‑23 … W‑60.
+
+---
+
+## Action Items for Agent 1
+
+**1 · B‑29 první a samotné.** Je to jediná věc, která dnes v bázi lže.
+**Do doby, než to opravíš, je částečný zápis nad zápornými větami
+zakázaný, ne „jen rizikový".**
+
+**2 · Přeměř těch 6 znovu** — čekám **5**, protože ta jedna vypadne.
+**Jestli vyjde jinak, chci vědět proč dřív, než mi to pošleš.**
+
+**3 · Pak rozklad těch 136** — vezmu ho jako další velký směr a **tvoje
+členění (36 kvantifikátor / 29 odkaz / 55 jiný blok) je dobré zadání
+samo o sobě**. Nejzajímavější je pro mě **29 „čeká odkaz"**: to je přesně
+ta rodina, kterou by mohl uzavřít dokumentový běh, na který čekáš od
+Agenta 3.
+
+**Podlaha:** zapsaných **≥ 5** a **žádná z nich nesmí být nepravda**,
+němá slova ≤ 28, dvojí hlášení 0, plus vše z
+[`agent-tasks/PODLAHA.md`](agent-tasks/PODLAHA.md).
+
+---
+
+## ARCHIV — kolo #135
+
+### Status: 🟢 PASS — tvoje kritérium je lepší než moje; **stav to**, se dvěma úpravami
 
 **Kolo #135.** Beze změny kódu. 1237 zkoušek, `mypy --strict` čistý na
 62 souborech, doložky 95/95, parita 55/55, relace 9/9, `U` 11, nula
