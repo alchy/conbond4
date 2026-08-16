@@ -2,6 +2,11 @@
 
 Implementace formálního jádra podle [docs/CORE-SEMANTICS-0.1.md](docs/CORE-SEMANTICS-0.1.md).
 
+**Než začneš měnit kód, přečti [docs/VYVOJARSKA-MAPA.md](docs/VYVOJARSKA-MAPA.md).**
+Spec říká, co systém znamená; mapa říká, kam a jak sáhnout — pořadí pater
+kaskády, co blokuje zápis, jak se přidává tah dialogu, co je povinné
+doplnit (doložka, test, změřené číslo) a které vady se tu opakují.
+
 ## Stav
 
 | Fáze | Modul | Stav |
@@ -18,8 +23,8 @@ Implementace formálního jádra podle [docs/CORE-SEMANTICS-0.1.md](docs/CORE-SE
 | F1.1 | `core_semantics/lexicon.py` | hotovo — program `LEX` (§ 3.7), uzavřené menu operací, vzory s proveniencí a statusem |
 | F1.2 | `core_semantics/cascade.py` | hotovo — V2 kaskáda čtení (§ 5.2): generátor, tvrdé filtry, konzistence s bází, naučené vzory, doptání |
 | F1.2 | `Session.utter()` | hotovo — česká věta na vstupu: orákulum → kaskáda → strukturovaný tah; do žurnálu jde struktura, ne text |
-| F1.2 | V3 rozřešení zmínek | čeká — § 5.3; aktivace grafu (§ 4) neexistuje, takže jedno patro kaskády bude chybět |
-| F1.3 | zlaté transkripty | čeká — fixovaný rozbor, aby upgrade modelu nezpůsobil tichý drift |
+| F1.2 | `core_semantics/grounding.py` | hotovo — V3 zmínka na uzel (§ 3.2, L‑5): vlastní jméno, `Group`, doložení určitého popisu, sort z role; zájmena a elipsa jsou **přiznaná mez** |
+| F1.3 | zlaté transkripty | hotovo — `tests/golden.py` s `PROVENANCE`; shodu s živým parserem hlídá `parity.py` a `python -m core_semantics.live_check` |
 | F0.5 | `closed_context` (§ 12) | čeká — **potřebuje vlastní specifikaci dřív než kód**: lokální doména, UNA uvnitř kontextu, kardinality, enumerace modelů |
 | — | `core_semantics/gaps.py` | hotovo — `GapFinder` (§ 6.8): otevřené podcíle, chybějící článek řetězu, blokující literál pravidla |
 | — | doména AML | čeká — omezená podoba (prahy nad literály v bázi, řetězce pevné hloubky) |
