@@ -1,6 +1,135 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **rozhodnutí k W‑102 dávám, a je UŽŠÍ, než jsem čekal**
+## Status: 🟢 PASS — **vrátil jsi mi moje rozhodnutí, a měls pravdu; moje znění bylo špatně**
+
+**Kolo #163** (postaveno, změřeno, vráceno; commit sahá jen na `docs/`).
+1339 zkoušek, `mypy --strict` čistý na 65 souborech, doložky **109/109**,
+`standing_metrics()` = 21/107/51/33/26, **baterie 20 ✔ / 0 ✘**,
+11 zapsaných *(golden_lexicon)* / 3 *(czech_seed)*.
+
+**Architectural Health Score: 9,3 / 10.**
+
+---
+
+## Nejdřív to hlavní: NEPŘEPSALS AKCEPTAČNÍ SADU, ABY PROŠLA TVOJE ZMĚNA
+
+**Šestnáct zkoušek stálo v cestě změně, kterou ti zadal recenzent, a tys
+je nechal být a vrátil to.** To je přesně ta věc, kvůli které tenhle
+protokol existuje, a je to vzácnější než jakákoli oprava: **zelená sada
+koupená přepsáním sady neměří nic.**
+
+---
+
+## A moje znění z #162 bylo špatně — opravuju ho
+
+**Napsal jsem: „`∀`, které přišlo z NAUČENÉHO TVARU, se nesmí zapsat."
+Tím jsem hodil do jednoho pytle dvě různé věci:**
+
+* `∀`, které **nikdo nikdy neřekl** (seed), a
+* `∀`, které **člověk právě odpověděl** na otázku o té větě.
+
+**Druhé je nejlepší doklad, jaký v tomhle systému existuje** — a moje
+pravidlo ho zahodilo. **Proto ti padlo šestnáct zkoušek a padly právem.**
+
+**A ověřil jsem si, co přesně ta smlouva žádá — je to míň, než jsi
+napsal.** `test_the_answer_generalises_beyond_this_one_sentence`
+**vyslovuje TUTÉŽ větu podruhé**, ne jinou:
+
+```python
+asked = session.utter("Učitelka učí.", oracle())
+session.play(answers_quantifier("O každé.", asked.predication, SHAPE, FOR_ALL))
+again = session.utter("Učitelka učí.", oracle())     # TÁŽ VĚTA
+assert again.question is None and again.statement_id is not None
+```
+
+**S‑14 tedy nežádá, aby `∀` přeskočilo na `vesmír`.** Žádá, aby se
+člověk neptal dvakrát na totéž. **Ty dvě smlouvy si neodporují — odporuje
+si s nimi moje formulace.**
+
+---
+
+## Tvůj nález o původu kvantifikátoru je správný, a je HORŠÍ, než jsi ho napsal
+
+**Napsal jsi „původ kvantifikátoru se v roli nenese vůbec". Ověřil jsem
+to a je to jinak — nese se, a je to špatný původ:**
+
+```
+po odpovědi na TUTÉŽ větu   source = 'tvar NOUN/Sing/Nom/nsubj'
+jiná věta téhož tvaru       source = 'tvar NOUN/Sing/Nom/nsubj'
+jen seed, nikdo neodpověděl source = 'tvar NOUN/Sing/Nom/nsubj'
+```
+
+**Tři různé autority, jeden a týž řetězec.** Pole `source` odpovídá na
+otázku **„který tvar se trefil"**, a potřeba je **„na čí zodpovědnost"**.
+Je to táž lekce jako `collided` a `shaped`, jen o patro výš: **stav, na
+kterém se staví, tu své místo má — jen v něm stojí jiná věc.**
+
+**A tvoje námitka proti (B) je doložená, ověřil jsem ji na holém seedu:**
+odpověz „o každé" u „Učitelka učí." a věta **„Vesmír se rozšířil."** se
+o dva tahy později **zapíše s `∀vesmír`**. Dvě věty, žádná fixture.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑102 zůstává otevřená — a tady je ten skutečný nález
+
+**Genericita není určená ŽÁDNOU signaturou, která je v rozboru.**
+
+* **podle TVARU** je to nesporně špatně — „Pes štěká." × „Vesmír se
+  rozšířil." (tvůj i můj doklad);
+* **podle LEMMATU** je to taky špatně — **„Pes štěká."** (generické) ×
+  **„Pes utekl."** (ten jeden pes). Tvůj návrh „∀ platí jen pro tvar se
+  stejným lemmatem" je proto ZLEPŠENÍ, ne řešení, a je dobře, žes ho
+  označil za neměřený.
+* **jediná zdravá licence je AFIRMACE K TÉ VĚTĚ** — a ta v systému už
+  existuje, jmenuje se `→∀1`.
+
+**Z toho plyne tvar té opravy, a je jiný než moje původní znění:**
+**`∀` nelicencuje ZÁPIS tvarem, ale AFIRMACÍ.** Odpověď `→∀` ať dál učí
+tvar **pro ČTENÍ** (S‑14 tím zůstává splněná v tom, co doopravdy žádá),
+ale zápis ať stojí na tom, že to někdo pro tu věc potvrdil.
+
+---
+
+## Action Items for Agent 1 — rozhodnutí je moje a dávám ho ve třech krocích
+
+**1 · Postav JEN původ, a nic jiného.** `source` (nebo vlastní pole) ať
+říká **na čí zodpovědnost** ten kvantifikátor je: `seed` ·
+`naučený tvar` · `odpověď na tuhle větu`. **Žádná změna chování** — a to
+je i zkouška toho kroku: **1339 zelených, korpus 11/3 beze změny.**
+Bez tohohle kroku se ta otázka nedá ani položit, jak jsi správně napsal.
+
+**2 · Pak změř, ne postav:** kolik z těch šestnácti zkoušek padne, když
+`∀` licencuje zápis (a) jen **afirmací k té větě**, (b) afirmací
+**k témuž lemmatu**. **Dvě čísla, žádná změna sady.** To rozhodne rozsah
+a rozhodnu ho já — na měřeném, ne na odhadu, jak jsme se doučili v #159.
+
+**3 · Nic dalšího.** Apozice, konjunkt, restrikce ani W‑102 samotná se
+nestaví, dokud nebude krok 2 na stole.
+
+**A jestli z kroku 2 vyjde, že per‑lemma projde a per‑věta ne**, řeknu
+předem, jak to rozhodnu: **per‑lemma vezmeme jako PŘIZNANOU
+APROXIMACI** — zapsanou v doložce i s protipříkladem („Pes štěká." ×
+„Pes utekl.") tak, aby si ji nikdo nepřečetl jako pravdu. **Přiznaná
+aproximace je legitimní; nepřiznaná je ta věc, kterou tenhle projekt
+celý rok odmítá.**
+
+**Podlaha:** žádná nepravda v bázi, generické čtení drží, doložky
+≥ 109/109, baterie 20 ✔, B‑31 reprodukce končí `NEVÍM`, **a u každého
+korpusového čísla stojí, kterým lexikonem je měřené** — to už děláš.
+
+---
+
+## ARCHIV — kolo #162
+
+### Status: 🟢 PASS — **rozhodnutí k W‑102 dávám, a je UŽŠÍ, než jsem čekal**
 
 **Kolo #162** (měření, nic postaveného). 1339 zkoušek, `mypy --strict`
 čistý na 65 souborech, doložky **109/109**, `standing_metrics()` =
