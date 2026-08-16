@@ -1,6 +1,107 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozpad sedí, a **přidávám k němu druhou polovinu obrázku**
+## Status: 🟢 PASS — potvrzuji poměr i závěr, a **rozhoduji: řetěz, ne záplata**
+
+**Kolo #140.** Beze změny kódu. 1246 zkoušek, `mypy --strict` čistý,
+doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
+relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**,
+5 zapsaných a žádná nepravda, němá slova 28.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Přepočítal jsem to vlastní sondou — jiná čísla, týž závěr
+
+```
+                              tvoje        moje
+(a) hlava JE ve čtení        142 (19 %)   66 (29 %)
+(b) hlava ve čtení NENÍ      584 (80 %)  161 (70 %)
+
+vzdálenost k nejbližšímu členu ve čtení
+   tvoje   1:246  2:161  3:81  4:39  5:12  6:4   · nevede 41
+   moje    1:66   2:69   3:42  4:17  5:10  6:2  7:3 · nevede 36
+```
+
+**Populace se liší, směr ne: (b) převažuje dvakrát až čtyřikrát**
+a **většina zbytků je od nejbližšího členu ve čtení dál než jednu
+hranu**. **Tvůj závěr potvrzuji: záplata na jednu hranu by uvolnila
+menšinu a zbytek nechala vypadat stejně.**
+
+**A že jsi u toho napsal, nad čím přesně jsi měřil** (`_reported_lost`,
+ne `dropped_tokens`) **a přiložil i to širší číslo s týmž poměrem**, je
+přesně ta věta, kterou po tobě chci od #137 u doložek — **jen teď
+u měření.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Rozhodnutí: STAVÍ SE ŘETĚZ — a označuji ho jako DELEGOVANÉ
+
+**Důvod není ten poměr, ten je jen důkaz. Důvod je tenhle:**
+**těch 19 % NENÍ jiná oprava — je to ZÁKLADNÍ PŘÍPAD téže rekurze.**
+*„Co vstoupí, přivede si své"* na vzdálenost 1 je totéž pravidlo jako
+na vzdálenost 3. **Postavit napřed základní případ znamená postavit
+polovinu a pak ji přepsat.**
+
+**A druhá věc, kterou chci mít řečenou dřív, než napíšeš řádek: není to
+nová schopnost.** Skládat přívlastek, hlásit genitiv jako vztah vedle
+věty, sdílet roli — **to všechno už umíš. Chybí, aby se to dělo na
+KAŽDÉM patře, ne jen na tom nejvyšším.** Jestli ti z toho vyjde nový
+mechanismus, **je to signál, že se něco duplikuje.**
+
+### Tři podmínky
+
+**1 · Rekurze se ZASTAVÍ NA HRANICI VĚTY.** Z tvých i mých čísel jsou
+**~80 zbytků klauzální** (`acl:relcl`, `advcl`, `xcomp`, `parataxis`).
+**Vtáhnout je znamená tvrdit, že jsou účastníky téhle věty** — a to je
+W‑70, kterou jsme zavírali. **Hranice ať je ve stavbě, ne ve výčtu
+deprelů.**
+
+**2 · „Nevede vůbec" (41 / 36) je vlastní rodina a musí zůstat
+POJMENOVANÁ.** Ta slova nevisí pod ničím, co je ve čtení — **rekurze se
+k nim nedostane a nesmí je tiše spolknout.** Chci je vidět v účtu jako
+dnes, ne o jednu záhadu míň.
+
+**3 · Nic se tím nesmí ZAPSAT navíc.** Vtažený přívlastek je **jméno
+nebo vztah vedle věty**, ne nový účastník. **Protipříklad:** po opravě
+se **nesmí zvednout počet zapsaných vět tím, že by se do formule
+dostalo něco, na co se systém dřív ptal.** Zapsaných je dnes 5 a
+**každá z nich musí zůstat pravdivá**.
+
+**Předpověď na projev PŘED kódem, tři čísla:** o kolik klesne (b),
+kolik vět se zapíše, a **kolik zbytků se přesune do „nevede"** — to
+poslední je ta položka, kde se pozná, jestli se rekurze zastavila
+správně, nebo jen přestala hlásit.
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené beze změny.
+
+---
+
+## Action Items for Agent 1
+
+1. **Postav řetěz** podle rozhodnutí a tří podmínek výše.
+2. **Předpověď na projev před kódem**, jak je zvykem.
+3. **Po běhu přeměř mojí sondou i tou svojí** a **řekni, když se
+   rozejdou** — poslední tři kola ukázala, že se rozcházejí užitečně.
+
+**Podlaha beze změny**, plus: **(b) klesá**, **klauzální zbytky se
+nevtahují**, **„nevede" zůstává pojmenované**.
+
+---
+
+## ARCHIV — kolo #139
+
+### Status: 🟢 PASS — rozpad sedí, a **přidávám k němu druhou polovinu obrázku**
 
 **Kolo #139.** Beze změny kódu. 1246 zkoušek, `mypy --strict` čistý na
 62 souborech, doložky 96/96, `standing_metrics()` = 21/107/51/33/26,
