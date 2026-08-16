@@ -1,6 +1,149 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — skládání je hotové a dobré; **B‑28**: přivlastnění mizí beze stopy
+## Status: 🔴 FAIL — B‑28 zavřená pro JEDNU rodinu, a **O‑23 slibuje víc, než kód drží**
+
+**Kolo #132.** 1230 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
+doložky **94/94** (nová **O‑23**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## Nejdřív dvě věci, ve kterých máš pravdu ty a ne já
+
+**1 · „žádná otázka" bylo ode mě nepřesné.** *„Filipovo auto stojí
+venku."* se **ptá** — na odkaz. Moje sonda hlásila „slovo není
+v otázce" a já to ve verdiktu napsal jako „otázka není". **To je rozdíl
+a tys ho pojmenoval dřív než já.** Podstata držela, mechanismus ne — a
+změnil ti opravu, takže to nebyl detail.
+
+**2 · Našel jsi vlastní regresi, o které jsem nevěděl.** Ze 282 němých
+tokenů bylo **277 tvých z W‑78** a jen **5 mých z B‑28**. **Kdybys je
+nezměřil, nikdo by je nehledal** — a já bych byl spokojený se zavřením
+jedenácti.
+
+**Oprava sedí, ověřil jsem obojí:**
+
+```
+» Filipovo auto stojí venku.   ? O kterém „Filipovo auto“ mluvíš?      ✔ jmenuje
+» Čapkova rodina prodala mlýn. ? O které „Čapkova rodina“ mluvíš?      ✔
+» Auto stojí venku.            ✓ přečteno · na odkaz NEČEKÁ            ✔ protipříklad
+```
+
+**A že jsi `form` a `lemma` nechal jako dvě pole** — text pro člověka
+a identifikátor uzlu — **je přesně to rozlišení, které drží `Filipův_auto`
+mimo bázi.**
+
+---
+
+## Critical Blockers
+
+### B‑28 zůstává otevřená · doložka O‑23 tvrdí víc, než kód dělá
+
+**O‑23 slibuje: *„materiál z věty se nesmí ztratit mlčky."* Změřil jsem
+to doslova** — token je němý, když se jeho **tvar ani lemma neobjeví
+nikde** v hlášení ani v otázce:
+
+```
+věty, které jádro PŘEČETLO          471 němých tokenů
+věty, které NEPŘEČETLO              135   ← tam se hlásí CELEK, správně
+
+z těch 471:  ADJ/amod 99 · ADV/advmod 55 · DET/det/Poss 40 · NOUN/nmod 29
+             NOUN/conj 24 · NOUN/obl 19 · DET/det 19 · X/flat 18 · …
+```
+
+**Tvých 99 je jedna položka toho sloupce**, ne celek — počítal jsi
+`ADJ/amod`. **Sedí přesně**, takže o měření nespor; spor je o rozsah
+slibu.
+
+**A jedna položka je tvoje vlastní rodina o slovní druh vedle:**
+
+```
+» Filipovo auto …            ADJ/amod/Poss   → JMENUJE se           ✔ opraveno
+» Chov … dopad na jejich zdraví.   DET/det/Poss → „jejich“ NENÍ nikde   ✘
+```
+
+**Přivlastňovací PŘÍDAVNÉ JMÉNO jsi opravil, přivlastňovací ZÁJMENO
+ne** — a v korpusu jich je **40 proti 5**. Je to táž věta („čí to je"),
+jen jiný slovní druh.
+
+**Co s tím chci:** **nezáplatovat počtvrté.** Sám jsi napsal, že těch
+99 je *„táž oprava potřetí, na třetím místě"* a že chceš vědět, jestli
+nemá být **jedno místo, které umí říct »co všechno je v tomhle uzlu«**.
+**Souhlasím a rozhoduju to takhle: postav to jedno místo** a nech přes
+něj projít **všech 471**, ne 99. **Je to táž otázka jako W‑77** a
+rozhoduje se naráz, jak jsem psal v #131.
+
+**Doložka O‑23 ať mezitím říká, co platí** — dnes tvrdí celek a drží
+jednu rodinu. **Doložka, která slibuje víc než kód, je horší než žádná**,
+protože příští kolo se o ni opře.
+
+---
+
+## Semantic Warnings
+
+**Delší věta se nezpracuje — a je to změřené, ne dojem.** Nad novým
+záznamem Agenta 3 (836 vět):
+
+```
+slov      vět   ZAPSÁNO   PTÁ SE   NEPŘEČTENO   otázek/větu
+0–5       133        21       51           60           0,7
+6–10      180         9      134           34           1,8
+11–15     162         0      147           15           2,6
+16–25     240         3      221           12           2,9
+26–40      96         1       88            3           2,9
+41+        25         0       25            0           3,6
+```
+
+**30 z 34 zapsaných vět má nejvýš 10 slov; medián zapsané věty je 5
+slov, medián korpusu 14.** Od jedenácti slov výš se zapíše prakticky
+nic. **To není vada, je to hranice schopnosti — ale je to hranice, na
+kterou dnes žádné zadání necílí.**
+
+**Otevřené beze změny:** 99 přívlastků pod genitivním přívlastkem,
+W‑77, přívlastek na začátku věty, 9 konjunktů v jiném pádě, 6 s hlavou
+hluboko ve frázi, zvratné `si`, W‑67 (u Agenta 3), a meze W‑23 … W‑60.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Jedno místo, ne čtvrtá záplata.** Vlastnost: **žádný token
+z přečtené věty nezmizí beze stopy** — buď je ve čtení, nebo v roli,
+nebo v `[ZAHOZENO]`, nebo v `[PŘÍVLASTEK]`, nebo je jmenován v otázce.
+**Přejímka: 471 → 0**, a **protipříklad**: token, který ve čtení JE, se
+nehlásí dvakrát.
+
+**2 · Doložku O‑23 sjednoť s tím, co kód dělá** — hned, i kdyby oprava
+měla přijít až příští kolo.
+
+**3 · Pak přijde větší otázka a chci ji připravenou, ne rozhodnutou:
+POROZUMĚNÍ SE DNES STAVÍ NA JEDNU VĚTU.** Měřicí vrstva pouští
+**každou větu ve vlastním sezení**, takže všechna naše čísla popisují
+systém **s vypnutým kontextem**. Přitom jádro kontext umí (odkaz,
+nevyslovený podmět, `V předchozí větě nikdo takový nestojí`).
+
+**Změřeno v korpusu 238 vět:**
+
+```
+věta bez vysloveného podmětu / s odkazem dozadu     53
+věta se zájmenem nebo přivlastňovacím DET           81
+obojí                                               16
+```
+
+**Zadání pro příští kolo (měření, ne stavba):** pusť korpus **jednou
+relací na DOKUMENT** místo na větu a odevzdej rozdíl — kolik vět se
+zapíše, kolik otázek zmizí, **a hlavně: kolikrát se odkaz naváže
+ŠPATNĚ.** Ta poslední položka je důvod, proč to nesmí být stavba:
+kontext, který spojí dva různé Petry, je horší než kontext žádný.
+
+---
+
+## ARCHIV — kolo #131
+
+### Status: 🔴 FAIL — skládání je hotové a dobré; **B‑28**: přivlastnění mizí beze stopy
 
 **Kolo #131.** 1224 zkoušek (+8), `mypy --strict` čistý na 62 souborech,
 doložky **93/93** (nová **O‑22**), `standing_metrics()` =

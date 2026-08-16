@@ -3967,6 +3967,81 @@ def _within_subtree(
     return False
 
 
+#: Slova, která NĚCO ZNAMENAJÍ. Širší než `MEANINGFUL_UPOS`, protože
+#: účtování je jiná otázka než ztracený člen: `ADV` a `DET` rolí být
+#: nemusí, ale ve větě STOJÍ, takže se o nich nesmí mlčet *(B‑28)*.
+#: Chybí tu jen slova, která jsou ZNAČKA, ne materiál — předložka je
+#: v tvaru role, spojka ve stavbě, `AUX` v přísudku, `PUNCT` nikde.
+MATERIAL_UPOS = ("NOUN", "PROPN", "ADJ", "VERB", "NUM", "PRON", "ADV", "DET")
+
+
+def unaccounted_tokens(
+    reading: Reading, predication: Predication
+) -> tuple[Token, ...]:
+    """Slova věty, o kterých hlášení NEŘÍKÁ NIC *(B‑28)*.
+
+    **Jedno místo místo čtvrté záplaty.** Materiál z věty mizel mlčky
+    postupně na třech místech (složený přívlastek pod ztracenou hlavou,
+    přivlastnění, přívlastek pod genitivním přívlastkem) a pokaždé se to
+    opravovalo tam, kde se to zrovna našlo. Tohle je ÚČET: co není ani
+    ve čtení, ani pohlcené, ani v přísudku, ani mezi čekajícími vztahy,
+    ani ztracené, se JMENUJE — ať už je to jakýkoli tvar.
+
+    **Není to otázka.** Na většinu z toho pravdivá odpověď neexistuje
+    („jakou roli hraje `jejich`?" je výzva přilepit k větě účastníka,
+    který v ní není, W‑75). Účet jen říká, že to systém VIDĚL a co
+    s tím udělal — mlčet o tom je tichá ztráta kusu věty (I‑1).
+    """
+    ucet: set[int] = set()
+    for role in predication.roles:
+        ucet.add(role.mention.token_index)
+        ucet.update(role.absorbed)
+    if predication.second is not None:
+        for role in predication.second.roles:
+            ucet.add(role.mention.token_index)
+            ucet.update(role.absorbed)
+    head = _predicate_head(reading)
+    if head is not None:
+        ucet.update({head[0].index, head[1].index})
+        inner = complex_predicate(reading, head[1])
+        if inner is not None:
+            ucet.add(inner.index)
+    for _, _, token_index in (
+        *predication.pending_attribute,
+        *predication.pending_title,
+        *predication.pending_share,
+        *predication.pending_name,
+    ):
+        ucet.add(token_index)
+    # Co se hlásí jako ZTRACENÉ, účet má — i s tím, co se do toho
+    # složilo, protože `_dropped_note` to od B‑28 vypisuje celé.
+    for token in dropped_tokens(reading, predication):
+        ucet.add(token.index)
+        ucet.update(t.index for t in attributes_of(token, reading))
+        ucet.update(t.index for t in name_parts_of(token, reading))
+    return tuple(
+        token
+        for token in reading.tokens
+        if token.upos in MATERIAL_UPOS and token.index not in ucet
+    )
+
+
+def unaccounted_note(reading: Reading, predication: Predication) -> str | None:
+    """Hlášení účtu — jmenuje slova, o kterých by se jinak mlčelo."""
+    zbyle = unaccounted_tokens(reading, predication)
+    if not zbyle:
+        return None
+    parts = []
+    for token in zbyle:
+        head = _token_at(token.head, reading)
+        under = f" pod „{head.form}“" if head is not None else ""
+        parts.append(f"„{token.form}“ ({token.deprel}{under})")
+    return (
+        "[BEZ ZÁZNAMU: " + ", ".join(parts) + " — do čtení se to "
+        "nedostalo a roli pro to systém nemá; neptá se, jen to nezamlčuje]"
+    )
+
+
 def _dropped_note(reading: Reading, predication: Predication) -> str | None:
     """Co z věty vypadlo — a genitivní přívlastek mezi to NEPATŘÍ.
 
