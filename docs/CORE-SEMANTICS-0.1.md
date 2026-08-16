@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.73 · 16. 8. 2026
+**Verze jádra:** 0.1.74 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.74 | § 12 — rozklad ztrát, které odpověď neodstraní: ze 152 je 114 řetěz, 19 klauze a jen 19 „hlava je ve čtení“ — a z nich má jméno i tvar jediná rodina, PŘEDLOŽKOVÝ PŘÍVLASTEK JMÉNA (4 zmínky) |
 | 0.1.73 | § 12 — hrana `conj` u role se NESTAVÍ: konjunktů, jejichž hlava je rolí v témž pádě, je po vyčerpání dialogu NULA; zbylých 99 má hlavu mimo čtení, a vtáhnout je by bylo druhý uzel role, která neexistuje |
 | 0.1.72 | § 12 — změřeno, jestli podstrom přijde s tím, co vstoupí do čtení: 80 % zbytků visí pod členem, který je sám venku, a nejbližší člen ve čtení je od dvou třetin vzdálený víc než jednu hranu — je to ŘETĚZ, ne jedna hrana |
 | 0.1.71 | § 12 — rozpad 50 vět, které se nezapíšou ani po vyčerpání dialogu: 22 drží `[ZAHOZENO]`, kterou odpověď neodstranila (S-39 jako překážka zápisu), 16 čekající sdílení, 12 zakotvení |
@@ -1063,6 +1064,34 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**ZTRÁTA, KTEROU ODPOVĚĎ NEODSTRANÍ — ROZKLAD** *(měření kola #145)*.
+Populace z #139 (částečný zápis povolen, zúžená predikace se zakotví,
+věta má ztrátu) dává dnes **24 vět**, ne 22; posun je z W‑81 a W‑82,
+ne z měřidla. Po vyčerpání dialogu v nich zbývá 152 vypsaných ztrát:
+
+| proč tam ta ztráta zůstala | kolik |
+|---|---|
+| hlava je MIMO čtení — **řetěz** (viz #140) | 114 |
+| KLAUZE — vtáhnout ji by byla W‑70 | 19 |
+| hlava JE ve čtení — **jediná položka s tvarem vady** | 19 |
+
+**A těch 19 se rozpadá dál, takže „odpověď měla zabrat" je moc silné
+slovo pro většinu z nich:**
+
+    hlava je NUM („více než 86 000 pádů")            7
+    hlava je ADJ                                     4
+    PŘEDLOŽKOVÝ přívlastek jména („pobyt v Berlíně") 4
+    hlava je VERB                                    3
+    jiný přívlastek jména                            1
+
+Jediná rodina, která má jméno i tvar, je **předložkový přívlastek
+jména**: „studijní pobyt **v Berlíně**" modifikuje JMÉNO, ne přísudek —
+je to zrcadlo genitivního přívlastku, který se hlásí jako vztah vedle
+věty od W‑39, jen s předložkou místo pádu. Jsou to **4 zmínky**.
+
+> Cíl tedy není 22 vět, ale 4 zmínky jedné pojmenovatelné rodiny; zbytek
+> je řetěz (#140), hranice věty (W‑70) nebo hlavy, které nejsou jména.
 
 **HRANA `conj` U ROLE — CÍL JE PRÁZDNÝ** *(měření kola #144)*.
 Rozhodnutí znělo „ptá se, až ten člen do čtení vstoupí" a mělo se podle
