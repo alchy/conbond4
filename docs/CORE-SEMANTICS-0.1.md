@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.72 · 16. 8. 2026
+**Verze jádra:** 0.1.73 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.73 | § 12 — hrana `conj` u role se NESTAVÍ: konjunktů, jejichž hlava je rolí v témž pádě, je po vyčerpání dialogu NULA; zbylých 99 má hlavu mimo čtení, a vtáhnout je by bylo druhý uzel role, která neexistuje |
 | 0.1.72 | § 12 — změřeno, jestli podstrom přijde s tím, co vstoupí do čtení: 80 % zbytků visí pod členem, který je sám venku, a nejbližší člen ve čtení je od dvou třetin vzdálený víc než jednu hranu — je to ŘETĚZ, ne jedna hrana |
 | 0.1.71 | § 12 — rozpad 50 vět, které se nezapíšou ani po vyčerpání dialogu: 22 drží `[ZAHOZENO]`, kterou odpověď neodstranila (S-39 jako překážka zápisu), 16 čekající sdílení, 12 zakotvení |
 | 0.1.70 | § 5.2 — částečný zápis se ptá OBOJÍHO, co vynechávám i ODKUD: pod záporným přísudkem se monotonie obrací (`¬(P∧Q)` ⊬ `¬P`), takže záporná věta se částečně nezapíše; § 13 T117 |
@@ -1062,6 +1063,31 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**HRANA `conj` U ROLE — CÍL JE PRÁZDNÝ** *(měření kola #144)*.
+Rozhodnutí znělo „ptá se, až ten člen do čtení vstoupí" a mělo se podle
+něj stavět. Měření nad tím, co by se stavělo, ale ukázalo, že **stavět
+není co**: po vyčerpání dialogu je konjunktů, jejichž hlava JE rolí ve
+čtení a má TÝŽ PÁD, **nula** — `sharing_tier` je od W‑73 chytá všechny.
+
+Co zbývá, je jiná věc:
+
+| konjunkt po vyčerpání dialogu | kolik |
+|---|---|
+| hlava JE role, týž pád — **cíl té stavby** | **0** |
+| hlava NENÍ ve čtení, týž pád | 99 |
+| hlava NENÍ ve čtení, jiný pád | 13 |
+| hlava JE role, jiný pád (vyloučeno správně, W‑73) | 6 |
+
+A těch 99 se dál dělí: u **81** se hlásí i ta hlava, takže se systém
+ptá na obojí a nemlčí; u **18** hlava ve čtení není a nehlásí se —
+většinou proto, že je sama kořenem jmenné fráze bez přísudku
+(„Obrázky, zvuky či **videa** k tématu…").
+
+> **Vtáhnout konjunkt, jehož hlava ve čtení není, by bylo přesně to, co
+> rozhodnutí zakazuje** — druhý uzel role, která neexistuje. Hrana
+> `conj` u role se proto NESTAVÍ; není to odklad, je to prázdná
+> množina.
 
 **PŘIJDE PODSTROM S TÍM, CO VSTOUPÍ DO ČTENÍ? — MĚŘENÍ, NE NÁVRH**
 *(kolo #140)*. Po vyčerpání dialogu (odpověď na každý ztracený tvar,
