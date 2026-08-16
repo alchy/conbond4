@@ -1,6 +1,174 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **rozhodnutí o konjunktu beru na sebe: rozsah letopočtů ANO, souřadný přívlastek NE, a důvod není velikost**
+## Status: 🔴 FAIL — **„v letech 1910 NEBO 1920" se zapíše jako jeden čas, a je to nepravda**
+
+**Kolo #154.** 1313 zkoušek (+6), `mypy --strict` čistý na 64 souborech,
+doložky **106/106** (0 bez `enforced_by`), `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, 13 zapsaných korpusových vět
+a **žádná z nich nepravdivá**.
+
+**Architectural Health Score: 9,2 / 10.**
+
+---
+
+## Critical Blockers
+
+### B‑30 · rozsah se skládá bez ohledu na SPOJKU, a `nebo` skončí jako jistý čas
+
+**Nejmenší protipříklad. Tři různé věty, jeden a týž uzel:**
+
+```
+» V letech 1910 – 1911 …    →  léta_1910_1911     ÚSEK      (správně)
+» V letech 1910 a 1920 …    →  léta_1910_1920     DVA ROKY  (uzel tvrdí úsek)
+» V letech 1910 nebo 1920 … →  léta_1910_1920     NEVÍ SE KTERÝ  ← TÝŽ UZEL
+» V letech 1910, 1911 a 1912 … → léta_1910_1911_1912         (výčet)
+```
+
+**A dojde to do BÁZE po jednom obyčejném tahu.** Stačí odpovědět na
+jméno role (`→@ kdy`), což je přesně to, co po systému chceme:
+
+```
+» V letech 1910 nebo 1920 studoval Karel Čapek v Berlíně.
+  → @ kdy
+  ✓ zapsáno [s0008]  studovat(kde:Berlín, kdo:Karel_Čapek, kdy:léta_1910_1920)
+     s0012  role(filler:léta_1910_1920, name:kdy, of:s0008)
+```
+
+**Věta říká, že se neví který rok. Báze tvrdí jeden čas.** Bez
+`[ZAHOZENO]`, bez otázky, beze slova — **složení je TICHÉ**.
+
+**Je to nové tímhle kolem, ověřeno na revizi před ním:**
+
+```
+$ git archive 7c7ea7f
+» V letech 1910 nebo 1920 …  →  v+Loc/rok:léta_1910
+     [ZAHOZENO: „1920“ (conj pod „1910“) — pro tenhle vztah role není]
+```
+
+**Tvoje pojistka hlídá jen jeden směr.** „Buď je úsek v uzlu celý, nebo
+tam ztráta zůstane" chrání před uzlem s PRVNÍM ROKEM. Směr, který vyrábí
+nepravdu, je **opačný**: něco, co úsek NENÍ, se zapíše jako úsek. Ten
+zůstal nehlídaný.
+
+**A protipříklad v sadě to nechytí:** „ve 30. a 40. letech" neprojde
+z JINÉHO důvodu (řadové číslovky pod „letech", ne holé letopočty), takže
+o téhle díře nic neříká. Test, který prochází z jiného důvodu, než si
+myslí, je pořád zelený.
+
+**Nejtěžší věta téhle recenze:** v témž commitu jsi změřil, že disjunkce
+je desetina souřadností, a použil jsi to jako důvod NESTAVĚT souřadný
+přívlastek — **a o dva soubory dál to `nebo` spolkne bez hlásky.** To
+měření bylo správné. Použilo se na jednu rodinu a na druhou ne.
+
+**Co musí oprava splnit** (hranici beru na sebe jako minule, **DELEGACE**):
+
+* **Rozhoduje SPOJKA, ne to, že jsou obojí letopočty.** Pomlčka a
+  „mezi X **a** Y" jsou úsek; „v letech X **a** Y" a čárkový výčet jsou
+  VÍC ČASŮ; „X **nebo** Y" je **neznámo který**. Čte se to z dítěte `cc`
+  a z předložky, tedy z rozboru — ne ze seznamu slov v kódu.
+* **Skládat smí JEN úsek.** Výčet i disjunkce zůstanou tak, jak byly do
+  #154 — přiznaná ztráta a nezapsaná věta. To není krok zpět, to je stav,
+  který nelže.
+* **Zkouška nese všechny tři**, ne dva směry jednoho případu. A napiš do
+  ní, PROČ „ve 30. a 40. letech" neprochází — jinak si příště zase někdo
+  (já) bude myslet, že hlídá tohle.
+
+**Pozor na to, co se přitom NESMÍ rozbít:** „Mezi lety 2009 a 2013" je
+úsek **se spojkou `a`** a v korpusu je — takže „`a` = nikdy úsek" je
+oprava, která rozbije jednu ze sedmi vět, co dnes fungují.
+
+---
+
+## Co drží — a je to většina kola
+
+**Rozsah letopočtů sám je postavený správně** a všech pět tvých čísel
+jsem přepočítal **touž populací na obou revizích** (`git archive
+7c7ea7f`, moje vlastní sonda):
+
+```
+                              7c7ea7f   3b16fd1
+ztrát pod pohlceným členem       24        17     ← −7, přesně tvoje číslo
+z toho conj                      17        10     ← −7, všech sedm rozsahů
+přívlastků (položek)            212       212     ← beze změny
+zapsaných                        13        13
+vět s [ZAHOZENO]                163       161
+```
+
+**Sedí to na kus** (rozdíl 1 proti tvým 16 → 9 je definice sondy, ne kód,
+a je konstantní přes tři kola). **A že zápisy nepřibyly, není zklamání**
+— těch sedm vět má i jiné otevřené otázky, což jsi napsal DOPŘEDU.
+
+**Disjunkci jsem přepočítal taky a tvá čísla sedí přesně:** `a` 163,
+bez spojky 139, `nebo` 28, `ale` 10, `či` 9, `i` 6. Celkem mi vyšlo 363
+konjunktů (tobě 360; tvůj výpis šesti největších dává 355, zbytek je
+ocas — `–` 3, `tak` 2, `přesto` 1, `však` 1, `×` 1).
+
+### Doměření k mé vlastní delegaci — jednotka rozhoduje
+
+**Napočítal jsem to ještě po CELÉ KOORDINACI**, protože to je jednotka,
+na kterou by se ta otázka ptala:
+
+```
+koordinací celkem                264
+  a                              150
+  ŽÁDNÉ spojovací slovo v celé koordinaci   49   ← 19 %
+  nebo 26 + či 9                  35   ← 13 %
+  ale 8 + však 1                   9
+  dvě RŮZNÉ relace v jedné koordinaci (a+nebo, a+ale, …)   5
+```
+
+**Málem jsem to napsal špatně:** první verze počítala po konjunktu a
+vyšlo mi „139 souřadností bez spojky, tedy 38 %". Je to nesmysl —
+v „Poranění, pokousání **a** smrt" nesou první dva členy `cc` nikde
+a vztah stojí na tom třetím. Podíval jsem se na vzorek a přepočítal to
+po koordinaci. **Třináctá zkratka ve vlastním měřidle; do verdiktu
+nedošla.**
+
+**Co z toho pro to rozhodnutí plyne:** nabídka odpovědí není tří‑ ani
+čtyřprvková a **u 19 % koordinací neurčuje relaci v textu vůbec nic**.
+Souřadný přívlastek proto zůstává nepostavený a je to potvrzené číslem,
+ne dojmem.
+
+---
+
+## Semantic Warnings
+
+**Nic nového nad rámec B‑30.**
+
+**Otevřené beze změny:** souřadný přívlastek (8, čeká na rozhodnutí
+o nabídce odpovědí), „30. a 40. letech" (1), 29 vět čeká odkaz
+(Agent 3), 64 odkazů s prázdnou nabídkou, 30 vztažných klauzí s hlavou
+mimo čtení, `acl` bez vztažného zájmena (13), doplněk přísudku 30,
+určuje děj 21, faktivita (9), podmětová klauze T72, řetěz 114, W‑67,
+sentence‑initial přívlastek, zvratné `si`, povrch přívlastku
+s lemmatem.
+
+---
+
+## Action Items for Agent 1
+
+**1 · B‑30 a nic jiného.** Spojka rozhoduje: skládá se **jen úsek**,
+výčet a disjunkce se vrátí k přiznané ztrátě. Zkouška na všechny tři
+plus na „mezi lety 2009 a 2013", aby oprava nerozbila to, co dnes
+funguje.
+
+**2 · Doplň do S‑55, že protipříklad „ve 30. a 40. letech" prochází
+z JINÉHO důvodu** než z toho, co má doložka hlídat. Doložka, která se
+opírá o test procházející náhodou, je zeleně vypadající prázdno — a je
+to táž třída jako sloupec `použití` v matici.
+
+**3 · Referenci přes větu a faktivitu nech být** — beze změny.
+
+**Podlaha po opravě:** 13 zapsaných a žádná nepravda, doložky ≥ 106/106,
+baterie 20 ✔, ztrát pod pohlceným členem ≤ 17 **u úseků** (u výčtu
+a disjunkce ztráta ZŮSTANE a je to správně), „mezi lety 2009 a 2013"
+se dál skládá.
+
+---
+
+## ARCHIV — kolo #153
+
+### Status: 🟢 PASS — **rozhodnutí o konjunktu beru na sebe: rozsah letopočtů ANO, souřadný přívlastek NE**
 
 **Kolo #153.** 1307 zkoušek (+6), `mypy --strict` čistý na 63 souborech,
 doložky **105/105** (0 bez `enforced_by`), `standing_metrics()` =
