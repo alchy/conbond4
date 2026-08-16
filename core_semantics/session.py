@@ -1626,7 +1626,9 @@ class Session:
                 # Otázka na význam genitivního přívlastku (W‑39). Stojí
                 # až za uzavřením: je to vztah VEDLE věty, takže se ptá
                 # jako poslední a větu samotnou nezdržuje.
-                attribute_question(predication),
+                attribute_question(
+                    predication, turn.reading or self._standing_reading
+                ),
                 # Otázka na to, co tvrdí TITUL (W‑55). Za přívlastkem
                 # z téhož důvodu: je to výrok vedle věty, takže větu
                 # samotnou nezdržuje a ptá se jako poslední.

@@ -1940,6 +1940,35 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-54",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "SYSTEM NERIKA O SVEM VSTUPU NIC, CO NENI PRAVDA *(W-93)*. "
+            "Otazka na privlastek se rozhodovala podle PRAZDNEHO TVARU "
+            "a do W-92 mohl byt prazdny jen holy genitiv pod jmenem — "
+            "od W-92 vede dovnitr druha cesta, holy pad pod pricestim "
+            "(typicky instrumental puvodce). Text se nezmenil, takze "
+            "system rikal instrumentalu GENITIV a oduvodnoval to "
+            "argumentem („chov zvirat“ x „pece majitele“), ktery na "
+            "nej neplati. Neni to nepresnost: je to tvrzeni o vlastnim "
+            "vstupu, ktere neplati, a ta trida byla do te doby prazdna. "
+            "PAD SE CTE Z ROZBORU, ne z lemmatu a ne z nalepky. Bez "
+            "rozboru se otazka nalepky VZDA a mluvi jen o tom, co vidi — "
+            "hadat pad by byla taz vada o patro niz. HOLY GENITIV SI "
+            "SVOU VETU PONECHA i se svym duvodem (protipriklad v sade). "
+            ". ROZSAH MERENI: korpus 238 vet — prazdny tvar ma dnes "
+            "dve pricini: holy genitiv pod jmenem a holy pad pod "
+            "pricestim; druha vznikla v #152. "
+        ),
+        anchor="core_semantics.cascade:attribute_question",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_question_does_not_call_an_instrumental_a_genitive",
+            "test_the_bare_genitive_keeps_its_own_sentence",
+            "test_without_the_parse_the_question_claims_no_case_at_all",
+        ),
+    ),
+    Clause(
         id="S-53",
         boundary=CASCADE_SESSION,
         promise=(
@@ -1961,12 +1990,22 @@ CONTRACTS: tuple[Clause, ...] = (
             "prazdny, takze se system pta u kazde vety znovu. Ze je holy "
             "instrumental u trpneho pricesti puvodce, je pravdepodobne, "
             "ale rozhodnout to v kodu by bylo rozhodnuti o vyznamu. "
-            ". ROZSAH MERENI: korpus 238 vet. POZOR NA POPULACI: 28 deti "
-            "pod pohlcenym `amod` je JINE cislo nez deti pod pohlcenym "
-            "PRICESTIM — z tech 28 jich vetsina visi pod obycejnym "
-            "adjektivem nebo cislovkou a je to KONJUNKT (15), tedy jina "
-            "rodina. Zmena vyresila 4 z 28; privlastku 117 -> 124, vet "
-            "s [ZAHOZENO] 165 -> 163, zapsanych 12 -> 13. "
+            ". ROZSAH MERENI: korpus 238 vet, TAZ POPULACE MERENA NA OBOU "
+            "REVIZICH (f8eebb5 -> 5098aaf, identicka sonda) — jinak se "
+            "meri rozdil dvou populaci a ne ucinek zmeny. "
+            "Ztrat pod pohlcenym clenem 37 -> 24, tedy MINUS 13; z toho "
+            "hlava = pricesti 15 -> 2 a dite = `obl`/`obl:arg` 15 -> 2, "
+            "takze CELY POKLES LEZI V TE RODINE, na kterou zmena mirila. "
+            "Privlastku 197 -> 211 polozek (117 -> 124 vet), zapsanych "
+            "12 -> 13. "
+            "PUVODNI ZAPIS („vyresilo 4 z 28“) BYL SPATNE, a je to "
+            "vada mereni, ne kodu: 28 bylo zmereno PRED zmenou na "
+            "populaci „deti pod pohlcenym `amod`“ a 24 PO zmene na "
+            "populaci „deti pod pohlcenym clenem“; rozdil dvou ruznych "
+            "populaci neni ucinek niceho. "
+            "CO ZUSTAVA: 16 ztrat je KONJUNKT pod pohlcenym clenem "
+            "(„30. a 40. letech“, „1824 - 1830“) — jina rodina, "
+            "beze zmeny na obou revizich. "
         ),
         anchor="core_semantics.cascade:_absorbed_participle",
         entry=".utter(",

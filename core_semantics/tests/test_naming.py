@@ -895,3 +895,55 @@ def test_an_obl_under_the_predicate_is_still_a_circumstance() -> None:
     result = session.utter(PARTICIPLE_TEXT, oracle)
     assert result.predication is not None
     assert genitive_attributes(reading, result.predication) == ()
+
+
+def test_the_question_does_not_call_an_instrumental_a_genitive() -> None:
+    """SYSTÉM NESMÍ ŘÍKAT O SVÉM VSTUPU NĚCO, CO NENÍ PRAVDA *(W‑93)*.
+
+    Do W‑92 mohl být prázdný tvar jen holý genitiv pod jménem, takže si
+    ta větev mohla dovolit mluvit o genitivu. W‑92 otevřela druhou cestu
+    dovnitř — holý pád pod příčestím, typicky instrumentál původce — a
+    text se nezměnil, takže se instrumentálu říkalo genitiv a odůvodnilo
+    se to argumentem („chov zvířat" × „péče majitele"), který na něj
+    neplatí."""
+    from core_semantics.cascade import attribute_question
+
+    reading = _participle(bez_predlozky=True)
+    session, oracle = _participle_session(reading)
+    result = session.utter(PARTICIPLE_TEXT, oracle)
+    assert result.predication is not None
+    otazka = attribute_question(result.predication, reading)
+    assert otazka is not None
+    assert "genitiv" not in otazka, "instrumentál není genitiv"
+    assert "Ins" in otazka, "pád se čte z rozboru a je vidět"
+
+
+def test_the_bare_genitive_keeps_its_own_sentence() -> None:
+    """PROTIPŘÍKLAD: holý genitiv pod jménem si svou větu PONECHÁ i se
+    svým důvodem. Kdyby se změnilo obojí, nebyla by to oprava nepravdy,
+    ale nové pravidlo."""
+    from core_semantics.cascade import attribute_question
+
+    session, oracle = _attribute_session()
+    result = session.utter(BREEDING_TEXT, oracle)
+    assert result.predication is not None
+    otazka = attribute_question(
+        result.predication, oracle.parse(BREEDING_TEXT).readings[0]
+    )
+    assert otazka is not None
+    assert "v genitivu" in otazka
+    assert "„chov zvířat“" in otazka and "„péče majitele“" in otazka
+
+
+def test_without_the_parse_the_question_claims_no_case_at_all() -> None:
+    """Bez rozboru se otázka nálepky VZDÁ. Hádat pád z lemmatu by byla
+    táž vada o patro níž."""
+    from core_semantics.cascade import attribute_question
+
+    reading = _participle(bez_predlozky=True)
+    session, oracle = _participle_session(reading)
+    result = session.utter(PARTICIPLE_TEXT, oracle)
+    assert result.predication is not None
+    otazka = attribute_question(result.predication)
+    assert otazka is not None
+    assert "genitiv" not in otazka and "pád Ins" not in otazka

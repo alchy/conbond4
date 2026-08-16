@@ -3567,8 +3567,10 @@ def attribute_label(head: str, filler: str, shape: str) -> str:
     return f"{head} {shape.split(':', 1)[1].split('+', 1)[0]} {filler}"
 
 
-def attribute_question(predication: Predication) -> str | None:
-    """Otázka na význam přívlastku jména *(W‑39, W‑84)*.
+def attribute_question(
+    predication: Predication, reading: Reading | None = None
+) -> str | None:
+    """Otázka na význam přívlastku jména *(W‑39, W‑84, W‑93)*.
 
     Ptá se na JMÉNO ROLE, protože právě jím se ty významy liší.
 
@@ -3576,6 +3578,19 @@ def attribute_question(predication: Predication) -> str | None:
     a „péče majitele" mají týž tvar a opačný směr. Přívlastek SE
     SIGNÁLEM má vlastní tvar (`nmod:na+Acc`) a ten se odpovědí naučí —
     předložka směr fixuje.
+
+    **A PRÁZDNÝ TVAR UŽ NEZNAMENÁ GENITIV** *(W‑93)*. Do W‑92 mohl být
+    prázdný jen holý genitiv pod jménem, takže si ta větev mohla dovolit
+    mluvit o genitivu; od W‑92 vede dovnitř druhá cesta — holý pád pod
+    příčestím, typicky instrumentál původce („studie provedená
+    **institutem**"). Text se ale nezměnil, takže systém říkal
+    instrumentálu genitiv a odůvodňoval to argumentem, který na něj
+    neplatí. **Tvrzení o vlastním vstupu, které není pravda, je vlastní
+    třída vady** — a ta třída byla do dneška prázdná.
+
+    Pád se proto čte Z ROZBORU. Bez rozboru se otázka nálepky vzdá
+    a mluví jen o tom, co vidí; hádat pád z lemmatu by byla táž vada
+    o patro níž.
     """
     if not predication.pending_attribute:
         return None
@@ -3583,15 +3598,37 @@ def attribute_question(predication: Predication) -> str | None:
         f"„{attribute_label(head_surface(predication, hlava), doplnek, tvar)}“"
         for hlava, doplnek, _, tvar in predication.pending_attribute
     ]
-    # HOLÝ GENITIV SE NEMĚNÍ ANI VE SLOVĚ. Je to protipříklad k W‑84:
-    # kde tvar směr nefixuje, ptá se systém u každé věty znovu a říká to
-    # týmiž slovy jako dřív.
-    if any(not tvar for *_, tvar in predication.pending_attribute):
+    bez_tvaru = [
+        token_index
+        for _, _, token_index, tvar in predication.pending_attribute
+        if not tvar
+    ]
+    if bez_tvaru:
+        tokeny = (
+            [_token_at(index, reading) for index in bez_tvaru]
+            if reading is not None
+            else []
+        )
+        pady = sorted(
+            {token.feat("Case") or "?" for token in tokeny if token is not None}
+        )
+        if pady == ["Gen"]:
+            return (
+                "Co ten přívlastek v genitivu tvrdí — " + ", ".join(parts)
+                + "? Zapíšu to jako vztah vedle věty; řekni, jakou roli "
+                "v něm ten genitiv hraje (co, kdo, whole, …). Ptám se "
+                "u každé věty znovu: „chov zvířat“ a „péče majitele“ mají "
+                "týž tvar a opačný směr."
+            )
+        popis = (
+            f" (pád {', '.join(pady)})" if pady and pady != ["?"] else ""
+        )
         return (
-            "Co ten přívlastek v genitivu tvrdí — " + ", ".join(parts) + "? "
-            "Zapíšu to jako vztah vedle věty; řekni, jakou roli v něm ten "
-            "genitiv hraje (co, kdo, whole, …). Ptám se u každé věty znovu: "
-            "„chov zvířat“ a „péče majitele“ mají týž tvar a opačný směr."
+            "Co ten přívlastek v holém pádu" + popis + " tvrdí — "
+            + ", ".join(parts) + "? Zapíšu to jako vztah vedle věty; "
+            "řekni, jakou roli v něm ten doplněk hraje (co, kdo, whole, …). "
+            "Ptám se u každé věty znovu: bez předložky ten tvar směr "
+            "neurčuje, takže se z jedné věty druhá naučit nedá."
         )
     return (
         "Co ten přívlastek tvrdí — " + ", ".join(parts) + "? "

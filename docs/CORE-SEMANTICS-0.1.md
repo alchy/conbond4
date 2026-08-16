@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.81 · 16. 8. 2026
+**Verze jádra:** 0.1.82 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,59 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**SYSTÉM ŘÍKAL INSTRUMENTÁLU „GENITIV"** *(W‑93, kolo #153)*.
+Otázka na přívlastek se rozhodovala podle PRÁZDNÉHO TVARU, a do W‑92
+mohl být prázdný jen holý genitiv pod jménem. W‑92 otevřela druhou cestu
+dovnitř — holý pád pod příčestím — a text se nezměnil, takže se
+instrumentálu původce („studie provedená **institutem**") říkalo genitiv
+a odůvodnilo se to argumentem o „chovu zvířat", který na něj neplatí.
+**Není to nepřesnost: je to tvrzení o vlastním vstupu, které neplatí, a
+ta třída byla do dneška prázdná.** Pád se teď čte z rozboru; bez rozboru
+se otázka nálepky vzdá. Holý genitiv si svou větu ponechá.
+
+---
+
+**ÚČINEK SE MĚŘÍ TOUŽ POPULACÍ NA OBOU REVIZÍCH** *(oprava S‑53)*.
+
+V #152 stálo „vyřešilo 4 z 28". To číslo je špatně, a je to vada MĚŘENÍ,
+ne kódu: 28 bylo změřeno PŘED změnou na populaci „děti pod pohlceným
+`amod`" a 24 PO změně na populaci „děti pod pohlceným členem". Rozdíl
+dvou různých populací není účinek ničeho.
+
+Přeměřeno identickou sondou na obou revizích (`git archive f8eebb5`):
+
+| | před | po |
+|---|---|---|
+| ztrát pod pohlceným členem | 37 | **24** (−13) |
+| z toho hlava = příčestí | 15 | **2** |
+| z toho dítě = `obl`/`obl:arg` | 15 | **2** |
+| z toho dítě = `conj` | 16 | 16 |
+| přívlastků (položek) | 197 | **211** |
+| zapsaných | 12 | **13** |
+
+**Celý pokles leží v té rodině, na kterou změna mířila** — to je na tom
+to podstatné a v původní doložce to nebylo.
+
+---
+
+**KONJUNKT POD POHLCENÝM ČLENEM JE JEDNA JMENOVKA A DVĚ OPAČNÁ
+ROZHODNUTÍ** *(měření #153, před stavbou)*.
+
+Zbylých 16 ztrát se dělí na dvě rodiny po osmi:
+
+  · **rozsah letopočtů** — „v letech **1910 – 1911**". To je JEDEN
+    časový úsek, ne dva roky; zapsat ho jako dvě zmínky by byla nepravda
+    a patří to k datu (W‑74), tedy „dohromady".
+  · **souřadný přívlastek** — „**fyzické a emocionální** potřeby". To
+    jsou dvě vlastnosti téhož jména, tedy „každý zvlášť", a je to táž
+    otázka jako W‑73 (víc členů v jedné roli), jen o patro níž: „Petr
+    a Jana přišli." dnes `[VÍC ČLENŮ V JEDNÉ ROLI]` dostane, „fyzické
+    a emocionální" ne.
+
+**Jedno pravidlo pro `conj` by tedy jednu z těch dvou rodin muselo číst
+naruby.** Osm a osm jsou navíc jednotky (pravidlo z #144), takže tohle
+kolo staví jen W‑93 a rozhodnutí o konjunktech nechává otevřené.
 
 **DOPLNĚNÍ POHLCENÉHO PŘÍČESTÍ JE VZTAH VEDLE VĚTY** *(W‑92, kolo #152)*.
 
