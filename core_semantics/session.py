@@ -828,6 +828,32 @@ def confirms(text: str, *, accepted: bool = True) -> Turn:
     return Turn(TurnKind.CONFIRM, text, accepted=accepted)
 
 
+class Outcome(str, Enum):
+    """CO SE S VĚTOU STALO — pět stavů, ne pět formulací *(W‑105)*.
+
+    Dva různé stavy dnes říkají totéž slovo: „→ NEVÍM [HYPOTÉZA — nikdo
+    to neřekl]" a „→ NEVÍM, jak to čtu … Tuhle větu přečíst neumím" jsou
+    různé věci. A protože to byly ŘETĚZCE v `lines`, nešly SPOČÍTAT —
+    takže metrika získané znalosti se nedala ani začít měřit.
+
+    **Systém dnes umí přečíst větu a pojmenovat, co na ní nezná; neumí
+    z textu získat znalost.** Ta pětice je právě ten rozdíl rozepsaný do
+    stavů, které jdou sečíst.
+    """
+
+    #: Věta se ZAPSALA do báze — jediný stav, po kterém systém něco VÍ.
+    WRITTEN = "ZAPSÁNO"
+    #: Věta se přečetla celá, ale zápis zastavil pojmenovaný zákaz
+    #: (ztráta, restrikce, `∀` z osiva, role s tvarem místo jména).
+    PARTIAL = "ČÁSTEČNĚ ROZUMÍM"
+    #: Rozbor se přečíst nedal — žádná predikace.
+    UNREADABLE = "NEČTU"
+    #: Tah byl odmítnut, protože se nemá o co opřít (`error`).
+    REFUSED = "ODMÍTÁM"
+    #: Dotaz bez verdiktu: v bázi na to není dost.
+    UNKNOWN = "NEVÍM"
+
+
 @dataclass(frozen=True, slots=True)
 class PendingReference:
     """Odkaz, na který se čeká, i s tím, co systém nabídl *(W‑88)*.
@@ -864,6 +890,24 @@ class TurnResult:
     #: NABÍDKA PRAVIDLA (most), ne kandidátů odkazu — tohle jméno je
     #: starší a svádí k záměně; kdo hledá kandidáty, hledá `references`.
     offered: Rule | None = None
+    #: CO SE S TÍM TAHEM STALO *(W‑105)*. Počítá se z toho, co už
+    #: v `TurnResult` je — je to POJMENOVÁNÍ stavu, ne nové chování.
+    @property
+    def outcome(self) -> "Outcome":
+        if self.error is not None:
+            return Outcome.REFUSED
+        if self.statement_id is not None or self.statements:
+            return Outcome.WRITTEN
+        # NEČTU MÁ PŘEDNOST PŘED NEVÍM, a je to celý smysl té pětice:
+        # věta bez čtení dnes dostane `status=UNKNOWN` z téže cesty jako
+        # dotaz, na který v bázi není dost — dvě různé věci pod jedním
+        # slovem. „Nevím" je verdikt o BÁZI, „nečtu" o VĚTĚ.
+        if self.predication is None:
+            return Outcome.UNREADABLE
+        if self.status is QueryStatus.UNKNOWN:
+            return Outcome.UNKNOWN
+        return Outcome.PARTIAL
+
     #: ČEKAJÍCÍ ODKAZY I S KANDIDÁTY *(W‑88)*, z OBOU predikací tahu.
     #: Bez tohohle pole se k nabídce zvenčí dostane jen ten, kdo ví, že
     #: má sáhnout na `predication.second.roles[i].offered` — a měření,

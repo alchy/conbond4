@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.95 · 16. 8. 2026
+**Verze jádra:** 0.1.96 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -102,6 +102,28 @@ z dialogu česky v uvozovkách, komentáře česky (rozhodnutí J.).
    Přirozeně‑jazyková spojka v otázce jde vždy do epistemické vrstvy.
 
 ---
+
+## 0 · CO TENHLE SYSTÉM UMÍ A CO NEUMÍ
+
+**Umí přečíst českou větu a pojmenovat, co na ní nezná. Neumí z textu
+získat znalost.** Měřeno na korpusu 238 vět (`golden_lexicon`):
+
+| stav | vět |
+|---|---|
+| ČÁSTEČNĚ ROZUMÍM — čtení hotové, zápis zastavil pojmenovaný zákaz | **212** |
+| ZAPSÁNO — systém to opravdu VÍ | **8** |
+| NEČTU — rozbor se přečíst nedal | 16 |
+| chyba segmentace (dvě věty v jednom textu) | 2 |
+
+Mezi „rozumím stavbě" a „vím" tedy leží **212 vět**. To není vada
+jednoho pravidla; je to rozdíl mezi analyzátorem neznalosti a systémem,
+který se z textu učí — a je zapsaný tady, aby ho žádné dílčí číslo
+nepřekrylo.
+
+**Se `czech_seed`** (bez naučených tvarů) je to 3 zapsané, 217 částečně
+a 16 nečitelných: většina zápisů stojí na tom, že někdo na otázku po
+kvantifikátoru už jednou odpověděl.
+
 
 ## 1 · Sorty a typování
 
@@ -1064,6 +1086,40 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**PĚT STAVŮ MÍSTO PĚTI FORMULACÍ** *(W‑105, kolo #167)*.
+`TurnResult.outcome` je typ, ne řetězec v `lines`. Dva různé stavy
+říkaly totéž slovo („nevím" o bázi × „nečtu" o větě) a nešly spočítat —
+takže metrika získané znalosti se nedala ani začít měřit. **NEČTU má
+přednost před NEVÍM**, protože věta bez čtení dostane `status=UNKNOWN`
+z téže cesty jako dotaz bez důkazu. Stav se počítá z toho, co už
+v `TurnResult` je: je to pojmenování, ne nové chování, a zkouška toho
+kroku je, že se korpus nezměnil.
+
+---
+
+**W‑106 PŘEMĚŘENA: DŮVOD B‑19 NEPLATÍ, ALE JEHO ZRUŠENÍ DNES NEPŘINESE
+ANI JEDEN ZÁPIS** *(měření #167, nestavěno)*.
+
+Reviewer měl pravdu v tom hlavním: mechanismus, o kterém B‑19 tvrdí, že
+neexistuje, existuje a funguje. „Petr bydlí v Praze." → `✓ zapsáno
+[s0001] bydlet(kdo:·Petr, v+Loc/Geo:·Praha)`; po odpovědi `→@` → `✓
+zapsáno [s0004] bydlet(kde:Praha, kdo:·Petr)` a **s0001 je odvolaný**
+s důvodem „doplněno". Dva výroky o téže větě v bázi neleží.
+
+**Ale odstranit ten zákaz dnes nepřinese nic.** Změřeno vypnutím
+podmínky, táž populace, oba lexikony:
+
+| | s B‑19 | bez B‑19 |
+|---|---|---|
+| zapsaných (`golden_lexicon`) | 8 | **8** |
+| zapsaných (`czech_seed`) | 3 | **3** |
+
+Vět, které mají roli pojmenovanou tvarem a nezapsaly se, je 139 — jenže
+**všechny mají i jiný blokátor** (ztráta, restrikce z B‑31, `∀` z osiva
+z W‑103). B‑19 je tedy dnes zákaz, který nic nezakazuje, a jeho zrušení
+by se muselo měřit až po odstranění těch ostatních. Pět zkoušek na něm
+stojí; nesahá se na ně.
 
 **ZÁKAZ SE TÝKÁ TVRZENÍ, NE DOTAZU** *(B‑32, kolo #166)*.
 

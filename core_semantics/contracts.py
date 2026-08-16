@@ -1940,6 +1940,40 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-60",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "TAH MA TYPOVANY VYSLEDEK, NE PET FORMULACI *(W-105)*. "
+            "`TurnResult.outcome` je jeden z peti stavu: ZAPSANO, "
+            "CASTECNE ROZUMIM, NECTU, ODMITAM, NEVIM. Do W-105 rikaly "
+            "dva RUZNE stavy TOTEZ SLOVO — „→ NEVIM [HYPOTEZA — nikdo to "
+            "nerekl]“ a „→ NEVIM, jak to ctu … Tuhle vetu precist "
+            "neumim“ — a protoze to byly RETEZCE v `lines`, NESLY "
+            "SPOCITAT; metrika ziskane znalosti se proto nedala ani "
+            "zacit merit. "
+            "NECTU MA PREDNOST PRED NEVIM, a je to cely smysl te petice: "
+            "veta bez cteni dostane `status=UNKNOWN` z teze cesty jako "
+            "dotaz, na ktery v bazi neni dost. „Nevim“ je verdikt "
+            "o BAZI, „nectu“ o VETE. "
+            "STAV SE POCITA Z TOHO, CO UZ V `TurnResult` JE — je to "
+            "POJMENOVANI, ne nove chovani; zkouska toho kroku je, ze se "
+            "korpus nezmenil. "
+            ". ROZSAH MERENI: korpus 238 vet. S `golden_lexicon` "
+            "CASTECNE ROZUMIM 212, ZAPSANO 8, NECTU 16, chyba segmentace "
+            "2; s `czech_seed` 217 / 3 / 16 / 2. Mezi „rozumim stavbe“ "
+            "a „vim“ tedy lezi 212 vet a je to zapsane v § 0. "
+        ),
+        anchor="core_semantics.session:Outcome",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_written_sentence_says_written",
+            "test_a_read_but_unwritten_sentence_says_partial",
+            "test_an_unreadable_sentence_does_not_say_unknown",
+            "test_a_refused_turn_says_refused",
+            "test_a_query_without_evidence_says_unknown",
+        ),
+    ),
+    Clause(
         id="S-59",
         boundary=CASCADE_SESSION,
         promise=(
