@@ -31,7 +31,7 @@ from core_semantics.lexicon import (
     czech_seed,
 )
 from core_semantics.oracle import Reading, Token, Utterance
-from core_semantics.session import Session
+from core_semantics.session import Session, answers_here
 
 STAMP = "test"
 
@@ -125,7 +125,14 @@ def test_under_forall_the_sentence_is_not_written(  # noqa: D401
     session, oracle = _session(podmet=Operation.FOR_ALL)
     result = session.utter(TEXT, oracle)
     assert result.statement_id is None
-    assert any("ZUŽUJE DOMÉNU" in line for line in result.lines)
+    # DVA ZÁKAZY NAJEDNOU *(B‑31 a W‑103)*: restrikce i `∀` z osiva.
+    # Test měří ten první, takže se `∀` nejdřív potvrdí — a věta se
+    # PŘESTO nezapíše, protože přívlastek zužuje doménu.
+    potvrzeno = session.play(
+        answers_here("O každém.", result.predication, "kdo", Operation.FOR_ALL)
+    ) if result.predication is not None else result
+    assert potvrzeno.statement_id is None
+    assert any("ZUŽUJE DOMÉNU" in line for line in potvrzeno.lines)
     assert list(session.kb.active()) == [], "do báze nejde nic"
 
 
@@ -221,3 +228,58 @@ def test_an_answer_marks_the_role_as_affirmed() -> None:
     assert po.predication is not None
     kdo = po.predication.reading("kdo")
     assert kdo is not None and kdo.quantifier_authority == AUTHORITY_AFFIRMED
+
+
+def test_a_seed_forall_does_not_reach_the_base() -> None:
+    """`∀` Z OSIVA SE NEZAPISUJE *(W‑103)*.
+
+    „Vesmír se rozšířil do dnešní podoby." dostalo `∀vesmír` jen proto,
+    že se trefil tvar — a po `subset(paralelní_vesmír, vesmír)` z toho
+    plyne tvrzení, které v té větě není. Čtení se nemění a systém se
+    PTÁ; bez té otázky by zákaz byl díra místo otázky."""
+    session, oracle = _session(podmet=Operation.FOR_ALL)
+    result = session.utter(TEXT, oracle)
+    assert result.predication is not None
+    assert result.statement_id is None
+    assert result.question is not None and "KAŽDÉM" in result.question
+    assert "∀chov" in str(result.predication), "čtení `∀` má dál"
+
+
+def test_an_affirmation_opens_the_write() -> None:
+    """`→∀1` zápis ODEMYKÁ — jinak by to byla díra místo otázky."""
+    session, oracle = _session(podmet=Operation.FOR_ALL)
+    result = session.utter(TEXT, oracle)
+    assert result.predication is not None
+    po = session.play(
+        answers_here("O každém.", result.predication, "kdo", Operation.FOR_ALL)
+    )
+    # Věta má i restriktivní přívlastek (B‑31), takže se pořád nezapíše —
+    # ale důvod se změnil a je vidět, že licence `∀` už platí.
+    assert not any("je z OSIVA" in line for line in po.lines)
+
+
+def test_a_determiner_licenses_the_write() -> None:
+    """DETERMINÁTOR JE VYSLOVENÝ, NE UHODNUTÝ *(W‑103)*. „KAŽDÝ chov…"
+    říká `∀` slovem, takže licence nestojí na tvaru."""
+    from core_semantics.cascade import AUTHORITY_DETERMINER
+
+    s_determinatorem = Reading(
+        tokens=(
+            tok(1, "Každý", "každý", "DET", 2, "det",
+                Case="Nom", Gender="Masc", Number="Sing", PronType="Tot"),
+            tok(2, "chov", "chov", "NOUN", 3, "nsubj",
+                Case="Nom", Gender="Masc", Number="Sing"),
+            tok(3, "vyvolává", "vyvolávat", "VERB", 0, "root",
+                Number="Sing", Polarity="Pos"),
+            tok(4, "obavy", "obava", "NOUN", 3, "obj",
+                Case="Acc", Gender="Fem", Number="Plur"),
+            tok(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    session, _ = _session(podmet=Operation.FOR_ALL)
+    result = session.utter(TEXT, _Oracle(s_determinatorem))
+    assert result.predication is not None
+    kdo = result.predication.reading("kdo")
+    assert kdo is not None and kdo.quantifier_authority == AUTHORITY_DETERMINER
+    assert result.statement_id is not None, "vyslovené `∀` zápis licencuje"

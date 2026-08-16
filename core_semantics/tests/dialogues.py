@@ -228,7 +228,6 @@ PETROVICE = Dialogue(
             ),
             reads="bydlet(kde:Petrovice, kdo:∀roník)",
             anchors=("Petrovicích → Petrovice (sort z role; místo)",),
-            writes="bydlet(kde:Petrovice, kdo:∀roník)",
             point=(
                 "MÍSTNÍ URČENÍ SE ZAKOTVÍ, jakmile je rozhodnuté, co `v`+Loc "
                 "znamená. Sort filleru plyne z ROLE (§ 3.6), ne ze slova — "
@@ -240,6 +239,19 @@ PETROVICE = Dialogue(
                 "vlastní jméno, které není v žádném rejstříku, je znalost "
                 "světa, ne morfologie. Doména na tom nestojí — mluví se "
                 "o TÉMŽ uzlu v obou větách, ať se jmenuje jakkoli"
+            ),
+        ),
+        Step(
+            text="Platí to o každém.",
+            answers_here=("kdo", Operation.FOR_ALL),
+            reads="bydlet(kde:Petrovice, kdo:∀roník)",
+            writes="bydlet(kde:Petrovice, kdo:∀roník)",
+            point=(
+                "`∀` Z OSIVA ZÁPIS NELICENCUJE *(W‑103)*. Čtení se "
+                "nezměnilo — ta věta se pořád čte s `∀` — ale osivo je "
+                "odpověď, kterou nikdo nedal, a `∀` je jediný "
+                "kvantifikátor, jehož chyba tvrzení ZESILUJE. Dialog je "
+                "proto o tah delší a o ten tah pravdivější."
             ),
         ),
         Step(
@@ -338,7 +350,6 @@ ICE_CREAM = Dialogue(
                 w(".", ".", "PUNCT", 2, "punct"),
             ),
             reads="mít(co:∃zmrzlina, jak:·rád, kdo:∀dítě)",
-            writes="mít(co:∃zmrzlina, jak:·rád, kdo:∀dítě)",
             point=(
                 "VĚTA, KTERÁ SE DLOUHO NEPŘEČETLA VŮBEC. Parser označí "
                 "„rády“ jako `iobj`; kaskáda to slévala s `obj` na roli "
@@ -355,6 +366,19 @@ ICE_CREAM = Dialogue(
                 "dostane povrchové jméno, zeptá se, co znamená, a člověk "
                 "odpoví `jak`. Chybu parseru neopravíme, jen ji "
                 "nepřevezmeme jako významové rozhodnutí"
+            ),
+        ),
+        Step(
+            text="Platí to o každém.",
+            answers_here=("kdo", Operation.FOR_ALL),
+            reads="mít(co:∃zmrzlina, jak:·rád, kdo:∀dítě)",
+            writes="mít(co:∃zmrzlina, jak:·rád, kdo:∀dítě)",
+            point=(
+                "`∀` Z OSIVA ZÁPIS NELICENCUJE *(W‑103)*. Čtení se "
+                "nezměnilo — ta věta se pořád čte s `∀` — ale osivo je "
+                "odpověď, kterou nikdo nedal, a `∀` je jediný "
+                "kvantifikátor, jehož chyba tvrzení ZESILUJE. Dialog je "
+                "proto o tah delší a o ten tah pravdivější."
             ),
         ),
         Step(
@@ -400,9 +424,21 @@ TRANSPORT = Dialogue(
                 "Auta → auto (obecné jméno)",
                 "dálnici → dálnice (sort z role; místo)",
             ),
-            writes="jezdit(kdo:∀auto, kudy:dálnice)",
             point="`po`+Loc → `kudy` je naučené mapování; sort určí ROLE, "
             "ne slovo, a místo se nekvantifikuje",
+        ),
+        Step(
+            text="Platí to o každém.",
+            answers_here=("kdo", Operation.FOR_ALL),
+            reads="jezdit(kdo:∀auto, kudy:dálnice)",
+            writes="jezdit(kdo:∀auto, kudy:dálnice)",
+            point=(
+                "`∀` Z OSIVA ZÁPIS NELICENCUJE *(W‑103)*. Čtení se "
+                "nezměnilo — ta věta se pořád čte s `∀` — ale osivo je "
+                "odpověď, kterou nikdo nedal, a `∀` je jediný "
+                "kvantifikátor, jehož chyba tvrzení ZESILUJE. Dialog je "
+                "proto o tah delší a o ten tah pravdivější."
+            ),
         ),
         Step(
             text="Jezdí auta po dálnici?",
@@ -638,6 +674,17 @@ VEGETARIAN = Dialogue(
                 "co dělá práci pravidla, je DISTRIBUCE KVANTIFIKOVANÝCH "
                 "ROLÍ (§ 5.2). Pravidlo z věty tedy NENÍ další patro, aspoň "
                 "ne kvůli tomuhle odstavci"
+            ),
+        ),
+        Step(
+            text="Platí to o každém vegetariánovi.",
+            answers_here=("kdo", Operation.FOR_ALL),
+            reads="¬jíst(co:maso, kdo:∀vegetarián)",
+            point=(
+                "`∀` Z OSIVA ZÁPIS NELICENCUJE *(W‑103)*, a tahle věta "
+                "potřebuje potvrdit OBĚ role: podmět generickým `∀` "
+                "a předmět tahem `→∀1` o krok dál. Čtení se ani jednou "
+                "nemění — mění se, na čí zodpovědnost se to zapíše."
             ),
         ),
         Step(
@@ -2378,7 +2425,6 @@ PASSIVE = Dialogue(
                 w(".", ".", "PUNCT", 3, "punct"),
             ),
             reads="popsaný(co:∀úmysl)",
-            writes="popsaný(co:∀úmysl)",
             point=(
                 "PODMĚT, KTERÝ NIC NEDĚLÁ. „Úmysly“ nic nepopisují — jsou "
                 "to ty POPISOVANÉ, tedy `co`. Neplyne to z naučeného "
@@ -2386,6 +2432,18 @@ PASSIVE = Dialogue(
                 "ptát se „co znamená role nsubj:pass“ znamenalo ptát se "
                 "na něco, co rozbor právě řekl, a byla to TŘETÍ "
                 "NEJČASTĚJŠÍ otázka korpusu"
+            ),
+        ),
+        Step(
+            text="Platí to o každém.",
+            answers_here=("co", Operation.FOR_ALL),
+            reads="popsaný(co:∀úmysl)",
+            writes="popsaný(co:∀úmysl)",
+            point=(
+                "`∀` Z OSIVA ZÁPIS NELICENCUJE *(W‑103)*. Čtení se "
+                "nezměnilo, ale osivo je odpověď, kterou nikdo nedal — "
+                "a `∀` je jediný kvantifikátor, jehož chyba tvrzení "
+                "ZESILUJE. Dialog je o tah delší a o ten tah pravdivější."
             ),
         ),
         Step(

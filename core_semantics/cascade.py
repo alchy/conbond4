@@ -2242,6 +2242,9 @@ AWAITING_REFERENCE = "odkaz"
 AUTHORITY_SEED = "osivo"
 AUTHORITY_SHAPE = "naučený tvar"
 AUTHORITY_AFFIRMED = "afirmace"
+#: Kvantifikátor VYSLOVENÝ V TEXTU — „KAŽDÝ pes štěká." *(W‑103)*.
+#: Není to domněnka z tvaru: to slovo v té větě stojí.
+AUTHORITY_DETERMINER = "determinátor"
 #: Role, která na sebe má JÁDROVÉ JMÉNO, ale zatím ho nemá *(B‑19)*.
 #: Dokud ho nedostane, věta se NEZAPISUJE: jinak by ji odpověď zapsala
 #: podruhé a v bázi by ležely dva výroky o téže větě.
@@ -3318,7 +3321,12 @@ def _quantify(
             # z podoby signatury: tvar je u osiva i u naučeného tentýž
             # a rozlišit je podle něj nejde.
             quantifier_authority=(
-                AUTHORITY_SHAPE
+                # DETERMINÁTOR JE VYSLOVENÝ, NE UHODNUTÝ *(W‑103)*.
+                # „Každý pes štěká." říká `∀` slovem, takže licence
+                # zápisu nestojí na tvaru — stojí na tom, co ve větě je.
+                AUTHORITY_DETERMINER
+                if determiner is not None
+                else AUTHORITY_SHAPE
                 if matches[0].learned_from.startswith("tah ")
                 else AUTHORITY_SEED
             ),
@@ -3794,6 +3802,29 @@ def attribute_label(
         return f"{head} {filler}"
     z_tvaru = shape.split(":", 1)[1].split("+", 1)[0]
     return f"{head} {preposition or z_tvaru} {filler}"
+
+
+def seed_forall_question(predication: Predication) -> str | None:
+    """Otázka po POTVRZENÍ `∀`, které přišlo z osiva *(W‑103)*.
+
+    Čtení `∀` má — „Psi štěkají." se čte jako `∀pes` — ale zápis stojí
+    na tom, že to někdo pro tu věc řekl. Bez téhle otázky by zákaz byl
+    díra místo otázky.
+    """
+    role = [
+        r
+        for r in predication.roles
+        if r.quantifier is Quantifier.FOR_ALL
+        and r.quantifier_authority == AUTHORITY_SEED
+    ]
+    if not role:
+        return None
+    kdo = ", ".join(f"„{r.mention.form}“ ({r.name})" for r in role)
+    return (
+        f"Platí to o KAŽDÉM — {kdo}? Přečetl jsem to tak podle tvaru, "
+        "ale tvar to nerozhoduje: „Pes štěká.“ je o každém psu, „Pes "
+        "utekl.“ o jednom. Dokud to nepotvrdíš, nezapíšu to."
+    )
 
 
 def restrictive_attributes(predication: Predication) -> tuple[str, ...]:

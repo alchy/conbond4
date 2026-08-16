@@ -56,6 +56,8 @@ from .ast import (
 )
 from .cascade import (
     AUTHORITY_AFFIRMED,
+    AUTHORITY_DETERMINER,
+    AUTHORITY_SEED,
     AWAITING_REFERENCE,
     dropped_tokens,
     lost_shape,
@@ -63,6 +65,7 @@ from .cascade import (
     argument_clause_tier,
     relative_question,
     restrictive_attributes,
+    seed_forall_question,
     relative_tier,
     AWAITING_ROLE_NAME,
     HARD_TIERS,
@@ -923,6 +926,16 @@ class Session:
         #: pro záznam o textu správné místo; z báze vede k té větě
         #: `Statement.utterance` (B‑26).
         self._surfaces: dict[str, tuple[str, str]] = {}
+        #: LEMMATA, U KTERÝCH ČLOVĚK POTVRDIL `∀` *(W‑103)*.
+        #:
+        #: Licence zápisu stojí na AFIRMACI, ne na tvaru — a váže se na
+        #: LEMMA, ne na větu. Je to **přiznaná aproximace**: „Pes štěká."
+        #: je generické a „Pes utekl." mluví o jednom psovi, takže ani
+        #: lemma to nerozhodne. Bez ní by ale odpověď neplatila ani pro
+        #: TÉŽ větu vyslovenou podruhé — afirmace dnes nepřežije vlastní
+        #: větu, protože při novém vyslovení se `∀` vrátí z naučeného
+        #: tvaru.
+        self._affirmed_forall: set[str] = set()
         #: `LEX` je program vedle `ONTO` a `DIA`, takže patří do sezení,
         #: ne do volání. Jinak by dvě věty téhož dialogu mohly být čteny
         #: podle jiných naučených vzorů a „diff naučeného" (§ 10) by nešel
@@ -1647,6 +1660,11 @@ class Session:
                 # je to otázka o DRUHÉ predikaci, takže nesmí zdržovat
                 # nic, co rozhoduje o té první.
                 relative_question(predication),
+                # POTVRĎ `∀` Z OSIVA *(W‑103)*. Bez téhle otázky by zákaz
+                # byl díra místo otázky: systém by nezapsal a neřekl by,
+                # co s tím — a `question` by zůstala prázdná, takže by
+                # ani nikdo nepoznal, že se čeká.
+                seed_forall_question(predication),
                 grounded.question,
             )
             if part
@@ -1718,6 +1736,35 @@ class Session:
         # `∃` a konkrétní uzel se NEMĚNÍ: tam vynechání tvrzení OSLABUJE
         # a slabší tvrzení není nepravda.
         pending_restriction = restrictive_attributes(predication)
+        # `∀` Z OSIVA SE NEZAPISUJE *(W‑103)*. Osivo je odpověď, kterou
+        # NIKDO NEDAL: „Vesmír se rozšířil do dnešní podoby." dostalo
+        # `∀vesmír` jen proto, že se trefil tvar `NOUN/Sing/Nom/nsubj`,
+        # a po `subset(paralelní_vesmír, vesmír)` z toho plyne tvrzení,
+        # které v té větě není. „Pes štěká." má TÝŽ TVAR a `∀` je tam
+        # pravda — generické × určité je vlastnost VĚTY, ne tvaru.
+        #
+        # ZÁKAZ JE JEN NA `∀`, a to je celé jeho odůvodnění: `∀` je
+        # jediný kvantifikátor, jehož chyba tvrzení ZESILUJE. Špatné `∃`
+        # tvrzení OSLABUJE a slabší tvrzení není nepravda (týž důvod jako
+        # W‑79); konkrétní uzel (`·`) neplyne z domněnky, protože vlastní
+        # jméno stojí v rozboru jako `PROPN`. Kdo si to přečte jako
+        # „kvantifikátor ze seedu se nezapisuje", zablokuje i to, co
+        # blokovat nemá.
+        #
+        # LICENCÍ JE AFIRMACE, a váže se na LEMMA — **přiznaná
+        # aproximace**: „Pes štěká." × „Pes utekl." ukazuje, že ani lemma
+        # to nerozhodne. Precedens politiky je vlastní: `v+Loc` v osivu
+        # SCHVÁLNĚ NENÍ, aby se systém zeptal (§ 12/1).
+        seed_forall = tuple(
+            sorted(
+                role.name
+                for role in predication.roles
+                if role.quantifier is Quantifier.FOR_ALL
+                and role.quantifier_authority
+                not in (AUTHORITY_AFFIRMED, AUTHORITY_DETERMINER)
+                and role.mention.lemma not in self._affirmed_forall
+            )
+        )
         # TÝŽ DŮVOD U ROLE, KTERÁ ČEKÁ NA JÁDROVÉ JMÉNO *(B‑19)*. Věta
         # s povrchovou rolí z vedlejší věty by se zapsala teď a po
         # odpovědi `→@` ZNOVU — v bázi by ležely dva výroky o téže větě
@@ -1750,7 +1797,8 @@ class Session:
         if (
             pending_role_name
             and not (stale_ztraceno or pending_relation or pending_complete
-                     or pending_share or pending_name or pending_restriction)
+                     or pending_share or pending_name or pending_restriction
+                     or seed_forall)
             and turn.reading is not None
         ):
             castecna, castecny_duvod = partial_write(
@@ -1759,6 +1807,7 @@ class Session:
         elif pending_role_name and self._standing_reading is not None and not (
             stale_ztraceno or pending_relation or pending_complete
             or pending_share or pending_name or pending_restriction
+            or seed_forall
         ):
             castecna, castecny_duvod = partial_write(
                 self._standing_reading, predication, self.lexicon
@@ -1794,6 +1843,7 @@ class Session:
             or pending_share
             or pending_name
             or pending_restriction
+            or seed_forall
             or (pending_role_name and castecna is None)
             else self._route(
                 index, turn, castecna or predication, zapisovane
@@ -1802,6 +1852,15 @@ class Session:
         if routed is None:
             if grounded.formula is None and not question:
                 lines.append("  (zakotvení neproběhlo — do báze nejde nic)")
+            elif seed_forall and predication.mood is Mood.ASSERTION:
+                lines.append(
+                    "  [NEZAPSÁNO: `∀` u role "
+                    + ", ".join(f"„{jmeno}“" for jmeno in seed_forall)
+                    + " je z OSIVA, tedy odpověď, kterou nikdo nedal. "
+                    "„Pes štěká.“ a „Vesmír se rozšířil.“ mají týž tvar "
+                    "a jen u prvního je `∀` pravda; odpověz na "
+                    "kvantifikátor a zapíšu to (W‑103)]"
+                )
             elif pending_restriction and predication.mood is Mood.ASSERTION:
                 lines.append(
                     "  [NEZAPSÁNO: přívlastek u role "
@@ -2341,7 +2400,16 @@ class Session:
         """
         assert turn.predication is not None and turn.operation is not None
         target = turn.predication.reading(turn.role_name)
-        if target is None or target.pending is None:
+        # ROLE, KTERÁ MÁ `∀` Z OSIVA, NA POTVRZENÍ ČEKÁ *(W‑103)* —
+        # kvantifikátor sice nese, ale zápis nelicencuje, protože osivo
+        # je odpověď, kterou nikdo nedal. Bez téhle větve by zákaz byl
+        # díra místo otázky: systém by nezapsal a nešlo by mu odpovědět.
+        ceka_na_potvrzeni = (
+            target is not None
+            and target.quantifier is Quantifier.FOR_ALL
+            and target.quantifier_authority == AUTHORITY_SEED
+        )
+        if target is None or (target.pending is None and not ceka_na_potvrzeni):
             return TurnResult(
                 index=index,
                 turn=turn,
@@ -2352,6 +2420,8 @@ class Session:
                 error="role nečeká na kvantifikátor",
             )
         quantifier = QUANTIFIER_OF.get(turn.operation)
+        if quantifier is Quantifier.FOR_ALL and target is not None:
+            self._affirmed_forall.add(target.mention.lemma)
         resolved = replace(
             turn.predication,
             roles=tuple(
@@ -2361,6 +2431,7 @@ class Session:
                     pending=None,
                     awaiting="",
                     source=f"rozhodnuto pro tuhle větu (tah {index})",
+                    quantifier_authority=AUTHORITY_AFFIRMED,
                 )
                 if role.name == turn.role_name
                 else role
@@ -2409,6 +2480,12 @@ class Session:
             for role in turn.predication.roles
             if role.pending is not None and role.pending == turn.shape
         )
+        if quantifier is Quantifier.FOR_ALL:
+            self._affirmed_forall.update(
+                role.mention.lemma
+                for role in turn.predication.roles
+                if role.pending is not None and role.pending == turn.shape
+            )
         resolved = _apply_quantifier(turn.predication, turn.shape, quantifier)
         prefix = [
             f"✓ naučeno  {confirmed or pattern}",

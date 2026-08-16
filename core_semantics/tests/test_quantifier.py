@@ -479,12 +479,30 @@ def test_the_shape_level_answer_still_teaches() -> None:
 
 
 def test_answering_a_role_that_does_not_wait_is_refused() -> None:
-    """Tah, který nemá co zavřít, se nesmí tvářit, že něco udělal."""
+    """Tah, který nemá co zavřít, se nesmí tvářit, že něco udělal.
+
+    **Doklad se po W‑103 změnil, tvrzení ne.** Role s `∀` z OSIVA na
+    potvrzení ČEKÁ — kvantifikátor sice nese, ale zápis nelicencuje —
+    takže „nečekající role" je dnes ta, kterou už někdo POTVRDIL. Kdyby
+    se sem dál posílala role z osiva, měřil by tenhle test opak toho, co
+    tvrdí."""
+    from dataclasses import replace as _replace
+
+    from core_semantics.cascade import AUTHORITY_AFFIRMED, Predication
     from core_semantics.session import answers_here
 
     session = Session()
+    zdroj = _pending(sentence("každý"))
+    assert isinstance(zdroj, Predication)
+    hotova = _replace(
+        zdroj,
+        roles=tuple(
+            _replace(role, quantifier_authority=AUTHORITY_AFFIRMED)
+            for role in zdroj.roles
+        ),
+    )
     result = session.play(
-        answers_here("Jde o každou.", _pending(sentence("každý")), ROLE_SUBJECT, Operation.FOR_ALL)  # type: ignore[arg-type]
+        answers_here("Jde o každou.", hotova, ROLE_SUBJECT, Operation.FOR_ALL)
     )
     assert result.error is not None
     assert any("nečeká" in line for line in result.lines)

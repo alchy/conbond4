@@ -1814,7 +1814,7 @@ def test_a_passive_sentence_goes_all_the_way_into_the_base() -> None:
     doložka měla vynucení jen nad vnitřní funkcí a nikdo by neověřil, že
     se ta role dostane až do BÁZE — tam, kde na ní stojí odpověď."""
     from core_semantics.oracle import Utterance
-    from core_semantics.session import Session
+    from core_semantics.session import Session, answers_here
     from core_semantics.ast import QueryStatus
 
     veta = _passive()
@@ -1848,7 +1848,15 @@ def test_a_passive_sentence_goes_all_the_way_into_the_base() -> None:
         )
     )
     session = Session(lexicon=lexicon)
-    zapsano = session.utter("Úmysly byly popsány.", _Recorded())
+    precteno = session.utter("Úmysly byly popsány.", _Recorded())
+    # `∀` ZE SEEDU ZÁPIS NELICENCUJE *(W‑103)*, takže dialog je o tah
+    # delší: člověk potvrdí právě to, co dosud osivo HÁDALO. Zkouška se
+    # tím nezeslabuje — tvrdí se v ní totéž, jen se k tomu dojde
+    # odpovědí místo domněnky.
+    assert precteno.predication is not None
+    zapsano = session.play(
+        answers_here("O každém.", precteno.predication, "co", Operation.FOR_ALL)
+    )
     assert zapsano.statement_id is not None
     assert session.utter("Byly úmysly popsány?", _Recorded()).status is (
         QueryStatus.PROVEN_TRUE

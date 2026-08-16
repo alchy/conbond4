@@ -1956,6 +1956,23 @@ CONTRACTS: tuple[Clause, ...] = (
             "tvar je u osiva i u nauceneho tentyz. Taz lekce jako "
             "`collided` a `shaped` (B-17), jen o patro vys: stav, na "
             "kterem se stavi, tu sve misto MEL, jen v nem stala jina vec. "
+            "A LICENCE ZAPISU STOJI NA AFIRMACI, NE NA TVARU *(W-103)*. "
+            "`∀` Z OSIVA SE NEZAPISUJE: osivo je odpoved, kterou NIKDO "
+            "NEDAL, a „Pes steka.“ x „Vesmir se rozsiril do dnesni "
+            "podoby.“ maji TYZ TVAR — jen u prvniho je `∀` pravda. "
+            "ZAKAZ JE JEN NA `∀` a to je cele jeho oduvodneni: `∀` je "
+            "jediny kvantifikator, jehoz chyba tvrzeni ZESILUJE; spatne "
+            "`∃` tvrzeni OSLABUJE (slabsi tvrzeni neni nepravda, tyz "
+            "duvod jako W-79) a konkretni uzel plyne z `PROPN` "
+            "v rozboru. Kdo si to precte jako „kvantifikator ze seedu se "
+            "nezapisuje“, zablokuje i to, co blokovat nema. "
+            "DETERMINATOR JE VYSLOVENY, NE UHODNUTY: „KAZDY pes steka.“ "
+            "rika `∀` slovem, takze zapis licencuje. "
+            "CTENI SE NEMENI a system se PTA (`seed_forall_question`), "
+            "takze zakaz neni dira misto otazky; `→∀1` i `→∀` zapis "
+            "ODEMYKAJI. Licence se vaze na LEMMA a je to PRIZNANA "
+            "APROXIMACE — „Pes steka.“ x „Pes utekl.“ ukazuje, ze ani "
+            "lemma to nerozhodne. "
             "TENHLE KROK NEMENI CHOVANI, a to je jeho zkouska: 1339 "
             "zelenych, korpus 11 (golden_lexicon) / 3 (czech_seed) beze "
             "zmeny. "
@@ -1972,6 +1989,9 @@ CONTRACTS: tuple[Clause, ...] = (
         enforced_by=(
             "test_the_quantifier_carries_its_authority",
             "test_an_answer_marks_the_role_as_affirmed",
+            "test_a_seed_forall_does_not_reach_the_base",
+            "test_an_affirmation_opens_the_write",
+            "test_a_determiner_licenses_the_write",
         ),
     ),
     Clause(

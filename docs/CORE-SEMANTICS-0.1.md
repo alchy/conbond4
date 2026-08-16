@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.93 · 16. 8. 2026
+**Verze jádra:** 0.1.94 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,47 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**`∀` Z OSIVA SE NEZAPISUJE** *(W‑103, kolo #165; rozhodnutí reviewera)*.
+
+Osivo je odpověď, kterou nikdo nedal. „Pes štěká." a „Vesmír se rozšířil
+do dnešní podoby." mají týž tvar `NOUN/Sing/Nom/nsubj` a jen u prvního
+je `∀` pravda — generické × určité je vlastnost VĚTY. Zákaz je **jen na
+`∀`** a to je celé jeho odůvodnění: `∀` je jediný kvantifikátor, jehož
+chyba tvrzení ZESILUJE; špatné `∃` tvrzení oslabuje a konkrétní uzel
+plyne z `PROPN` v rozboru.
+
+**Determinátor je vyslovený, ne uhodnutý:** „**Každý** pes štěká." říká
+`∀` slovem, takže zápis licencuje.
+
+**Čtení se nemění a systém se PTÁ** — `∀` zůstává v predikaci a otázka
+„Platí to o KAŽDÉM…?" je nová; `→∀1` i `→∀` zápis odemykají. Bez té
+otázky by zákaz byl díra místo otázky.
+
+Licence se váže na LEMMA a je to **přiznaná aproximace**: „Pes štěká."
+× „Pes utekl." ukazuje, že ani lemma to nerozhodne.
+
+CO TO STÁLO (a bylo to schváleno dopředu):
+
+| | před | po |
+|---|---|---|
+| zapsaných (`golden_lexicon`) | 11 | **8** |
+| zapsaných (`czech_seed`) | 3 | 3 |
+| kroků v dialozích | 107 | **112** |
+
+**Třináct zkoušek bylo opraveno PŘIDÁNÍM TAHU**, nikdy oslabením
+tvrzení: v pěti dialozích člověk potvrdí právě to, co dosud osivo
+hádalo, takže `turns_to_learn` se **zhorší** — a horší pravdivé číslo je
+lepší než lepší předplacené.
+
+**U tří zlatých PŘEPISŮ tah přidat nešlo** (přepis je jedna věta bez
+tahů), takže se změnilo očekávání: sada nově pojmenovává, že se systém
+ptá. Tvrzení o ČTENÍ zůstalo doslova.
+
+A dvě věci vyplavaly až při stavbě: `pending` **nesmí** nést „čeká na
+potvrzení" (je to pole pro „kvantifikátor chybí" a jeho zneužití shodilo
+smlouvu o odmítnutí odpovědi), a **determinátor** musel dostat vlastní
+autoritu, jinak by zákaz spolkl i `∀`, které věta říká slovem.
 
 **ROLE VÍ, NA ČÍ ZODPOVĚDNOST JE JEJÍ KVANTIFIKÁTOR** *(W‑103, kolo #164,
 krok 1 ze tří)*.

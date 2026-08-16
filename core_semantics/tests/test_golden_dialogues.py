@@ -14,6 +14,8 @@ from core_semantics.oracle import RecordedOracle
 from typing import Sequence
 
 from core_semantics.cascade import relation_shape
+from core_semantics.ast import Quantifier
+from core_semantics.cascade import AUTHORITY_SEED
 from core_semantics.session import (
     Session,
     TurnResult,
@@ -168,7 +170,18 @@ def _answer(
     pending = result.predication
     assert pending is not None, f"{step.text!r}: předchozí krok nic nepřečetl"
     role = pending.reading(name)
-    assert role is not None and role.pending is not None, (
+    # ROLE S `∀` Z OSIVA NA POTVRZENÍ ČEKÁ *(W‑103)*, i když `pending`
+    # nemá: kvantifikátor nese, ale zápis nelicencuje. Běhoun to musí
+    # vědět, jinak by ohlásil „není na co odpovídat" o kroku, který
+    # odpovídá na otázku, kterou systém právě položil.
+    ceka = role is not None and (
+        role.pending is not None
+        or (
+            role.quantifier is Quantifier.FOR_ALL
+            and role.quantifier_authority == AUTHORITY_SEED
+        )
+    )
+    assert role is not None and ceka, (
         f"{step.text!r}: role {name!r} na kvantifikátor nečeká, "
         f"takže není na co odpovídat"
     )
@@ -177,6 +190,7 @@ def _answer(
         # tvar NENAUČIL: kdyby ano, další věta téhož tvaru by se nezeptala
         # a krok, který na ni odpovídá, by spadl na „role nečeká".
         return session.play(answers_here(step.text, pending, name, operation))
+    assert role.pending is not None
     return session.play(
         answers_quantifier(step.text, pending, role.pending, operation)
     )
@@ -435,7 +449,14 @@ def test_replay_with_a_different_lexicon_says_so() -> None:
     # lexikon nepotřebuje. Rozdíl se projeví až u tahu `→@`, který větu
     # čte NANOVO z rozboru, a tam na výchozím lexikonu záleží.
     session = Session(lexicon=_lexikon())  # type: ignore[arg-type]
-    session.utter("Kočka spí v Praze.", _Recorded())
+    precteno = session.utter("Kočka spí v Praze.", _Recorded())
+    # `∀` Z OSIVA ZÁPIS NELICENCUJE *(W‑103)*, takže se to potvrdí —
+    # jinak by se báze nenaplnila ani u jednoho přehrání a test by
+    # porovnával dvě prázdné báze, tedy neměřil nic.
+    assert precteno.predication is not None
+    session.play(
+        answers_here("O každé.", precteno.predication, "kdo", Operation.FOR_ALL)
+    )
     session.play(names_role("Je to místo.", veta, "v+Loc/Geo", "kde"))
 
     stejny = Session.replay(session.journal, lexicon=_lexikon())  # type: ignore[arg-type]
@@ -476,9 +497,14 @@ def test_the_standing_metrics_are_measured_in_one_place() -> None:
     nemůže je nikdo v předávce dopočítat po svém."""
     from core_semantics.tests.dialogues import standing_metrics
 
+    # KROKŮ PŘIBYLO A JE TO ZÁMĚR *(W‑103)*: `∀` z osiva zápis
+    # nelicencuje, takže pět dialogů potvrdí tahem to, co se dosud
+    # hádalo. Dialog je o pět kroků delší a o těch pět kroků
+    # pravdivější — a `turns_to_learn` se tím ZHORŠÍ, protože dosud
+    # měřil dialog s předplacenou odpovědí.
     assert standing_metrics() == {
         "domén": 21,
-        "kroků": 107,
+        "kroků": 112,
         "zápisů": 51,
         "odpovědí": 33,
         "otázek": 26,

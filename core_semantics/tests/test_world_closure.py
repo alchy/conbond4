@@ -36,7 +36,8 @@ from core_semantics.ast import (
 from core_semantics.cascade import ROLE_SUBJECT, completeness_shape
 from core_semantics.engine import Engine
 from core_semantics.oracle import Reading, RecordedOracle, Token, Utterance
-from core_semantics.session import Session, Turn, TurnResult, declares_complete, revokes
+from core_semantics.lexicon import Operation
+from core_semantics.session import Session, answers_here, Turn, TurnResult, declares_complete, revokes
 from core_semantics.storage import KnowledgeBase
 from core_semantics.tests._console import echo
 
@@ -568,7 +569,14 @@ def test_the_same_sentence_without_negation_is_written_partially() -> None:
         {text: Utterance(text=text, readings=(_negated_partial(False),))}
     )
     session = Session(lexicon=golden.golden_lexicon())
-    result = session.utter(text, oracle)
+    precteno = session.utter(text, oracle)
+    # O TAH DELŠÍ DIALOG *(W‑103)*: `∀` z osiva zápis nelicencuje, takže
+    # člověk potvrdí to, co se dosud hádalo. Tvrzení testu je pořád, že
+    # se věta zapíše ČÁSTEČNĚ, tedy bez okolnosti.
+    assert precteno.predication is not None
+    result = session.play(
+        answers_here("O každém.", precteno.predication, "kdo", Operation.FOR_ALL)
+    )
     assert result.statement_id is not None
     ulozene = [str(st.formula) for st in session.kb.active() if "šťastný" in str(st.formula)]
     assert all("od+Gen" not in f for f in ulozene), "okolnost se nezapíše"
@@ -621,4 +629,12 @@ def test_a_circumstance_is_still_omitted() -> None:
     )
     oracle = RecordedOracle({text: Utterance(text=text, readings=(prosty,))})
     session = Session(lexicon=golden.golden_lexicon())
-    assert session.utter(text, oracle).statement_id is not None
+    # `∀` Z OSIVA ZÁPIS NELICENCUJE *(W‑103)*, takže dialog je o tah
+    # delší: člověk potvrdí právě to, co dosud osivo hádalo. Tvrzení
+    # testu se tím nemění — měří se pořád, že OKOLNOST se vynechává.
+    precteno = session.utter(text, oracle)
+    assert precteno.predication is not None
+    zapsano = session.play(
+        answers_here("O každém.", precteno.predication, "kdo", Operation.FOR_ALL)
+    )
+    assert zapsano.statement_id is not None

@@ -19,7 +19,8 @@ from core_semantics.ast import Entity, Group, Label, P_NAME, QueryStatus, atom, 
 from core_semantics.cascade import naming_shape
 from core_semantics.ast import Quantifier
 from core_semantics.oracle import Reading, Token, Utterance
-from core_semantics.session import Session
+from core_semantics.lexicon import Operation as _Op
+from core_semantics.session import Session, answers_here
 from core_semantics.tests._console import echo
 
 STAMP = "test"
@@ -764,7 +765,14 @@ def test_the_written_statement_says_what_its_composed_nodes_were() -> None:
     reading = _composed("rizika", "riziko", "zdravotní", "zdravotní",
                         attribute_first=True)
     session, oracle = _composed_session(reading)
-    result = session.utter(COMPOSED_TEXT, oracle)
+    precteno = session.utter(COMPOSED_TEXT, oracle)
+    # O TAH DELŠÍ *(W‑103)*: `∀` z osiva zápis nelicencuje, takže se
+    # potvrdí. Tvrzení testu (řádek `[UZLY: …]` u ZAPSANÉ věty) se tím
+    # nemění.
+    assert precteno.predication is not None
+    result = session.play(
+        answers_here("O každém.", precteno.predication, "kdo", _Op.FOR_ALL)
+    )
     assert result.statement_id is not None, (
         "test, který měří jen nezapsanou větu, tuhle větev nikdy nespustí"
     )

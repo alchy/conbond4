@@ -146,6 +146,12 @@ A2 = Golden(
         tok(5, ".", ".", "PUNCT", 2, "punct"),
     ),
     predication="jezdit(kdo:∀auto, kudy:dálnice)",
+    # `∀` Z OSIVA SE PTÁ, NEŽ ZAPÍŠE *(W‑103)*. Čtení se nezměnilo —
+    # ta věta se pořád čte jako `∀auto` — ale zápis stojí na tom, že to
+    # někdo pro tu věc řekl. Přepis je JEDNA VĚTA BEZ TAHŮ, takže sem
+    # tah přidat nejde a mění se očekávání: sada nově pojmenovává, že
+    # se systém ptá. Tvrzení o ČTENÍ zůstává doslova.
+    asks="Platí to o KAŽDÉM",
     point="`po`+Loc → `kudy` je NAUČENÉ mapování role, jednoznačné, takže přejmenuje",
 )
 
@@ -304,6 +310,7 @@ E2 = Golden(
         tok(3, ".", ".", "PUNCT", 2, "punct"),
     ),
     predication="¬létat(kdo:∀tučňák)",
+    asks="Platí to o KAŽDÉM",
     notes=("ZÁPOR",),
     point=(
         "tah, na kterém stojí celý dialog E: bez čtení záporu je to TÁŽ "
@@ -511,6 +518,7 @@ H2 = Golden(
         tok(4, ".", ".", "PUNCT", 2, "punct"),
     ),
     predication="¬jíst(co:∃maso, kdo:∀vegetarián)",
+    asks="Platí to o KAŽDÉM",
 )
 
 H3 = Golden(
