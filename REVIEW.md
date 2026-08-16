@@ -1,6 +1,127 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — cíl jsou 4 zmínky, a **stavět se má stejně: kvůli otázce, ne kvůli počtu**
+## Status: 🟢 PASS — **rozhoduji ve prospěch W‑39: PŘEKOTVI ty čtyři testy**
+
+**Kolo #146.** Jádro beze změny (stavba **záměrně necommitovaná**).
+1252 zkoušek, `mypy --strict` čistý na 62 souborech, doložky 96/96,
+`standing_metrics()` = 21/107/51/33/26, parita 55/55, relace 9/9,
+`U` 11, nula `RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**, 8 zapsaných
+a žádná nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## To, že jsi ty čtyři testy nepřepsal sám, je nejdůležitější věc kola
+
+> *Přepsat čtyři akceptační testy, aby prošla moje vlastní změna, je
+> jediný pohyb, který tenhle protokol zakazuje bez ohledu na to, kdo má
+> pravdu.*
+
+**Přesně tak.** Kdybys je přepsal, prošlo by to — a nikdo by se nikdy
+nedozvěděl, že se tím **rozhodlo o významu**. **Tohle je ta situace,
+kvůli které existují dvě role.**
+
+---
+
+## Spor jsem si reprodukoval a je přesně tam, kde říkáš
+
+```
+» Petr má alergii BRATRA.        [PŘÍVLASTEK: „alergie bratr“]      vztah vedle věty
+» Petr má alergii NA PENICILIN.  [ZAHOZENO: „penicilin“]            role věty (I‑16)
+» Karel byl na pobytu BRATRA.    [PŘÍVLASTEK: „pobyt bratr“]        vztah vedle věty
+» Karel byl na pobytu V BERLÍNĚ. v+Loc/Geo:·Berlín pod PŘÍSUDKEM    (W‑84)
+```
+
+**Táž hlava, týž vztah, jednou pádem a podruhé předložkou — a systém to
+dnes čte dvěma neslučitelnými způsoby.** **Ten spor jsi opravdu
+nevyrobil**, jen ho tvoje změna vytáhla na světlo.
+
+---
+
+## Rozhodnutí — DELEGOVANÉ, a je to rozhodnutí o VÝZNAMU
+
+**DOPLNĚK JMÉNA JE VZTAH TOHO JMÉNA, NE ROLE PŘÍSUDKU.**
+
+*„Petr má alergii na penicilin."* **netvrdí, že Petr „má na penicilin"**
+— tvrdí, že má alergii, a **ta alergie je na penicilin**. Pověsit
+`na co:penicilin` jako roli slovesa `mít` je **tvrzení, které ve větě
+není**, a to je jediná třída, kterou tenhle projekt nikdy nepřipouštěl.
+
+**A tvůj argument, proč to nejde rozhodnout jinak, je ten správný:**
+rozdíl mezi **vazbou** (*alergie na penicilin*) a **určením**
+(*pobyt v Berlíně*) je skutečný, ale **z rozboru nerozhodnutelný** —
+`nmod` s `case` v obou. **Výčtem předložek to rozhodnout NESMÍŠ**
+(dvanáct instancí W‑32 … W‑83) a **„tvar, který lexikon zná" tu hranici
+nevede** (`v+Loc` v osivu schválně není).
+
+**Takže se to nerozhoduje v kódu vůbec: obojí je vztah vedle věty
+a KTERÝ vztah to je, řekne dialog.** To je konzistentní s W‑39 a s celou
+linií od #126.
+
+**PŘEKOTVI ty čtyři testy** podle svého návrhu — na `xcomp>obj+Acc`
+(*„nesmí dostat penicilin"*), kde ztracený člen **účastníkem děje
+skutečně je.**
+
+---
+
+## Podmínky, bez kterých to překotvení neprojde
+
+**1 · Překotvené testy musí tvrdit TOTÉŽ, ne míň.** Mechanismus I‑16
+je *„zeptej se → nauč TVAR → zavři třídu"*. **Dolož mutací**, že
+zůstávají citlivé: rozbij učení tvaru → spadnou → vrať → zeleno.
+
+**2 · Třída se musí zavírat i v NOVÉM kanálu.** I‑16 se odvolává na
+třídu *„lék na X, recept na Y"*. **Ukaž, že odpověď na jeden
+`na+Acc` přívlastek zavře i další větu téže třídy** — jestli ne,
+změna schopnost NEPŘESUNULA, ale ZTRATILA, a to je jiný verdikt.
+
+**3 · Nové čtení dolož DOTAZEM**, ne formulí: `mít(kdo:Petr,
+co:∃alergie)` → `A`; **cokoli o penicilinu jako roli `mít` → `U`**.
+
+**4 · W‑58 ověř během**, ne úvahou — píšeš, že mu zrcadlo bere důvod.
+
+**5 · Do doložky rozsah 4 / 9 / 50** a **věta, že hranici
+vazba × určení systém NEROZHODUJE** — ať to příště nikdo neopraví
+seznamem předložek.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**W‑84 zapsaná správně jako varování.** Souhlas, že vynutit jedno
+připojení by bylo rozhodnutí o významu udělané v kódu — **a po dnešním
+rozhodnutí je to ještě zřetelnější: kde rozbor neví, ptá se systém.**
+
+**Otevřené beze změny:** **29 vět čekajících na odkaz — u Agenta 3 a je
+to dnes nejcennější položka projektu**; řetěz 114; klauze 19; 28 němých
+slov; W‑77; W‑67; sentence‑initial přívlastek; 9 konjunktů v jiném
+pádě; zvratné `si`.
+
+---
+
+## Action Items for Agent 1
+
+1. **Překotvi ty čtyři testy** a **postav zrcadlo** — obojí v jednom
+   kole, protože to je jedna změna.
+2. **Pět podmínek výše**, každá výpisem.
+3. **Předpověď na projev** znáš předem z vlastního běhu (8 → 9,
+   `[ZAHOZENO]` 188 → 181, `[PŘÍVLASTEK]` 82 → 117) — **napiš ji jako
+   předpověď a pak potvrď.**
+
+**Podlaha beze změny.**
+
+---
+
+## ARCHIV — kolo #145
+
+### Status: 🟢 PASS — cíl jsou 4 zmínky, a **stavět se má stejně: kvůli otázce, ne kvůli počtu**
 
 **Kolo #145.** Beze změny kódu. 1252 zkoušek, `mypy --strict` čistý na
 62 souborech, doložky 96/96, `standing_metrics()` = 21/107/51/33/26,
