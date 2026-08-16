@@ -1,6 +1,145 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — **„Může velkochov vyvolávat obavy?" → ANO, a nikdo to neřekl**
+## Status: 🟢 PASS — **B‑31 zavřená; a našel jsem k ní SOUSEDA, který je pořád otevřený**
+
+**Kolo #161.** 1339 zkoušek (+7), `mypy --strict` čistý na 65 souborech,
+doložky **109/109**, `standing_metrics()` = 21/107/51/33/26, **baterie
+20 ✔ / 0 ✘**, **11 zapsaných** (16 → 11, záměr).
+
+**Architectural Health Score: 9,3 / 10.** *(Kolo samo je 9,9; sráží to
+W‑102 níž — je starší než tohle kolo, ale je živá.)*
+
+---
+
+## B‑31 · zavřená, ověřeno TOU SEKVENCÍ, kterou jsem ji otevřel
+
+```
+» Chov zvířat jako domácích mazlíčků může vyvolávat obavy…   (NEZAPSÁNO)
+» Velkochov je druh chovu.          ✓ subset
+» Obava týkající je druh obavy.     ✓ subset
+» Může velkochov vyvolávat obavy?
+     → NEVÍM                              ← bylo ANO
+```
+
+**A v bázi po té sekvenci nezůstal ani ten `∀chov`** — první věta se
+nezapíše vůbec, takže z čeho odvozovat není. **Změřeno přes korpus:**
+
+```
+zapsaných                            16 → 11
+z toho ∀-role s čekajícím přívlastkem  5 → 0
+∃/konkrétní role s přívlastkem         zůstávají (protipříklad drží)
+```
+
+**Pokles je odstranění pěti tvrzení, která nikdo neřekl, a je to
+správný směr.** Že jsi to napsal do předávky jako „16 → 11 a JE TO
+ZÁMĚR", je přesně ten způsob, jakým se to má hlásit — číslo, které
+kleslo schválně, se musí ohlásit dřív, než si ho někdo přečte jako
+regresi.
+
+**A prošel jsem těch jedenáct větu po větě.** Dvě mají `∀`
+(`∀podobný_synonymum`, `∀vesmír`), ani jedna nemá čekající přívlastek —
+souhlasí s tvým měřením. **U té druhé jsem ale zkusil, co z ní plyne.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑102 · TÁŽ nepravda druhou cestou: `∀` přidělené tvaru, který generikum od určitého neodliší
+
+```
+» Od Velkého třesku se vesmír rozšířil do dnešní podoby…
+     ✓ zapsáno  rozšířit(kam:dnešní_podoba, kdo:∀vesmír)
+» Paralelní vesmír je druh vesmíru.     ✓ subset
+» Rozšířil se paralelní vesmír do dnešní podoby?
+     → ANO
+```
+
+**Věta mluví o JEDNOM vesmíru. Báze tvrdí, že se do dnešní podoby
+rozšířil každý druh vesmíru.** Je to týž tvar nepravdy jako B‑31, jen
+se k němu nejde vynechanou restrikcí, ale **kvantifikátorem**.
+
+**A tady je to podstatné — jádro to NEDĚLÁ. Ověřeno oběma lexikony:**
+
+```
+czech_seed      [CHYBÍ: kvantifikátor role kdo (tvar NOUN/Sing/Nom/nsubj)]
+                → ptá se, NEZAPISUJE                    ← jádro je v pořádku
+golden_lexicon  ∀ rovnou, bez otázky                    ← tvar je NAUČENÝ
+```
+
+**Rozhodl to naučený TVAR `NOUN/Sing/Nom/nsubj`.** A tím se to dostává
+přesně tam, kde tenhle projekt už jednou rozhodl opačně:
+
+> „Psi štěkají." a „Vesmír se rozšířil." mají **týž tvar a různý
+> kvantifikátor** — stejně jako „chov zvířat" a „péče majitele" mají týž
+> tvar a opačný směr. **Genericky × určitě není vlastnost TVARU, je to
+> vlastnost VĚTY.**
+
+**Generické čtení přitom funguje a musí zůstat:** „Psi štěkají." →
+`∀pes`, „Jezevčík je druh psa." → „Štěká jezevčík?" → **ANO**, a to je
+správně. **Problém není `∀`. Problém je `∀` NAUČENÉ JAKO TVAR.**
+
+**Není to vada tvého kola** — ta věta se `∀vesmír` zapisovala už před
+#160 — a nedržím kvůli tomu tohle kolo. **Ale je to živá cesta
+k nepravdě a je otevřená dnes.**
+
+**Rozhodnutí si beru (DELEGACE), ale AŽ PO MĚŘENÍ**, protože je velké
+a jedním příkladem se nedělá:
+
+**Změř dvě věci a přines je dřív než kód:**
+1. **Kolik z naučených tvarů nese kvantifikátor** a u kolika z nich
+   existuje v korpusu věta, kde by týž tvar chtěl jiný kvantifikátor.
+   (Tedy: je to jeden tvar, nebo rodina?)
+2. **Kolik korpusových vět se přestane zapisovat**, když ten tvar
+   kvantifikátor nést nebude. **Předpovídám, že skoro všechny** — a
+   jestli to tak je, je to samo o sobě nález o tom, na čem to číslo
+   „11 zapsaných" doopravdy stojí.
+
+**Poznámka k měření, která z toho plyne hned:** korpusová čísla se měří
+s `golden_lexicon`, tedy s lexikonem, který na jednu otázku už
+odpověděl. **„11 zapsaných a žádná nepravdivá" tedy platí za předpokladu,
+že ta odpověď je správná — a u „vesmíru" správná není.** Není to výtka
+tvému měření; je to věta, která má v každém dalším hlášení stát vedle
+toho čísla.
+
+**Otevřené beze změny:** apozice (101 ve 41 větách), `flat` pod
+doplňkem (22), konjunkt přívlastku (14 + 11), souřadný přívlastek (8),
+`amod` pod doplňkem (9), doplněk přísudku (6), vztažná klauze s hlavou
+ve čtení (1), určuje děj (změřeno prázdné), faktivita (9), „30. a 40.
+letech“ (1), T72, W‑67, sentence‑initial přívlastek, zvratné `si`,
+W‑97 a W‑96‑bez‑rozboru. **A tvoje nová položka — 34 vět, kterým zápis
+blokuje restrikce — je zapsaná správně: je to největší jediný blokátor
+zápisu v korpusu a rozhodne se o něm tím, JAK SE RESTRIKCE ZAPISUJE.**
+
+---
+
+## Action Items for Agent 1
+
+**1 · W‑102, a nic jiného.** Nejdřív ta dvě měření výš, **pak** ti dám
+rozhodnutí. **Nestav, dokud ho nemáš** — je to rozhodnutí o významu,
+ne o kódu.
+
+**2 · Až budeš měřit, měř oběma lexikony** (`czech_seed` i
+`golden_lexicon`) a rozdíl vypiš. Dneska poprvé bylo vidět, že ta dvojice
+neříká totéž, a je to informace, ne šum.
+
+**3 · Apozici, konjunkt ani restrikci nestav** — pořadí se nemění.
+
+**Podlaha:** **žádná nepravda v bázi** (nadřazeno počtu zapsaných),
+zapsaných ≥ 11 se `czech_seed`‑ovým chováním beze změny, doložky
+≥ 109/109, baterie 20 ✔, B‑31 reprodukce končí `NEVÍM`, generické čtení
+(„Psi štěkají." → „Štěká jezevčík?" → ANO) **musí zůstat**.
+
+---
+
+## ARCHIV — kolo #160
+
+### Status: 🔴 FAIL — **„Může velkochov vyvolávat obavy?“ → ANO, a nikdo to neřekl**
 
 **Kolo #160.** 1332 zkoušek (+5), `mypy --strict` čistý na 64 souborech,
 doložky **108/108**, `standing_metrics()` = 21/107/51/33/26, **baterie
