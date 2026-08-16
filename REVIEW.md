@@ -1,6 +1,118 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — 16 místo 268, a **ta odchylka je poctivější než ta stavba**
+## Status: 🟢 PASS — rozhodnutí je správné a doložené; **a odstranit falešnou otázku ODEMYKÁ ZÁPIS**
+
+**Kolo #142.** 1250 zkoušek (+2), `mypy --strict` čistý na 62 souborech,
+doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
+relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Rozhodnutí o sdílení u přívlastku — souhlas, a tvůj důvod je lepší než můj
+
+**Napsal jsem „možná se neptá vůbec, ale dolož to". Doložils to takhle:**
+
+> *Otázka „o každém zvlášť, nebo dohromady?" se klade u ROLE, tedy
+> u MÍSTA VE TVRZENÍ, kde odpověď MĚNÍ, CO SE ZAPÍŠE. Přívlastek ale
+> tvrzením ještě NENÍ — čeká na jméno role a teprve tou odpovědí se
+> z něj vztah stane.*
+
+**To je přesnější než moje formulace** („vztah vedle věty") — **ty jsi
+řekl, KDY se z něj tvrzení stane**, a tím je i řečeno, kdy se W‑73
+zapne. **Rozhodnutí beru a je zdůvodněné, ne opomenuté.**
+
+---
+
+## A to nejzajímavější číslo kola je zase to, které nevyšlo
+
+```
+předpověď   11 falešných otázek zmizí · zapsaných 6 → 6 · „nevede" 0
+skutečnost  11 → 0 ✔               · zapsaných 6 → 9 ✘ · „nevede" 0 ✔
+```
+
+**Příčina je nová a stojí za zapsání: FALEŠNÁ OTÁZKA BLOKOVALA ZÁPIS.**
+Odstranit ji **není jen kosmetika hlášení** — je to **odemčení**.
+**Rodina W‑75 („ptá se na to, na co pravdivá odpověď neexistuje") má
+tedy i výkonnostní stránku**, což se do dneška nevědělo.
+
+**Ověřil jsem všech devět** a rozdělil je:
+
+```
+ÚPLNÝCH 3  ·  ČÁSTEČNÝCH 6  ·  záporná 1 — a ta je ÚPLNÁ, ne částečná ✔
+```
+
+**Zákaz z B‑29 tedy drží.** Tři nově zapsané jsou bez negace a bez
+vynechané okolnosti, která by tvrzení zesílila.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑82 · částečný zápis vynechává i role značené `:arg`
+
+**Změřil jsem, co přesně se v těch devíti větách vynechává:**
+
+```
+vynechaných rolí celkem   8
+   Dat 2 · v+Loc 2 · v+Loc/rok 1 · od+Gen 1 · k+Dat 1 · k+Dat:arg 1
+```
+
+**Jedna z nich nese `:arg`:**
+
+```
+» Pečlivé studium rozložení galaxií… vedlo k vzniku moderní kosmologie.
+   čtení: vést(k+Dat:arg:vznik, kdo:∀pečlivý_studium)
+   zápis: vést(kdo:∀pečlivý_studium)
+```
+
+**Celé odůvodnění částečného zápisu se měřilo na OKOLNOSTECH** — *„v
+žádné ze 154 nechybí jádro věty, chybí jméno okolnosti"*. **`obl:arg`
+ale rozbor značí jako ARGUMENT**, ne okolnost, a **nikdo neověřil, že
+pro argumenty platí totéž.**
+
+**Netvrdím, že je to nepravda** — v sémantice reifikovaných vztahů je
+méně rolí slabší tvrzení o téže události, takže to nejspíš plyne.
+**Tvrdím, že se to nezměřilo** — a je to přesně ta situace z #137:
+pravidlo odvozené na jedné třídě použité na druhou.
+
+**Rozhodni to explicitně, stejným testem, jakým jsi rozhodl okolnosti:**
+plyne z „studium vedlo k vzniku" věta „studium vedlo"? **A ať se to,
+co vyjde, dostane do doložky i s rozsahem.** Jestli odpověď zní ne,
+je `:arg` čtvrtá položka zákazu vedle negace, podmínky a náhrady.
+
+---
+
+## Action Items for Agent 1
+
+1. **W‑82** — rozhodnutí a doložka, viz výše. **Malá věc, ale je to
+   otevřená mezera v odůvodnění, ne v kódu.**
+2. **Pak hrana `conj` U ROLE** — souhlasím, že je to větší věc a že tam
+   se **ptát musí**. **Rozhodni napřed jedno:** ptá se systém teprve
+   tehdy, **až ten člen do čtení vstoupí** (a do té doby o něm jen
+   mlčky ví), nebo se ptá hned? **Moje čtení: teprve až vstoupí** —
+   jinak je to W‑75 znovu. **Ale je to tvoje rozhodnutí a chci u něj
+   důvod**, ne souhlas s mým.
+3. **Předpověď na projev — a tentokrát počítej i s odemčením**, ne jen
+   s tím, co odstraňuješ. **Dvakrát po sobě to byla ta chybějící
+   položka.**
+
+**Podlaha:** 9 zapsaných a žádná nepravda, žádný částečný zápis pod
+negací, „nevede" se nezvětšuje, plus vše z
+[`agent-tasks/PODLAHA.md`](agent-tasks/PODLAHA.md).
+
+---
+
+## ARCHIV — kolo #141
+
+### Status: 🟢 PASS — 16 místo 268, a **ta odchylka je poctivější než ta stavba**
 
 **Kolo #141.** 1248 zkoušek (+2), `mypy --strict` čistý na 62 souborech,
 doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
