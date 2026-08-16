@@ -3317,3 +3317,68 @@ def test_a_lost_head_is_reported_with_what_was_composed_into_it() -> None:
     note = _dropped_note(reading, predication)
     assert note is not None
     assert "domácími zvířaty" in note, "složené jméno musí být v hlášení vidět"
+
+
+def test_a_word_with_no_role_is_named_not_silenced() -> None:
+    """JEDNO MÍSTO MÍSTO ČTVRTÉ ZÁPLATY *(B‑28)*. Materiál z věty mizel
+    mlčky postupně na třech místech a pokaždé se to opravovalo tam, kde
+    se to zrovna našlo. Účet říká, co systém VIDĚL — „jejich" roli
+    nedostane a ptát se na ni nelze, ale zamlčet se nesmí."""
+    from core_semantics.cascade import unaccounted_note
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Chov", "chov", "NOUN", 3, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "jejich", "jeho", "DET", 4, "det", Poss="Yes", PronType="Prs"),
+            _token(3, "ovlivňuje", "ovlivňovat", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+            _token(4, "zdraví", "zdraví", "NOUN", 3, "obj", Case="Acc", Gender="Neut", Number="Sing"),
+            _token(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    note = unaccounted_note(reading, predication)
+    assert note is not None and "„jejich“" in note
+
+
+def test_a_word_that_is_in_the_reading_is_not_reported_twice() -> None:
+    """PROTIPŘÍKLAD: co ve čtení JE, do účtu nepatří — dvě hlášky
+    o jednom slově jsou horší než jedna (W‑20)."""
+    from core_semantics.cascade import unaccounted_tokens
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            _token(2, "přišel", "přijít", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            _token(3, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    assert unaccounted_tokens(reading, predication) == ()
+
+
+def test_the_ledger_and_the_report_read_the_same_list() -> None:
+    """ÚČET SE STAVÍ NA TOM, CO SE OPRAVDU VYPÍŠE *(B‑28)*. Postavený na
+    `dropped_tokens` prohlásil 233 slov za zaznamenaná, ačkoli je nikdo
+    nevypsal: hlášení z toho seznamu ještě odečítá genitivní přívlastek
+    a druhou větu. Dva seznamy by se rozešly přesně tam, kde to není
+    vidět."""
+    from core_semantics.cascade import _dropped_note, _reported_lost
+
+    reading = Reading(
+        tokens=(
+            _token(1, "psi", "pes", "NOUN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Plur"),
+            _token(2, "štěkají", "štěkat", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(3, "návštěv", "návštěva", "NOUN", 1, "nmod", Case="Gen", Gender="Fem", Number="Plur"),
+            _token(4, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    note = _dropped_note(reading, predication)
+    hlasene = {t.form for t in _reported_lost(reading, predication)}
+    if note is None:
+        assert not hlasene
+    else:
+        assert all(form in note for form in hlasene)

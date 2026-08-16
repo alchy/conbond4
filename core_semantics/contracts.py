@@ -1845,6 +1845,39 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-24",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "ÚČET: ŽÁDNÉ SLOVO PŘEČTENÉ VĚTY NEZMIZÍ BEZE STOPY "
+            "*(B‑28)*. Materiál mizel mlčky na TŘECH místech "
+            "(složený přívlastek pod ztracenou hlavou, přivlastnění, "
+            "přívlastek pod genitivním přívlastkem) a pokaždé se to "
+            "opravovalo tam, kde se to zrovna našlo — čtvrtá záplata "
+            "by byla pátá. JEDNO MÍSTO to proto sečte: co není ani ve "
+            "čtení, ani pohlcené, ani v přísudku, ani mezi čekajícími "
+            "vztahy, ani mezi VYPSANÝMI ztracenými členy, se JMENUJE. "
+            "NENÍ TO OTÁZKA — na „jakou roli hraje `jejich`“ pravdivá "
+            "odpověď neexistuje (W‑75); účet jen říká, že to systém "
+            "VIDĚL. ÚČET ČTE TÝŽ SEZNAM, KTERÝ SE VYPISUJE: postavený "
+            "na `dropped_tokens` prohlásil 233 slov za zaznamenaná, "
+            "ačkoli je nikdo nevypsal — hlášení z toho seznamu ještě "
+            "odečítá genitivní přívlastek a druhou větu. ZMĚŘENO: "
+            "němých slov v přečtených větách 471 → 28, a těch 28 je "
+            "POJMENOVANÁ ZBYTKOVÁ RODINA — leží v podstromu DRUHÉ "
+            "VĚTY, kterou hlášení hlásí jako celek („číst ji zatím "
+            "neumím“), takže věta o nich mlčí jen jednotlivě, ne jako "
+            "o kusu textu. Slovo, které ve čtení JE, se do účtu "
+            "nedostane: dvojí hlášení 0 z 220 vět"
+        ),
+        anchor="core_semantics.cascade:unaccounted_tokens",
+        entry="cascade(",
+        enforced_by=(
+            "test_a_word_with_no_role_is_named_not_silenced",
+            "test_a_word_that_is_in_the_reading_is_not_reported_twice",
+            "test_the_ledger_and_the_report_read_the_same_list",
+        ),
+    ),
+    Clause(
         id="O-23",
         boundary=ORACLE_CASCADE,
         promise=(
@@ -1866,7 +1899,10 @@ CONTRACTS: tuple[Clause, ...] = (
             "UBRAT OTÁZKU JE POKROK JEN TEHDY, KDYŽ SE TEN MATERIÁL "
             "OHLÁSÍ JINDE — jinak je to tichá ztráta kusu věty (I‑1), "
             "táž třída jako B‑25, jen o patro níž. Holé jméno bez "
-            "přivlastnění takový záznam NEMÁ a na odkaz nečeká"
+            "přivlastnění takový záznam NEMÁ a na odkaz nečeká. "
+            "ROZSAH: tahle doložka drží TY DVĚ RODINY, ne celek — "
+            "celek hlídá O‑24 (účet). Doložka, která slibuje víc než "
+            "kód, je horší než žádná, protože se o ni příští kolo opře"
         ),
         anchor="core_semantics.cascade:_nominal",
         entry="cascade(",

@@ -4015,7 +4015,13 @@ def unaccounted_tokens(
         ucet.add(token_index)
     # Co se hlásí jako ZTRACENÉ, účet má — i s tím, co se do toho
     # složilo, protože `_dropped_note` to od B‑28 vypisuje celé.
-    for token in dropped_tokens(reading, predication):
+    #
+    # POZOR NA ZDROJ: bere se to, co se OPRAVDU VYPÍŠE, ne `dropped_tokens`.
+    # Hlášení z toho seznamu ještě odečítá genitivní přívlastek a druhou
+    # větu, takže účet postavený na `dropped_tokens` by 233 slov
+    # prohlásil za zaznamenaná, ačkoli je nikdo nevypsal — právě ta
+    # netěsnost, kvůli které se tenhle účet dělá.
+    for token in _reported_lost(reading, predication):
         ucet.add(token.index)
         ucet.update(t.index for t in attributes_of(token, reading))
         ucet.update(t.index for t in name_parts_of(token, reading))
@@ -4042,13 +4048,13 @@ def unaccounted_note(reading: Reading, predication: Predication) -> str | None:
     )
 
 
-def _dropped_note(reading: Reading, predication: Predication) -> str | None:
-    """Co z věty vypadlo — a genitivní přívlastek mezi to NEPATŘÍ.
+def _reported_lost(
+    reading: Reading, predication: Predication
+) -> tuple[Token, ...]:
+    """Ztracené členy, KTERÉ SE OPRAVDU VYPÍŠOU *(B‑28)*.
 
-    Hlásit u něj „pro tenhle vztah role není" by bylo NEPRAVDA vedle
-    vlastní otázky: systém v témže tahu říká, že na ten přívlastek čeká
-    a ptá se na jeho roli. Dvě hlášky o jedné věci, které si odporují,
-    jsou horší než jedna — je to táž třída jako W‑20.
+    Jeden seznam pro hlášení i pro účet — dva by se rozešly a ten
+    rozdíl by se schoval přesně tam, kde se nedá vidět.
     """
     attribute_tokens = {
         token for _, _, token in genitive_attributes(reading, predication)
@@ -4060,11 +4066,22 @@ def _dropped_note(reading: Reading, predication: Predication) -> str | None:
             for token in reading.tokens
             if _within_subtree(token, druha, reading)
         }
-    lost = [
+    return tuple(
         token
         for token in dropped_tokens(reading, predication)
         if token.index not in attribute_tokens and token.index not in druha
-    ]
+    )
+
+
+def _dropped_note(reading: Reading, predication: Predication) -> str | None:
+    """Co z věty vypadlo — a genitivní přívlastek mezi to NEPATŘÍ.
+
+    Hlásit u něj „pro tenhle vztah role není" by bylo NEPRAVDA vedle
+    vlastní otázky: systém v témže tahu říká, že na ten přívlastek čeká
+    a ptá se na jeho roli. Dvě hlášky o jedné věci, které si odporují,
+    jsou horší než jedna — je to táž třída jako W‑20.
+    """
+    lost = list(_reported_lost(reading, predication))
     if not lost:
         return None
     parts = []
@@ -4326,6 +4343,11 @@ def cascade(
             "číst ji zatím neumím]"
         )
     if len(candidates) == 1:
+        # ÚČET *(B‑28)*. Až za ztrátou: co je ztracené, účet má, takže
+        # se to nehlásí dvakrát.
+        ucet = unaccounted_note(reading, candidates[0].predication)
+        if ucet:
+            trace.append(ucet)
         note = _dropped_note(reading, candidates[0].predication)
         if note:
             # Do STOPY, ne odvozením z predikace. Ztracený token v predikaci
