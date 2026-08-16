@@ -922,21 +922,55 @@ def date_parts_under(token: Token, reading: Reading) -> tuple[Token, ...]:
     return tuple(sorted(najdene, key=lambda t: t.index))
 
 
+def _is_year(token: Token) -> bool:
+    """Čtyřciferná `NumType=Card` — letopočet *(W‑74)*."""
+    return (
+        dict(token.feats).get("NumType") == "Card"
+        and token.lemma.isdigit()
+        and len(token.lemma) == 4
+    )
+
+
 def _date_numerals(token: Token, reading: Reading) -> tuple[Token, ...]:
-    """Číslovky jednoho časového údaje PŘÍMO pod tokenem *(W‑75)*."""
+    """Číslovky jednoho časového údaje PŘÍMO pod tokenem *(W‑75, W‑95)*."""
     najdene = [
         child
         for child in reading.children(token.index)
         if base_deprel(child.deprel) == "nummod"
         and dict(child.feats).get("NumType") == "Card"
         and (
-            (child.lemma.isdigit() and len(child.lemma) == 4)
+            _is_year(child)
             or (
                 dict(child.feats).get("NumForm") == "Digit"
                 and child.form.endswith(".")
             )
         )
     ]
+    # ROZSAH LETOPOČTŮ JE JEDEN ÚSEK *(W‑95)*. „v letech **1910 – 1911**"
+    # má druhý letopočet jako `conj` pod prvním, takže se do zmínky
+    # nedostal a hlásil se jako ztracený člen — a zmínka se jmenovala
+    # `léta_1910`, tedy UŽŠÍ, než co ta věta říká. Do báze se to
+    # nedostalo jen proto, že ztracený člen zápis blokoval; ochrana
+    # cizím pravidlem vydrží přesně do chvíle, kdy se to pravidlo z
+    # jiného důvodu uvolní.
+    #
+    # BERE SE JEN KONJUNKT LETOPOČTU. „ve **30. a 40.** letech" jsou dvě
+    # desetiletí, ne jeden úsek, a složit je do jedné zmínky by tvrdilo
+    # něco, co ta věta neříká — zůstávají ztrátou a hlásí se.
+    zmena = True
+    while zmena:
+        zmena = False
+        znama = {t.index for t in najdene}
+        for kandidat in reading.tokens:
+            if (
+                kandidat.index not in znama
+                and base_deprel(kandidat.deprel) == "conj"
+                and kandidat.head in znama
+                and _is_year(kandidat)
+                and _is_year(_token_at(kandidat.head, reading) or kandidat)
+            ):
+                najdene.append(kandidat)
+                zmena = True
     return tuple(sorted(najdene, key=lambda t: t.index))
 
 

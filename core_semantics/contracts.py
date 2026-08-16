@@ -1940,6 +1940,40 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-55",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "ROZSAH LETOPOCTU JE JEDEN USEK A NIKDY SE NEZUZI NA PRVNI "
+            "ROK *(W-95)*. „V letech 1910 - 1911“ melo druhy letopocet "
+            "jako `conj` pod prvnim, takze se do zminky nedostal a "
+            "hlasil se jako ztraceny clen — a zminka se jmenovala "
+            "`leta_1910`, tedy UZSI, nez co ta veta rika. "
+            "DO BAZE SE TO NEDOSTALO JEN PROTO, ZE ZTRACENY CLEN ZAPIS "
+            "BLOKOVAL, tedy chranilo nas CIZI PRAVIDLO; ochrana cizim "
+            "pravidlem vydrzi presne do chvile, kdy se to pravidlo z "
+            "jineho duvodu uvolni. Od W-95 to plati samo: BUD JE USEK "
+            "V UZLU CELY, NEBO TAM ZTRATA ZUSTANE — nikdy uzel s prvnim "
+            "rokem a k tomu ticho (vlastni test nad obema vetvemi). "
+            "BERE SE JEN KONJUNKT LETOPOCTU (ctyrciferna `NumType=Card`). "
+            "„Ve 30. a 40. letech“ jsou DVE desetileti, ne jeden usek, "
+            "a slozit je do jedne zminky by tvrdilo neco, co ta veta "
+            "nerika — zustavaji ztratou a hlasi se (protipriklad "
+            "v sade). "
+            ". ROZSAH MERENI: korpus 238 vet, TAZ POPULACE NA OBOU "
+            "REVIZICH (7c7ea7f -> tento strom): konjunkt pod pohlcenym "
+            "clenem 16 -> 9, ztrat pod pohlcenym clenem 24 -> 17, tedy "
+            "vsech 7 rozsahu letopoctu; zapsanych 13 -> 13 (ty vety maji "
+            "i jine otevrene otazky), privlastku 211 beze zmeny. "
+        ),
+        anchor="core_semantics.cascade:_date_numerals",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_year_range_is_one_mention",
+            "test_an_ordinal_pair_is_not_a_range_and_stays_lost",
+            "test_the_range_is_never_narrowed_to_its_first_year",
+        ),
+    ),
+    Clause(
         id="S-54",
         boundary=CASCADE_SESSION,
         promise=(

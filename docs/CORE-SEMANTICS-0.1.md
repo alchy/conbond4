@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.82 · 16. 8. 2026
+**Verze jádra:** 0.1.83 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,48 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**ROZSAH LETOPOČTŮ JE JEDEN ÚSEK** *(W‑95, kolo #154)*.
+
+„V letech **1910 – 1911**" mělo druhý letopočet jako `conj` pod prvním,
+takže se do zmínky nedostal a hlásil se jako ztracený člen — a zmínka se
+jmenovala `léta_1910`, tedy UŽŠÍ, než co ta věta říká. Do báze se to
+nedostalo jen proto, že ztracený člen zápis blokoval: **chránilo nás cizí
+pravidlo, ne kontrola téhle věci.** Od W‑95 platí sama: buď je úsek
+v uzlu celý, nebo tam ztráta zůstane — nikdy uzel s prvním rokem a k tomu
+ticho.
+
+**Bere se jen konjunkt LETOPOČTU.** „Ve **30. a 40.** letech" jsou dvě
+desetiletí, ne jeden úsek; složit je do jedné zmínky by tvrdilo něco, co
+ta věta neříká, takže zůstávají ztrátou a hlásí se.
+
+Předpověď (7 rozsahů, ztrát 24 → 17, zápisů +0 až +2) změřena TOUŽ
+populací na obou revizích: konjunkt pod pohlceným členem **16 → 9**,
+ztrát **24 → 17**, zapsaných **13 → 13**. Sedí, včetně toho, že těch
+sedm vět má i jiné otevřené otázky.
+
+---
+
+**DISJUNKCE V SOUŘADNOSTI NENÍ VZÁCNÁ** *(měření #154 k souřadnému
+přívlastku)*.
+
+Reviewer podmínil stavbu souřadného přívlastku tím, že otázka z W‑73 má
+dvě odpovědi („každý zvlášť" / „dohromady") a „další **nebo** odlišná"
+potřebuje třetí („aspoň jedno"). Měření celého korpusu — 360 `conj`
+podle spojky:
+
+| spojka | kolik |
+|---|---|
+| a | 163 |
+| (bez spojky) | 139 |
+| **nebo** | **28** |
+| ale | 10 |
+| **či** | **9** |
+| i | 6 |
+
+**Disjunkce je 37 z 360, tedy desetina souřadností** — není to jedna
+věta v otázce, je to vlastní rozhodnutí, přesně jak reviewer předpokládal
+v té druhé variantě. Souřadný přívlastek proto zůstává nepostavený.
 
 **SYSTÉM ŘÍKAL INSTRUMENTÁLU „GENITIV"** *(W‑93, kolo #153)*.
 Otázka na přívlastek se rozhodovala podle PRÁZDNÉHO TVARU, a do W‑92
