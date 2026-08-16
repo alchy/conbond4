@@ -929,6 +929,40 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-44",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "CO SE NAUČÍ, MUSÍ JÍT NAJÍT — SPOUŠTĚČ SE STAVÍ Z TÉŽE "
+            "SIGNATURY, KTEROU SE PAK HLEDÁ *(B‑27)*. Tah hlásil „✓ "
+            "naučeno … platí pro každý tvar `DET/det`“ a TÁŽ VĚTA "
+            "v témž sezení se zeptala ZNOVU. Příčina: `lemma` se při "
+            "učení ZAHAZOVALO, takže vzor vznikl jako STRUKTURNÍ — a "
+            "`Trigger.matches` strukturní vzor se signaturou, která "
+            "lemma NESE, z principu nepáruje („dvě různé otázky mají "
+            "zůstat oddělené“). Naučené se pak nenašlo; ne špatně "
+            "použilo, NENAŠLO SE VŮBEC. Je to nepravda o vlastním stavu "
+            "na KANÁLU UČENÍ, o stupeň silnější než S‑39, protože ta "
+            "věta slibuje CELOU TŘÍDU a neplatila ani pro doslovné "
+            "zopakování téže věty. Lemma se proto nese dál a JE TO "
+            "I VÝZNAMOVĚ SPRÁVNĚ: u role s determinátorem kvantifikuje "
+            "PRÁVĚ TO SLOVO — „některé“, „jejich“ a „každý“ nejsou "
+            "totéž, takže `DET/det → ∃` pro všechny determinátory by byl "
+            "tichý default s razítkem naučeného. HLÁŠENÍ ŘÍKÁ, CO SE "
+            "OPRAVDU NAUČILO („`DET/det` se slovem „jeho““), a slib se "
+            "dokazuje na DRUHÉ větě téhož tvaru. Signatura BEZ lemmatu "
+            "se dál učí strukturně a zobecňuje jako dřív — změřeno: "
+            "38 tvarů z 38 (32 strukturních, 6 lexikálních) po odpovědi "
+            "znovu neptá"
+        ),
+        anchor="core_semantics.session:Session._answer_quantifier",
+        entry=".play(",
+        enforced_by=(
+            "test_what_was_learned_is_found_again_in_the_same_session",
+            "test_the_promise_of_a_class_holds_on_a_second_sentence",
+            "test_the_report_says_what_it_actually_learned",
+        ),
+    ),
+    Clause(
         id="S-27",
         boundary=SESSION_STORAGE,
         promise=(

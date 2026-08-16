@@ -296,3 +296,102 @@ def test_learning_loop_transcript_prints() -> None:
         f"{session.turns_to_learn('Učí učitelka?')}"
     )
     echo("=" * 72)
+
+
+def _determiner_reading(noun: str, lemma: str) -> Reading:
+    """„Lékaři sledovali jejich <X>." — role s DETERMINÁTOREM, jehož
+    signatura NESE LEMMA a číslo ani pád nemá."""
+    return Reading(
+        tokens=(
+            tok(1, "Lékaři", "lékař", "NOUN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Plur"),
+            tok(2, "sledovali", "sledovat", "VERB", 0, "root", Gender="Masc", Number="Plur", Polarity="Pos"),
+            tok(3, "jejich", "jeho", "DET", 4, "det", Poss="Yes", PronType="Prs"),
+            tok(4, noun, lemma, "NOUN", 2, "obj", Case="Acc", Gender="Masc", Number="Sing"),
+            tok(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def _teach_the_determiner() -> tuple[Session, StructuralSignature]:
+    from core_semantics.oracle import RecordedOracle
+    from core_semantics.tests import golden
+
+    text = "Lékaři sledovali jejich stav."
+    reading = _determiner_reading("stav", "stav")
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    first = session.utter(text, oracle)
+    assert first.predication is not None
+    role = next(
+        r for r in first.predication.roles if r.pending is not None and r.quantifier is None
+    )
+    assert role.pending is not None
+    session.play(
+        answers_quantifier("Některého.", first.predication, role.pending, Operation.EXISTS)
+    )
+    return session, role.pending
+
+
+def test_what_was_learned_is_found_again_in_the_same_session() -> None:
+    """„✓ NAUČENO … PLATÍ PRO KAŽDÝ TVAR" A NEPLATILO ANI PRO TUTÉŽ VĚTU
+    *(B‑27)*. Spouštěč se stavěl bez `lemma`, tedy jako STRUKTURNÍ, jenže
+    `Trigger.matches` strukturní vzor se signaturou, která lemma NESE,
+    z principu nepáruje. Naučené se pak nenašlo — ne špatně použilo,
+    NENAŠLO SE VŮBEC."""
+    from core_semantics.oracle import RecordedOracle
+    from core_semantics.tests import golden
+
+    session, signature = _teach_the_determiner()
+    assert session.lexicon.quantifier_candidates(signature), "naučené musí jít najít"
+    text = "Lékaři sledovali jejich stav."
+    oracle = RecordedOracle(
+        {text: Utterance(text=text, readings=(_determiner_reading("stav", "stav"),))}
+    )
+    again = session.utter(text, oracle)
+    assert again.predication is not None
+    assert not any(
+        r.pending is not None and r.quantifier is None for r in again.predication.roles
+    ), "táž věta se nesmí zeptat podruhé"
+
+
+def test_the_promise_of_a_class_holds_on_a_second_sentence() -> None:
+    """Tah slibuje „platí pro každý tvar X" — a musí to dokázat na JINÉ
+    větě téhož tvaru, ne jen na té, ze které se učil *(B‑27)*."""
+    from core_semantics.oracle import RecordedOracle
+    from core_semantics.tests import golden
+
+    session, _ = _teach_the_determiner()
+    text = "Lékaři sledovali jejich případ."
+    oracle = RecordedOracle(
+        {text: Utterance(text=text, readings=(_determiner_reading("případ", "případ"),))}
+    )
+    other = session.utter(text, oracle)
+    assert other.predication is not None
+    assert not any(
+        r.pending is not None and r.quantifier is None for r in other.predication.roles
+    )
+
+
+def test_the_report_says_what_it_actually_learned() -> None:
+    """Slib musí sedět s klíčem *(B‑27)*: u signatury s lemmatem se
+    naučilo „`DET/det` se slovem „jeho“", ne „každý `DET/det`" —
+    „některé", „jejich" a „každý" nejsou totéž a naučit je najednou by
+    byl tichý default s razítkem naučeného."""
+    from core_semantics.oracle import RecordedOracle
+    from core_semantics.tests import golden
+
+    text = "Lékaři sledovali jejich stav."
+    reading = _determiner_reading("stav", "stav")
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    session = Session(lexicon=golden.golden_lexicon())
+    first = session.utter(text, oracle)
+    assert first.predication is not None
+    role = next(
+        r for r in first.predication.roles if r.pending is not None and r.quantifier is None
+    )
+    assert role.pending is not None
+    result = session.play(
+        answers_quantifier("Některého.", first.predication, role.pending, Operation.EXISTS)
+    )
+    assert "se slovem „jeho“" in result.lines[1]

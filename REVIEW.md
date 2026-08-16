@@ -1,6 +1,183 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — kolo, ve kterém bylo správné NEPSAT kód
+## Status: 🔴 FAIL — měření je poctivé a cenné; a našlo se v něm **B‑27**
+
+**Kolo #128.** 1209 zkoušek (+1), `mypy --strict` čistý na 62 souborech,
+doložky **91/91**, `standing_metrics()` = **21/107/51/33/26**, parita
+55/55, relace 9/9, `U` 11, nula `RECALL_FAILURE`, **moje baterie
+20 ✔ / 0 ✘**, W‑71 dál **0**.
+
+**Architectural Health Score: 9,7 / 10.**
+
+---
+
+## Měření, které jsem chtěl — a dostal jsem ho celé
+
+**Reprodukoval jsem tu jedinou zapsanou větu do posledního kroku:**
+
+```
+» Některé důležité faktory mohou ovlivnit jejich zdraví.
+   tah 2 (kvantifikátor role „co“) → ✓ zapsáno [s0001]
+      moci_ovlivnit(co:∃zdraví, kdo:∃důležitý_faktor)
+   to, co věta říká      → A
+   víc, než říká (∀)     → U
+   cizí tvrzení          → U
+   revoke_utterance("v1") → [s0001…s0004] · týž dotaz → U · aktivních 0
+```
+
+**Sedí to na kus** — včetně toho, že se ověřuje **dotazem**, ne pohledem
+na formuli. **1 z 20 je tvrdé číslo a je správné ho odevzdat takhle
+holé.**
+
+**A tvůj závěr o příčině té odchylky přepočítal jsem přes CELÝ korpus,
+ne přes dvacítku — a vychází silněji, než jsi řekl:**
+
+```
+ztracené členy podle toho, POD ČÍM visí
+  pod JMÉNEM     937    nmod 289 · amod 276 · conj 102 · flat 85 · acl:relcl 47
+  pod SLOVESEM   184    nsubj 43 · obl 39 · obj 36
+```
+
+**Pětkrát víc materiálu visí ve jmenné frázi než na slovese.** Tvoje
+věta *„není to zaseknutý dialog, je to chybějící schopnost číst jmennou
+frázi"* je tím doložená na 238 větách.
+
+**Dvě vady vlastní sondy jsi ohlásil sám** — a ta druhá (čtení
+`turn.lost` z tahu odpovědi) je **B‑25 znovu, jen v měřicí vrstvě**.
+Že jsi po opravě nástroje ukázal, že se závěr nezměnil a změnilo se jen
+**jméno důvodu u šesti vět**, je přesně to, co dělá měření použitelným.
+
+**A na moji otázku na definici jsi odpověděl přesně** („usadil se" =
+vstup do čtení **nebo** čekající sdílení; dvojice jen přes jednu hranu).
+**Moje je širší, tvoje užší, závěr týž** — a je to zapsané, takže příště
+se to nebude dopočítávat znovu.
+
+**W‑76 rozhodnuto pro `◐` a ověřil jsem trojici:**
+
+```
+» Rožnov pod Radhoštěm je město.   ◐ přečteno, neúplné   zápis: žádný
+» Hradec Králové je město.         ✓ přečteno            ✓ zapsáno [s0001]
+» Rožnov je město.                 ✓ přečteno            ✓ zapsáno [s0001]
+```
+
+---
+
+## Critical Blockers
+
+### B‑27 · „✓ naučeno … platí pro každý tvar" — a neplatí ani pro tutéž větu
+
+**Našel jsem to při reprodukci tvé zapsané věty. Doložené během:**
+
+```
+» Některé důležité faktory mohou ovlivnit jejich zdraví.
+   tah:  ✓ naučeno  tvar DET/det -> exists [confirmed, tah 2]
+         (platí pro každý tvar DET/det, ne jen pro tuhle větu)
+
+   TÁŽ VĚTA ZNOVU v témž sezení:
+         ◐ přečteno, neúplné  moci_ovlivnit(co:zdraví, …)
+         ? Nevím, o kom to platí — co (DET/det). O každém (∀)…
+```
+
+**Vzor v lexikonu JE** (`tvar DET/det -> exists [confirmed, tah 2]`),
+**signatura je při obou průchodech ZNAK ZA ZNAK TÁŽ**, a přesto:
+
+```
+quantifier_candidates(sig)  →  ()
+```
+
+**Naučené se nenajde.** Ne že by se špatně použilo — **nenajde se
+vůbec.**
+
+**Kontrola, ať to není obžaloba celého učení:**
+
+```
+tvar s vyplněným číslem i pádem   NOUN/Plur/Gen/nsubj → naučí se, kandidát JE,
+                                  táž věta se už NEPTÁ            ✔ 3 ze 3
+tvar s PRÁZDNÝM číslem nebo pádem DET/det → kandidát (), ptá se dál ✘ 3 ze 3
+```
+
+**Rozsah, změřený přes korpus:**
+
+```
+čekajících tvarů na kvantifikátor      206
+  s vyplněným číslem i pádem           159   učení drží
+  s PRÁZDNÝM číslem nebo pádem          47   učení nedrží
+     z toho DET/det                     41
+```
+
+**Není to tvoje regrese** — nad `72213de` (#121) je to znak za znakem
+stejné. **Ale je to nepravda o vlastním stavu na kanálu učení**, tedy
+rodina, kterou jsme zavírali v #121 (S‑39) a #124 (W‑73): *„vypadá to
+jako odpověď a není."* Tady je to o stupeň silnější, protože ta věta
+**slibuje celou třídu** (*„platí pro každý tvar DET/det"*) a neplatí ani
+pro doslovné zopakování téže věty.
+
+**A dopadá to přímo na to, cos měřil:** dialog, který se u 47 tvarů
+z 206 nikdy nedozví nic natrvalo, **nemůže konvergovat napříč větami**,
+ať se odpovídá jakkoli poctivě. **Číslo „1 z 20" tím není vysvětlené —
+ale je tím znejistěné**, a to je horší.
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené: čtení jmenné fráze (viz níže), zbylé konjunkty
+(9 / 22), zvratné `si`, W‑67 (u Agenta 3), vnořené datum (3), množství
+slovem (14), počet číslicí (11), kolize (10 z 12), 26 ze 42 `v+Loc`,
+úřad, příbuzenství, W‑54, W‑60, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30,
+W‑31, W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel »vše«"* zůstává
+otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**B‑27 první a samotné.** Rozhoduješ jednu věc: **co je klíč naučeného
+vzoru, když tvar číslo a pád nemá.** Buď se takový vzor **uloží pod klíč,
+který se dá najít**, nebo se **neuloží a tah řekne, že platí jen pro
+tuhle větu** (to je `→∀1`, který už existuje a je na to dělaný).
+**Slíbit třídu a neuložit nic je jediná možnost, která nepřipadá
+v úvahu.**
+
+**Vlastnost jako protipříklad:**
+
+* **věta, na jejíž otázku se odpovědělo, se v témž sezení nezeptá
+  podruhé** — doloženo na `DET/det` i na `PRON/obl`;
+* **tah, který hlásí „platí pro každý tvar X", to musí dokázat na DRUHÉ
+  větě** téhož tvaru — a ta druhá věta ať je v protipříkladu jiná než
+  ta první;
+* **a naopak**: tah, který platí jen pro tuhle větu, to **řekne** a další
+  věta téhož tvaru se **zeptá znovu** (N‑8 nesmí zmizet);
+* **159 tvarů, které učení drží dnes, ho drží dál** — nechci opravu
+  koupenou tím, že se přestane učit.
+
+**Změř po opravě znovu těch dvacet vět.** Očekávám, že se to číslo
+nezvedne dramaticky — **a jestli se nezvedne vůbec, je to důležitá
+zpráva**, protože pak je jmenná fráze opravdu jediná překážka.
+
+**Pak jmenná fráze — a schvaluju ji jako další velký směr**, s tvým
+vlastním postupem: **rozklad předem, ne kód.** Moje čísla ti do něj
+dávají tvrdý základ: **937 členů pod jménem proti 184 pod slovesem**,
+`nmod` 289 a `amod` 276 na špici. **Otázka, kterou po tobě budu chtít
+zodpovězenou dřív než návrh, je tahle: co JE `amod` uvnitř jmenné fráze
+— součást jména toho uzlu, nebo samostatné tvrzení o něm?** *„Terapeutický
+pes"* a *„starší lidé"* na to možná odpovídají různě, a to je přesně ten
+druh rozdílu, kvůli kterému se ptáš, místo abys hádal.
+
+**Podlaha beze změny:** 180 vět s víc než jedním čekajícím členem,
+0 mlčení, 0 překlopení ◐ → ✓, 0 hlášení proti změněné značce, W‑71 = 0,
+tři věty W‑73, kolektivní čtení neprosakuje, `revoke_utterance` na obou
+cestách, `·Hradec_Králové` se skládá, `Rožnov pod Radhoštěm` se
+nezapíše a nese `◐`, 21 domén, `standing_metrics()` 21/107/51/33/26,
+relace 9/9, gate *Farmaka*, parita ≥ 55/55, doložky ≥ 91/91, nula
+`RECALL_FAILURE`, `mypy --strict` čistý, **celý korpus bez pádu, běh
+před předávkou, každý ✔ doložený výpisem**.
+
+---
+
+## ARCHIV — kolo #127
+
+### Status: 🟢 PASS — kolo, ve kterém bylo správné NEPSAT kód
 
 **Kolo #127.** 1208 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
 doložky **91/91** (nová **O‑21**), `standing_metrics()` =

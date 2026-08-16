@@ -2006,9 +2006,22 @@ class Session:
         """`→∀` — naučí tvar a HNED přečte čekající větu znovu."""
         assert turn.predication is not None
         assert turn.shape is not None and turn.operation is not None
+        # SPOUŠTĚČ SE STAVÍ Z TÉŽE SIGNATURY, KTEROU SE PAK HLEDÁ *(B‑27)*.
+        # Dosud se `lemma` zahazovalo, takže se vzor uložil jako
+        # STRUKTURNÍ — a `Trigger.matches` strukturní vzor se signaturou,
+        # která lemma NESE, z principu nepáruje („dvě různé otázky mají
+        # zůstat oddělené"). Výsledek: tah ohlásil „✓ naučeno … platí pro
+        # každý tvar DET/det" a TÁŽ VĚTA v témž sezení se zeptala ZNOVU.
+        # Nebylo to špatné použití naučeného, NENAŠLO SE TO VŮBEC.
+        #
+        # Lemma se tedy nese dál, a je to i významově to správné: signatura
+        # ho má proto, že u role s determinátorem KVANTIFIKUJE PRÁVĚ TO
+        # SLOVO — „některé", „jejich" a „každý" nejsou totéž. Naučit
+        # `DET/det → ∃` pro všechny determinátory by byl tichý default
+        # s razítkem naučeného, tedy přesně to, čemu ta stráž brání.
         pattern = self.lexicon.teach(
             Trigger(
-                lemma="",
+                lemma=turn.shape.lemma,
                 upos=turn.shape.upos,
                 number=turn.shape.number,
                 case=turn.shape.case,
@@ -2027,7 +2040,13 @@ class Session:
         resolved = _apply_quantifier(turn.predication, turn.shape, quantifier)
         prefix = [
             f"✓ naučeno  {confirmed or pattern}",
-            f"  (platí pro každý tvar {turn.shape.shape()}, ne jen pro tuhle větu)",
+            "  (platí pro každý tvar "
+            + (
+                f"{turn.shape.shape()} se slovem „{turn.shape.lemma}“"
+                if turn.shape.lemma
+                else turn.shape.shape()
+            )
+            + ", ne jen pro tuhle větu)",
         ]
         if not closed:
             prefix.append(
