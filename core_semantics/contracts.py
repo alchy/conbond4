@@ -1845,6 +1845,45 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-22",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "PŘÍVLASTEK SE SKLÁDÁ DO JMÉNA I POD ZTRACENOU HLAVOU "
+            "*(W‑78)*. „…s **domácími** zvířaty“ — `domácími` není člen "
+            "věty, je to část jména třídy; ptát se na jeho ROLI znamená "
+            "vyzvat člověka, ať z něj udělá účastníka děje, kterým "
+            "není. Je to TÁŽ schopnost, jakou `attributes_of` dělá pro "
+            "frázi přímo pod rolí (182 z 542 v korpusu), jen O PATRO "
+            "NÍŽ — a proto se drží i obě její vyloučení: hlava musí být "
+            "`NOUN` a přivlastnění (`Poss=Yes`) se neskládá, protože "
+            "„Filipovo auto“ je vztah ke KONKRÉTNÍMU uzlu, ne druh "
+            "auta. SKLÁDÁNÍ NETVRDÍ NIC, a to je celý důvod, proč se "
+            "smí dělat mlčky: rozbor „terapeutický pes“ a „bývalý "
+            "prezident“ NEROZLIŠÍ (znak za znakem táž morfologie), "
+            "takže čtení, které by o vztahu k holému jménu něco "
+            "tvrdilo, by u jedné z nich LHALO — `subset(složená ⊆ "
+            "holá)` proto zůstává `U` OBĚMA směry. „Je to pes“ se "
+            "zapisuje vlastním tahem `→⊆`. PŘÍVLASTEK PSANÝ VELKÝM "
+            "PÍSMENEM je ČÁST JMÉNA („Malé Svatoňovice“, „Severní "
+            "Amerika“), ne přívlastek („anglická Wikipedie“) — dělí to "
+            "velikost písmene, shoda v pádě/čísle/rodě a to, že díl "
+            "NESTOJÍ NA ZAČÁTKU VĚTY. Sentence‑initial je POJMENOVANÁ "
+            "MEZ: tam velké písmeno neznamená nic („Krásná Praha“ má "
+            "týž rozbor), takže se neskládá a ten člen se HLÁSÍ. Díly "
+            "jména se řadí podle POZICE V TEXTU, ne podle toho, kdo je "
+            "hlava"
+        ),
+        anchor="core_semantics.cascade:dropped_tokens",
+        entry="cascade(",
+        enforced_by=(
+            "test_an_attribute_under_a_lost_head_is_not_asked_about",
+            "test_a_composed_class_name_claims_no_subset",
+            "test_a_capitalised_adjective_is_part_of_the_name",
+            "test_a_lowercase_adjective_under_a_name_is_not_part_of_it",
+            "test_a_sentence_initial_adjective_is_a_named_limit",
+        ),
+    ),
+    Clause(
         id="O-21",
         boundary=ORACLE_CASCADE,
         promise=(

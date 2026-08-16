@@ -1,6 +1,162 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — B‑27 zavřená, a to „pořád 1 z 20" je dobrá zpráva
+## Status: 🟢 PASS — rozklad sedí a **návrh SCHVALUJI**, s třemi podmínkami
+
+**Kolo #130.** 1216 zkoušek (+1), `mypy --strict` čistý na 62 souborech,
+doložky **92/92**, `standing_metrics()` = **21/107/51/33/26**, parita
+55/55, relace 9/9, `U` 11, nula `RECALL_FAILURE`, **moje baterie
+20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Zúžení — měls pravdu a moje zkouška byla opravdu bezcenná
+
+```
+osivo obsahuje:   každý|?!| -> for_all [hypothesis, seed]
+```
+
+**„Každý" je v osivu**, takže se v mé větě neptalo z úplně jiného
+důvodu. **Tvoje zkouška s „veškerý" (v osivu NENÍ, ověřeno) dokládá
+obojí naráz** — role čeká, signatura nese `lemma='veškerý'`
+a `quantifier_candidates` je prázdné. **Jádro rozhodnutí z #129 je tím
+doložené zkouškou, ne úvahou.** A žes do docstringu napsal, proč se
+„každý" na tu zkoušku nehodí, ušetří to příštímu jedno kolo.
+
+---
+
+## Rozklad jmenné fráze — přepočítal jsem ho, sedí do jedné položky
+
+```
+                                      tvoje   moje
+amod pod jménem                         542    542
+  část jména (hlava PROPN)               18     18
+  přivlastnění (Poss=Yes)                11     11
+  přívlastek třídy                      513    513
+```
+
+**A ta dvojice, kterou jsem ti dal jako past, padla na obě strany —
+doložil jsi to a já to ověřil:**
+
+```
+Terapeutický   Animacy=Anim Case=Nom Degree=Pos Gender=Masc Number=Sing Polarity=Pos
+Bývalý         Animacy=Anim Case=Nom Degree=Pos Gender=Masc Number=Sing Polarity=Pos
+```
+
+**Znak za znakem totéž.** Z prvního plyne „je to pes", z druhého „NENÍ
+to prezident", a **rozbor je nerozliší**. *„Degree je vlastnost slova,
+ne toho vztahu"* — přesně tak.
+
+---
+
+## Rozhodnutí: SCHVALUJI. A tady je důvod, který v návrhu nebyl
+
+**Tvůj argument zněl „skládání netvrdí nic". Ověřil jsem to během —
+a je to silnější, než jsi napsal:**
+
+```
+» Terapeutický pes pomáhá.     ✓ přečteno  pomáhat(kdo:∀terapeutický_pes)
+     subset(terapeutický_pes ⊆ pes)   → U
+     subset(pes ⊆ terapeutický_pes)   → U
+» Bývalý prezident promluvil.  ✓ přečteno  promluvit(kdo:∀bývalý_prezident)
+     subset(bývalý_prezident ⊆ prezident) → U      ← NEPRODĚRAVĚLO
+```
+
+**Skládání do jména třídy je vůči tomu rozdílu NEUTRÁLNÍ** — a právě to
+je jeho hlavní přednost, ne vedlejší efekt. Rozbor tu dvojici rozlišit
+neumí, takže **jakékoli čtení, které by o vztahu k holému jménu něco
+tvrdilo, by u jedné z nich lhalo. Tohle netvrdí u ani jedné.**
+
+**A druhý důvod:** není to nová sémantika. **Fráze přímo pod rolí se
+takhle skládá už dnes** (`∃obecný_teorie`, `∀domácí_mazlíček`) — 182
+z těch 542. **Tvoje věta „táž schopnost o patro níž" je doslova
+pravdivá**, a proto ten návrh schvaluju jako **malý**, ne velký.
+
+**Označuji to jako DELEGOVANÉ ROZHODNUTÍ** — rozhoduji o smlouvě vrstvy
+místo řídicího agenta a takhle je to zapsané.
+
+### Tři podmínky
+
+**1 · `subset` zůstává `U` — a je to DOLOŽKA, ne shoda okolností.**
+Neutralita je celý důvod, proč se to smí udělat mlčky. **Ať ji hlídá
+zkouška se jménem** a ať je v ní **„bývalý prezident"** jmenovitě.
+
+**2 · Hlava `PROPN` (18) NESMÍ skončit jako třída.**
+*„Malé Svatoňovice"* je **pojmenované individuum s celým jménem**
+(`·Malé_Svatoňovice`), ne skupina `malý_svatoňovice`. Je to tvoje
+vlastní pravidlo z W‑72/O‑20 o patro výš a **platí i pro přívlastek**.
+
+**3 · Přivlastnění (11) rozhodni ZVLÁŠŤ a napiš proč.**
+*„Čapkova rodina"* je morfologicky totéž tvrzení jako *„rodina Čapka"*,
+a genitivní přívlastek dnes končí jako `[PŘÍVLASTEK: … — vztah vedle
+věty, čeká se na jméno role]`. **Doporučuji symetrii** — ale je to tvoje
+rozhodnutí a chci u něj důvod, ne jen volbu.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑77 · složené jméno neodpovídá povrchu a s 277 členy jich přibude
+
+```
+» Zdravotní rizika spojená s domácími zvířaty zahrnují:
+     zahrnovat(kdo:∀zdravotní_spojený_riziko)
+```
+
+**Jméno uzlu je to, co člověk čte**, a tohle není to, co ve větě stojí:
+pořadí se ztratilo, shoda taky. **Netvrdí to nic nepravdivého** — proto
+varování, ne bloker — **ale po složení dalších 277 členů to poroste**.
+**Chci, aby se u složeného uzlu dal dohledat POVRCHOVÝ tvar fráze**
+(dnes to `→ (založen)` u jmen dělá). Bez toho se z báze nepozná,
+z čeho uzel vznikl, jinak než zopakováním běhu.
+
+**Otevřené beze změny:** 9 konjunktů v jiném pádě, 6 s hlavou hluboko
+ve frázi, zvratné `si`, W‑67 (u Agenta 3), vnořené datum (3), množství
+slovem (14), počet číslicí (11), kolize (10 z 12), 26 ze 42 `v+Loc`,
+úřad, příbuzenství, W‑54, W‑60, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30,
+W‑31, W‑36 – W‑38, W‑40, W‑41. Otázka *„co JE uzel »vše«"* zůstává
+otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**Stav to.** Rozklad je hotový, rozhodnutí máš, podmínky výše.
+
+**Předpověď na projev PŘED kódem** — a chci v ní **tři čísla zvlášť**:
+kolik z těch **277** ztracených členů se složí, **u kolika VĚT se tím
+změní čtení**, a **kolik vět se nově ZAPÍŠE** (dnes 1 z 238).
+**U třetího čísla čekám malé číslo a bude mě zajímat, jestli se
+spleteme oba.**
+
+**Přejímka:**
+
+* `subset(složená ⊆ holá)` = **`U`**, doloženo na *„bývalý prezident"*;
+* `·Malé_Svatoňovice` je **individuum s celým jménem**, ne třída;
+* **kladný, sporný a záporný případ** — *„terapeutický pes"* /
+  *„Malé Svatoňovice"* / *„bývalý prezident"*;
+* u každé nově zapsané věty **dotazem** doloženo, že v bázi je **právě
+  to, co ve větě stojí** — ne víc;
+* **korpusový běh položku po položce**, ne součtem;
+* **celá podlaha** z [`agent-tasks/PODLAHA.md`](agent-tasks/PODLAHA.md)
+  beze změny, **běh před předávkou, každý ✔ doložený výpisem**.
+
+**A jedna prosba k formě:** tohle je první kolo po zavedení
+`agent-tasks/`. **Když v něm něco nesedí s tím, jak opravdu pracuješ,
+napiš to** — ten adresář má popisovat provoz, ne ho předstírat.
+
+---
+
+## ARCHIV — kolo #129
+
+### Status: 🟢 PASS — B‑27 zavřená, a to „pořád 1 z 20“ je dobrá zpráva
 
 **Kolo #129.** 1215 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
 doložky **92/92** (nová **S‑44**), `standing_metrics()` =

@@ -424,6 +424,22 @@ def attributes_of(token: Token, reading: Reading) -> tuple[Token, ...]:
 NAME_CONTINUATION = ("flat",)
 
 
+def _capitalised_name_part(
+    child: Token, head: Token, reading: Reading
+) -> bool:
+    """Přívlastek psaný VELKÝM PÍSMENEM je část jména *(W‑78)*."""
+    if base_deprel(child.deprel) != "amod" or child.feat("Poss") == "Yes":
+        return False
+    if not child.form[:1].isupper():
+        return False
+    if child.index == min(t.index for t in reading.tokens):
+        return False
+    feats, hlava = dict(child.feats), dict(head.feats)
+    return all(
+        feats.get(key) == hlava.get(key) for key in ("Case", "Number", "Gender")
+    )
+
+
 def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
     """Další díly VÍCESLOVNÉHO JMÉNA — `flat` *(B‑21)*.
 
@@ -450,7 +466,8 @@ def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
             (
                 child
                 for child in reading.children(token.index)
-                if child.upos == "PROPN"
+                if _capitalised_name_part(child, token, reading)
+                or child.upos == "PROPN"
                 and (
                     base_deprel(child.deprel) in NAME_CONTINUATION
                     # DRUHÝ DÍL JMÉNA V GENITIVU *(W‑72)*. „v **Hradci
@@ -471,6 +488,19 @@ def name_parts_of(token: Token, reading: Reading) -> tuple[Token, ...]:
                         base_deprel(child.deprel) == "nmod"
                         and is_bare_genitive(child, reading)
                     )
+                    # PŘÍVLASTEK, KTERÝ JE ČÁSTÍ JMÉNA *(W‑78)*. „**Malé**
+                    # Svatoňovice" nejsou „Svatoňovice, které jsou malé";
+                    # „**Severní** Amerika", „**Nový** Bydžov", „**Divá**
+                    # Bára" taky ne. Od přívlastku („anglická Wikipedie",
+                    # „starověké Řecko") to dělí VELKÉ PÍSMENO — a je
+                    # v textu, ne v odhadu.
+                    #
+                    # Dvě stráže, obě nutné: shoda v pádě, čísle a rodě
+                    # (bez ní je to jiná stavba) a NE NA ZAČÁTKU VĚTY,
+                    # kde velké písmeno neznamená nic. Ta druhá není
+                    # opatrnost navíc — „Malá Barunka" na začátku věty
+                    # je v korpusu a bez ní by se složila špatně.
+
                 )
             ),
             key=lambda t: t.index,
@@ -577,11 +607,16 @@ def _composed_mention(token: Token, reading: Reading) -> Mention:
         )
     jmeno = name_parts_of(token, reading)
     if jmeno:
-        # VÍCESLOVNÉ JMÉNO. Díly stojí ZA hlavou, protože tak stojí
-        # v textu — „Josef Hora", ne „Hora Josef".
+        # VÍCESLOVNÉ JMÉNO V POŘADÍ TEXTU. „Josef Hora", ne „Hora
+        # Josef" — a od W‑78 taky „Malé Svatoňovice", ne „Svatoňovice
+        # Malé": díl může stát i PŘED hlavou, takže se řadí podle
+        # POZICE, ne podle toho, kdo je hlava. Pravidlo bylo napsané
+        # v `name_parts_of` od B‑21 („pořadí se drží podle pozice
+        # v textu"); tady se drželo jen napůl.
+        dily = sorted([token, *jmeno], key=lambda t: t.index)
         return Mention(
-            lemma="_".join([token.lemma, *(p.lemma for p in jmeno)]),
-            form=" ".join([token.form, *(p.form for p in jmeno)]),
+            lemma="_".join(p.lemma for p in dily),
+            form=" ".join(p.form for p in dily),
             token_index=token.index,
             upos=token.upos,
             feats=token.feats,
@@ -3134,6 +3169,21 @@ def dropped_tokens(reading: Reading, predication: Predication) -> tuple[Token, .
     # „Radhoštěm", znamená vyzvat člověka, ať k větě přilepí účastníka,
     # který v ní není — otázka, na kterou pravdivá odpověď neexistuje.
     used |= {token for _, _, token in predication.pending_name}
+    # PŘÍVLASTEK SE SKLÁDÁ DO JMÉNA I TAM, KDE JE HLAVA SAMA ZTRACENÁ
+    # *(W‑78)*. „…s **domácími** zvířaty" — `domácími` není člen věty,
+    # je to část jména třídy `domácí_zvíře`; ptát se na jeho ROLI
+    # znamená vyzvat člověka, ať ho udělá účastníkem děje, kterým není.
+    # Je to TÁŽ schopnost, jakou `attributes_of` dělá pro frázi přímo
+    # pod rolí (182 z 542), jen o patro níž — a proto se tu drží i obě
+    # její vyloučení: hlava musí být `NOUN` (na vlastním jméně by
+    # přívlastek měnil IDENTITU, O‑20) a přivlastnění se neskládá
+    # (`Filipovo auto` je vztah ke konkrétnímu uzlu, ne druh auta).
+    for token in reading.tokens:
+        nositel = _token_at(token.head, reading)
+        if nositel is None or nositel.upos != "NOUN":
+            continue
+        if base_deprel(token.deprel) == "amod" and token.feat("Poss") != "Yes":
+            used.add(token.index)
     return tuple(
         token
         for token in reading.tokens

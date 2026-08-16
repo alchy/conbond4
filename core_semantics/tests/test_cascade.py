@@ -3157,3 +3157,94 @@ def test_a_part_of_a_name_is_not_asked_about_as_a_role() -> None:
     assert all(
         token.form != "Králové" for token in dropped_tokens(reading, predication)
     )
+
+
+def _adjective_in_a_name(form: str, *, first: bool) -> Reading:
+    """„(Bydlí v) Malých Svatoňovicích." — přívlastek pod VLASTNÍM
+    jménem. Proměnná je jen to, jestli stojí na začátku věty."""
+    tokens = [
+        _token(1, form, "malý", "ADJ", 2, "amod", Case="Nom", Degree="Pos", Gender="Fem", Number="Plur"),
+        _token(2, "Svatoňovice", "Svatoňovice", "PROPN", 3, "nsubj", Case="Nom", Gender="Fem", NameType="Geo", Number="Plur"),
+        _token(3, "leží", "ležet", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+        _token(4, ".", ".", "PUNCT", 3, "punct"),
+    ]
+    if not first:
+        tokens.insert(0, _token(0, "Tam", "tam", "ADV", 3, "advmod"))
+    return Reading(tokens=tuple(tokens), provenance="test")
+
+
+def test_a_capitalised_adjective_is_part_of_the_name() -> None:
+    """PŘÍVLASTEK PSANÝ VELKÝM PÍSMENEM JE ČÁST JMÉNA *(W‑78)*. „Malé
+    Svatoňovice" nejsou „Svatoňovice, které jsou malé" — a uzel proto
+    nese CELÉ jméno a zůstává INDIVIDUEM, ne třídou."""
+    predication = cascade(
+        _adjective_in_a_name("Malých", first=False), tiers=HARD_TIERS
+    ).survivors[0].predication
+    jmena = [r.mention.lemma for r in predication.roles]
+    assert "malý_Svatoňovice" in jmena
+    assert "Svatoňovice" not in jmena, "zkrácené jméno nesmí zůstat"
+
+
+def test_a_lowercase_adjective_under_a_name_is_not_part_of_it() -> None:
+    """PROTIPŘÍKLAD: „anglická Wikipedie" nebo „starověké Řecko" jsou
+    PŘÍVLASTKY, ne části jména — dělí je VELKÉ PÍSMENO, a to je v textu,
+    ne v odhadu."""
+    predication = cascade(
+        _adjective_in_a_name("malých", first=False), tiers=HARD_TIERS
+    ).survivors[0].predication
+    assert all("malý" not in r.mention.lemma for r in predication.roles)
+
+
+def test_a_sentence_initial_adjective_is_a_named_limit() -> None:
+    """POJMENOVANÁ MEZ *(W‑78)*: na ZAČÁTKU VĚTY velké písmeno neznamená
+    nic — „Malé Svatoňovice" a „Krásná Praha" mají tam rozbor znak za
+    znakem týž. Neskládá se tedy, a ten člen se HLÁSÍ; složit ho mlčky
+    by znamenalo rozhodnout něco, co v rozboru není."""
+    reading = _adjective_in_a_name("Malé", first=True)
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    assert all("malý" not in r.mention.lemma for r in predication.roles)
+    assert any(t.form == "Malé" for t in dropped_tokens(reading, predication))
+
+
+def test_an_attribute_under_a_lost_head_is_not_asked_about() -> None:
+    """PŘÍVLASTEK SE SKLÁDÁ I POD ZTRACENOU HLAVOU *(W‑78)*. „…s
+    **domácími** zvířaty" — `domácími` není člen věty, je to část jména
+    třídy; ptát se na jeho ROLI znamená vyzvat člověka, ať z něj udělá
+    účastníka děje, kterým není."""
+    reading = Reading(
+        tokens=(
+            _token(1, "Rizika", "riziko", "NOUN", 6, "nsubj", Case="Nom", Gender="Neut", Number="Plur"),
+            _token(2, "s", "s", "ADP", 3, "case", AdpType="Prep", Case="Ins"),
+            _token(3, "zvířaty", "zvíře", "NOUN", 1, "nmod", Case="Ins", Gender="Neut", Number="Plur"),
+            _token(5, "domácími", "domácí", "ADJ", 3, "amod", Case="Ins", Degree="Pos", Gender="Neut", Number="Plur"),
+            _token(6, "rostou", "růst", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(7, ".", ".", "PUNCT", 6, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    ztracene = {t.form for t in dropped_tokens(reading, predication)}
+    assert "domácími" not in ztracene, "část jména třídy není člen věty"
+
+
+def test_a_composed_class_name_claims_no_subset() -> None:
+    """NEUTRALITA JE CELÝ DŮVOD, PROČ SE TO SMÍ SKLÁDAT MLČKY *(W‑78)*.
+    Rozbor „terapeutický pes" a „bývalý prezident" NEROZLIŠÍ, takže
+    jakékoli čtení, které by o vztahu k holému jménu něco tvrdilo, by
+    u jedné z nich LHALO. Složené jméno netvrdí ani u jedné."""
+    from core_semantics.ast import Group, Quantifier, QueryStatus, atom, role
+    from core_semantics.engine import Engine
+    from core_semantics.storage import KnowledgeBase
+
+    engine = Engine(KnowledgeBase())
+    for sub, sup in (
+        ("bývalý_prezident", "prezident"),
+        ("prezident", "bývalý_prezident"),
+        ("terapeutický_pes", "pes"),
+    ):
+        dotaz = atom(
+            "subset",
+            role("sub", Group(sub), Quantifier.SELF),
+            role("sup", Group(sup), Quantifier.SELF),
+        )
+        assert engine.ask(dotaz).status is QueryStatus.UNKNOWN

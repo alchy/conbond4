@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.63 · 16. 8. 2026
+**Verze jádra:** 0.1.64 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.64 | § 5.2 — PŘÍVLASTEK SE SKLÁDÁ I POD ZTRACENOU HLAVOU (257 členů ve 126 větách přestalo být falešnou otázkou) a velkým písmenem psaný přívlastek je ČÁST JMÉNA; skládání netvrdí `subset`; § 13 T113 |
 | 0.1.63 | § 12 — ROZKLAD PŘÍVLASTKU VE JMENNÉ FRÁZI: tři různé věci (část jména 18, přivlastnění 11, přívlastek třídy ~513), a u té třetí rozbor odpověď NEMÁ — „terapeutický pes“ a „bývalý prezident“ jsou znak za znakem stejné |
 | 0.1.62 | § 5.2 — CO SE NAUČÍ, MUSÍ JÍT NAJÍT: spouštěč se stavěl bez `lemma`, takže se vzor uložil jako strukturní a signatura s lemmatem ho nenašla — táž věta se ptala podruhé. 47 tvarů z 206 se tím nikdy nenaučilo natrvalo; § 13 T112 |
 | 0.1.61 | § 5.2 — UZEL SE ZKRÁCENÝM JMÉNEM SE NEZAPÍŠE MLČKY: předložkový druhý díl („Rožnov pod Radhoštěm“) se složit nedá, ale hlásí se jako NEÚPLNÉ JMÉNO a zápis blokuje; falešná otázka na roli dílu zmizela; § 13 T111 |
@@ -1354,6 +1355,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T113 | přívlastek ve jmenné frázi | „…s domácími zvířaty“ se na „domácími“ neptá; „Malých Svatoňovicích“ dá `·malý_Svatoňovice`, „anglickou Wikipedii“ ne; `subset(bývalý_prezident ⊆ prezident)` zůstává `U` |
 | T112 | naučené se najde | „Lékaři sledovali jejich stav.“ + `→∀` se v témž sezení nezeptá podruhé a „…jejich případ.“ se neptá vůbec; hlášení říká „`DET/det` se slovem „jeho““; strukturní tvary se učí jako dřív |
 | T111 | zkrácené jméno se řekne nahlas | „Bydlí v Rožnově pod Radhoštěm.“ hlásí `[JMÉNO NEÚPLNÉ: … uzel by nesl jen „Rožnov“]`, NEPTÁ se, jakou roli hraje „Radhoštěm“, a nezapíše se; „v Hradci Králové“ se složí a neúplné není |
 | T110 | jméno se neskládá zkráceně | „Bydlí v Hradci Králové.“ dá `·Hradec_Králové` a NEHLÁSÍ k tomu přívlastek; „Rožnov pod Radhoštěm“ (předložka) se neskládá a hlásí se dál; `flat` („Čapka Josefa“) se skládá jako dřív |
