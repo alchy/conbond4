@@ -155,6 +155,19 @@ class RoleReading:
     #: čeká na kvantifikátor, „ta učitelka" na to, KTERÝ uzel to je. Slít
     #: obojí do jedné otázky by znamenalo ptát se na špatnou věc.
     awaiting: str = ""
+    #: NA ČÍ ZODPOVĚDNOST TEN KVANTIFIKÁTOR JE *(W‑103)*.
+    #:
+    #: `source` odpovídá na otázku „který TVAR se trefil" a je u všech
+    #: tří případů týž řetězec: po odpovědi na TUHLE větu, u jiné věty
+    #: téhož tvaru i u čistého osiva stojí `tvar NOUN/Sing/Nom/nsubj`.
+    #: Potřeba je ale druhá otázka — „na čí zodpovědnost", tedy jestli
+    #: to někdo řekl, nebo se to jen trefilo. Táž lekce jako `collided`
+    #: a `shaped`, jen o patro výš: stav, na kterém se staví, tu své
+    #: místo měl, jen v něm stála jiná věc.
+    #:
+    #: Hodnoty: `""` (nerozhodnuto), `OSIVO`, `TVAR` (naučený vzor)
+    #: a `AFIRMACE` (odpověď na kvantifikátor TÉHLE věty).
+    quantifier_authority: str = ""
     #: KANDIDÁTI, KTERÉ SYSTÉM NABÍDL *(W‑86)*. Vlastní pole, ne jen věta
     #: v otázce: nabídka je STAV, na kterém staví měření („kolik odkazů
     #: má jednoho kandidáta a kolik víc" je číslo, které řekne, jak drahý
@@ -2224,6 +2237,11 @@ def passive_question(predication: Predication) -> str | None:
 #: Na co otevřená role čeká.
 AWAITING_QUANTIFIER = "kvantifikátor"
 AWAITING_REFERENCE = "odkaz"
+
+#: NA ČÍ ZODPOVĚDNOST je kvantifikátor role *(W‑103)*.
+AUTHORITY_SEED = "osivo"
+AUTHORITY_SHAPE = "naučený tvar"
+AUTHORITY_AFFIRMED = "afirmace"
 #: Role, která na sebe má JÁDROVÉ JMÉNO, ale zatím ho nemá *(B‑19)*.
 #: Dokud ho nedostane, věta se NEZAPISUJE: jinak by ji odpověď zapsala
 #: podruhé a v bázi by ležely dva výroky o téže větě.
@@ -3296,6 +3314,14 @@ def _quantify(
             quantifier=quantifier,
             determiner=_mention(determiner) if determiner else None,
             source=origin,
+            # PŮVOD SE ČTE Z `learned_from` TOHO VZORU *(W‑103)*, ne
+            # z podoby signatury: tvar je u osiva i u naučeného tentýž
+            # a rozlišit je podle něj nejde.
+            quantifier_authority=(
+                AUTHORITY_SHAPE
+                if matches[0].learned_from.startswith("tah ")
+                else AUTHORITY_SEED
+            ),
         ),
         None,
     )

@@ -55,6 +55,7 @@ from .ast import (
     same_as_of,
 )
 from .cascade import (
+    AUTHORITY_AFFIRMED,
     AWAITING_REFERENCE,
     dropped_tokens,
     lost_shape,
@@ -184,6 +185,10 @@ def _apply_quantifier(
                 # znovupoužití by ten tah nezapočítala, takže učení by
                 # vypadalo neužitečněji, než je.
                 source=f"tvar {shape.shape()}",
+                # AFIRMACE K TÉHLE VĚTĚ *(W‑103)*. Tohle je jediné místo,
+                # kde kvantifikátor stojí na tom, že ho někdo pro TU věc
+                # řekl — všude jinde se jen trefil tvar.
+                quantifier_authority=AUTHORITY_AFFIRMED,
             )
             if role.pending is not None and role.pending == shape
             else role

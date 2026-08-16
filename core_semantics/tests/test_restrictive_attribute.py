@@ -166,3 +166,58 @@ def test_under_exists_the_sentence_is_written_as_before() -> None:
     assert result.predication is not None
     assert restrictive_attributes(result.predication) == ()
     assert result.statement_id is not None, "∃ se zapisuje dál"
+
+
+# --------------------------------------------------------------------------
+# Původ kvantifikátoru — W‑103
+# --------------------------------------------------------------------------
+
+
+def test_the_quantifier_carries_its_authority() -> None:
+    """`source` říká, KTERÝ TVAR se trefil; autorita říká, NA ČÍ
+    ZODPOVĚDNOST to je *(W‑103)*.
+
+    Po odpovědi na tuhle větu, u jiné věty téhož tvaru i u čistého osiva
+    stojí v `source` týž řetězec — rozlišit se to podle něj nedá."""
+    from core_semantics.cascade import AUTHORITY_SEED
+
+    session, oracle = _session(podmet=Operation.FOR_ALL)
+    result = session.utter(TEXT, oracle)
+    assert result.predication is not None
+    role = result.predication.role("kdo")
+    assert role is not None
+    kdo = result.predication.reading("kdo")
+    assert kdo is not None
+    assert kdo.quantifier_authority == AUTHORITY_SEED
+    assert kdo.source == "tvar NOUN/Sing/Nom/nsubj", (
+        "a `source` mluví dál o tvaru — ta dvě pole odpovídají na jiné otázky"
+    )
+
+
+def test_an_answer_marks_the_role_as_affirmed() -> None:
+    """Odpověď `→∀` je jediné místo, kde kvantifikátor stojí na tom, že
+    ho někdo pro TU věc řekl."""
+    from core_semantics.cascade import AUTHORITY_AFFIRMED
+    from core_semantics.lexicon import czech_seed
+    from core_semantics.session import answers_quantifier
+
+    session = Session(lexicon=czech_seed())
+    oracle = _Oracle(sentence())
+    result = session.utter(TEXT, oracle)
+    assert result.predication is not None
+    ceka = [
+        r for r in result.predication.roles
+        if r.pending is not None and r.name == "kdo"
+    ]
+    assert ceka, "bez naučeného tvaru se systém ptá"
+    signatura = ceka[0].pending
+    assert signatura is not None
+
+    po = session.play(
+        answers_quantifier(
+            "O každém.", result.predication, signatura, Operation.FOR_ALL
+        )
+    )
+    assert po.predication is not None
+    kdo = po.predication.reading("kdo")
+    assert kdo is not None and kdo.quantifier_authority == AUTHORITY_AFFIRMED

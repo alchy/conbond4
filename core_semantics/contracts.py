@@ -1940,6 +1940,41 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-59",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "ROLE VI, NA CI ZODPOVEDNOST JE JEJI KVANTIFIKATOR "
+            "*(W-103)*. `source` odpovida na otazku „ktery TVAR se "
+            "trefil“ a je u vsech tri pripadu TYZ RETEZEC: po odpovedi "
+            "na TUHLE vetu, u jine vety tehoz tvaru i u ciste osiva stoji "
+            "`tvar NOUN/Sing/Nom/nsubj`. Potreba je ale druha otazka — "
+            "„na ci zodpovednost“ — a bez ni se rozhodnuti o zapisu `∀` "
+            "neda ani polozit, natoz rozhodnout. "
+            "`quantifier_authority` proto rozlisuje OSIVO, NAUCENY TVAR "
+            "a AFIRMACI (odpoved na kvantifikator teto vety); cte se "
+            "z `learned_from` toho vzoru, ne z podoby signatury, protoze "
+            "tvar je u osiva i u nauceneho tentyz. Taz lekce jako "
+            "`collided` a `shaped` (B-17), jen o patro vys: stav, na "
+            "kterem se stavi, tu sve misto MEL, jen v nem stala jina vec. "
+            "TENHLE KROK NEMENI CHOVANI, a to je jeho zkouska: 1339 "
+            "zelenych, korpus 11 (golden_lexicon) / 3 (czech_seed) beze "
+            "zmeny. "
+            ". ROZSAH MERENI: korpus 238 vet obema lexikony. Licence "
+            "zapisu `∀` NENI postavena — zmereno jen, co by stala: "
+            "afirmace K TE VETE shodi 15 akceptacnich zkousek, afirmace "
+            "K TEMUZ LEMMATU 13, obe varianty daji korpus 11 -> 8. "
+            "Rozdil dvou zkousek je cela cena per-lemma proti per-vete; "
+            "zbylych 13 pada u OBOU, protoze zlate dialogy a prepisy "
+            "beru `∀` z OSIVA a to zadna afirmace nezachrani. "
+        ),
+        anchor="core_semantics.cascade:RoleReading",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_quantifier_carries_its_authority",
+            "test_an_answer_marks_the_role_as_affirmed",
+        ),
+    ),
+    Clause(
         id="S-58",
         boundary=CASCADE_SESSION,
         promise=(

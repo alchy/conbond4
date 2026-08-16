@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.92 · 16. 8. 2026
+**Verze jádra:** 0.1.93 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,44 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**ROLE VÍ, NA ČÍ ZODPOVĚDNOST JE JEJÍ KVANTIFIKÁTOR** *(W‑103, kolo #164,
+krok 1 ze tří)*.
+
+`source` odpovídá na otázku „který TVAR se trefil" a je u všech tří
+případů týž řetězec: po odpovědi na TUHLE větu, u jiné věty téhož tvaru
+i u čistého osiva stojí `tvar NOUN/Sing/Nom/nsubj`. Potřeba je ale druhá
+otázka — **na čí zodpovědnost** — a bez ní se rozhodnutí o zápisu `∀`
+nedá ani položit.
+
+`quantifier_authority` proto rozlišuje **osivo**, **naučený tvar**
+a **afirmaci** (odpověď na kvantifikátor téhle věty); čte se
+z `learned_from` toho vzoru, ne z podoby signatury. Táž lekce jako
+`collided` a `shaped` (B‑17), jen o patro výš.
+
+**Tenhle krok nemění chování a to je jeho zkouška:** 1339 → 1344
+zelených (jen dva nové testy), korpus **11** (`golden_lexicon`) /
+**3** (`czech_seed`) beze změny.
+
+---
+
+**KROK 2: CO BY LICENCE STÁLA** *(změřeno, nepostaveno)*.
+
+| licence zápisu `∀` | padlo zkoušek | korpus (`golden`) |
+|---|---|---|
+| jen afirmace **k té větě** | **15** | 11 → 8 |
+| afirmace **k témuž lemmatu** | **13** | 11 → 8 |
+
+**Rozdíl dvou zkoušek je celá cena per‑lemma proti per‑větě** — zachrání
+právě `test_the_answer_generalises_beyond_this_one_sentence`
+a `test_turns_to_learn_finally_has_something_to_measure`, tedy I‑16 pro
+kvantifikátor.
+
+**Zbylých třináct padá u OBOU variant, a je to podstatnější zjištění:**
+zlaté dialogy a přepisy berou `∀` z OSIVA (`quantifier_authority ==
+osivo`, ověřeno na „Auta jezdí po dálnici."), a osivo žádná afirmace
+nezachrání. Volba mezi per‑větou a per‑lemmatem tedy **nerozhoduje o té
+kolizi**; rozhoduje o ní otázka, jestli smí `∀` ze seedu zapisovat.
 
 **W‑102 SE V ZADANÉM ZNĚNÍ POSTAVIT NEDÁ — KOLIDUJE S I‑16 PRO
 KVANTIFIKÁTOR** *(kolo #163; postaveno, změřeno, vráceno)*.
