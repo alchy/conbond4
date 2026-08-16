@@ -1884,6 +1884,56 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-49",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "TAZACI A VZTAZNE PRISLOVCE POJMENOVAVA SVOU ROLI SAMO "
+            "*(W-87)*. Kazde `advmod` dostavalo roli `jak`, takze "
+            "„…do Josefova, KDE se manzelum narodilo dite.“ tvrdilo, ze "
+            "„kde“ je ZPUSOB deje. To o te vete NEPLATI a neni to "
+            "nepresnost: je to nepravda vedle vlastni otazky, protoze "
+            "system se pak ptal na odkaz role „jak“. "
+            "Jmeno se nebere ze seznamu slov (ctrnacta instance "
+            "W-32 … W-83 by to byla), ale z RYSU `PronType` (`Int`/`Rel`, "
+            "cteno prunikem): ceske tazaci prislovce JE jmeno te "
+            "okolnosti — „kde“ se pta na misto, „kdy“ na cas, „kam“ "
+            "na smer — a system ta jmena uz pouziva (`v+Loc/Geo → kde`, "
+            "`do+Gen → kam`). PROTIPRIKLAD: obycejne prislovce "
+            "(„rychle“, „velmi“) `PronType` nema a zustava `jak`. "
+            ". ROZSAH MERENI: korpus 238 vet — po zmene ma 6 roli jmeno "
+            "`kde`, 1 `kam`, 1 `odkud`; `jak` zustava u 40. "
+        ),
+        anchor="core_semantics.cascade:_role_for",
+        entry=".utter(",
+        enforced_by=(
+            "test_an_interrogative_adverb_names_its_own_role",
+            "test_an_ordinary_adverb_is_still_manner",
+        ),
+    ),
+    Clause(
+        id="S-50",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "NABIDKA KANDIDATU JE POLE, NE VETA V OTAZCE *(W-86)*. "
+            "`RoleReading.offered` drzi kandidaty strojove a otazka se "
+            "sklada Z NEJ; obracene poradi by znamenalo psat parser na "
+            "vlastni vystup — taz vada jako N-10 u dokumentoveho behu. "
+            "Meri se na tom, kolik odkazu ma jednoho kandidata a kolik "
+            "vic, tedy jak drahy ten dialog bude. Vlastni pole ze "
+            "stejneho duvodu jako `collided` a `shaped` (B-17): znacka, "
+            "na ktere nekdo stavi, musi mit vlastni misto. "
+            ". ROZSAH MERENI: korpus 238 vet — 34 cekajicich odkazu, "
+            "rozdeleni podle poctu kandidatu 0:9, 1:5, 2:8, 3:9, 4:1, "
+            "5:2. "
+        ),
+        anchor="core_semantics.cascade:relative_question",
+        entry=".utter(",
+        enforced_by=(
+            "test_the_offer_is_a_field_not_a_sentence_in_the_question",
+            "test_agreement_narrows_the_offer_but_never_decides",
+        ),
+    ),
+    Clause(
         id="S-48",
         boundary=CASCADE_SESSION,
         promise=(

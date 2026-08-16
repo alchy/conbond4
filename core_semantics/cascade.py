@@ -155,6 +155,14 @@ class RoleReading:
     #: čeká na kvantifikátor, „ta učitelka" na to, KTERÝ uzel to je. Slít
     #: obojí do jedné otázky by znamenalo ptát se na špatnou věc.
     awaiting: str = ""
+    #: KANDIDÁTI, KTERÉ SYSTÉM NABÍDL *(W‑86)*. Vlastní pole, ne jen věta
+    #: v otázce: nabídka je STAV, na kterém staví měření („kolik odkazů
+    #: má jednoho kandidáta a kolik víc" je číslo, které řekne, jak drahý
+    #: ten dialog bude), a číst ji zpátky z textu otázky znamená psát
+    #: parser na vlastní výstup. Táž lekce jako N‑10 u dokumentového
+    #: běhu — a jako `collided`/`shaped`: značka, na které někdo staví,
+    #: musí mít vlastní místo.
+    offered: tuple[str, ...] = ()
     #: Uzel, který na otevřenou referenci ROZHODL ČLOVĚK (tah `?→`).
     #: Nese se v roli, takže je součástí žurnálu — a `replay` se proto
     #: neptá podruhé (M‑4).
@@ -1058,6 +1066,24 @@ def _role_for(token: Token, reading: Reading) -> str | None:
         # by byl dohad o významu — a od N‑3 na to existuje otázka.
         return surface_role(token, reading)
     if base in ("amod", "advmod"):
+        # TÁZACÍ A VZTAŽNÉ PŘÍSLOVCE POJMENOVÁVÁ SVOU ROLI SAMO *(W‑87)*.
+        # „…do Josefova, **kde** se manželům narodilo dítě." dávalo roli
+        # `jak` — tedy tvrzení, že „kde" je způsob děje, což o té větě
+        # NEPLATÍ. Není to nepřesnost: je to nepravda vedle vlastní
+        # otázky, protože systém se pak ptá na odkaz role „jak".
+        #
+        # Jméno se nehádá a nebere se ze seznamu slov (to by byla
+        # čtrnáctá instance W‑32 … W‑83): české tázací příslovce JE
+        # jméno té okolnosti — „kde" se ptá na místo, „kdy" na čas,
+        # „kam" na směr — a systém ta jména už používá (`v+Loc/Geo →
+        # kde`, `do+Gen → kam`). Poznají se z RYSU `PronType`
+        # (`Int`/`Rel`), čteného průnikem jako všude jinde (W‑32);
+        # obyčejné příslovce („rychle", „velmi") `PronType` nemá a
+        # zůstává `jak`.
+        if token.upos == "ADV" and {"Int", "Rel"} & set(
+            (token.feat("PronType") or "").split(",")
+        ):
+            return token.lemma
         return ROLE_MANNER
     if base in CIRCUMSTANCE_DEPRELS:
         # Okolnost se jmenuje z předložky a pádu, takže je na podtypu
@@ -4178,8 +4204,9 @@ def relative_question(predication: Predication) -> str | None:
     if not ceka:
         return None
     role = ceka[0]
-    nabidka = role.source.split("nabídka: ", 1)[-1] if "nabídka: " in role.source else ""
-    kdo = f" Nabízím: {nabidka}." if nabidka else ""
+    # OTÁZKA SE ČTE Z POLE, ne pole z otázky *(W‑86)*. Kdyby se nabídka
+    # skládala jen do textu, muselo by ji každé měření parsovat zpátky.
+    kdo = f" Nabízím: {', '.join(role.offered)}." if role.offered else ""
     return (
         f"A koho se týká ta vztažná věta — „{druha.predicate}“, role "
         f"„{role.name}“ („{role.mention.form}“)?{kdo} "
@@ -4251,10 +4278,8 @@ def relative_tier(lexicon: Lexicon) -> Tier:
                 replace(
                     r,
                     awaiting=AWAITING_REFERENCE,
-                    source=(
-                        "vztažné zájmeno — odkazuje na jméno z věty; "
-                        "nabídka: " + ", ".join(nabidka)
-                    ),
+                    offered=nabidka,
+                    source="vztažné zájmeno — odkazuje na jméno z věty",
                 )
                 if r is zajmena[0]
                 else r

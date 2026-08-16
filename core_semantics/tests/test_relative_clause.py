@@ -163,8 +163,8 @@ def test_agreement_narrows_the_offer_but_never_decides() -> None:
     session, oracle = _default()
     zuzena = session.utter(TEXT, oracle).predication
     assert zuzena is not None and zuzena.second is not None
-    nabidka = [r for r in zuzena.second.roles if r.awaiting][0].source
-    assert "soused" in nabidka and "sestra" not in nabidka, (
+    nabidka = [r for r in zuzena.second.roles if r.awaiting][0].offered
+    assert nabidka == ("soused",), (
         "ženský podmět s mužským zájmenem se nenabízí"
     )
 
@@ -173,10 +173,27 @@ def test_agreement_narrows_the_offer_but_never_decides() -> None:
     )
     oba = session2.utter(TEXT, oracle2).predication
     assert oba is not None and oba.second is not None
-    nabidka2 = [r for r in oba.second.roles if r.awaiting][0].source
-    assert "soused" in nabidka2 and "muž" in nabidka2, (
+    nabidka2 = [r for r in oba.second.roles if r.awaiting][0].offered
+    assert set(nabidka2) == {"soused", "muž"}, (
         "dva kandidáti téhož rodu zůstanou oba a rozhodne člověk"
     )
+
+
+def test_the_offer_is_a_field_not_a_sentence_in_the_question() -> None:
+    """NABÍDKA JE STAV, NE VĚTA *(W‑86)*.
+
+    Číst kandidáty zpátky z textu otázky znamená psát parser na vlastní
+    výstup — táž vada jako N‑10 u dokumentového běhu. Měření „kolik
+    odkazů má jednoho kandidáta a kolik víc" na tom pak stojí."""
+    session, oracle = _default()
+    result = session.utter(TEXT, oracle)
+    assert result.predication is not None and result.predication.second is not None
+    ceka = [r for r in result.predication.second.roles if r.awaiting][0]
+    assert ceka.offered == ("soused",)
+    # A otázka se skládá Z POLE, ne pole z otázky.
+    assert result.question is not None
+    for kandidat in ceka.offered:
+        assert kandidat in result.question
 
 
 def test_without_the_reference_the_clause_does_not_reach_the_base() -> None:
@@ -227,3 +244,71 @@ def test_the_message_does_not_claim_the_node_came_from_the_parse() -> None:
     radek = [line for line in po.lines if "DRUHÁ VĚTA téže promluvy" in line]
     assert radek and "určila ODPOVĚĎ" in radek[0]
     assert "vzniká z něj" not in radek[0]
+
+
+# --------------------------------------------------------------------------
+# Vztažné příslovce — W‑87
+# --------------------------------------------------------------------------
+
+
+def _with_adverb(lemma: str, upos: str = "ADV", **feats: str) -> Reading:
+    """«Sestra potkala souseda, <slovo> odešel.» — místo zájmena příslovce."""
+    return Reading(
+        tokens=(
+            tok(1, "Sestra", "sestra", "NOUN", 2, "nsubj",
+                Case="Nom", Gender="Fem", Number="Sing"),
+            tok(2, "potkala", "potkat", "VERB", 0, "root",
+                Gender="Fem", Number="Sing", Polarity="Pos"),
+            tok(3, "souseda", "soused", "NOUN", 2, "obj",
+                Case="Acc", Gender="Masc", Number="Sing"),
+            tok(4, ",", ",", "PUNCT", 6, "punct"),
+            tok(5, lemma, lemma, upos, 6, "advmod", **feats),
+            tok(6, "odešel", "odejít", "VERB", 3, "acl:relcl",
+                Gender="Masc", Number="Sing", Polarity="Pos"),
+            tok(7, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def test_an_interrogative_adverb_names_its_own_role() -> None:
+    """PŘÍSLOVCE „kde" NENÍ ZPŮSOB *(W‑87)*.
+
+    Každé `advmod` dostávalo roli `jak`, takže „…do Josefova, **kde** se
+    manželům narodilo dítě." tvrdilo, že „kde" je způsob děje. To o té
+    větě NEPLATÍ — a je to nepravda vedle vlastní otázky, protože systém
+    se pak ptal na odkaz role „jak".
+
+    Jméno se nebere ze seznamu slov (to by byla čtrnáctá instance
+    W‑32 … W‑83), ale z RYSU `PronType`: české tázací příslovce JE jméno
+    té okolnosti."""
+    session, oracle = _session(_with_adverb("kde", PronType="Int,Rel"))
+    result = session.utter(TEXT, oracle)
+    assert result.predication is not None and result.predication.second is not None
+    assert result.predication.second.role("kde") is not None
+    assert result.predication.second.role("jak") is None
+
+
+def test_an_ordinary_adverb_is_still_manner() -> None:
+    """PROTIPŘÍKLAD: „rychle" `PronType` nemá a zůstává `jak`. Kdyby se
+    změnilo obojí, změna by nebyla oprava, ale jiné pravidlo.
+
+    Měří se na HLAVNÍ větě: bez vztažného zájmena se klauze nepřipojí
+    (W‑85), takže druhá predikace by ani nevznikla a test by měřil něco
+    jiného, než co tvrdí."""
+    obycejne = Reading(
+        tokens=(
+            tok(1, "Sestra", "sestra", "NOUN", 2, "nsubj",
+                Case="Nom", Gender="Fem", Number="Sing"),
+            tok(2, "odešla", "odejít", "VERB", 0, "root",
+                Gender="Fem", Number="Sing", Polarity="Pos"),
+            tok(3, "rychle", "rychle", "ADV", 2, "advmod", Degree="Pos"),
+            tok(4, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    session, oracle = _session(obycejne)
+    result = session.utter("Sestra odešla rychle.", oracle)
+    assert result.predication is not None
+    assert result.predication.role("jak") is not None
+    assert result.predication.role("rychle") is None

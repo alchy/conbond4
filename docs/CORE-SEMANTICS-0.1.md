@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.78 · 16. 8. 2026
+**Verze jádra:** 0.1.79 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,55 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**TÁZACÍ PŘÍSLOVCE POJMENOVÁVÁ SVOU ROLI SAMO** *(W‑87, kolo #150)*.
+
+Každé `advmod` dostávalo roli `jak`, takže „…do Josefova, **kde** se
+manželům narodilo dítě." tvrdilo, že „kde" je ZPŮSOB děje. To o té větě
+neplatí — a je to nepravda vedle vlastní otázky, protože systém se pak
+ptal na odkaz role „jak". Jméno se nebere ze seznamu slov (čtrnáctá
+instance W‑32 … W‑83 by to byla), ale z rysu `PronType` (`Int`/`Rel`,
+čteno průnikem): české tázací příslovce JE jméno té okolnosti a systém
+ta jména už používá (`v+Loc/Geo → kde`, `do+Gen → kam`). Protipříklad:
+„rychle" a „velmi" `PronType` nemají a zůstávají `jak`.
+
+**NABÍDKA KANDIDÁTŮ JE POLE, NE VĚTA** *(W‑86)*. `RoleReading.offered`
+drží kandidáty strojově a otázka se skládá z něj. Opačné pořadí by
+znamenalo psát parser na vlastní výstup — táž vada jako N‑10. Měření
+z korpusu: 34 čekajících odkazů, podle počtu kandidátů 0:9, 1:5, 2:8,
+3:9, 4:1, 5:2.
+
+---
+
+**ARGUMENTOVÁ KLAUZE — ROZHODNUTÍ PŘED KÓDEM** *(zadání #150)*.
+
+**Nejdřív oprava vlastního čísla z #148.** Řekl jsem „největší rodina:
+argument slovesa, 75 klauzí". To číslo je nadsazené: z 67 měřitelných je
+**21 už obsloužených jako SLOŽENÝ PŘÍSUDEK** (`moci_ovlivnit`,
+`chtít_koupit` — G‑1a; 44 ze 75 `xcomp` visí pod „moci"/„muset"),
+**12 leží jako reifikovaný děj v roli** (`zjistit(ccomp:umírat,
+kdo:∀studie)`), **15 je zahozených** a **19 je hluboko uvnitř jiné
+klauze** (řetěz z #140). Otevřená je tedy ~15, ne 75.
+
+**ROZHODNUTÍ: obsah argumentové klauze se do báze jako samostatný výrok
+NESMÍ.** „Studie zjistila, že lidé umírají…" NETVRDÍ, že lidé umírají —
+tvrdí, že to studie zjistila. Vztažná věta se zapsat směla, protože
+o svém uzlu tvrdí („lidé, kteří nemají interakci" o těch lidech platí);
+tady pravdivost obsahu závisí na řídícím slovese. Je to táž hranice jako
+W‑79: operátor, který pravdivost obrací nebo podmiňuje, zápis zastaví —
+jen tady tím operátorem není částice, ale SLOVESO SAMO.
+
+Jádro pro to prostředek má a už ho používá: **reifikovaný děj v roli**.
+Co zbývá udělat, není připojení, ale (a) dát tvaru `ccomp`/`xcomp` jméno
+role — dnes je to TVAR, na který se systém ptá — a (b) přečíst členy
+uvnitř klauze, což je dnešní ztráta.
+
+**Faktivní slovesa jsou jiná rodina a patří do LEXIKONU, ne do kódu.**
+„Je známo, že gestapo plánovalo zatčení." se tvrdí; „Studie zjistila,
+že…" ne. Rozdíl je lexikální vlastnost řídícího slovesa — v korpusu je
+23 různých — a musí ležet jako odvolatelná data vedle `ScopeOperator`
+(W‑79). Do té doby se **nezapisuje nic**: nezapsat pravdu je mez,
+zapsat nepravdu je vada.
 
 **VZTAŽNÁ VĚTA SE PŘIPOJÍ A ZEPTÁ SE, O KOM JE** *(W‑85, kolo #149)*.
 
