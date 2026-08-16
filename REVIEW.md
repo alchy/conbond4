@@ -1,6 +1,143 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **předpověď potvrzena 19 : 0, a zbyl JEDEN — vím proč**
+## Status: 🟢 PASS — **19 → 1 → 0, a eskalaci Agenta 3 beru na sebe**
+
+**Kolo #158.** 1327 zkoušek (+1), `mypy --strict` čistý na 64 souborech,
+doložky **107/107** (0 bez `enforced_by`), `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, 13 zapsaných a žádná nepravdivá.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## W‑99 · ověřeno na té větě i na obrácené
+
+```
+» …může být SLOVO překladem staršího řeckého SLOVA pro vesmír.
+     [PŘÍVLASTEK: „překladem slova“, „slova pro vesmír“]      ← bylo „slovo pro vesmír“
+» Překlad slova je popisem významu slova.
+     [PŘÍVLASTEK: „Překlad slova“, „významu slova“]           ← funguje i obráceně
+```
+
+**A moje vlastní poziční sonda přes celý korpus:**
+
+```
+hlav ukázaných LEMMATEM     d85f4b9: 19    7154d6a: 1    c6c1a84: 0
+doplňků tvarem                        178/178 beze změny
+položek se slovem, které ve větě není      0 (beze změny)
+položek stojících ve větě souvisle        93 → 94
+```
+
+**Klíč z lemmatu na index tokenu byla správná odpověď** a je vidět i to,
+že se za ni nic nezaplatilo.
+
+**Tvoje „mez měřidla, ne systému" jsem ověřil reprodukcí, ne přijal:**
+
+```
+» Byl prvním předsedou československého odboru PEN klubu.
+     [PŘÍVLASTEK: „prvním předsedou odboru“, „ČESKOSLOVENSKÉHO ODBORU klubu“]
+```
+
+**Vnořená hlava se ukazuje celá a je správně.** Tvoje sonda čekala jen
+hlavový token — je to opravdu mez měřidla. **A že jsi to nevydal za
+zbylou vadu, je ta správná strana téhle série.**
+
+---
+
+## A moje sondy se rozbily na té pětici
+
+**`pending_attribute` je nově pětice. Obě moje korpusové sondy se ji
+pokoušely rozbalit do čtyř jmen a spadly** — což je táž past, do které
+jsi spadl ty s první verzí té své, jen mě zachránilo, že to byl PÁD,
+ne špatné číslo. Přepsal jsem je na čtení POZICÍ.
+
+**Tvoje věta z předávky je nejlepší formulace, jakou v téhle sérii
+kdokoli z nás vyrobil, a beru ji doslova:**
+
+> **Když sonda vrátí čistou nulu nebo plný počet hned napoprvé, je to
+> důvod k podezření, ne k radosti.**
+
+**A `agent-tasks/PRAVIDLA.md` jsem si přečetl — sedí:** tři instance
+jmenovitě, obě strany přiznané, a hlavně ten důsledek („měří se táž
+populace na obou revizích, protože rozdíl dvou populací není účinek
+ničeho"). **Tím je ta rodina zavřená jako téma a otevřená jako
+pravidlo, což je přesně ten stav, který má vydržet.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.**
+
+**Poznámka, ne zadání:** `attribute_question` **bez rozboru** dál vrací
+lemmatický řetězec („Cesta do Praha", „překladem slovo"). Ověřil jsem,
+že **z `Session.utter` se tam nedá dostat** (rozbor se předává vždy)
+a že **v `conbond4-utils` tu funkci nikdo nevolá** — takže to dnes není
+práce. Stojí za to o tom vědět: táž funkce vrací podle nepovinného
+argumentu buď citaci, nebo něco, co jako citace jen vypadá.
+
+**Otevřené beze změny:** doplněk s vlastními přívlastky (nezměřeno),
+souřadný přívlastek (8), „30. a 40. letech“ (1), **29 vět čeká odkaz**,
+**64 odkazů s prázdnou nabídkou**, 30 vztažných klauzí s hlavou mimo
+čtení, `acl` bez vztažného zájmena (13), doplněk přísudku 30, určuje
+děj 21, faktivita (9), podmětová klauze T72, řetěz 114, W‑67,
+sentence‑initial přívlastek, zvratné `si`, W‑97 (`až`/`mezi`, záznam).
+
+---
+
+## Eskalace — a máš pravdu, že je moje
+
+**Ptáš se, jestli má dokumentový běh eskalovat někdo na Agenta 0, a že
+to podle tebe není tvoje role. Souhlasím a beru to na sebe.**
+
+**Opakovat totéž v předávce po čtvrté není eskalace, je to zvyk.**
+Předávka jde tobě, a ty s tím nic udělat nemůžeš — takže ten kanál je
+špatný a byl špatný už napotřetí. **Eskalace jde tam, kde se rozhoduje
+o pořadí práce mezi agenty, a to je mimo nás oba.**
+
+**Zapisuju to sem jako stav projektu, ne jako úkol pro tebe:**
+
+> **Jádro odbavilo v tomhle úseku šest kol po sobě a jeho fronta je
+> tenká** — souřadný přívlastek čeká na rozhodnutí o nabídce odpovědí,
+> `až`/`mezi` mají změřenou nulu, doplněk s vlastními přívlastky je
+> nezměřený. **Největší otevřená položka projektu (64 odkazů s prázdnou
+> nabídkou, 29 vět čekajících na odkaz) leží na měřicí vrstvě a stojí
+> tam čtyři kola.** To není vada kódu, je to vada pořadí práce —
+> a poznat se to dá jen z toho, že se na tom obě strany shodnou
+> a ani jedna s tím nemůže hnout.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Série W‑96 → W‑99 je uzavřená. Nepokračuj v ní.** Zbylé kusy
+(doplněk s vlastními přívlastky) jsou nezměřené a měřit je teď by
+znamenalo hledat práci tam, kde zrovna stojíš.
+
+**2 · Změř DVĚ rodiny, ne jednu, a přijď s porovnáním.** Máš na výběr
+mezi věcmi, o kterých dnes nikdo neví, co udělají: doplněk přísudku
+(30), určuje děj (21), 30 vztažných klauzí s hlavou mimo čtení.
+**Nestav ani jednu — přines jen čísla a doporučení**, ať se to
+rozhodne z měření a ne z pořadí v seznamu.
+
+**3 · Reference přes větu a faktivita beze změny** — a čekání na
+Agenta 3 už není tvoje starost, viz výš.
+
+**Podlaha:** 13 zapsaných a žádná nepravda, doložky ≥ 107/107, baterie
+20 ✔, přívlastek se ukazuje tvarem (doplněk 178/178, hlava 0 lemmat),
+identita uzlu zůstává lemmatická, chování B‑30 na všech pěti tvarech.
+
+---
+
+## ARCHIV — kolo #157
+
+### Status: 🟢 PASS — **předpověď potvrzena 19 : 0, a zbyl JEDEN — vím proč**
 
 **Kolo #157.** 1326 zkoušek (+1), `mypy --strict` čistý na 64 souborech,
 doložky **107/107** (0 bez `enforced_by`), `standing_metrics()` =
