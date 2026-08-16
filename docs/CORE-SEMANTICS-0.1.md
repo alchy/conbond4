@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.87 · 16. 8. 2026
+**Verze jádra:** 0.1.88 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,54 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**TŘI RODINY ZMĚŘENÉ VEDLE SEBE — A HMOTA NENÍ V ŽÁDNÉ Z NICH**
+*(měření #159, žádná stavba)*.
+
+Zadání znělo změřit doplněk přísudku, „určuje děj" a vztažné klauze
+s hlavou mimo čtení a přijít s porovnáním. Změřeno podle pravidla
+z #150 — ne z rozboru, ale z toho, co s nimi systém dnes dělá:
+
+| rodina | v korpusu | hlava JE ve čtení | hlava MIMO čtení | už obslouženo |
+|---|---|---|---|---|
+| doplněk přísudku (`advcl:pred`) | 28 | **6** | 15 | 7 |
+| určuje děj (`advcl`) | 18 | **0** | 7 | 7 rolí + 4 |
+| vztažná klauze (`acl:relcl`) | 57 | **1** | 19 | 27 + 10 |
+
+**Dosažitelné je dohromady sedm.** U „určuje děj" je to nula: sedm z osmnácti
+už rolí JE, zbytek je mimo čtení nebo pohlcený. Stavět kteroukoli z těch
+tří by znamenalo psát kód pro jednotky — pravidlo z #144.
+
+**SPOLEČNÁ PŘÍČINA JE U VŠECH TŘÍ TÁŽ: hlava MIMO čtení.** Přes celý
+korpus je to **619 ztrát ze 735** (84 %). Nejbližší předek ve čtení je
+u 244 z nich vzdálený dva kroky, u 153 tři, a u 85 není ve čtení nikdo
+až ke kořeni.
+
+CO STOJÍ NA VRCHOLU TĚCH ŘETĚZŮ (nejvyšší člen, který sám ve čtení není):
+
+| vrchol řetězu | ztrát |
+|---|---|
+| `nmod` (NOUN 148 + PROPN 35) | **183** |
+| `root` (VERB 64 + ADJ 15) | 79 |
+| `conj` (NOUN) | 76 |
+| `appos` (NOUN 54 + PROPN 21) | **75** |
+| `acl` (VERB) | 29 |
+
+**DOPORUČENÍ: ŘETĚZ PŘÍVLASTKŮ.** Ztrát, jejichž hlava je doplňkem
+nějakého už nalezeného přívlastku, je **95 v 59 větách** (`nmod` 41,
+`flat` 20, `conj` 10, `appos` 9, `amod` 7). Mluví pro ni tři věci:
+
+  1. **Mechanismus je hotový.** W‑84 (vztah vedle věty), W‑92 (hlavou smí
+     být pohlcený díl), W‑98 (hlava nemusí být role) — zbývá rozšířit
+     podmínku „hlava musí být ve čtení" o „nebo je doplňkem přívlastku".
+  2. **Rozhodnutí o významu už padlo** a je totéž: je to vztah vedle
+     věty, do báze jde až po odpovědi.
+  3. Je to ČTENÍ, takže nová možnost nepravdy nevzniká.
+
+**Apozice (75 na vrcholu, 101 ztrát ve 41 větách) je druhá v pořadí
+a NEDOPORUČUJU ji teď**: potřebuje vlastní rozhodnutí o významu (co
+apozice tvrdí), a T77 už jednou rozhodla jen jednu její půlku — že
+apozice není díl jména.
 
 **KLÍČ HLAVY JE INDEX TOKENU, NE LEMMA** *(W‑99, kolo #158)*.
 
