@@ -1,6 +1,135 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — **„v letech 1910 NEBO 1920" se zapíše jako jeden čas, a je to nepravda**
+## Status: 🟢 PASS — **B‑30 zavřená, a tvůj vlastní nález je cennější než ta oprava**
+
+**Kolo #155.** 1319 zkoušek (+6), `mypy --strict` čistý na 64 souborech,
+doložky **106/106** (0 bez `enforced_by`), `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, 13 zapsaných a žádná nepravdivá.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## B‑30 · zavřená, a ověřil jsem to TOUŽ SONDOU, kterou jsem ji otevřel
+
+```
+» V letech 1910 – 1911 studoval Karel Čapek v Berlíně.   → @ kdy
+     ✓ zapsáno  studovat(kde:Berlín, kdo:Karel_Čapek, kdy:léta_1910_1911)
+» V letech 1910 a 1920 …                                 → @ kdy
+     [ZAHOZENO: „1920“]        v bázi: NIC
+» V letech 1910 nebo 1920 …                              → @ kdy
+     [ZAHOZENO: „1920“]        v bázi: NIC
+» V letech 1910, 1911 a 1912 …
+     [ZAHOZENO: „1911“, „1912“]
+» Mezi lety 2009 a 2013 …    → léta_2009_2013   (to, co se nesmělo rozbít)
+```
+
+**Cesta, kterou se nepravda dostávala do báze, je zavřená, a nic se za
+to nezaplatilo.** Přepočítal jsem korpus: ztrát pod pohlceným členem
+**17 → 17**, zapsaných **13 → 13**, přívlastků **212 → 212**, vět
+s `[ZAHOZENO]` **161 → 161**. Sedí to na kus.
+
+**A čárkový výčet je chycený správně z toho důvodu, který jsi
+pojmenoval:** „1910, 1911 a 1912" nese `cc` až u posledního členu,
+takže dotaz po jedné hraně by ho prohlásil za úsek. Ptát se CELÉ
+KOORDINACE je ta správná jednotka — je to táž oprava jednotky, jakou
+jsem si o kolo dřív musel udělat u vlastního počítání souřadností.
+
+---
+
+## Tvůj nález o pomlčce — a je HORŠÍ, než jsi napsal
+
+**Ověřil jsem to a rozšířil na celý korpus.** Vzal jsem každý token,
+který v korpusu stojí MEZI DVĚMA ČÍSLY, a podíval se, čím ho parser
+značí:
+
+```
+znak „–“ (U+2013)   PUNCT/punct   5
+znak „–“ (U+2013)   ADP/case      5
+znak „–“ (U+2013)   ADP/cc        2
+znak „–“ (U+2013)   ADP/punct     1
+znak „–“ (U+2013)   CCONJ/cc      1
+znak „-“ (U+002D)   PUNCT/punct   1
+znak „−“ (U+2212)   PUNCT/punct   1     ← ještě jiný znak, MINUS
+```
+
+**Táž pomlčka dostane PĚT různých dvojic značek**, ne dvě — a k tomu
+jsou v korpusu tři různé znaky pro totéž. **Rozhodovat podle značky by
+tedy nerozbilo jeden úsek, ale bylo by to nespolehlivé principiálně.**
+„Slovo se pozná PÍSMENY, ne značkou" je proto správně, a je to
+**patnáctá instance téže rodiny** (přesná shoda na kategorii, která má
+varianty) — jen poprvé je ta varianta v tom, jak TÝŽ ZNAK dostane od
+parseru pokaždé jinou nálepku.
+
+**A to, že to chytilo tvoje vlastní měření před předávkou, a ne test,
+je přesně ten pořádek, který tenhle protokol chce.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑97 · „v letech 1910 AŽ 1920" je úsek a pravidlo ho odmítne — ZAPSAT, NESTAVĚT
+
+```
+» V letech 1910 až 1920 …   →  léta_1910   [ZAHOZENO: „1920“]
+     „až“  CCONJ/cc   (má písmena → bere se jako spojka)
+```
+
+**Zobecnění „spojovací slovo ⇒ není to úsek" má výjimku, a je to
+nejběžnější slovní podoba rozsahu v češtině.** Směr je ale ten
+bezpečný: ztráta se hlásí, do báze nejde nic, **žádná nepravda**.
+
+**A hlavně: v korpusu je toho NULA.** Prošel jsem každý token stojící
+mezi dvěma čísly — `až` mezi letopočty tam není ani jednou. **Podle
+pravidla z #144 se to tedy NESTAVÍ**, jen se to zapíše jako
+pojmenovaná mez; kdyby to někdo stavěl teď, stavěl by na cíl změřený
+jako prázdný. Až se `až` objeví v měření, patří to k `mezi` — a obojí
+podle tvého vlastního návrhu do lexikonu, ne do kódu.
+
+**Drobnost k témuž:** výjimka pro `mezi` vrací „úsek" **bez ohledu na
+spojku**, takže „Mezi lety 1910 **nebo** 1920" se složí. Česky se tak
+nemluví a v korpusu to není, takže to dnes není práce — ale **až se
+`mezi` bude stěhovat do lexikonu, ať se ta kontrola spojky ptá i tam.**
+Je to táž stavba jako B‑30, jen o patro výš.
+
+**Otevřené beze změny:** souřadný přívlastek (8), „30. a 40. letech“
+(1), 29 vět čeká odkaz (Agent 3), 64 odkazů s prázdnou nabídkou, 30
+vztažných klauzí s hlavou mimo čtení, `acl` bez vztažného zájmena (13),
+doplněk přísudku 30, určuje děj 21, faktivita (9), podmětová klauze
+T72, řetěz 114, W‑67, sentence‑initial přívlastek, zvratné `si`,
+povrch přívlastku s lemmatem.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Vrať se k tomu, co bylo přerušené.** B‑30 byla vsuvka, ne plán.
+Nejbližší otevřená věc se změřeným cílem je pořád **souřadný přívlastek
+(8)** — a ten čeká na rozhodnutí o nabídce odpovědí, ne na kód. **Pokud
+nic jiného změřeného není, změř před stavbou další rodinu** a řekni
+předem, co čekáš.
+
+**2 · `až` a `mezi` NESTAVĚT** — W‑97 je záznam, ne zadání.
+
+**3 · Reference přes větu a faktivita beze změny.** Dokumentový běh
+Agenta 3 pořád nedorazil; **to je dnes největší otevřená položka
+projektu a není tvoje.**
+
+**Podlaha:** 13 zapsaných a žádná nepravda, doložky ≥ 106/106, baterie
+20 ✔, chování B‑30 na všech pěti tvarech (pomlčka, pomlčka jako `cc`,
+`a`, `nebo`, čárkový výčet) plus „mezi lety 2009 a 2013".
+
+---
+
+## ARCHIV — kolo #154
+
+### Status: 🔴 FAIL — **„v letech 1910 NEBO 1920“ se zapíše jako jeden čas, a je to nepravda**
 
 **Kolo #154.** 1313 zkoušek (+6), `mypy --strict` čistý na 64 souborech,
 doložky **106/106** (0 bez `enforced_by`), `standing_metrics()` =
