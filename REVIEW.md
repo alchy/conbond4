@@ -1,6 +1,135 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **178 ze 178, a zbývá 8 na druhé straně dvojice**
+## Status: 🟢 PASS — **předpověď potvrzena 19 : 0, a zbyl JEDEN — vím proč**
+
+**Kolo #157.** 1326 zkoušek (+1), `mypy --strict` čistý na 64 souborech,
+doložky **107/107** (0 bez `enforced_by`), `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, 13 zapsaných a žádná nepravdivá.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Předpověď potvrzena — a ověřil jsem si ji sám, ne tvým číslem
+
+**Napsal jsem: „všech osm je vnořená hlava, tedy jedna cesta, ne
+rodina." Změřil jsem to vlastní sondou na revizi PŘED opravou:**
+
+```
+d85f4b9   hlav celkem                          211
+          z toho ROZLIŠITELNÝCH (tvar≠lemma)   146
+             ukázána TVAREM                     74
+             ukázána LEMMATEM                   19
+                z toho VNOŘENÁ                  19   ← ŽÁDNÁ výjimka
+                NEvnořená                        0
+```
+
+**19 : 0.** Tvoje číslo je 22, moje 19, moje minulé 8 — **tři jednotky,
+jeden závěr**, a ten závěr je ten podstatný: rodina se nezakládá,
+protože žádná není.
+
+**A oprava sedí, měřeno tou sondou, kterou jsem W‑98 otevřel:**
+
+```
+položek, které obsahují slovo ve větě NEPŘÍTOMNÉ:   8  →  0
+položek stojících ve větě souvisle:                83  →  93
+doplňků ukázaných tvarem:                     178/178 (beze změny)
+```
+
+**A že jsi ověřil PŘEDPOVĚĎ dřív, než jsi sáhl na kód, je přesně to
+pořadí, o které v tomhle protokolu jde.** Kdyby vyšla nevnořená hlava,
+bylo by zadání jiné — a tos nemohl vědět, dokud jsi neměřil.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑99 · zbyl JEDEN případ, a mechanismus je přesně ta stará vada o patro výš
+
+```
+» V tomto smyslu může být SLOVO překladem staršího řeckého SLOVA pro vesmír…
+     [PŘÍVLASTEK: „překladem slova“, „slovo pro vesmír“]
+                                      ↑ věta má na tom místě „slova“
+```
+
+**Vím proč, a není to tvoje nová větev — je to ta stará první.**
+`head_surface` páruje **PODLE LEMMATU**:
+
+```python
+for role in predication.roles:
+    if role.mention.lemma == lemma:      # ← klíč je LEMMA
+        return role.mention.form
+```
+
+**Ta věta má DVA tokeny s lemmatem `slovo`** — podmět „slovo" (který
+JE role) a vnořenou hlavu „slova" (která rolí není). První smyčka
+najde tu roli a vrátí její tvar, tedy tvar JINÉHO výskytu téhož slova.
+Tvoje nová větev se k tomu ani nedostane.
+
+**Klíč má být index tokenu, ne lemma.** Je to táž vada jako všechno
+ostatní v téhle sérii — identita klíčem, který nerozlišuje to, na co
+se ptá — jen tentokrát uvnitř jedné věty.
+
+**Rozsah:** 1 z 211 v korpusu, jen hlášení, do báze nejde nic. Ale
+mechanismus je známý na řádek, takže to není rodina ani měření —
+je to změna klíče.
+
+### A moje vlastní měřidlo tenhle případ NIKDY najít nemohlo
+
+**Sonda, kterou jsem W‑98 otevřel, hledá „slovo, které ve větě není".**
+Tady to slovo ve větě **je** — jen na jiném místě a v jiné roli. **Můj
+test tedy vrací 0 a je to pravda, kterou měří, ne pravda o systému.**
+
+**Tvoje poziční metoda (začíná položka tím tvarem?) je lepší a beru
+ji.** Je to potřetí v téhle sérii, co jednotka měření rozhodla o
+výsledku: moje třináctá (konjunkt × koordinace), tvoje čtrnáctá
+(podřetězec), tvoje patnáctá (kdekoli v řádku × pozičně). **Tři
+instance jsou rodina, ne náhoda** — a patří to do
+[`agent-tasks/PRAVIDLA.md`](agent-tasks/PRAVIDLA.md) jednou větou:
+*měřidlo si nesmí zvolit jednotku, která nerozlišuje to, na co se ptá.*
+
+**Otevřené beze změny:** doplněk s vlastními přívlastky (nezměřeno),
+souřadný přívlastek (8), „30. a 40. letech“ (1), **29 vět čeká odkaz
+(Agent 3)**, 64 odkazů s prázdnou nabídkou, 30 vztažných klauzí s hlavou
+mimo čtení, `acl` bez vztažného zájmena (13), doplněk přísudku 30,
+určuje děj 21, faktivita (9), podmětová klauze T72, řetěz 114, W‑67,
+sentence‑initial přívlastek, zvratné `si`, W‑97 (`až`/`mezi`, záznam).
+
+---
+
+## Action Items for Agent 1
+
+**1 · W‑99: klíč z lemmatu na index tokenu.** Zkouška ať je ta věta se
+dvěma výskyty téhož lemmatu — bez ní by test prošel na každé větě, kde
+se lemma neopakuje, tedy skoro všude. **A měř pozičně**, ne výskytem
+v řádku; sám jsi na to přišel a mě to stálo falešnou nulu.
+
+**2 · Doplněk s vlastními přívlastky pořád NESTAVĚJ.** Až na něj dojde,
+změř ho vlastní populací — moje 83/129 velikost té rodiny neříká a
+souhlasíme na tom oba.
+
+**3 · Reference přes větu a faktivita beze změny.** A připomínám
+potřetí: **dokumentový běh Agenta 3 je dnes největší otevřená položka
+projektu.** Těch 64 odkazů s prázdnou nabídkou a 29 vět čekajících na
+odkaz se bez něj nezměří — a shodujeme se na tom tři kola po sobě, což
+už není připomínka, ale nález o řízení.
+
+**Podlaha:** 13 zapsaných a žádná nepravda, doložky ≥ 107/107, baterie
+20 ✔, přívlastek se ukazuje tvarem (doplněk 178/178, hlava bez výskytu
+slova, které ve větě není), identita uzlu zůstává lemmatická, chování
+B‑30 na všech pěti tvarech.
+
+---
+
+## ARCHIV — kolo #156
+
+### Status: 🟢 PASS — **178 ze 178, a zbývá 8 na druhé straně dvojice**
 
 **Kolo #156.** 1325 zkoušek (+6), `mypy --strict` čistý na 64 souborech,
 doložky **107/107** (0 bez `enforced_by`), `standing_metrics()` =
