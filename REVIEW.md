@@ -1,6 +1,116 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — tři zadané věci hotové, a **moje hypotéza byla vedle**
+## Status: 🟢 PASS — rozpad sedí, a **přidávám k němu druhou polovinu obrázku**
+
+**Kolo #139.** Beze změny kódu. 1246 zkoušek, `mypy --strict` čistý na
+62 souborech, doložky 96/96, `standing_metrics()` = 21/107/51/33/26,
+parita 55/55, relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie
+20 ✔ / 0 ✘**, 5 zapsaných a žádná nepravda, němá slova 28.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Rozpad je poctivý a to nejcennější je, jak vznikl
+
+```
+22×  [ZAHOZENO] v hlášení dál stojí — ztráta, kterou odpověď neodstranila
+16×  čekající sdílení role
+12×  zakotvení neproběhlo  (7 povrchová role znovu · 3 odkaz bez antecedenta · 2 jiné)
+```
+
+**Dvě slepé odbočky jsi ohlásil sám, a jedna z nich je B‑25 ve tvojí
+vlastní sondě** — `turn.lost` u tahu ODPOVĚDI je prázdné, takže 22 vět
+vypadalo jako *„zakotví se, a přesto nezapisuje"*. **Potřetí za tři kola
+tě dohnala zkratka v měřidle a potřetí jsi ji našel dřív než já.**
+
+**A že jsi z toho nenapsal závěr** (*„zbytek je rozhodnutí, ne
+pozorování"*) **je přesně to, co jsem zadal.**
+
+---
+
+## Přeměřil jsem to šířeji a obrázek má druhou polovinu
+
+**Tvoje 22 je uvnitř tvých 55. Pustil jsem to přes VŠECHNY nezapsané
+věty se ztrátou** — odpovím na **každý** ztracený tvar volným jménem
+a dívám se, co zbude:
+
+```
+nezapsaných vět se [ZAHOZENO]              193
+   po odpovědích se zapsaly                  7
+   [ZAHOZENO] ZŮSTALO                       95     ← tvá rodina, v celém korpusu
+```
+
+**A co v tom zbytku stojí, mění směr:**
+
+```
+podle závislosti   nmod 56 · conj 43 · flat 37 · obl 21 · acl:relcl 20 · nummod 14
+podle druhu        NOUN 88 · ADJ 61 · PROPN 53 · VERB 31
+
+větné členy (klauze, ne účastník)     81
+JMENNÉ (mohly by být fillerem)       178
+```
+
+**Dvě třetiny toho, co po všech odpovědích zbyde, jsou JMENNÁ slova
+visící HLOUBĚJI** — `nmod`, `conj`, `flat`. **Ne klauze.**
+
+**To je táž rodina jako zbytek v #127** (*„hlava se neusadila, protože
+visí pod členem, který ve čtení taky není"*) — jen se tam měřila na
+konjunktech a tady na zápisu. **Odpověď na tvar nahoře se k nim
+nedostane, protože jejich hlava je sama venku.**
+
+**Neopravuju tím tvůj závěr** — S‑39 jako překážka zápisu platí.
+**Doplňuju, že vedle ní stojí větší kus a je to řetěz, ne kolize.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené beze změny.
+
+---
+
+## Action Items for Agent 1
+
+**Vrátil ses podle zadání, takže rozhoduju já — a rozhoduju MĚŘENÍ,
+ne stavbu.** Jedna otázka, která rozhodne mezi dvěma velmi různými
+opravami:
+
+**Když člen vstoupí do čtení díky odpovědi, přijde jeho podstrom
+s ním?**
+
+**Změř to takhle:** z těch **178 jmenných zbytků** rozděl
+* **(a)** kolik jich visí pod členem, který **do čtení VSTOUPIL**
+  (jméno, přívlastek, konjunkt toho, co se právě usadilo) — **ty tam
+  neměly zůstat**;
+* **(b)** kolik jich visí pod členem, který **je sám pořád venku** —
+  **ty potřebují řetěz**.
+
+**Jestli převáží (a), je to jedna vlastnost a malá oprava** — *„co
+vstoupí, přivede si své"*, tedy táž úvaha jako W‑71, jen o patro dál:
+tam šlo o to, že se o závislém členu MLUVÍ, tady o to, že s ním
+VSTOUPÍ.
+
+**Jestli převáží (b), je to řetěz** a chci to vědět dřív, než na tom
+někdo postaví záplatu na jednu hranu.
+
+**Bez hypotézy dopředu, jak jsi to udělal teď.** A **vrať se zase před
+stavbou** — tenhle způsob práce se za poslední tři kola vyplatil
+třikrát.
+
+**Podlaha beze změny.**
+
+---
+
+## ARCHIV — kolo #138
+
+### Status: 🟢 PASS — tři zadané věci hotové, a **moje hypotéza byla vedle**
 
 **Kolo #138.** Beze změny kódu jádra. 1246 zkoušek, `mypy --strict`
 čistý na 62 souborech, doložky **96/96**, `standing_metrics()` =
