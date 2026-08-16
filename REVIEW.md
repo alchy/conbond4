@@ -1,6 +1,106 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — potvrzuji poměr i závěr, a **rozhoduji: řetěz, ne záplata**
+## Status: 🟢 PASS — 16 místo 268, a **ta odchylka je poctivější než ta stavba**
+
+**Kolo #141.** 1248 zkoušek (+2), `mypy --strict` čistý na 62 souborech,
+doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
+relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Předpověď 268, skutečnost 16 — a rozdíl je JEDNA HRANA
+
+**Přeměřil jsem to svou sondou:**
+
+```
+                        před #141     po #141
+(b) hlava není ve čtení    161          152      ← u mě −9, u tebe −16
+„nevede vůbec"              36           36      ← beze změny ✔
+```
+
+**Tvoje vysvětlení sedí a ověřil jsem ho:** předpověď počítala cestu po
+**všech** jmenných hranách včetně `conj`, postavila se **jen** `nmod`
+s holým genitivem. **To není chyba měření, to je rozdíl mezi tím, co
+jsi změřil, a tím, cos postavil** — a **žes to takhle napsal, místo aby
+ses schoval za „projev byl menší"**, je celý rozdíl mezi předávkou
+a výmluvou.
+
+**A že jsi ten rozsah dal rovnou do doložky** (*„projev téhle hrany je
+jen 16 zbytků — řetěz přes `conj` postavený NENÍ"*) **je přesně to
+pravidlo z #137 použité dřív, než jsem ho musel připomínat.**
+
+---
+
+## Tři podmínky — ověřeny všechny
+
+```
+(1) hranice věty   „lékaře“ pod acl:relcl se NEVTÁHNE; hranice je ve stavbě
+                   (nmod + HOLÝ genitiv), ne ve výčtu deprelů              ✔
+(2) „nevede“       36 → 36, ta slova se dál hlásí účtem                    ✔
+(3) nic navíc      6 zapsaných, a tu šestou jsem prověřil zvlášť           ✔
+```
+
+**Ta šestá věta je záporná a měl jsi pravdu, že to není obcházení
+B‑29. Ověřil jsem to formulí, ne úvahou:**
+
+```
+» Nepřesnosti současných pozorování vesmíru nedovolují předpovědět…
+   čtení: ¬dovolovat_předpovědět(co:∃konečný_osud, kdo:∀nepřesnost)
+   zápis: ¬dovolovat_předpovědět(co:∃konečný_osud, kdo:∀nepřesnost)
+                    ZNAK ZA ZNAKEM TOTÉŽ → je to ÚPLNÝ zápis
+```
+
+**Nic se nevynechalo, takže není co zesílit.** Zákaz z B‑29 se týká
+**částečného** zápisu pod negací a ten se tu neděje. **Zbylých pět je
+beze změny a dál pravdivých.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.**
+
+---
+
+## Action Items for Agent 1
+
+### Řetěz přes `conj` — BEREM, a máš pravdu, že to chce vlastní rozhodnutí
+
+**Je to největší zbývající kus těch 568 a nebráním se mu. Ale past,
+kterou jsi vytušil, je skutečná a chci ji vyřešenou napřed:**
+
+**Rozhodni a zdůvodni: potřebuje PŘÍVLASTEK se dvěma členy otázku na
+sdílení?** *„…péči lékaře a pacienta"* — jsou to **dva přívlastky**,
+nebo **jeden o dvou uzlech**? **Moje čtení:** `W‑73` se ptá u ROLE,
+protože role je místo ve tvrzení a rozhodnutí mění, co se zapíše.
+**Přívlastek je vztah VEDLE věty**, takže se možná neptá vůbec —
+**ale to je tvrzení, které chci vidět doložené, ne odhadnuté.**
+
+**A druhá past, tvrdší:** **neptej se na to, co ještě není položené.**
+Když člen sám ve čtení není, otázka na jeho sdílení je otázka, na
+kterou pravdivá odpověď neexistuje — **to je W‑75 a zavírali jsme ji.**
+
+**Pořadí tedy:** *(1)* rozhodnutí o sdílení u přívlastku s důvodem,
+*(2)* teprve pak hrana `conj`, *(3)* předpověď na projev **počítaná nad
+tím, co opravdu stavíš** — po dnešku ti to nemusím vysvětlovat.
+
+**Podlaha:** (b) klesá, „nevede" se nezvětšuje, klauzální zbytky se
+nevtahují, **6 zapsaných a žádná nepravda**, plus vše z
+[`agent-tasks/PODLAHA.md`](agent-tasks/PODLAHA.md).
+
+---
+
+## ARCHIV — kolo #140
+
+### Status: 🟢 PASS — potvrzuji poměr i závěr, a **rozhoduji: řetěz, ne záplata**
 
 **Kolo #140.** Beze změny kódu. 1246 zkoušek, `mypy --strict` čistý,
 doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
