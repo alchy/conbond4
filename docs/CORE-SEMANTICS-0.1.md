@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.70 · 16. 8. 2026
+**Verze jádra:** 0.1.71 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.71 | § 12 — rozpad 50 vět, které se nezapíšou ani po vyčerpání dialogu: 22 drží `[ZAHOZENO]`, kterou odpověď neodstranila (S-39 jako překážka zápisu), 16 čekající sdílení, 12 zakotvení |
 | 0.1.70 | § 5.2 — částečný zápis se ptá OBOJÍHO, co vynechávám i ODKUD: pod záporným přísudkem se monotonie obrací (`¬(P∧Q)` ⊬ `¬P`), takže záporná věta se částečně nezapíše; § 13 T117 |
 | 0.1.69 | § 5.2 — ČÁSTEČNÝ ZÁPIS: zapíše se to, čemu systém rozumí, nepojmenovaná okolnost zůstane otevřená; vylučuje TŘÍDA OPERÁTORŮ z lexikonu (odvolatelná data), doplnění částečný výrok ODVOLÁ; § 13 T116 |
 | 0.1.68 | § 12 — W-79 přeměřena PŘES VYNECHANOU ČÁST: rizikové jsou 3 věty ze 154 (zápor, podmínka, náhrada), ne 15 — slučovací okolnost dává po vynechání tvrzení SLABŠÍ, a to není nepravda |
@@ -1060,6 +1061,27 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**PADESÁT VĚT, KTERÉ SE NEZAPÍŠOU ANI PO VYČERPÁNÍ DIALOGU** *(měření
+kola #139)*. Po částečném zápisu (W‑79) drží 55 vět korpusu ZTRACENÝ
+ČLEN. Odpovídá‑li se na všechno, na co se systém ptá — ztracený člen →
+povrchová role → kvantifikátor, strop 25 tahů — zapíšou se **3**.
+Zbylých 50 rozepsáno položku po položce, čteno z HLÁŠENÍ JÁDRA:
+
+| co jim chybí | kolik |
+|---|---|
+| v hlášení dál stojí `[ZAHOZENO]` — **ztráta, kterou odpověď neodstranila** | **22** |
+| čekající SDÍLENÍ role (`pending_share`) | 16 |
+| zakotvení opravdu neproběhlo (7× povrchová role po odpovědi, 3× odkaz bez antecedentu, 2× jiné) | 12 |
+
+**Ta největší položka není nová rodina.** „Odpověď se přijme a nic
+neudělá" je S‑39 z kola #121 — jenže tam to bylo měřeno na ČTENÍ
+(„vypadá to jako odpověď a není"), kdežto tady se to poprvé ukazuje
+jako PŘEKÁŽKA ZÁPISU: dokud ta ztráta v hlášení stojí, věta se
+nezapíše, ať se odpoví cokoli.
+
+> **Bez hypotézy, co s tím.** Číslo je rozepsané, příčina pojmenovaná;
+> co z toho plyne, je rozhodnutí, ne pozorování.
 
 **SMÍ SE ZAPSAT TO, ČEMU SYSTÉM ROZUMÍ? — PODKLAD, NE ROZHODNUTÍ**
 *(kolo #134, 16. 8. 2026)*. Zápis je dnes VŠECHNO NEBO NIC: dokud ve
