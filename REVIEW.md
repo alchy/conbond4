@@ -1,6 +1,115 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozhodnutí je správné a doložené; **a odstranit falešnou otázku ODEMYKÁ ZÁPIS**
+## Status: 🟢 PASS — `:arg` je čtvrtý zákaz, předpověď sedla, a rozhodnutí o `conj` stojí na vlastním důvodu
+
+**Kolo #143.** 1252 zkoušek (+2), `mypy --strict` čistý na 62 souborech,
+doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
+relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## W‑82 · test odpověděl sám a odpověď je NE
+
+**Nejlepší věc na tomhle kole je, že se nerozhodovalo úvahou:**
+
+```
+» Zabýval se zkoumáním vesmíru.   zabývat(Ins:arg:zkoumání, kdo:…)
+   „Zabýval se.“  se nedá přečíst VŮBEC  →  zbytek není slabší tvrzení,
+                                            zbytek NENÍ TVRZENÍ
+» studium vedlo k vzniku  →  „studium vedlo“ znamená něco jiného
+```
+
+**`:arg` je čtvrtá položka zákazu** vedle záporu, podmínky a náhrady —
+**a jediná, která se pozná ze STAVBY, ne ze slova.**
+
+**Ověřil jsem obojí, i tu druhou stranu:**
+
+```
+zapsaných 9 → 8, vypadla přesně věta o „pečlivém studiu“              ✔
+z vynechaných rolí nese :arg     0                                    ✔
+» Karel bydlel v Praze od roku 1920.  →  ✓ zapsáno  bydlet(kdo:Karel) ✔
+   obyčejná okolnost se vynechává dál — zákaz se NEROZLIL
+» Zabýval se zkoumáním vesmíru.       →  zápis ŽÁDNÝ                  ✔
+```
+
+**Předpověď 9 → 8 a žádné odemčení SEDLA na kus** — a **tvoje poznámka,
+proč se tentokrát odemčení počítat nemá** (*„přidávám zákaz, ten může
+zápisy jen ubrat"*), je ta správná úvaha: **moje připomínka z minula
+platila na ODSTRAŇOVÁNÍ otázky, ne na přidávání zábrany.**
+
+---
+
+## Rozhodnutí o `conj` u role — beru, a beru ho i proto, že NENÍ souhlas se mnou
+
+**Napsal jsem „moje čtení je: teprve až vstoupí, ale chci důvod, ne
+souhlas". Dals důvod, který stojí sám:**
+
+> *W‑73 mění, CO SE ZAPÍŠE, a dokud člen ve čtení není, nemá co měnit —
+> zapisuje se predikace a ta o něm neví. Navíc by ta odpověď musela
+> někde počkat, což je stav navíc, který nikdo neumí odvolat.*
+
+**Ta druhá půlka je argument, který jsem neměl** — *„odpověď, která
+někde čeká, je stav, který se nedá odvolat"*. **To je silnější než moje
+odvolání na W‑75.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑83 · seznam zákazů má nově DVA různé druhy a nesmí se to setřít
+
+```
+zápor · podmínka · náhrada   → LEXIKÁLNÍ, jsou to odvolatelná data (ScopeOperator)
+:arg                         → STRUKTURNÍ, pozná se z deprelu
+```
+
+**Napiš to do doložky výslovně.** Bez toho hrozí přesně jedna věc:
+někdo příště narazí na strukturní případ a **„opraví" ho přidáním slova
+do seznamu** — a seznam slov strukturní vlastnost nikdy nepokryje.
+**Je to táž past jako výčet `MATERIAL_UPOS` z #134**, jen z druhé
+strany.
+
+**Otevřené beze změny:** hrana `conj` u role (rozhodnutí hotové, stavba
+čeká), 22 vět bez odstranitelné ztráty, 16 čekající sdílení, 12
+zakotvení, 36 kvantifikátor, 29 odkaz (dokumentový běh), 28 němých
+slov, W‑77, přívlastek na začátku věty, 9 konjunktů v jiném pádě,
+zvratné `si`, W‑67, meze W‑23 … W‑60.
+
+---
+
+## Action Items for Agent 1
+
+1. **W‑83 do doložky** — jedna věta, ale je to pojistka proti špatné
+   opravě.
+2. **Postav hranu `conj` u role** podle rozhodnutí, které jsi obhájil.
+   **Předpověď na projev až nad tím, co bude mít tvar** — souhlas
+   s tvým postupem.
+3. **Čtyři vlastnosti, které u toho chci vidět:**
+   * konjunkt vstoupí do čtení **jako druhý uzel téže role**, ne jako
+     druhá role;
+   * **otázka na sdílení se položí až v tu chvíli**, ne dřív;
+   * **`revoke_utterance` bere zpět obojí** — i to, co vzniklo z druhého
+     uzlu;
+   * **protipříklad**: věta s jediným členem v roli **se na sdílení
+     neptá** a zapisuje se jako dnes.
+
+**Podlaha:** **8 zapsaných a žádná nepravda**, žádný `:arg` mezi
+vynechanými, žádný částečný zápis pod negací, „nevede" se nezvětšuje,
+plus vše z [`agent-tasks/PODLAHA.md`](agent-tasks/PODLAHA.md).
+
+---
+
+## ARCHIV — kolo #142
+
+### Status: 🟢 PASS — rozhodnutí je správné a doložené; **a odstranit falešnou otázku ODEMYKÁ ZÁPIS**
 
 **Kolo #142.** 1250 zkoušek (+2), `mypy --strict` čistý na 62 souborech,
 doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
