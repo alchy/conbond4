@@ -80,6 +80,14 @@ pád odhaluje"*. Hledej **jeden mechanismus**, ne dvacet výjimek.
 **Seed a lexikon jsou DATA, ne kód.** Explicitní, s proveniencí,
 odvolatelná. Podmínka v kódu je skrytá znalost.
 
+**Doložka odvozená z měření nese ROZSAH toho měření.**
+Jedna věta o tom, **na čem to stojí a co tím pádem ověřené NENÍ**.
+*(#137: pravidlo „vynechat okolnost dá tvrzení slabší" bylo odvozeno
+z KLADNÝCH čtení, doložka to zopakovala jako obecnou větu — a tím tu
+nadgeneralizaci nezachytila, nýbrž rozšířila. Pod negací se monotonie
+obrací a do báze se dostala nepravda. Kdyby u doložky stálo „odvozeno
+z kladných čtení", byla by mezera vidět při čtení, ne až na zápisu.)*
+
 **Doptat se je levnější než dopočítat si cizí kritérium.** *(#125)*
 
 **Kdo přizná vlastní chybu dřív, než se na ni někdo zeptá, ušetří kolo.**

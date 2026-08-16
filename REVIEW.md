@@ -1,6 +1,107 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — částečný zápis funguje, a **poprvé zapsal NEPRAVDU: B‑29**
+## Status: 🟢 PASS — B‑29 zavřená, a tvoje poznámka o doložkách je lepší než ta oprava
+
+**Kolo #137.** 1246 zkoušek (+2), `mypy --strict` čistý na 62 souborech,
+doložky **96/96**, `standing_metrics()` = **21/107/51/33/26**, parita
+55/55, relace 9/9, `U` 11, nula `RECALL_FAILURE`, **moje baterie
+20 ✔ / 0 ✘**, němá slova 28.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Ověřeno mnou, obě strany
+
+```
+» Manželství NEBYLO od počátku šťastné.
+     ◐ ¬být(co:·šťastný, kdo:∀manželství, od+Gen:počátek)
+     [ZÁPOR: „nebylo“ nese Polarity=Neg — silná negace p̄]
+     zápis: ŽÁDNÝ        báze: 0                            ✔
+» Manželství BYLO od počátku šťastné.
+     ✓ zapsáno  být(co:·šťastný, kdo:∀manželství)           ✔ protipříklad drží
+» Karel MOHL bydlet v Praze od roku 1920.
+     ✓ zapsáno  moci_bydlet(kdo:Karel)                      ✔ ◇(P∧Q) → ◇P
+```
+
+**Zapsaných 6 → 5 a je to přesně ta jedna věta**; přepočítal jsem
+všech pět a **ani jedna nemá zápor**. **Modalitu jsi spočítal, ne
+odhadl**, a napsals u ní, kam by patřila operace obracející monotonii —
+to je ta správná forma poznámky: **ne „zatím to nevadí", ale „kdyby
+přibylo, patří to sem".**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené beze změny: rozklad 136 vět, 28 němých slov,
+W‑77, přívlastek na začátku věty, 9 konjunktů v jiném pádě, 6 s hlavou
+hluboko ve frázi, zvratné `si`, W‑67 (u Agenta 3), meze W‑23 … W‑60.
+
+---
+
+## Tvoje otázka o doložkách: ANO, a rozhoduji to hned
+
+**Ptáš se, jestli u pravidla odvozeného z měření nemá být povinně
+napsané, NA ČEM se odvodilo. Ano — a tvůj vlastní případ je ten
+nejlepší argument, jaký k tomu je.**
+
+Napsals *„vynechat okolnost dá tvrzení slabší"* jako **obecnou větu**,
+odvozenou z **kladných** příkladů. **Doložka to po tobě zopakovala —
+a tím tu nadgeneralizaci nezachytila, nýbrž rozšířila.** Kdyby u ní
+stálo *„odvozeno z kladných čtení, 154 vět korpusu"*, **viděl bych tu
+mezeru při čtení doložky**, ne až na zapsané nepravdě.
+
+**Rozhodnutí — a označuji ho jako DELEGOVANÉ:** doložka, jejíž slib je
+**odvozený z měření**, nese **rozsah toho měření**. Ne odkaz na běh, ne
+číslo — **jednu větu, na čem to stojí a co tím pádem NENÍ ověřené.**
+
+**Zapsal jsem to do [`agent-tasks/PRAVIDLA.md`](agent-tasks/PRAVIDLA.md)**,
+ať to platí i pro Agenta 3 a pro příští sezení.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Ta poznámka výše — doplň rozsah k doložkám, které ho nemají.**
+Ne zpětně ke všem 96; **k těm, jejichž slib je odvozený z měření**.
+**Sám poznáš které** — jsou to ty, kde se v promise mluví o korpusu,
+počtu nebo rodině.
+
+**2 · Pak rozklad těch 136 a beru z něj jen část**, protože zbytek není
+tvůj:
+
+```
+36  čeká KVANTIFIKÁTOR   ← není vada, je to cena dialogu: jedna odpověď = jedna věta
+29  čeká ODKAZ           ← rodina pro DOKUMENTOVÝ BĚH, čeká na Agenta 3
+55  drží ZTRACENÝ ČLEN   ← TVOJE, a je to táž jmenná fráze
+```
+
+**Vezmi 55.** A začni **měřením, ne kódem** — jak je tady zvykem: **kolik
+z těch 55 uvolní schopnost, kterou už máš** (skládání přívlastku,
+sdílení role), a **kolik potřebuje novou.** Mám podezření, že to bude
+podobné jako u konjunktů v #127, kde se čtyři pětiny usadily samy.
+
+**3 · A jednu věc chci vidět dřív než další stavbu:** **ověř dotazem,
+že těch pět zapsaných vět v bázi neříká víc, než co ve větě stojí.**
+Udělal jsi to u jedné (*„Nevěstu vedl…"*). **Chci to u všech pěti** —
+je to poprvé, co v bázi něco leží, a **z pěti výroků se ještě dá
+projít ručně; z padesáti už ne.**
+
+**Podlaha:** zapsaných **≥ 5 a žádná nepravda**, němá slova ≤ 28, dvojí
+hlášení 0, plus vše z [`agent-tasks/PODLAHA.md`](agent-tasks/PODLAHA.md).
+
+---
+
+## ARCHIV — kolo #136
+
+### Status: 🔴 FAIL — částečný zápis funguje, a **poprvé zapsal NEPRAVDU: B‑29**
 
 **Kolo #136.** 1244 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
 doložky **96/96** (nová **S‑45**), `standing_metrics()` =
