@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.74 · 16. 8. 2026
+**Verze jádra:** 0.1.75 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,78 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**PŘEDLOŽKOVÝ PŘÍVLASTEK JMÉNA — ZRCADLO W‑39 SE POSTAVIT NEDÁ, DOKUD
+SE NEROZHODNE SPOR, KTERÝ V SYSTÉMU UŽ JE** *(kolo #146, zadáno POSTAVIT)*.
+
+Zrcadlo je šest řádků v `genitive_attributes`: přijmout `nmod`, které má
+dítě s `deprel=case`, a do dvojice psát PŘEDLOŽKU s lemmatem. Postaveno
+a změřeno bylo; **necommitovalo se, protože přepisuje čtyři akceptační
+testy I‑16, které o TÉŽE STRUKTUŘE tvrdí pravý opak.**
+
+CO BY TO PŘINESLO (měřeno na celém korpusu 238 vět, obojí týmž během):
+
+| | dnes | se zrcadlem |
+|---|---|---|
+| ZAPSÁNO | 8 | **9** (odemčení, jak předpověděl #142) |
+| vět s `[ZAHOZENO: …]` | 188 | **181** |
+| vět s `[PŘÍVLASTEK: …]` | 82 | **117** |
+
+ROZSAH MĚŘENÍ: **4** zmínky v populaci z #139 (nezapsané věty se
+ztrátou, hlava ve čtení), **9** v širší populaci reviewera (všechny
+nezapsané věty se čtením), **50 zmínek ve 48 větách** v celém korpusu
+(hlášená ztráta, `nmod` s předložkou pod jménem, které je ve čtení).
+Důvodem stavby je FALEŠNÁ OTÁZKA, ne počet.
+
+CO SE ROZBIJE — a proč to není detail:
+
+  · `test_a_prepositional_genitive_is_not_an_attribute` (W‑58). Jeho
+    důvod zrcadlo ODSTRAŇUJE: nepravda byla „synonyma filozofů" se
+    zahozenou předložkou, kdežto zrcadlo píše „synonymum u filozof".
+  · `test_a_lost_head_is_reported_with_what_was_composed_into_it` (W‑78).
+  · **ČTYŘI TESTY I‑16 NA VĚTĚ „Petr má alergii na penicilin."** Ty
+    tvrdí, že `obj>nmod+Acc` je ROLE VĚTY, že se na ni systém ptá a že
+    odpověď doplní `mít(kdo:Petr, co:alergie, na co:penicilin)`. Zrcadlo
+    z toho udělá vztah vedle věty a ta odpověď zmizí.
+
+KOŘEN: **rozbor „alergii na penicilin" a „pobytu v Berlíně" NEROZLIŠÍ.**
+Obojí je `nmod` s `case` pod jménem, které je ve čtení. Rozdíl je
+lexikální, ne strukturní: `na penicilin` je VAZBA toho jména (jako
+„lék na X", „recept na Y" — právě tuhle třídu I‑16 jmenuje jako smysl
+učení TVARU), kdežto `v Berlíně` je URČENÍ toho pobytu. Je to táž
+hranice jako u W‑82, jenže tam ji rozbor značí (`:arg`) a tady ne.
+
+**Rozhodnout to výčtem předložek se NESMÍ.** Dvanáctkrát (W‑32 … W‑83)
+se ukázalo, že kategorie porovnaná výčtem variant měří výčet, ne jazyk;
+a `v+Loc` v seedu SCHVÁLNĚ není (§ 12/1), takže ani „tvar, který lexikon
+zná" tu hranici nevede.
+
+**SPOR NENÍ NOVÝ A NEVYROBILO HO TOHLE KOLO.** Systém dnes drží obě
+rozhodnutí najednou: `alergie bratra` je podle W‑39 vztah vedle věty,
+`alergie na penicilin` je podle I‑16 role věty — o téže hlavě, ve stejné
+větě, jen jednou pádem a podruhé předložkou. To je důvod, proč devět
+vět reviewera vypadá jako falešná otázka: falešná je ta z nich, kde
+předložková fráze určuje jméno, a pravdivá tam, kde je jeho vazbou.
+
+DOPORUČENÍ: rozhodnout ve prospěch W‑39 a čtyři testy I‑16 PŘEKOTVIT na
+ztracený člen, který účastníkem děje SKUTEČNĚ je — `xcomp>obj+Acc`
+(„nesmí dostat penicilin"), což je příklad, kterým se `lost_shape` sám
+dokládá. Mechanismus I‑16 (ptát se, naučit tvar, zavřít třídu) tím
+zůstane doložený, jen na větě, o které to platí. **Přepsat čtyři
+akceptační testy, aby prošla moje změna, jsem si sám nevzal:** je to
+rozhodnutí o VÝZNAMU (co je role věty), ne o kódu, a smlouva se v tomhle
+protokolu nemění tím, kdo zrovna staví.
+
+**W‑84 (VAROVÁNÍ, jen pojmenované).** Rozbor tutéž předložkovou frázi
+jednou věší pod JMÉNO a jednou pod PŘÍSUDEK: „Karel Čapek byl na
+studijním pobytu v Berlíně." dá `v+Loc/Geo` na přísudku, „Mluvil
+o pobytu v Berlíně." dá `nmod` pod „pobytu". U prvního typu to vyjde
+nastejno, obecně ne — „mluvil o pobytu v Berlíně" není „mluvil v Berlíně
+o pobytu". **Vynutit jedno připojení by bylo rozhodnutí o významu
+udělané v kódu**, a proto se to nedělá; dědí se to z rozboru a je to
+napsané tady.
+
+PROTIPŘÍKLAD DRŽÍ: genitivní přívlastek se nemění (T85, T84).
 
 **ZTRÁTA, KTEROU ODPOVĚĎ NEODSTRANÍ — ROZKLAD** *(měření kola #145)*.
 Populace z #139 (částečný zápis povolen, zúžená predikace se zakotví,
