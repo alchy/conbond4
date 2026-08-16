@@ -47,13 +47,30 @@ tabulku a přikládá výpis.
 | `revoke_utterance` strhne cizí promluvu | **ne** |
 | `·Hradec_Králové` se složí · `Rožnov pod Radhoštěm` se nezapíše a nese `◐` | **ano** |
 
-## Korpus
+## Korpus — a KDO které číslo měří
 
-| korpus | stav |
+**Nikdo neodevzdává číslo, na které nemá nástroj.** Rozdělení podle
+vlastnictví repozitáře:
+
+### Měří Agent 1 (z `conbond4`)
+
+| co | stav |
 |---|---|
 | Wikipedie, **238 vět** | běh **bez pádu**; `219 PTÁ SE / 14 NEPŘEČTENO / 2 DVOJZNAČNÉ / 1 ZAPSÁNO / 2 CHYBA` |
+| dialog do konce, 20 vět | **2 zapsané** (#131), medián 2 tahy — zbytek stojí na **jmenné frázi** |
+| ztracené členy přes korpus | **≤ 1041** (bylo 1388 před skládáním) |
+
+### Měří Agent 3 (z `conbond4-utils`)
+
+| co | stav |
+|---|---|
 | conBond2 `@418d7f7`, **836 vět** | `31 ZAPSÁNO / 669 PTÁ SE / 7 DVOJZNAČNÉ / 124 NEPŘEČTENO / 5 CHYBA / 0 ODMÍTNUTO` |
-| dialog do konce, 20 vět | **1 zapsaná**, 2 tahy — 19 stojí na **jmenné frázi** |
+| otázka není nula | ptá se **679**, prázdný seznam **0**; mlčí **157**, neprázdný seznam **0** |
+| druhy otázek | role 956 · kvantifikace 375 · přívlastek 230 · koordinace 167 · konstrukce 130 · koreference 52 · dvojznačnost 7 · **jiné 0** |
+
+> **`jiné > 0` je signál, ne odpad**: znamená, že jádro umí otázku,
+> kterou měření neumí pojmenovat — tabulka druhů po každém kole jádra
+> zestárne a tohle je způsob, jak to poznat z běhu.
 
 ## Největší otevřená věc
 

@@ -1845,6 +1845,38 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="O-23",
+        boundary=ORACLE_CASCADE,
+        promise=(
+            "MATERIÁL Z VĚTY SE NESMÍ ZTRATIT MLČKY *(B‑28)*, ani když "
+            "se ho patro vědomě vzdá. DVĚ MÍSTA, JEDNA PŘÍČINA. "
+            "(1) PŘIVLASTNĚNÍ: „Filipovo auto stojí venku.“ se čte jako "
+            "věta o NĚJAKÉM autě a slovo „Filipovo“ se v celém přepisu "
+            "neobjevilo ANI JEDNOU — role sice čeká na odkaz a systém se "
+            "ptá „O kterém „auto“ mluvíš?“, ale NEŘÍKÁ, CO TU REFERENCI "
+            "ZUŽUJE. Přivlastnění je proto vidět ve TVARU zmínky "
+            "(„Filipovo auto“), ne v lemmatu: uzel `Filipův_auto` "
+            "vzniknout nesmí (z každého majitele by byla nová třída, "
+            "N‑2c), a právě proto jsou `form` a `lemma` dvě pole. "
+            "(2) SLOŽENÝ PŘÍVLASTEK POD ZTRACENOU HLAVOU: od W‑78 se "
+            "skládá i tam, jenže když je ztracená i ta hlava, nikde se "
+            "to jméno neobjevilo a o 277 slovech korpusu přestalo "
+            "hlášení mluvit ÚPLNĚ. Ztracený člen se proto hlásí I S TÍM, "
+            "CO SE DO NĚJ SLOŽILO („domácími zvířaty“, ne „zvířaty“). "
+            "UBRAT OTÁZKU JE POKROK JEN TEHDY, KDYŽ SE TEN MATERIÁL "
+            "OHLÁSÍ JINDE — jinak je to tichá ztráta kusu věty (I‑1), "
+            "táž třída jako B‑25, jen o patro níž. Holé jméno bez "
+            "přivlastnění takový záznam NEMÁ a na odkaz nečeká"
+        ),
+        anchor="core_semantics.cascade:_nominal",
+        entry="cascade(",
+        enforced_by=(
+            "test_a_possessive_is_visible_in_the_mention",
+            "test_a_bare_noun_carries_no_possessive",
+            "test_a_lost_head_is_reported_with_what_was_composed_into_it",
+        ),
+    ),
+    Clause(
         id="O-22",
         boundary=ORACLE_CASCADE,
         promise=(

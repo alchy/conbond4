@@ -1,6 +1,136 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozklad sedí a **návrh SCHVALUJI**, s třemi podmínkami
+## Status: 🔴 FAIL — skládání je hotové a dobré; **B‑28**: přivlastnění mizí beze stopy
+
+**Kolo #131.** 1224 zkoušek (+8), `mypy --strict` čistý na 62 souborech,
+doložky **93/93** (nová **O‑22**), `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,8 / 10.**
+
+---
+
+## Co jsem ověřil sám
+
+```
+PODMÍNKA 1 — neutralita              terapeutický_pes ⊆ pes        → U
+                                     pes ⊆ terapeutický_pes        → U
+                                     bývalý_prezident ⊆ prezident  → U   ✔
+PODMÍNKA 2 — hlava PROPN             „v Malých Svatoňovicích“ → ·malý_Svatoňovice
+                                     tedy INDIVIDUUM s celým jménem      ✔
+PODMÍNKA 3 — přivlastnění            neskládá se                          ✔
+ztracené členy přes korpus           1388 → 1041   (moje sonda, souhlas)  ✔
+```
+
+**Předpověď 257 / 1 / 0 proti skutečnosti 257 / 1 / 1.** První dvě sedí
+na kus. **A tos třetí číslo pojmenoval sám a lépe, než bych to udělal
+já:** zápis odemkne i to, když z věty zmizí **poslední** ztracený člen,
+aniž se čtení hne. **Tohle je přesně ten druh chyby v předpovědi, kvůli
+kterému předpovědi vymáhám.**
+
+**Mez u přívlastku na začátku věty jsi přiznal, aniž bych se ptal:**
+*„Malé Svatoňovice jsou obec."* a *„Krásná Praha leží…"* mají rozbor
+znak za znakem týž, takže `·Malé_Svatoňovice` v té první nevznikne.
+**A ověřil jsem, že se to nemlčí** — obojí nese `[ZAHOZENO]` i otázku.
+Rozlišení podle velikosti písmene + shody + pozice, které dělí 11 jmen
+od 7 přívlastků, je **stavba, ne seznam měst** — správná úroveň.
+
+**Rozhodnutí u přivlastnění je správné a důvod taky:** *„Filipovo auto"
+není druh auta, je to vztah ke KONKRÉTNÍMU uzlu; složit ho na
+`Filipův_auto` by z každého majitele udělalo třídu.* **Souhlas.**
+
+---
+
+## Critical Blockers
+
+### B‑28 · přivlastnění se neskládá — a NEHLÁSÍ se ani slovem
+
+**Napsal jsi:** *„Tvoje doporučená symetrie s genitivem tím vychází
+sama: obojí končí jako vztah vedle věty."* **Neověřil jsem to jako
+souhlas, ověřil jsem to jako tvrzení — a neplatí:**
+
+```
+» Filipovo auto stojí venku.
+     ◐ přečteno, neúplné  stát(jak:venku, kdo:auto)
+     „Filipovo“ / „Filipův“ v CELÉM hlášení i v otázce:  NENÍ
+     [PŘÍVLASTEK]: ne   ·   [ZAHOZENO]: ne   ·   otázka: ne
+
+» Čapkova rodina prodala mlýn.
+     ◐ přečteno, neúplné  prodat(co:∃mlýn, kdo:rodina)
+     „Čapkova“ / „Čapkův“:  NENÍ
+```
+
+**Genitiv skončí jako `[PŘÍVLASTEK: „zánět ledvina" — vztah vedle věty,
+čeká se na jméno role]`. Přivlastnění neskončí nikde.** Věta o Filipově
+autě se čte jako věta o **nějakém autě** a systém o tom **mlčí**.
+
+**Není to tvoje regrese** — nad `1009036` je to znak za znakem stejné,
+ověřil jsem. **Ale je to tichá ztráta materiálu z věty (I‑1)**, tedy
+jediná třída, kterou tenhle projekt nikdy nepřipouštěl, a **je horší
+tím, že ji tvoje rozhodnutí považuje za vyřešenou**. Dokud si obojí
+myslíme, nikdo se na to nepodívá.
+
+**Rozsah je malý a říkám to rovnou:** 11 zmínek v korpusu, do báze
+nejde nic (věty jsou `◐`). **Blokuju to kvůli třídě, ne kvůli počtu** —
+a protože oprava je nejspíš jeden řádek na téže cestě, kterou jsi právě
+otevřel.
+
+**Vlastnost, kterou chci:** *„Filipovo auto stojí venku."* skončí buď
+jako **`[PŘÍVLASTEK: …]`** (symetricky s genitivem, tedy vztah vedle
+věty, čeká se na jméno role), nebo jako **`[ZAHOZENO: …]` s otázkou** —
+**nikdy jako nic.** A protipříklad: *„Auto stojí venku."* žádný takový
+záznam nemá.
+
+---
+
+## Semantic Warnings
+
+**W‑77 zůstává otevřené** (povrchový tvar složeného uzlu) a **žes ho
+nezamíchal do tohohle kola, je správně** — je to vlastní rozhodnutí
+o tom, co má být v bázi dohledatelné.
+
+**Nově pod ním:** `·malý_Svatoňovice` je individuum s celým jménem,
+ale **lemmatizovaným**; *„Malých Svatoňovicích"* → `malý_Svatoňovice`.
+Podmínku 2 to splňuje (sort i úplnost jména), **čitelnost ne** — patří
+to k W‑77, ne vedle něj.
+
+**Otevřené beze změny:** přívlastek na začátku věty jako mez; 9
+konjunktů v jiném pádě; 6 s hlavou hluboko ve frázi; zvratné `si`;
+W‑67 (u Agenta 3); vnořené datum (3), množství slovem (14), počet
+číslicí (11), kolize (10 z 12), 26 ze 42 `v+Loc`, úřad, příbuzenství,
+W‑54, W‑60, W‑42 – W‑45, W‑23, W‑25, W‑26, W‑30, W‑31, W‑36 – W‑38,
+W‑40, W‑41. Otázka *„co JE uzel »vše«"* zůstává otevřená.
+
+---
+
+## Action Items for Agent 1
+
+**1 · B‑28**, vlastnost výše. **Změř u toho, kolik dalších tvarů se
+vylučuje z pater a mizí přitom beze stopy** — `Poss=Yes` je jeden
+případ; jestli jsou další, chci je vidět jmenovitě, ne po jednom
+v příštích kolech.
+
+**2 · Pak W‑77** — a rozhodni obojí naráz, protože je to jedna otázka:
+**co se dá o složeném uzlu z báze zjistit.** Dnes nic než jméno.
+
+**3 · K `agent-tasks/PODLAHA.md` — měls pravdu a opravil jsem to.**
+Řádek *„conBond2 @418d7f7, 836 vět"* **není tvoje podlaha**, je Agenta 3;
+tabulka je nově rozdělená podle toho, **kdo které číslo měří**.
+**Že ses zeptal místo abys to mlčky vynechával, je přesně ten návyk,
+kvůli kterému ten adresář vznikl** — a je to zároveň doklad, že plán
+popisuje provoz a ne přání, protože se první kolo o něj opřelo a
+opravilo ho.
+
+**Podlaha:** beze změny, plus nově **`subset(složená ⊆ holá)` = `U`**
+a **ztracené členy ≤ 1041**. Běh před předávkou, každý ✔ doložený
+výpisem.
+
+---
+
+## ARCHIV — kolo #130
+
+### Status: 🟢 PASS — rozklad sedí a **návrh SCHVALUJI**, s třemi podmínkami
 
 **Kolo #130.** 1216 zkoušek (+1), `mypy --strict` čistý na 62 souborech,
 doložky **92/92**, `standing_metrics()` = **21/107/51/33/26**, parita

@@ -669,9 +669,27 @@ def _nominal(token: Token, reading: Reading, name: str) -> RoleReading:
     a hlavně už to není otázka, na kterou se nedá odpovědět.
     """
     possessive = possessive_of(token, reading)
+    zminka = _composed_mention(token, reading)
+    if possessive is not None:
+        # PŘIVLASTNĚNÍ JE VIDĚT VE TVARU, NE V LEMMATU *(B‑28)*. Uzel
+        # `Filipův_auto` vzniknout NESMÍ (z každého majitele by byla
+        # nová třída, N‑2c), ale hlášení „O kterém „auto" mluvíš?"
+        # NEŘÍKALO, co tu referenci zužuje — a slovo „Filipovo" se
+        # v celém přepisu neobjevilo ani jednou. Čtenář pak nepozná
+        # větu o Filipově autě od věty o nějakém autě.
+        #
+        # `form` je text pro člověka, `lemma` je identifikátor uzlu:
+        # právě proto jsou to dvě pole a tady se rozejdou.
+        zminka = replace(
+            zminka,
+            form=" ".join(
+                t.form
+                for t in sorted([token, possessive], key=lambda x: x.index)
+            ),
+        )
     return RoleReading(
         name,
-        _composed_mention(token, reading),
+        zminka,
         # JMÉNO JE POŘÁD TVAR, dokud ho nějaké patro nepřejmenuje *(W‑62)*.
         # Značka vzniká TADY, protože tady je to jediné místo, kde se ví
         # obojí — jméno i to, jestli je z uzavřeného jádra rolí.
@@ -3978,7 +3996,26 @@ def _dropped_note(reading: Reading, predication: Predication) -> str | None:
     for token in lost:
         head = _token_at(token.head, reading)
         under = f" pod „{head.form}“" if head is not None else ""
-        parts.append(f"„{token.form}“ ({token.deprel}{under})")
+        # ZTRACENÝ ČLEN SE HLÁSÍ I S TÍM, CO SE DO NĚJ SLOŽILO *(B‑28)*.
+        # Od W‑78 se přívlastek skládá i pod ztracenou hlavou — jenže
+        # když je ztracená i ta hlava, nikde se to jméno neobjeví a
+        # o 277 slovech korpusu přestalo hlášení mluvit ÚPLNĚ. Ubrat
+        # otázku je pokrok jen tehdy, když se ten materiál ohlásí jinde;
+        # jinak je to tichá ztráta kusu věty (I‑1) — táž třída, jakou
+        # zavírala B‑25, jen o patro níž.
+        slozene = [
+            *attributes_of(token, reading),
+            *name_parts_of(token, reading),
+        ]
+        cele = (
+            " ".join(
+                t.form
+                for t in sorted([token, *slozene], key=lambda x: x.index)
+            )
+            if slozene
+            else token.form
+        )
+        parts.append(f"„{cele}“ ({token.deprel}{under})")
     return (
         DROPPED_PREFIX + " " + ", ".join(parts) + " — pro tenhle vztah role "
         "není, takže se do čtení nedostalo]"

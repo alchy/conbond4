@@ -3248,3 +3248,72 @@ def test_a_composed_class_name_claims_no_subset() -> None:
             role("sup", Group(sup), Quantifier.SELF),
         )
         assert engine.ask(dotaz).status is QueryStatus.UNKNOWN
+
+
+def _possessed_noun() -> Reading:
+    """„Filipovo auto stojí venku." — přivlastnění jako `amod` s
+    `Poss=Yes`."""
+    return Reading(
+        tokens=(
+            _token(1, "Filipovo", "Filipův", "ADJ", 2, "amod", Case="Nom", Gender="Neut", Number="Sing", Poss="Yes"),
+            _token(2, "auto", "auto", "NOUN", 3, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+            _token(3, "stojí", "stát", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+            _token(4, "venku", "venku", "ADV", 3, "advmod"),
+            _token(5, ".", ".", "PUNCT", 3, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_a_possessive_is_visible_in_the_mention() -> None:
+    """PŘIVLASTNĚNÍ JE VIDĚT VE TVARU, NE V LEMMATU *(B‑28)*. Otázka
+    „O kterém „auto" mluvíš?" NEŘÍKALA, co tu referenci zužuje, a slovo
+    „Filipovo" se v celém přepisu neobjevilo ani jednou — čtenář pak
+    nepozná větu o Filipově autě od věty o nějakém autě."""
+    predication = cascade(_possessed_noun(), tiers=HARD_TIERS).survivors[0].predication
+    role = next(r for r in predication.roles if r.name == ROLE_SUBJECT)
+    assert role.mention.form == "Filipovo auto", "tvar nese, co se přivlastnilo"
+    assert role.mention.lemma == "auto", "uzel `Filipův_auto` vzniknout NESMÍ"
+
+
+def test_a_bare_noun_carries_no_possessive() -> None:
+    """PROTIPŘÍKLAD: „Auto stojí venku." žádný takový záznam nemá —
+    tvar zmínky je holý a role na odkaz nečeká."""
+    reading = Reading(
+        tokens=(
+            _token(1, "Auto", "auto", "NOUN", 2, "nsubj", Case="Nom", Gender="Neut", Number="Sing"),
+            _token(2, "stojí", "stát", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+            _token(3, "venku", "venku", "ADV", 2, "advmod"),
+            _token(4, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    role = next(r for r in predication.roles if r.name == ROLE_SUBJECT)
+    assert role.mention.form == "Auto"
+    assert role.awaiting == ""
+
+
+def test_a_lost_head_is_reported_with_what_was_composed_into_it() -> None:
+    """ZTRACENÝ ČLEN SE HLÁSÍ I S TÍM, CO SE DO NĚJ SLOŽILO *(B‑28)*.
+    Od W‑78 se přívlastek skládá i pod ztracenou hlavou — jenže když je
+    ztracená i ta hlava, nikde se to jméno neobjevilo a o 277 slovech
+    korpusu přestalo hlášení mluvit ÚPLNĚ. Ubrat otázku je pokrok jen
+    tehdy, když se ten materiál ohlásí jinde."""
+    from core_semantics.cascade import _dropped_note
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Rizika", "riziko", "NOUN", 6, "nsubj", Case="Nom", Gender="Neut", Number="Plur"),
+            _token(2, "s", "s", "ADP", 4, "case", AdpType="Prep", Case="Ins"),
+            _token(3, "domácími", "domácí", "ADJ", 4, "amod", Case="Ins", Degree="Pos", Gender="Neut", Number="Plur"),
+            _token(4, "zvířaty", "zvíře", "NOUN", 1, "nmod", Case="Ins", Gender="Neut", Number="Plur"),
+            _token(6, "rostou", "růst", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(7, ".", ".", "PUNCT", 6, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    note = _dropped_note(reading, predication)
+    assert note is not None
+    assert "domácími zvířaty" in note, "složené jméno musí být v hlášení vidět"
