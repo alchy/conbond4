@@ -2081,9 +2081,18 @@ def test_a_shape_named_role_stops_the_write_wherever_it_is() -> None:
             )
         )
     session = Session(lexicon=lexicon)
-    prvni = session.utter("Petr bydlí v Praze.", _Recorded())
-    assert prvni.statement_id is None, "role s tvarem místo jména zápis zastaví"
-    assert "NEZAPSÁNO" in "\n".join(prvni.lines), "a musí být vidět KTERÉ pravidlo"
+    session.utter("Petr bydlí v Praze.", _Recorded())
+    # OD W‑79 SE VĚTA ZAPÍŠE ČÁSTEČNĚ. To, co tahle zkouška hlídá od
+    # W‑62, PLATÍ DÁL A JE PŘÍSNĚJŠÍ: role s tvarem místo jména se do
+    # báze nedostane teď, a po doplnění tam neleží DVAKRÁT.
+    castecne = [
+        str(st.formula)
+        for st in session.kb.active()
+        if str(st.formula).startswith("bydlet(")
+    ]
+    assert castecne == ["bydlet(kdo:Petr)"], (
+        f"zapíše se jen to, čemu systém rozumí, ale bylo {castecne}"
+    )
 
     session.play(names_role("Je to místo.", veta, "v+Loc/Geo", "kde"))
     zapsane = [

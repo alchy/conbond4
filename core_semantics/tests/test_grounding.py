@@ -160,9 +160,15 @@ def test_surface_role_cannot_be_grounded_and_says_so() -> None:
             tok(4, "pondělí", "pondělí", "NOUN", 2, "obl", Case="Loc", Number="Sing"),
         ),
     )
-    assert result.statement_id is None
+    # OD W‑79 SE VĚTA ZAPÍŠE ČÁSTEČNĚ, ale ta role NE — a to je ta
+    # vlastnost, na které tahle zkouška vždycky stála: povrchová role
+    # neurčí sort, takže se do báze nedostane. Že se kvůli ní zastaví
+    # CELÁ věta, bylo pravidlo navíc (B‑19) a padlo s tím, že promluva
+    # má od B‑26 rukojeť.
     assert any("NEZAKOTVENO" in line for line in result.lines)
-    assert session.program() == ()
+    ulozene = chr(10).join(str(st) for st in session.kb.active())
+    assert "v+Loc" not in ulozene, "nepojmenovaná role do báze nesmí"
+    assert "pondělí" not in ulozene
 
 
 def test_pronoun_is_refused_out_loud() -> None:

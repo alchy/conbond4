@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.68 · 16. 8. 2026
+**Verze jádra:** 0.1.69 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.69 | § 5.2 — ČÁSTEČNÝ ZÁPIS: zapíše se to, čemu systém rozumí, nepojmenovaná okolnost zůstane otevřená; vylučuje TŘÍDA OPERÁTORŮ z lexikonu (odvolatelná data), doplnění částečný výrok ODVOLÁ; § 13 T116 |
 | 0.1.68 | § 12 — W-79 přeměřena PŘES VYNECHANOU ČÁST: rizikové jsou 3 věty ze 154 (zápor, podmínka, náhrada), ne 15 — slučovací okolnost dává po vynechání tvrzení SLABŠÍ, a to není nepravda |
 | 0.1.67 | § 5.2 — účet se ptá na DOPLNĚK značek, ne na výčet slovních druhů (výčet minul 30 slov: `X`, `SYM`); § 12 — podklad k otázce, jestli se smí zapsat to, čemu systém rozumí |
 | 0.1.66 | § 5.2 — ÚČET: jedno místo místo čtvrté záplaty. Němých slov v přečtených větách 471 → 28 (zbytek leží v podstromu druhé věty); doložka O-23 sjednocena s tím, co kód drží; § 13 T115 |
@@ -1422,6 +1423,7 @@ T1–T15 z kostry F0 v0.1, T16–T26 z podkladu. Nově přibývá:
 | T83 | úřad se nezapíše, povolání ano | `confirms_title(..., OFFICE)` NEZAPÍŠE a nabídku nechá otevřenou; `TRADE` zapíše `member`; otázka nabízí obě možnosti a říká, která se nezapíše |
 | T82 | tři stavy nabídky, tři hlášky | druhé potvrzení téhož titulu neřekne „žádná věta to netvrdí“, ale „už je to potvrzené a leží to v bázi jako sXXXX“ — a obě odmítnutí mají různý důvod |
 | T81 | potvrdit jde jen to, co někdo řekl | `confirms_title` bez nabídky NEZAPÍŠE a vrátí `✗` — ani v prázdném sezení („Kdokoli je král“), ani na jiný titul téhož člověka („prezident Josef Hora“ po větě o básníkovi); po nabídce zapíše a v hlášení je VĚTA Z TEXTU, která to tvrdí |
+| T116 | částečný zápis | „Petr bydlel v Praze.“ zapíše `bydlet(kdo:Petr)` a dál se ptá na `v+Loc`; dotaz na `kde` dá `U`; po `→@` leží v bázi JEDEN výrok a v historii je odvolaný částečný s důvodem „doplněno“; věta s `pokud` se částečně NEZAPÍŠE |
 | T115 | účet slov věty | „Chov jejich ovlivňuje zdraví.“ hlásí `[BEZ ZÁZNAMU: „jejich“ (det pod „zdraví“)]`; „Petr přišel.“ účet prázdný a nic se nehlásí dvakrát |
 | T114 | nic nezmizí beze stopy | „Filipovo auto stojí venku.“ se ptá „O kterém **Filipovo auto** mluvíš?“ a uzel zůstává `auto`; „…s domácími zvířaty“ hlásí `[ZAHOZENO: „domácími zvířaty“]`; „Auto stojí venku.“ takový záznam nemá |
 | T113 | přívlastek ve jmenné frázi | „…s domácími zvířaty“ se na „domácími“ neptá; „Malých Svatoňovicích“ dá `·malý_Svatoňovice`, „anglickou Wikipedii“ ne; `subset(bývalý_prezident ⊆ prezident)` zůstává `U` |

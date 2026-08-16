@@ -3980,6 +3980,61 @@ def _within_subtree(
 MARKER_UPOS = ("PUNCT", "ADP", "CCONJ", "SCONJ", "AUX", "PART")
 
 
+def omitted_subtree(reading: Reading, predication: Predication) -> tuple[Token, ...]:
+    """Co by ČÁSTEČNÝ ZÁPIS vynechal *(W‑79)* — podstromy povrchových rolí."""
+    povrch = set(surface_roles(predication))
+    korenove = {
+        role.mention.token_index
+        for role in predication.roles
+        if role.name in povrch
+    }
+    if not korenove:
+        return ()
+    vybrane = set(korenove)
+    zmena = True
+    while zmena:
+        zmena = False
+        for token in reading.tokens:
+            if token.head in vybrane and token.index not in vybrane:
+                vybrane.add(token.index)
+                zmena = True
+    return tuple(t for t in reading.tokens if t.index in vybrane)
+
+
+def partial_write(
+    reading: Reading, predication: Predication, lexicon: Lexicon
+) -> tuple[Predication | None, str]:
+    """Predikace BEZ nepojmenovaných okolností — nebo důvod, proč ne
+    *(W‑79)*.
+
+    **Vynechat okolnost je bezpečné, protože říká MÍŇ.** Ze „působil
+    **pouze** pět měsíců" plyne „působil"; slabší tvrzení není nepravda.
+    Zápis se proto nemusí držet všechno‑nebo‑nic: ve všech 154 větách
+    korpusu, které dnes zákaz drží, je nepojmenovaná role JEN OKOLNOST —
+    ani jednou `kdo`, `co` nebo `jak`.
+
+    **Neplatí to tam, kde okolnost pravdivost OBRACÍ nebo PODMIŇUJE.**
+    Rozhoduje o tom TŘÍDA OPERÁTORŮ z lexikonu (`ScopeOperator`), tedy
+    odvolatelná data s proveniencí — ne seznam vět a ne podmínka
+    v kódu: seznam vět je vlastnost korpusu, třída je vlastnost jazyka.
+
+    Vrací `(zúžená predikace, "")`, nebo `(None, důvod)`.
+    """
+    povrch = set(surface_roles(predication))
+    if not povrch:
+        return None, ""
+    if any(role.awaiting == AWAITING_ROLE_NAME for role in predication.roles):
+        return None, "role čeká na jádrové jméno"
+    zbyle = tuple(r for r in predication.roles if r.name not in povrch)
+    if not zbyle or all(r.name not in CANONICAL_ROLES for r in zbyle):
+        return None, "bez okolností by nezbylo jádro věty"
+    for token in omitted_subtree(reading, predication):
+        operator = lexicon.scope_operator(token.lemma)
+        if operator is not None:
+            return None, f"„{token.form}“ — {operator.kind}"
+    return replace(predication, roles=zbyle), ""
+
+
 def unaccounted_tokens(
     reading: Reading, predication: Predication
 ) -> tuple[Token, ...]:

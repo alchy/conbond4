@@ -440,6 +440,69 @@ class RelationMapping:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class ScopeOperator:
+    """Slovo, které MĚNÍ PRAVDIVOST okolnosti *(W‑79)*.
+
+    Částečný zápis vynechá okolnost, jejíž jméno se ještě neví — a to je
+    bezpečné, protože u SLUČOVACÍHO čtení dá vynechání tvrzení SLABŠÍ:
+    z „působil **pouze** pět měsíců" plyne „působil". Slabší tvrzení
+    není nepravda.
+
+    **Neplatí to tam, kde okolnost pravdivost OBRACÍ nebo PODMIŇUJE.**
+    Takové věty se ze zápisu vylučují — a vylučuje je TŘÍDA OPERÁTORŮ,
+    ne seznam vět: seznam vět je vlastnost korpusu, třída je vlastnost
+    jazyka.
+
+    **Je to odvolatelná DATA s proveniencí, ne podmínka v kódu.** Když
+    do třídy přibude slovo, nemá se kvůli tomu měnit interpret — je to
+    táž úvaha jako u `RoleMapping`: „že `do+Gen` znamená `kam`, je
+    naučené a odvolatelné tvrzení, ne vlastnost kódu".
+    """
+
+    lemma: str
+    #: Čím to pravdivost mění. Popis pro člověka i pro audit.
+    kind: str
+    learned_from: str = ""
+    active: bool = True
+
+    def key(self) -> str:
+        return self.lemma
+
+
+#: Operátory, které v okolnosti mění pravdivost zbytku *(W‑79)*.
+#:
+#: Prvních devět je ZMĚŘENÝCH: v korpusu 238 vět drží čtyři věty, u nichž
+#: by částečný zápis tvrdil něco jiného než text („nikoliv vlastnictví",
+#: „pokud nejsou dobře chována", „místo…", „pravděpodobně").
+#:
+#: MODALITA a SKORO‑NE jsou tam PREVENTIVNĚ a je to řečeno nahlas:
+#: v tomhle korpusu dnes leží mimo vynechanou část, takže neVADÍ — ale
+#: „téměř zemřel" NEIMPLIKUJE „zemřel" a „pravděpodobně přišel"
+#: neimplikuje „přišel". 238 vět z 22 článků je vzorek, ne jazyk;
+#: čekat, až se ta věta objeví, znamená čekat na nepravdu v bázi.
+_SCOPE_SEED: tuple[tuple[str, str], ...] = (
+    ("nikoli", "zápor — obrací pravdivost"),
+    ("nikoliv", "zápor — obrací pravdivost"),
+    ("místo", "náhrada — zbytek by tvrdil to, co se NESTALO"),
+    ("namísto", "náhrada — zbytek by tvrdil to, co se NESTALO"),
+    ("pokud", "podmínka — zbytek by tvrdil nepodmíněně"),
+    ("kdyby", "podmínka — zbytek by tvrdil nepodmíněně"),
+    ("jestliže", "podmínka — zbytek by tvrdil nepodmíněně"),
+    ("jestli", "podmínka — zbytek by tvrdil nepodmíněně"),
+    ("ledaže", "podmínka — zbytek by tvrdil nepodmíněně"),
+    ("pravděpodobně", "modalita — zbytek by tvrdil jistotu"),
+    ("možná", "modalita — zbytek by tvrdil jistotu"),
+    ("snad", "modalita — zbytek by tvrdil jistotu"),
+    ("zřejmě", "modalita — zbytek by tvrdil jistotu"),
+    ("údajně", "modalita — zbytek by tvrdil jistotu"),
+    ("téměř", "skoro‑ne — „téměř zemřel“ NEIMPLIKUJE „zemřel“"),
+    ("málem", "skoro‑ne — „málem zemřel“ NEIMPLIKUJE „zemřel“"),
+    ("bezmála", "skoro‑ne — nedosažená míra"),
+    ("skoro", "skoro‑ne — nedosažená míra"),
+)
+
+
 class Lexicon:
     """Sbírka naučených vzorů. Žádný globální stav, všechno je to data."""
 
@@ -448,16 +511,28 @@ class Lexicon:
         patterns: Iterable[LearnedPattern] = (),
         roles: Iterable[RoleMapping] = (),
         relations: Iterable[RelationMapping] = (),
+        scope: Iterable[ScopeOperator] = (),
     ) -> None:
         self._by_key: dict[str, LearnedPattern] = {}
         self._roles: dict[str, RoleMapping] = {}
         self._relations: dict[str, RelationMapping] = {}
+        self._scope: dict[str, ScopeOperator] = {}
         for pattern in patterns:
             self.add(pattern)
         for mapping in roles:
             self.add_role(mapping)
         for relation in relations:
             self.add_relation(relation)
+        for operator in scope:
+            self.add_scope(operator)
+
+    def add_scope(self, operator: ScopeOperator) -> None:
+        self._scope[operator.key()] = operator
+
+    def scope_operator(self, lemma: str) -> ScopeOperator | None:
+        """Operátor měnící pravdivost, nebo `None` *(W‑79)*."""
+        found = self._scope.get(lemma.lower())
+        return found if found is not None and found.active else None
 
     def add(self, pattern: LearnedPattern) -> None:
         self._by_key[pattern.key()] = pattern
@@ -779,6 +854,10 @@ def czech_seed(*, learned_from: str = "seed") -> Lexicon:
                 shape=shape, operation=operation, learned_from=learned_from
             )
             for shape, operation in _RELATION_SEED
+        ),
+        (
+            ScopeOperator(lemma=lemma, kind=kind, learned_from=learned_from)
+            for lemma, kind in _SCOPE_SEED
         ),
     )
 

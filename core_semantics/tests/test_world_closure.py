@@ -34,7 +34,7 @@ from core_semantics.ast import (
 from core_semantics.cascade import ROLE_SUBJECT, completeness_shape
 from core_semantics.engine import Engine
 from core_semantics.oracle import Reading, RecordedOracle, Token, Utterance
-from core_semantics.session import Session, Turn, declares_complete, revokes
+from core_semantics.session import Session, Turn, TurnResult, declares_complete, revokes
 from core_semantics.storage import KnowledgeBase
 from core_semantics.tests._console import echo
 
@@ -431,3 +431,88 @@ def test_revoking_an_utterance_spares_another_that_shares_a_node() -> None:
     assert engine.ask(odesel).status is QueryStatus.PROVEN_TRUE
     session.kb.revoke_utterance(written.utterance, "zkouška")
     assert engine.ask(odesel).status is QueryStatus.PROVEN_TRUE, "cizí promluva zůstává"
+
+
+def _partial_reading(with_operator: bool) -> Reading:
+    """„Petr bydlel (pokud) v Praze." — okolnost bez jména, volitelně
+    s operátorem, který pravdivost PODMIŇUJE."""
+    tokens = [
+        w(1, "Petr", "Petr", "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+        w(2, "bydlel", "bydlet", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+        w(4, "v", "v", "ADP", 5, "case", AdpType="Prep", Case="Loc"),
+        w(5, "Praze", "Praha", "PROPN", 2, "obl", Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+        w(6, ".", ".", "PUNCT", 2, "punct"),
+    ]
+    if with_operator:
+        tokens.insert(2, w(3, "pokud", "pokud", "SCONJ", 5, "mark"))
+    return Reading(tokens=tuple(tokens), provenance=STAMP)
+
+
+def _partial_setup(
+    with_operator: bool = False,
+) -> tuple[Session, Reading, RecordedOracle, str]:
+    """Sezení připravené k `.utter(` — samotné čtení si každá zkouška
+    zahraje sama, aby vstupním bodem prošla ONA, ne pomocná funkce."""
+    from core_semantics.tests import golden
+
+    text = "Petr bydlel v Praze."
+    reading = _partial_reading(with_operator)
+    oracle = RecordedOracle({text: Utterance(text=text, readings=(reading,))})
+    return Session(lexicon=golden.golden_lexicon()), reading, oracle, text
+
+
+def test_what_is_understood_is_written_and_the_rest_stays_open() -> None:
+    """ZAPÍŠE SE TO, ČEMU SYSTÉM ROZUMÍ *(W‑79)*. Ve všech 154 větách
+    korpusu, které dnes zákaz drží, je nepojmenovaná role JEN OKOLNOST —
+    ani jednou `kdo`/`co`/`jak`. Vynechat ji znamená říct MÍŇ, a slabší
+    tvrzení není nepravda."""
+    session, _, oracle, text = _partial_setup()
+    result = session.utter(text, oracle)
+    assert result.statement_id is not None, "jádro věty se zapíše"
+    ulozene = [str(st.formula) for st in session.kb.active() if str(st.formula).startswith("bydlet(")]
+    assert ulozene == ["bydlet(kdo:Petr)"], f"bez okolnosti, ale bylo {ulozene}"
+    assert "v+Loc" in (result.question or ""), "co se nezapsalo, zůstane otevřené"
+
+
+def test_the_omitted_role_is_unknown_not_false() -> None:
+    """NEGATIVNÍ KONTROLA: dotaz na vynechané dá `U`, ne `A` a ne `N`."""
+    from core_semantics.ast import Place
+
+    session, _, oracle, text = _partial_setup()
+    session.utter(text, oracle)
+    engine = Engine(session.kb)
+    kde = atom(
+        "bydlet",
+        role(ROLE_SUBJECT, Entity("Petr")),
+        role("kde", Place("Praha")),
+    )
+    assert engine.ask(kde).status is QueryStatus.UNKNOWN
+
+
+def test_an_operator_that_changes_truth_blocks_the_partial_write() -> None:
+    """PROTIPŘÍKLAD *(W‑79)*: věta, jejíž vynechaná část PODMIŇUJE
+    pravdivost, se částečně NEZAPÍŠE — a řekne se proč. Rozhoduje TŘÍDA
+    OPERÁTORŮ z lexikonu, tedy odvolatelná data, ne seznam vět."""
+    session, _, oracle, text = _partial_setup(with_operator=True)
+    result = session.utter(text, oracle)
+    assert result.statement_id is None
+    assert not [st for st in session.kb.active() if str(st.formula).startswith("bydlet(")]
+
+
+def test_completing_a_sentence_leaves_one_statement_and_a_history() -> None:
+    """DOPLNĚNÍ NEZALOŽÍ DRUHÝ VÝROK *(W‑79)*: částečný se ODVOLÁ, ne
+    přepíše — báze je append‑only a auditovatelnost stojí na tom, že se
+    nic nemaže. V historii proto stojí OBOJÍ."""
+    from core_semantics.session import names_role
+
+    session, reading, oracle, text = _partial_setup()
+    session.utter(text, oracle)
+    session.play(names_role("Je to místo.", reading, "v+Loc/Geo", "kde"))
+    aktivni = [str(st.formula) for st in session.kb.active() if str(st.formula).startswith("bydlet(")]
+    assert aktivni == ["bydlet(kde:Praha, kdo:Petr)"]
+    duvody = [
+        session.kb.inspect(st.id)[2]
+        for st in session.kb.history()
+        if str(st.formula).startswith("bydlet(")
+    ]
+    assert "doplněno" in duvody, "historie ukáže, že tam částečný výrok byl"

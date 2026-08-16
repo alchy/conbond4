@@ -73,6 +73,7 @@ from .cascade import (
     RoleReading,
     lost_role_tier,
     mention_of,
+    partial_write,
     partial_name_tier,
     sharing_tier,
     share_question,
@@ -402,6 +403,7 @@ def reads(
     *,
     trace: Sequence[str] = (),
     lost: Sequence[tuple[str, str]] = (),
+    reading: Reading | None = None,
 ) -> Turn:
     """Tah, který vznikl z české věty. Nese VYBRANÉ ČTENÍ, ne text —
     `text` je jen popis pro transkript, přehrává se struktura."""
@@ -409,6 +411,7 @@ def reads(
         TurnKind.READING,
         text,
         predication=predication,
+        reading=reading,
         trace=tuple(trace),
         lost=tuple(lost),
     )
@@ -833,6 +836,10 @@ class Session:
         #: vlastní; bez toho by se každá odpověď stala vlastní promluvou
         #: a „vezmi zpět tu větu“ by nemělo co vzít.
         self._utterance: str = ""
+        #: ROZBOR právě čtené věty *(W‑79)*. Tah odpovědi ho nenese,
+        #: a částečný zápis ho potřebuje: rozhodnutí „smí se to zapsat
+        #: bez okolnosti?" se čte ze STROMU, ne z predikace.
+        self._standing_reading: Reading | None = None
         #: `LEX` je program vedle `ONTO` a `DIA`, takže patří do sezení,
         #: ne do volání. Jinak by dvě věty téhož dialogu mohly být čteny
         #: podle jiných naučených vzorů a „diff naučeného" (§ 10) by nešel
@@ -1340,6 +1347,11 @@ class Session:
                 verdict.decided.predication,
                 trace=verdict.trace,
                 lost=verdict.lost,
+                # ROZBOR SE NESE S TAHEM *(W‑79)*. Částečný zápis se ptá
+                # STROMU, ne predikace: „stojí ve vynechané části slovo,
+                # které pravdivost obrací?" se z hotové predikace zjistit
+                # nedá — ta ty tokeny právě nemá.
+                reading=utterance.readings[0],
             )
         )
 
@@ -1440,6 +1452,8 @@ class Session:
         # tah, který ji jen doplňuje (kvantifikátor, odkaz), zdědí
         # poslední známý stav — protože rozbor se jím nemění, takže
         # ztracený člen ztraceným zůstal.
+        if turn.reading is not None:
+            self._standing_reading = turn.reading
         if turn.kind is TurnKind.READING:
             # NOVÁ VĚTA — nová rukojeť *(B‑26)*. Odpovědi na ni si ji
             # ponesou dál, takže všechno, co z té věty vznikne, patří
@@ -1603,6 +1617,51 @@ class Session:
         pending_role_name = bool(surface_roles(predication)) or any(
             role.awaiting == AWAITING_ROLE_NAME for role in predication.roles
         )
+        # ČÁSTEČNÝ ZÁPIS *(W‑79)*. Nepojmenovaná OKOLNOST větu nezastaví:
+        # vynechat ji znamená říct MÍŇ, a slabší tvrzení není nepravda.
+        # Zastaví ji operátor, který pravdivost obrací nebo podmiňuje —
+        # a ten se čte z LEXIKONU, ne z kódu.
+        castecna: Predication | None = None
+        castecny_duvod = ""
+        if (
+            pending_role_name
+            and not (stale_ztraceno or pending_relation or pending_complete
+                     or pending_share or pending_name)
+            and turn.reading is not None
+        ):
+            castecna, castecny_duvod = partial_write(
+                turn.reading, predication, self.lexicon
+            )
+        elif pending_role_name and self._standing_reading is not None and not (
+            stale_ztraceno or pending_relation or pending_complete
+            or pending_share or pending_name
+        ):
+            castecna, castecny_duvod = partial_write(
+                self._standing_reading, predication, self.lexicon
+            )
+        # ZAKOTVIT SE MUSÍ TO, CO SE ZAPÍŠE. `grounded` výš vzniklo
+        # z PLNÉ predikace, protože z ní se skládá OTÁZKA — ta se
+        # částečným zápisem nemění a nesmí. Do báze ale jde zúžená
+        # predikace, takže má vlastní zakotvení; bez toho by se zapsala
+        # i ta okolnost, na kterou se systém v témž tahu ptá.
+        # DOPLNĚNÍ NEZALOŽÍ DRUHÝ VÝROK *(W‑79)*. Když táž promluva psala
+        # už dřív (částečně) a teď píše znovu s doplněnou rolí, ten dřívější
+        # se ODVOLÁ — nepřepíše. Rozhodnuto takhle, protože báze je
+        # append‑only s odvoláním a auditovatelnost stojí na tom, že se
+        # nic nemaže: v historii pak stojí OBOJÍ, odvolaný částečný
+        # výrok s důvodem „doplněno" i nový celek.
+        if (
+            predication.mood is Mood.ASSERTION
+            and castecna is None
+            and self._utterance
+            and any(st.utterance == self._utterance for st in self.kb.active())
+        ):
+            self.kb.revoke_utterance(self._utterance, "doplněno")
+        zapisovane = grounded
+        if castecna is not None:
+            zapisovane = ground(castecna, self.kb.view(), self._discourse)
+            if zapisovane.formula is None:
+                castecna = None
         routed = (
             None
             if stale_ztraceno
@@ -1610,8 +1669,10 @@ class Session:
             or pending_complete
             or pending_share
             or pending_name
-            or pending_role_name
-            else self._route(index, turn, predication, grounded)
+            or (pending_role_name and castecna is None)
+            else self._route(
+                index, turn, castecna or predication, zapisovane
+            )
         )
         if routed is None:
             if grounded.formula is None and not question:

@@ -929,6 +929,42 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-45",
+        boundary=SESSION_STORAGE,
+        promise=(
+            "ZAPÍŠE SE TO, ČEMU SYSTÉM ROZUMÍ; ZBYTEK ZŮSTANE OTEVŘENÝ "
+            "*(W‑79)*. Zápis byl VŠECHNO NEBO NIC: ze 238 vět mělo 220 "
+            "čtení a zapsaná byla JEDNA, protože 154 z nich drží "
+            "nepojmenovaná role. VE VŠECH 154 JE TA ROLE JEN OKOLNOST — "
+            "ani jednou `kdo`, `co` nebo `jak`; přísudek a jádroví "
+            "účastníci jsou přečtení. Vynechat okolnost znamená říct "
+            "MÍŇ: z „působil **pouze** pět měsíců“ plyne „působil“, "
+            "a slabší tvrzení není nepravda. DŮVOD Z B‑19 („uložilo by "
+            "DVA výroky a ten první by nikdo neodvolal“) PADL v B‑26: "
+            "promluva má rukojeť a doplnění ten částečný výrok ODVOLÁ "
+            "s důvodem „doplněno“ — nepřepíše ho, protože báze je "
+            "append‑only a auditovatelnost stojí na tom, že se nic "
+            "nemaže; v HISTORII proto stojí OBOJÍ. NEPLATÍ TO TAM, KDE "
+            "OKOLNOST PRAVDIVOST OBRACÍ NEBO PODMIŇUJE — a rozhoduje "
+            "o tom TŘÍDA OPERÁTORŮ z lexikonu (zápor, náhrada, "
+            "podmínka, modalita, skoro‑ne), tedy ODVOLATELNÁ DATA "
+            "S PROVENIENCÍ, ne seznam vět a ne podmínka v kódu: seznam "
+            "vět je vlastnost korpusu, třída je vlastnost jazyka. "
+            "Modalita a „skoro‑ne“ jsou v ní PREVENTIVNĚ — v tomhle "
+            "korpusu dnes nevadí, ale „téměř zemřel“ neimplikuje "
+            "„zemřel“. Nepojmenovaná role se do báze NEDOSTANE ani "
+            "částečně, a dotaz na ni dá `U`, ne `A` a ne `N`"
+        ),
+        anchor="core_semantics.cascade:partial_write",
+        entry=".utter(",
+        enforced_by=(
+            "test_what_is_understood_is_written_and_the_rest_stays_open",
+            "test_the_omitted_role_is_unknown_not_false",
+            "test_an_operator_that_changes_truth_blocks_the_partial_write",
+            "test_completing_a_sentence_leaves_one_statement_and_a_history",
+        ),
+    ),
+    Clause(
         id="S-44",
         boundary=SESSION_STORAGE,
         promise=(
