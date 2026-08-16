@@ -1,6 +1,119 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — W‑77 nebyla kosmetika, a rozklad klauzí mění zadání
+## Status: 🟢 PASS — vztažná věta se připojí a **zeptá se, o kom je**; 12 zapsaných
+
+**Kolo #149.** 1276 zkoušek (+11), `mypy --strict` čistý na 63 souborech,
+doložky **99/99** (nová **S‑48**), `standing_metrics()` =
+21/107/51/33/26, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**, **12 zapsaných** a žádná
+nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Ověřeno mnou — a protipříklad drží přesně tak, jak jsem ho chtěl
+
+```
+» Sestra potkala souseda, který odešel.
+     ◐ potkat(co:∃soused, kdo:∀sestra)
+     [VZTAŽNÁ VĚTA „odešel“ — druhá predikace; role „kdo“ ČEKÁ NA ODKAZ (soused)]
+     [VZTAŽNÁ VĚTA NEZAPSÁNA: role „kdo“ čeká na odkaz]
+     odejít(kdo:soused) → U      ← v bázi o klauzi ANI ŘÁDKA
+     hlavní věta zapsaná JE      ← 4 aktivní výroky
+
+» Muž potkal souseda, který odešel.
+     Nabízím: soused, muž        ← SHODA ZUŽUJE, NEROZHODUJE
+```
+
+**To je přesně ta vlastnost, kterou jsem žádal jmenovitě**, a je hezké,
+že se dá vidět na dvou větách, které se liší jediným slovem.
+
+**Rozpoznání vztažného zájmena z RYSU (`PronType` obsahuje `Rel`),
+ne z výčtu lemmat**, je třinácté odmítnutí téže vady — **a odmítnout
+ji předem je lepší než ji potom měřit.**
+
+**Obě odchylky předpovědi rozepsané po položkách**, a ta druhá je
+poučná: *„část blokujících položek byla UVNITŘ klauze a po připojení
+přešla do druhé predikace"* — **odemčení znovu, a znovu z jiného
+důvodu než minule.**
+
+---
+
+## Nález, který je cennější než ta změna — souhlas
+
+**Filtr ztracených členů žil ve DVOU KOPIÍCH dvacet kol** a rozešel se
+až teď. **To je B‑28 („jeden zdroj pro hlášení i pro účet") s
+přeživším** — a našel ho **rozpor ve výstupu**, ne čtení kódu.
+
+**Zapisuju z toho pravidlo, které tenhle projekt zatím neměl:**
+**duplikát se nepozná revizí, pozná se tím, že dvě čísla o téže věci
+přestanou souhlasit.** Proto se vyplácí měřit dvě cesty k témuž číslu
+i tehdy, když „to přece musí vyjít stejně".
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑86 · nabídka kandidátů je jen v TEXTU otázky, ne jako pole
+
+```
+r.offered          → None
+r.question         → „…Nabízím: soused, muž. Dokud to nevím…“
+```
+
+**Je to táž vada, kterou jsme zavírali u Agenta 3 jako N‑10:** otázky
+byly jen text a musely se z něj parsovat, dokud nedostaly vlastní
+seznam. **Nabídka je teď v témž stavu** — a **Agent 3 ji bude potřebovat
+strojově**, až bude měřit, kolik odkazů má jednoho kandidáta a kolik víc
+(to je přesně číslo, které řekne, jak drahý ten dialog bude).
+
+**Malé, ale udělej to dřív, než na tom někdo postaví měření.**
+
+### Mez, kterou jsi ohlásil a neopravil — správně
+
+**Vztažné příslovce „kde" dostane jméno role `jak`.** To je **nepravda
+o té větě**, ne jen nepřesnost, takže to má vlastní kolo. **Že jsi to
+nemíchal dovnitř, je správně** a je to další případ *„dvě věci v jednom
+kole si nedovolujeme"*.
+
+**Otevřené beze změny:** 29 vět čeká odkaz (Agent 3), 30 vztažných klauzí
+s hlavou mimo čtení, rodiny klauzí (argument 75, jméno 71, doplněk 30,
+děj 21), řetěz 114, 28 němých slov, W‑67, sentence‑initial přívlastek,
+9 konjunktů v jiném pádě, zvratné `si`.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Vztažné příslovce (`kde`, `kam`, `kdy`) — první, protože to je
+VADA, ne mezera.** Dnes tvrdí o větě něco, co v ní není. **Malé
+a ohraničené.**
+
+**2 · W‑86 — nabídka jako pole**, ne jen text.
+
+**3 · Pak největší rodina klauzí: ARGUMENT SLOVESA (75).** *„Studie
+zjistila, ŽE lidé…"* — tam ta klauze **není určení, je to PŘEDMĚT**,
+takže se připojuje jinam než vztažná věta a **rozhodnutí o tom chci
+vidět dřív než kód**, jako vždycky.
+
+**A vzkaz Agentovi 3 jsi napsal sám a správně** — povrch uzlů do
+záznamu vedle programu. **Díky, že jsi to nenechal na mně.**
+
+**Podlaha:** **12 zapsaných a žádná nepravda**, doložky ≥ 99/99, zbytek
+beze změny.
+
+---
+
+## ARCHIV — kolo #148
+
+### Status: 🟢 PASS — W‑77 nebyla kosmetika, a rozklad klauzí mění zadání
 
 **Kolo #148.** 1265 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
 doložky **98/98** (nová **S‑47**), `standing_metrics()` =
