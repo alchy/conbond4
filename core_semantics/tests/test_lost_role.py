@@ -60,24 +60,31 @@ def tok(
 
 
 def sentence(who: str) -> Reading:
-    """«<Kdo> má alergii na penicilin.» — PŘÍVLASTEK V GENITIVU nemá roli.
+    """«<Kdo> působil jako vychovatel.» — DOPLNĚK PŘÍSUDKU nemá jméno.
 
-    Příklad se stěhoval už dvakrát a pokaždé proto, že ten předchozí
+    Příklad se stěhoval už POTŘETÍ a pokaždé proto, že ten předchozí
     ztracený člen mít PŘESTAL — což je dobrá zpráva, ne vada testu.
     Nejdřív tu stálo „Jan nesmí dostat penicilin.", než ho složený
     přísudek (G‑1a) vtáhl do predikace. Pak „Filipovo auto je modré.",
-    než se z přivlastnění stal určitý popis (N‑6). Zůstal předložkový
-    přívlastek pod předmětem: „alergii NA PENICILIN" — `penicilin` visí
-    pod `alergie`, ne pod přísudkem, takže roli ve vztahu nedostane.
+    než se z přivlastnění stal určitý popis (N‑6). Potom „Jan má alergii
+    na penicilin." — a ta odešla ROZHODNUTÍM, ne pokrokem: od W‑84 je
+    `penicilin` PŘÍVLASTEK JMÉNA, tedy vztah vedle věty, protože ta věta
+    netvrdí, že Jan „má na penicilin".
+
+    **Tenhle příklad se od předchozích liší tím, že ztracený člen
+    ÚČASTNÍKEM DĚJE SKUTEČNĚ JE.** „působil JAKO VYCHOVATEL" je doplněk
+    přísudku: visí přímo na slovese (`advcl:pred`), pojmenovat ho rolí je
+    o té větě pravda, a `advcl+Nom` je s pěti výskyty reálná třída
+    měřeného korpusu („působil jako vychovatel", „ukázalo se jako
+    faktor"), ne věta vymyšlená pro test.
     """
     return Reading(
         tokens=(
-            tok(1, who, who, "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
-            tok(2, "má", "mít", "VERB", 0, "root", Number="Sing", Polarity="Pos"),
-            tok(3, "alergii", "alergie", "NOUN", 2, "obj", Case="Acc", Number="Sing"),
-            tok(4, "na", "na", "ADP", 5, "case", AdpType="Prep", Case="Acc"),
-            tok(5, "penicilin", "penicilin", "NOUN", 3, "nmod", Case="Acc", Number="Sing"),
-            tok(6, ".", ".", "PUNCT", 2, "punct"),
+            tok(1, who, who, "PROPN", 2, "nsubj", Case="Nom", Gender="Masc", Number="Sing"),
+            tok(2, "působil", "působit", "VERB", 0, "root", Gender="Masc", Number="Sing", Polarity="Pos"),
+            tok(3, "jako", "jako", "SCONJ", 4, "mark"),
+            tok(4, "vychovatel", "vychovatel", "NOUN", 2, "advcl:pred", Case="Nom", Gender="Masc", Number="Sing"),
+            tok(5, ".", ".", "PUNCT", 2, "punct"),
         ),
         provenance=STAMP,
     )
@@ -93,9 +100,9 @@ class _Recorded:
         return Utterance(text=text, readings=(self._mapping[text],))
 
 
-DENIED = "Jan má alergii na penicilin."
-OTHER = "Petr má alergii na penicilin."
-SHAPE = "obj>nmod+Acc"
+DENIED = "Jan působil jako vychovatel."
+OTHER = "Petr působil jako vychovatel."
+SHAPE = "advcl+Nom"
 
 
 def oracle() -> _Recorded:
@@ -110,11 +117,11 @@ def oracle() -> _Recorded:
 def test_the_shape_is_a_path_not_a_word() -> None:
     """Učí se TVAR, ne slovo — jedna odpověď má zavřít celou třídu vět.
 
-    Cesta od přísudku je podstatná: `penicilin` nevisí na slovese, ale
-    pod předmětem, a `obj>nmod+Acc` platí stejně pro „má alergii na X",
-    „našel lék na Y" i „dostal recept na Z"."""
+    Cesta od přísudku je podstatná: `advcl+Nom` platí stejně pro
+    „působil jako vychovatel", „pracoval jako redaktor" i „ukázalo se
+    jako faktor" — a v měřeném korpusu je to pět vět, ne jedna."""
     reading = sentence("Jan")
-    assert lost_shape(reading.tokens[4], reading) == SHAPE
+    assert lost_shape(reading.tokens[3], reading) == SHAPE
 
 
 def test_only_what_is_really_in_the_parse_is_asked_about() -> None:
@@ -125,7 +132,7 @@ def test_only_what_is_really_in_the_parse_is_asked_about() -> None:
     verdict = cascade(reading)
     assert verdict.decided is not None
     lost = {t.form for t, _ in lost_members(reading, verdict.decided.predication)}
-    assert lost == {"penicilin"}
+    assert lost == {"vychovatel"}
 
 
 # --------------------------------------------------------------------------
@@ -137,7 +144,7 @@ def test_a_lost_member_is_asked_about_not_just_noted() -> None:
     session = Session()
     result = session.utter(DENIED, oracle())
     assert result.question is not None
-    assert "penicilin" in result.question
+    assert "vychovatel" in result.question
     assert SHAPE in result.question
 
 
@@ -156,11 +163,11 @@ def test_the_answer_completes_the_very_sentence_that_asked() -> None:
     session = Session()
     session.utter(DENIED, oracle())
     answer = session.play(
-        names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co")
+        names_role("Je to doplněk.", sentence("Jan"), SHAPE, "jako")
     )
     assert answer.predication is not None
-    assert answer.predication.role("na co") is not None
-    assert "penicilin" in str(answer.predication)
+    assert answer.predication.role("jako") is not None
+    assert "vychovatel" in str(answer.predication)
     assert any("naučeno" in line for line in answer.lines)
 
 
@@ -169,12 +176,12 @@ def test_one_answer_closes_the_whole_class() -> None:
     vzorem a zapamatovanou odpovědí."""
     session = Session()
     session.utter(DENIED, oracle())
-    session.play(names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co"))
+    session.play(names_role("Je to doplněk.", sentence("Jan"), SHAPE, "jako"))
 
     again = session.utter(OTHER, oracle())
     assert again.predication is not None
-    assert again.predication.role("na co") is not None
-    assert again.question is None or "penicilin" not in again.question
+    assert again.predication.role("jako") is not None
+    assert again.question is None or "vychovatel" not in again.question
     assert any("DOPLNĚNO" in step for step in again.trace)
 
 
@@ -182,7 +189,7 @@ def test_the_learned_shape_is_revocable_data() -> None:
     """I‑16: co se naučí odpovědí, jde odvolat stejně jako cokoli jiného."""
     session = Session()
     session.utter(DENIED, oracle())
-    session.play(names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co"))
+    session.play(names_role("Je to doplněk.", sentence("Jan"), SHAPE, "jako"))
     learned = [m for m in session.lexicon.all_roles() if m.surface == SHAPE]
     assert learned and "tah" in learned[0].learned_from
 
@@ -194,7 +201,7 @@ def test_the_whole_loop_replays_from_the_journal() -> None:
     """Odpověď je TAH, takže leží v žurnálu a přehrání se neptá podruhé."""
     session = Session()
     session.utter(DENIED, oracle())
-    session.play(names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co"))
+    session.play(names_role("Je to doplněk.", sentence("Jan"), SHAPE, "jako"))
     replayed = Session.replay(session.journal)
     assert replayed.answers() == session.answers()
     assert replayed.program() == session.program()
@@ -212,7 +219,7 @@ def test_lost_role_transcript_prints() -> None:
         (
             "→@ Je to vlastník.",
             session.play(
-                names_role("Je to alergen.", sentence("Jan"), SHAPE, "na co")
+                names_role("Je to doplněk.", sentence("Jan"), SHAPE, "jako")
             ),
         ),
         (OTHER + "   (JINÁ věta téhož tvaru)", session.utter(OTHER, oracle())),

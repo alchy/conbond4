@@ -444,7 +444,7 @@ def declares_disjoint(text: str, first: GroupTerm, second: GroupTerm) -> Turn:
 
 
 def names_attribute(
-    text: str, head: str, filler: str, role_name: str
+    text: str, head: str, filler: str, role_name: str, shape: str = ""
 ) -> Turn:
     """ODPOVĚĎ na otázku po významu genitivního přívlastku *(W‑39)*.
 
@@ -452,9 +452,15 @@ def names_attribute(
     zvířat je náročný." Věta sama se zapsala, když se dočetla; tenhle tah
     přidává, co se z ní zapsat nedalo, a je to týž tvar jako `→'`.
 
-    **Nic se tím neučí.** Význam genitivu je vlastnost VĚTY, ne tvaru:
-    „přínos Němcové" a „popis Němcové" mají identický rozbor a opačný
-    směr, takže druhá věta téhož tvaru se musí zeptat znovu.
+    **U HOLÉHO GENITIVU SE NIC NEUČÍ.** Význam genitivu je vlastnost
+    VĚTY, ne tvaru: „přínos Němcové" a „popis Němcové" mají identický
+    rozbor a opačný směr, takže druhá věta téhož tvaru se musí zeptat
+    znovu.
+
+    **S PŘEDLOŽKOU SE TVAR UČÍ** *(W‑84)*. `nmod:na+Acc` je „alergie na
+    penicilin", „lék na chřipku" i „recept na X" a předložka směr
+    fixuje — kdyby se to neučilo, přesunutím pod přívlastek by systém
+    o schopnost zavřít celou třídu PŘIŠEL, ne ji přestěhoval.
     """
     return Turn(
         TurnKind.NAME_ATTRIBUTE,
@@ -462,6 +468,7 @@ def names_attribute(
         subject=Group(head),
         node_id=filler,
         role_name=role_name,
+        shape_name=shape,
     )
 
 
@@ -1498,6 +1505,11 @@ class Session:
             self._offered_titles.setdefault(
                 (jmeno, titul), TitleOffer(sentence=turn.text)
             )
+        # PŘÍVLASTEK SE ZNÁMÝM TVAREM SE UŽ NEPTÁ *(W‑84)*. Je to táž
+        # smyčka jako u ztraceného členu (I‑16): zeptat se → odpověď jako
+        # TAH → naučit TVAR → další věta téže třídy se doplní sama. Jen
+        # se tím doplňuje VZTAH VEDLE VĚTY, ne role predikace.
+        predication, naucene_privlastky = self._settled_attributes(predication)
         still_open = tuple(
             role
             for role in predication.open_roles()
@@ -1714,6 +1726,12 @@ class Session:
         # se první zapsala: kdyby se zapsala druhá bez první, ležel by
         # v bázi konec promluvy bez jejího začátku.
         druha_radky = self._write_second(index, predication, routed)
+        # PŘÍVLASTEK S NAUČENÝM TVAREM SE ZAPÍŠE AŽ ZA VĚTOU a jen když
+        # se věta zapsala — vztah vedle věty bez té věty by byl výrok
+        # o promluvě, která v bázi není.
+        privlastek_radky = self._write_learned_attributes(
+            index, naucene_privlastky, routed
+        )
         # TAH, KTERÝ ZAPSAL VÍC VÝROKŮ, JE VŠECHNY OHLÁSÍ *(B‑26)*. Bere
         # se to z BÁZE, ne se sbírá po cestě: každá cesta by si to jinak
         # nesla sama a ta, která by na to zapomněla, by mlčela — a mlčení
@@ -1726,13 +1744,74 @@ class Session:
         return replace(
             routed,
             turn=turn,
-            lines=(*lines, *routed.lines, *druha_radky),
+            lines=(*lines, *routed.lines, *druha_radky, *privlastek_radky),
             predication=predication,
             trace=turn.trace,
             question=question,
             statements=zapsane,
             utterance=self._utterance,
         )
+
+    def _settled_attributes(
+        self, predication: Predication
+    ) -> tuple[Predication, tuple[tuple[str, str, str, str], ...]]:
+        """Přívlastky, jejichž TVAR už někdo pojmenoval *(W‑84)*.
+
+        Vrací predikaci BEZ nich (aby se na ně systém neptal) a jejich
+        seznam jako `(hlava, doplněk, tvar, jméno role)`.
+
+        **Holý genitiv sem nikdy nespadne**, protože tvar nemá — a je to
+        celé rozhodnutí W‑39: „přínos Němcové" a „popis Němcové" mají
+        identický rozbor a opačný směr, takže naučit z jednoho druhý by
+        znamenalo číst větu naruby. Předložka směr fixuje, a proto se
+        `nmod:na+Acc` naučit smí.
+
+        **Dvojznačný tvar se taky neptá naslepo.** Když má tvar víc
+        kandidátů, rozhodnout musí člověk, takže přívlastek zůstane
+        čekat — stejně jako `v+Loc` u okolnosti (INV‑11).
+        """
+        zbytek: list[tuple[str, str, int, str]] = []
+        naucene: list[tuple[str, str, str, str]] = []
+        for hlava, doplnek, token_index, tvar in predication.pending_attribute:
+            kandidati = self.lexicon.role_candidates(tvar) if tvar else ()
+            if len(kandidati) != 1:
+                zbytek.append((hlava, doplnek, token_index, tvar))
+                continue
+            naucene.append((hlava, doplnek, tvar, kandidati[0].canonical))
+        if not naucene:
+            return predication, ()
+        return replace(predication, pending_attribute=tuple(zbytek)), tuple(naucene)
+
+    def _write_learned_attributes(
+        self,
+        index: int,
+        naucene: tuple[tuple[str, str, str, str], ...],
+        routed: TurnResult,
+    ) -> tuple[str, ...]:
+        """Zapíše vztahy vedle věty, jejichž tvar je NAUČENÝ *(W‑84)*.
+
+        Až za větou a jen když se věta zapsala — z téhož důvodu jako
+        u druhé věty (W‑71): vztah vedle věty bez té věty by byl výrok
+        o promluvě, která v bázi není.
+        """
+        if not naucene or routed.statement_id is None:
+            return ()
+        radky: list[str] = []
+        for hlava, doplnek, tvar, jmeno in naucene:
+            formula = atom(
+                hlava, role(jmeno, Group(doplnek), Quantifier.FOR_ALL)
+            )
+            sid = self.kb.attach(
+                formula,
+                provenance=f"tah {index}: přívlastek s naučeným tvarem {tvar}",
+                utterance=self._utterance,
+            )
+            radky.append(
+                f"  ✓ zapsáno [{sid}]  {formula}"
+                f"  [DOPLNĚNO: tvar {tvar} má jméno „{jmeno}“ z dřívější "
+                "odpovědi — na tenhle přívlastek se systém už neptá]"
+            )
+        return tuple(radky)
 
     def _write_second(
         self, index: int, predication: Predication, routed: TurnResult
@@ -1867,14 +1946,26 @@ class Session:
             provenance=f"tah {index}: přívlastek",
             utterance=self._utterance,
         )
+        # TVAR S PŘEDLOŽKOU SE UČÍ, HOLÝ GENITIV NE *(W‑84)*. Odpověď je
+        # DATA, ne kód — leží v lexikonu a jde odvolat jako cokoli jiného.
+        if turn.shape_name:
+            self.lexicon.teach_role(
+                turn.shape_name, turn.role_name, learned_from=f"tah {index}"
+            )
+            druhy_radek = (
+                f"[VZTAH VEDLE VĚTY — věta sama se zapsala už dřív; tvar "
+                f"{turn.shape_name} se tím NAUČIL, další věta téže třídy se "
+                "nezeptá]"
+            )
+        else:
+            druhy_radek = (
+                "[VZTAH VEDLE VĚTY — věta sama se zapsala už dřív; tvar "
+                "se tím NEUČÍ, další věta se zeptá znovu]"
+            )
         return TurnResult(
             index=index,
             turn=turn,
-            lines=(
-                f"✓ zapsáno [{sid}]  {formula}",
-                "[VZTAH VEDLE VĚTY — věta sama se zapsala už dřív; tvar "
-                "se tím NEUČÍ, další věta se zeptá znovu]",
-            ),
+            lines=(f"✓ zapsáno [{sid}]  {formula}", druhy_radek),
             statement_id=sid,
         )
 

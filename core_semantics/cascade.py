@@ -211,7 +211,11 @@ class Predication:
     #: SLOVESA a `domu` není argument „obývat". Je to vztah dvou jmen
     #: uvnitř fráze, tedy DRUHÝ VÝROK vedle věty; větě samotné chybí
     #: přívlastek, ne predikát.
-    pending_attribute: tuple[tuple[str, str, int], ...] = ()
+    #: Od W‑84 je to ČTVEŘICE `(hlava, doplněk, token, tvar)`: přívlastek
+    #: se signálem má TVAR (`nmod:na+Acc`) a ten se odpovědí UČÍ, kdežto
+    #: holý genitiv má tvar prázdný a učit se nesmí — „přínos Němcové"
+    #: a „popis Němcové" mají identický rozbor a opačný směr.
+    pending_attribute: tuple[tuple[str, str, int, str], ...] = ()
     #: TVRZENÍ, KTERÉ NESE TITUL *(W‑55)*, jako `(jméno, titul, token)`.
     #: „básník Josef Hora“ tvrdí DVĚ věci — že promluvil a že je básník.
     #: Zapisovala se jedna a o druhé systém říkal „nikdo to neřekl“, což
@@ -3238,10 +3242,30 @@ def lost_shape(token: Token, reading: Reading) -> str:
     return ">".join(reversed(path)) + "+" + (token.feat("Case") or "?")
 
 
+def attribute_shape(token: Token, reading: Reading) -> str:
+    """Tvar přívlastku — **`nmod:` plus předložka a pád**, nebo PRÁZDNO.
+
+    Prázdný tvar znamená „tenhle přívlastek se učit NESMÍ" a má ho právě
+    holý genitiv: „přínos Němcové" a „popis Němcové" mají identický
+    rozbor a opačný směr, takže naučit z jednoho druhý by znamenalo číst
+    větu naruby *(W‑39)*. Se signálem je to jinak — předložka směr
+    fixuje („alergie na penicilin", „lék na chřipku", „recept na X" mají
+    všechny `na co`), a proto se `nmod:na+Acc` naučit DÁ *(W‑84)*.
+
+    **Vlastní jmenný prostor (`nmod:`) je podstatný.** `na+Acc` u
+    přísudku je okolnost slovesa, `nmod:na+Acc` je vztah jména; splynout
+    nesmějí, jinak by naučené jméno okolnosti pojmenovalo přívlastek
+    a naopak.
+    """
+    if _preposition_of(token, reading) is None:
+        return ""
+    return "nmod:" + surface_role(token, reading)
+
+
 def genitive_attributes(
     reading: Reading, predication: Predication
-) -> tuple[tuple[str, str, int], ...]:
-    """Genitivní přívlastky jako `(hlava, genitiv, token)` *(W‑39)*.
+) -> tuple[tuple[str, str, int, str], ...]:
+    """Přívlastky jména jako `(hlava, doplněk, token, tvar)` *(W‑39, W‑84)*.
 
     Hlava musí být JMÉNO, které je ve čtení — jinak by vztah visel na
     něčem, o čem věta nemluví. Genitiv sám ve čtení není a ani být nemá:
@@ -3325,9 +3349,36 @@ def genitive_attributes(
     narokovany = (
         root.index if predication.pending_relation and root is not None else None
     )
-    najdene: list[tuple[str, str, int]] = []
+    najdene: list[tuple[str, str, int, str]] = []
     for token in reading.tokens:
-        if token.deprel != "nmod" or not is_bare_genitive(token, reading):
+        if token.deprel != "nmod":
+            continue
+        # DOPLNĚK JMÉNA JE VZTAH TOHO JMÉNA, NE ROLE PŘÍSUDKU *(W‑84)*.
+        # „…na studijním pobytu **bratra**" dá `[PŘÍVLASTEK: studijní_pobyt
+        # bratr]` a ptá se, co ten vztah tvrdí — správně. „…na studijním
+        # pobytu **v Berlíně**" dávalo `[ZAHOZENO: „Berlíně"]` a ptalo se
+        # „jakou roli hraje „Berlíně"?", což je otázka BEZ PRAVDIVÉ
+        # ODPOVĚDI: `Berlíně` není účastník děje, je to určení toho
+        # POBYTU. Je to TÝŽ vztah, jednou obsloužený a podruhé ne; jediný
+        # rozdíl je, že místo pádu ho značí předložka.
+        #
+        # A ROZDÍL VAZBA × URČENÍ SE TU NEROZHODUJE. „alergie **na**
+        # penicilin" je vazba toho jména, „pobyt **v** Berlíně" jeho
+        # určení — jenže rozbor dá v obou případech `nmod` s `case`
+        # a signál pro to nemá. Výčtem předložek se to rozhodnout NESMÍ
+        # (dvanáct instancí W‑32 … W‑83) a „tvar, který lexikon zná" tu
+        # hranici nevede taky, protože `v+Loc` v osivu SCHVÁLNĚ není
+        # (§ 12/1). Obojí je proto vztah vedle věty a KTERÝ vztah to je,
+        # řekne dialog — ne kód.
+        predlozka = next(
+            (
+                child.form
+                for child in reading.children(token.index)
+                if child.upos == "ADP"
+            ),
+            None,
+        )
+        if predlozka is None and not is_bare_genitive(token, reading):
             continue
         if token.index in pohlcene:
             continue
@@ -3336,49 +3387,79 @@ def genitive_attributes(
             continue
         if head.index not in ve_cteni or head.index == narokovany:
             continue
-        najdene.append((ve_cteni[head.index], token.lemma, token.index))
+        najdene.append(
+            (
+                ve_cteni[head.index],
+                token.lemma,
+                token.index,
+                attribute_shape(token, reading),
+            )
+        )
     # Konjunkty už nalezených přívlastků: patří k TÉMUŽ vztahu.
     zmena = True
     while zmena:
         zmena = False
-        znama = {index for _, _, index in najdene}
+        znama = {index for _, _, index, _ in najdene}
         for token in reading.tokens:
             if token.index in znama or base_deprel(token.deprel) != "conj":
                 continue
             rodic = next(
                 (
                     hlava
-                    for hlava, _, index in najdene
+                    for hlava, _, index, _ in najdene
                     if index == token.head
                 ),
                 None,
             )
             if rodic is None or not is_bare_genitive(token, reading):
                 continue
-            najdene.append((rodic, token.lemma, token.index))
+            najdene.append((rodic, token.lemma, token.index, ""))
             zmena = True
     return tuple(najdene)
 
 
-def attribute_question(predication: Predication) -> str | None:
-    """Otázka na význam genitivního přívlastku *(W‑39)*.
+def attribute_label(head: str, filler: str, shape: str) -> str:
+    """Přívlastek tak, jak stojí ve větě — s předložkou, když ji má.
 
-    Ptá se na JMÉNO ROLE, protože právě jím se ty významy liší. A ptá se
-    U KAŽDÉ VĚTY ZNOVU: „chov zvířat" a „péče majitele" mají týž tvar
-    a opačný směr, takže naučit ho jako tvar by znamenalo přečíst druhou
-    větu naruby.
+    Předložka se bere Z TVARU, ne z hlášení: `nmod:na+Acc` dá „na", a
+    kdyby se skládala jinde, rozešly by se popis a to, co se učí.
+    """
+    if not shape:
+        return f"{head} {filler}"
+    return f"{head} {shape.split(':', 1)[1].split('+', 1)[0]} {filler}"
+
+
+def attribute_question(predication: Predication) -> str | None:
+    """Otázka na význam přívlastku jména *(W‑39, W‑84)*.
+
+    Ptá se na JMÉNO ROLE, protože právě jím se ty významy liší.
+
+    **HOLÝ GENITIV SE PTÁ U KAŽDÉ VĚTY ZNOVU**, protože „chov zvířat"
+    a „péče majitele" mají týž tvar a opačný směr. Přívlastek SE
+    SIGNÁLEM má vlastní tvar (`nmod:na+Acc`) a ten se odpovědí naučí —
+    předložka směr fixuje.
     """
     if not predication.pending_attribute:
         return None
     parts = [
-        f"„{hlava} {genitiv}“"
-        for hlava, genitiv, _ in predication.pending_attribute
+        f"„{attribute_label(hlava, doplnek, tvar)}“"
+        for hlava, doplnek, _, tvar in predication.pending_attribute
     ]
+    # HOLÝ GENITIV SE NEMĚNÍ ANI VE SLOVĚ. Je to protipříklad k W‑84:
+    # kde tvar směr nefixuje, ptá se systém u každé věty znovu a říká to
+    # týmiž slovy jako dřív.
+    if any(not tvar for *_, tvar in predication.pending_attribute):
+        return (
+            "Co ten přívlastek v genitivu tvrdí — " + ", ".join(parts) + "? "
+            "Zapíšu to jako vztah vedle věty; řekni, jakou roli v něm ten "
+            "genitiv hraje (co, kdo, whole, …). Ptám se u každé věty znovu: "
+            "„chov zvířat“ a „péče majitele“ mají týž tvar a opačný směr."
+        )
     return (
-        "Co ten přívlastek v genitivu tvrdí — " + ", ".join(parts) + "? "
+        "Co ten přívlastek tvrdí — " + ", ".join(parts) + "? "
         "Zapíšu to jako vztah vedle věty; řekni, jakou roli v něm ten "
-        "genitiv hraje (co, kdo, whole, …). Ptám se u každé věty znovu: "
-        "„chov zvířat“ a „péče majitele“ mají týž tvar a opačný směr."
+        "doplněk hraje (co, kdo, whole, …). Tvar s předložkou se tím "
+        "NAUČÍ — další věta téže třídy se už nezeptá."
     )
 
 
@@ -3645,7 +3726,9 @@ def attribute_tier() -> Tier:
                 continue
             notes.append(
                 "[PŘÍVLASTEK: "
-                + ", ".join(f"„{h} {g}“" for h, g, _ in found)
+                + ", ".join(
+                    f"„{attribute_label(h, g, tvar)}“" for h, g, _, tvar in found
+                )
                 + " — vztah vedle věty, čeká se na jméno role]"
             )
             # BUĎ PŘÍVLASTEK, NEBO ROLE — NE OBOJÍ *(W‑58)*. U slovesné
@@ -3656,7 +3739,7 @@ def attribute_tier() -> Tier:
             # Stavba se liší, zacházení se lišit nesmí: věta by jinak
             # o jednom členu tvrdila dvě věci najednou a na tu roli by se
             # ptala „co znamená“, ačkoli právě řekla, že je to přívlastek.
-            prislovecne = {token_index for _, _, token_index in found}
+            prislovecne = {token_index for _, _, token_index, _ in found}
             oznacene.append(
                 Candidate(
                     replace(
@@ -3994,7 +4077,7 @@ def lost_members(
     fráze, tedy druhý výrok vedle věty. Hlásit ho jako ztrátu znamenalo
     zablokovat zápis věty, které nechybí predikát, ale přívlastek.
     """
-    attribute_tokens = {token for _, _, token in genitive_attributes(reading, predication)}
+    attribute_tokens = {token for _, _, token, _ in genitive_attributes(reading, predication)}
     # DRUHÁ VĚTA MEZI ZTRACENÉ ČLENY NEPATŘÍ *(W‑70)*. Ptát se na ni
     # „jak se ta role jmenuje?" znamená vyzvat člověka, aby druhou větu
     # dosadil jako člen první — a odpověď, která by tomu vyhověla,
@@ -4167,8 +4250,11 @@ def unaccounted_tokens(
         inner = complex_predicate(reading, head[1])
         if inner is not None:
             ucet.add(inner.index)
+    for token_index in (
+        *(index for _, _, index, _ in predication.pending_attribute),
+    ):
+        ucet.add(token_index)
     for _, _, token_index in (
-        *predication.pending_attribute,
         *predication.pending_title,
         *predication.pending_share,
         *predication.pending_name,
@@ -4218,7 +4304,7 @@ def _reported_lost(
     rozdíl by se schoval přesně tam, kde se nedá vidět.
     """
     attribute_tokens = {
-        token for _, _, token in genitive_attributes(reading, predication)
+        token for _, _, token, _ in genitive_attributes(reading, predication)
     }
     druha = {t.index for t in second_predications(reading)}
     if druha:

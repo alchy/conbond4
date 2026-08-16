@@ -1519,7 +1519,7 @@ def test_a_composed_head_keeps_its_genitive_attribute() -> None:
     predication = generate(reading)[0].predication
     assert "první_předseda" in {r.mention.lemma for r in predication.roles}
     assert genitive_attributes(reading, predication) == (
-        ("první_předseda", "odbor", 4),
+        ("první_předseda", "odbor", 4, ""),
     )
 
 
@@ -1573,7 +1573,7 @@ def test_a_genitive_is_either_an_attribute_or_a_role() -> None:
     )
     verdict = cascade(reading, tiers=(*HARD_TIERS, attribute_tier()))
     predication = verdict.survivors[0].predication
-    assert predication.pending_attribute == (("první_předseda", "odbor", 4),)
+    assert predication.pending_attribute == (("první_předseda", "odbor", 4, ""),)
     assert 4 not in {r.mention.token_index for r in predication.roles}
     assert "Gen" not in surface_roles(predication)
 
@@ -1656,10 +1656,23 @@ def test_a_prepositional_genitive_is_not_an_attribute() -> None:
         provenance="test",
     )
     predication = generate(reading)[0].predication
+    from core_semantics.cascade import attribute_label
+
     najdene = genitive_attributes(reading, predication)
-    assert [g for _, g, _ in najdene] == ["vesmír"], (
-        "„u filozofů“ je okolnost, ne přívlastek — tvrdit „synonyma "
-        "filozofů“ je o té větě nepravda"
+    # PO W‑84 JE PŘÍVLASTEK I TEN PŘEDLOŽKOVÝ — ale to, co tenhle test
+    # hlídal, DRŽÍ DÁL: nepravda byla „synonyma filozofů“ se zahozenou
+    # předložkou, a ta se nesmí objevit ani teď.
+    assert [(g, tvar) for _, g, _, tvar in najdene] == [
+        ("vesmír", ""),
+        ("filozof", "nmod:u+Gen"),
+    ], "holý genitiv i předložkový jsou vztah vedle věty, každý svým tvarem"
+    popisy = [attribute_label(h, g, tvar) for h, g, _, tvar in najdene]
+    assert popisy == ["synonymum vesmír", "synonymum u filozof"], (
+        "„synonyma filozofů“ bez předložky je o té větě nepravda a "
+        "nesmí vzniknout ani jako popis"
+    )
+    assert all("+" not in p for p in popisy), (
+        "popis je věta, ne tvar — tvar se do něj nesmí propsat"
     )
 
 
@@ -3322,8 +3335,30 @@ def test_a_lost_head_is_reported_with_what_was_composed_into_it() -> None:
         ),
         provenance="test",
     )
+    from dataclasses import replace as _replace_field
+
+    from core_semantics.cascade import genitive_attributes, unaccounted_note
+
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
-    note = _dropped_note(reading, predication)
+
+    # PO W‑84 UŽ TO NENÍ ZTRÁTA, JE TO PŘÍVLASTEK — „zvířaty" visí pod
+    # „Rizika", které je ve čtení. Tvrzení testu se tím ale nemění:
+    # UBRAT OTÁZKU JE POKROK JEN TEHDY, KDYŽ SE MATERIÁL OHLÁSÍ JINDE,
+    # a tady se hlásí ve dvou kanálech najednou.
+    assert [g for _, g, _, _ in genitive_attributes(reading, predication)] == [
+        "zvíře"
+    ], "jméno pod jménem je vztah vedle věty"
+    ucet = unaccounted_note(reading, predication)
+    assert ucet is not None and "domácími" in ucet, (
+        "co se do přívlastku nesložilo, musí být vidět v účtu — jinak "
+        "o 277 slovech korpusu přestane hlášení mluvit úplně"
+    )
+
+    # A PŮVODNÍ TVRZENÍ SE MĚŘÍ DÁL, na téže větě: jakmile hlava ve
+    # čtení není, přívlastek nevzniká, ztráta se vrátí — a musí přijít
+    # se složeným jménem, ne jen s holou hlavou.
+    bez_hlavy = _replace_field(predication, roles=())
+    note = _dropped_note(reading, bez_hlavy)
     assert note is not None
     assert "domácími zvířaty" in note, "složené jméno musí být v hlášení vidět"
 
@@ -3443,7 +3478,7 @@ def test_a_genitive_under_a_genitive_is_reported_too() -> None:
 
     reading = _genitive_chain()
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
-    hlavy = {genitiv for _, genitiv, _ in genitive_attributes(reading, predication)}
+    hlavy = {genitiv for _, genitiv, _, _ in genitive_attributes(reading, predication)}
     assert "lékař" in hlavy, "první patro se hlásilo už dřív"
     assert "pacient" in hlavy, "druhé patro se musí ohlásit taky"
 
@@ -3467,7 +3502,7 @@ def test_the_chain_stops_at_a_clause() -> None:
         provenance="test",
     )
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
-    hlavy = {genitiv for _, genitiv, _ in genitive_attributes(reading, predication)}
+    hlavy = {genitiv for _, genitiv, _, _ in genitive_attributes(reading, predication)}
     assert "lékař" not in hlavy, "přes vedlejší větu se řetěz nepřenese"
 
 
@@ -3496,7 +3531,7 @@ def test_the_second_member_of_an_attribute_is_an_attribute() -> None:
 
     reading = _attribute_with_two_members()
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
-    privlastky = {g for _, g, _ in genitive_attributes(reading, predication)}
+    privlastky = {g for _, g, _, _ in genitive_attributes(reading, predication)}
     assert privlastky == {"lékař", "pacient"}
     assert all(
         t.form != "pacienta" for t in _reported_lost(reading, predication)

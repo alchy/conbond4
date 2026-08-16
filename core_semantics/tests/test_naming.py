@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from core_semantics.ast import Entity, Group, Label, P_NAME, QueryStatus, atom, role
 from core_semantics.cascade import naming_shape
+from core_semantics.ast import Quantifier
 from core_semantics.oracle import Reading, Token, Utterance
 from core_semantics.session import Session
 from core_semantics.tests._console import echo
@@ -441,7 +442,7 @@ def test_the_sentence_is_written_even_though_the_attribute_waits() -> None:
     assert result.statement_id is not None
     assert result.question is not None
     assert result.predication is not None
-    assert result.predication.pending_attribute == (("chov", "zvíře", 2),)
+    assert result.predication.pending_attribute == (("chov", "zvíře", 2, ""),)
 
 
 def test_the_attribute_is_not_reported_as_a_dropped_member() -> None:
@@ -491,5 +492,179 @@ def test_nothing_is_learned_so_the_next_sentence_asks_again() -> None:
     session.play(names_attribute("Předmět.", "chov", "zvíře", "co"))
     again = session.utter(CARE_TEXT, oracle)
     assert again.predication is not None
-    assert again.predication.pending_attribute == (("péče", "majitel", 2),)
+    assert again.predication.pending_attribute == (("péče", "majitel", 2, ""),)
     assert again.question is not None and "přívlastek" in again.question
+
+
+# --------------------------------------------------------------------------
+# Předložkový přívlastek jména — W‑84
+# --------------------------------------------------------------------------
+#
+# Rozhodnutí je o VÝZNAMU, ne o kódu: doplněk jména je vztah TOHO JMÉNA,
+# ne role přísudku. „Petr má alergii na penicilin." netvrdí, že Petr „má
+# na penicilin" — tvrdí, že má alergii, a ta alergie je na penicilin.
+#
+# Rozdíl mezi VAZBOU jména („alergie na penicilin") a jeho URČENÍM
+# („pobyt v Berlíně") je skutečný, ale Z ROZBORU NEROZHODNUTELNÝ: `nmod`
+# s `case` v obou. Systém ho proto NEROZHODUJE — obojí je vztah vedle
+# věty a KTERÝ vztah to je, řekne dialog. Výčtem předložek se to
+# rozhodnout nesmí (dvanáct instancí W‑32 … W‑83).
+
+ALLERGY = "Petr má alergii na penicilin."
+MEDICINE = "Jan má lék na bolest."
+
+
+def _prepositional(subject: str, verb: str, head: str, head_form: str,
+                   filler: str, filler_form: str) -> Reading:
+    """«<Kdo> <sloveso> <jméno> na <doplněk>.» — doplněk visí pod JMÉNEM."""
+    return Reading(
+        tokens=(
+            w(1, subject, subject, "PROPN", 2, "nsubj", Case="Nom", Number="Sing"),
+            w(2, verb, verb, "VERB", 0, "root", Number="Sing", Polarity="Pos"),
+            w(3, head_form, head, "NOUN", 2, "obj", Case="Acc", Number="Sing"),
+            w(4, "na", "na", "ADP", 5, "case", AdpType="Prep", Case="Acc"),
+            w(5, filler_form, filler, "NOUN", 3, "nmod", Case="Acc", Number="Sing"),
+            w(6, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+
+
+def _prepositional_session() -> tuple[Session, _Recorded]:
+    readings = {
+        ALLERGY: _prepositional("Petr", "mít", "alergie", "alergii",
+                                "penicilin", "penicilin"),
+        MEDICINE: _prepositional("Jan", "mít", "lék", "lék",
+                                 "bolest", "bolest"),
+    }
+
+    from core_semantics.lexicon import (
+        LearnedPattern,
+        Operation as _Operation,
+        PatternStatus,
+        Trigger,
+        czech_seed,
+    )
+
+    # Kvantifikátor podmětu a předmětu není předmětem tohohle testu —
+    # bez něj by se věta nezapsala a měřilo by se něco jiného.
+    lexicon = czech_seed()
+    for upos, case, deprel in (
+        ("NOUN", "Nom", "nsubj"),
+        ("NOUN", "Acc", "obj"),
+    ):
+        lexicon.add(
+            LearnedPattern(
+                trigger=Trigger(
+                    lemma="", upos=upos, number="Sing", case=case, deprel=deprel
+                ),
+                operation=_Operation.EXISTS,
+                learned_from="test",
+                status=PatternStatus.CONFIRMED,
+            )
+        )
+    return Session(lexicon=lexicon), _Recorded(readings)
+
+
+def test_a_prepositional_complement_of_a_noun_is_not_a_role_of_the_verb() -> None:
+    """NOVÉ ČTENÍ SE DOKLÁDÁ DOTAZEM, NE FORMULÍ *(W‑84)*.
+
+    Do W‑84 se „na penicilin" pojmenovalo jako role věty a v bázi ležel
+    výrok, že Petr něco „má na penicilin". Ta věta to netvrdí."""
+    from core_semantics.engine import Engine
+    from core_semantics.session import names_attribute
+
+    session, oracle = _prepositional_session()
+    result = session.utter(ALLERGY, oracle)
+    assert result.predication is not None
+    assert result.predication.pending_attribute == (
+        ("alergie", "penicilin", 5, "nmod:na+Acc"),
+    )
+    session.play(
+        names_attribute("Je to na co.", "alergie", "penicilin", "na co",
+                        "nmod:na+Acc")
+    )
+
+    engine = Engine(session.kb)
+    veta = atom("mít", role("co", Group("alergie"), Quantifier.EXISTS),
+                role("kdo", Entity("Petr")))
+    vztah = atom("alergie", role("na co", Group("penicilin"),
+                                 Quantifier.FOR_ALL))
+    jako_role = atom("mít", role("kdo", Entity("Petr")),
+                     role("na co", Group("penicilin"), Quantifier.EXISTS))
+    assert engine.ask(veta).status is QueryStatus.PROVEN_TRUE
+    assert engine.ask(vztah).status is QueryStatus.PROVEN_TRUE, (
+        "vztah vedle věty v bázi LEŽÍ — schopnost se přesunula"
+    )
+    assert engine.ask(jako_role).status is QueryStatus.UNKNOWN, (
+        "penicilin jako role slovesa „mít“ je tvrzení, které ve větě není"
+    )
+
+
+def test_one_answer_closes_the_whole_class_of_shaped_attributes() -> None:
+    """TŘÍDA SE MUSÍ ZAVÍRAT I V NOVÉM KANÁLU *(W‑84)*.
+
+    I‑16 se odvolávala na třídu „lék na X, recept na Y". Kdyby se tvar
+    přívlastku neučil, přesunutím pod vztah vedle věty by systém
+    schopnost zavřít celou třídu ZTRATIL — a to je jiná změna než ta,
+    která se schválila."""
+    from core_semantics.engine import Engine
+    from core_semantics.session import names_attribute
+
+    session, oracle = _prepositional_session()
+    session.utter(ALLERGY, oracle)
+    session.play(
+        names_attribute("Je to na co.", "alergie", "penicilin", "na co",
+                        "nmod:na+Acc")
+    )
+
+    again = session.utter(MEDICINE, oracle)
+    assert again.predication is not None
+    assert again.predication.pending_attribute == (), "druhá věta se neptá"
+    assert again.question is None or "přívlastek" not in again.question
+    assert any("DOPLNĚNO" in line for line in again.lines)
+    assert Engine(session.kb).ask(
+        atom("lék", role("na co", Group("bolest"), Quantifier.FOR_ALL))
+    ).status is QueryStatus.PROVEN_TRUE, (
+        "druhá věta téže třídy zapsala vztah sama"
+    )
+
+
+def test_the_learned_attribute_shape_is_revocable_data() -> None:
+    """Co se naučí odpovědí, jde odvolat — stejně jako u role (I‑16)."""
+    from core_semantics.session import names_attribute
+
+    session, oracle = _prepositional_session()
+    session.utter(ALLERGY, oracle)
+    session.play(
+        names_attribute("Je to na co.", "alergie", "penicilin", "na co",
+                        "nmod:na+Acc")
+    )
+    naucene = [m for m in session.lexicon.all_roles()
+               if m.surface == "nmod:na+Acc"]
+    assert naucene and "tah" in naucene[0].learned_from
+
+    session.lexicon.revoke_role(naucene[0].key())
+    znovu = session.utter(MEDICINE, oracle)
+    assert znovu.predication is not None
+    assert znovu.predication.pending_attribute != (), (
+        "po odvolání se systém ptá zas — jinak by to nebyla data"
+    )
+
+
+def test_a_shaped_attribute_never_borrows_the_name_of_a_circumstance() -> None:
+    """VLASTNÍ JMENNÝ PROSTOR *(W‑84)*. `na+Acc` u přísudku je okolnost
+    slovesa, `nmod:na+Acc` je vztah jména. Kdyby splynuly, naučené jméno
+    okolnosti by pojmenovalo přívlastek — a naopak."""
+    from core_semantics.cascade import attribute_shape
+
+    reading = _prepositional("Petr", "mít", "alergie", "alergii",
+                             "penicilin", "penicilin")
+    assert attribute_shape(reading.tokens[4], reading) == "nmod:na+Acc"
+    session, oracle = _prepositional_session()
+    session.lexicon.teach_role("na+Acc", "kam", learned_from="test")
+    result = session.utter(ALLERGY, oracle)
+    assert result.predication is not None
+    assert result.predication.pending_attribute != (), (
+        "jméno okolnosti se na přívlastek nesmí přenést"
+    )

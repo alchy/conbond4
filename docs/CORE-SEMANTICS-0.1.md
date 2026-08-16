@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.75 · 16. 8. 2026
+**Verze jádra:** 0.1.76 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,65 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**DOPLNĚK JMÉNA JE VZTAH TOHO JMÉNA, NE ROLE PŘÍSUDKU** *(W‑84, kolo #147;
+rozhodnutí o VÝZNAMU, delegované reviewerem)*.
+
+„Petr má alergii na penicilin." NETVRDÍ, že Petr „má na penicilin" —
+tvrdí, že má alergii, a ta alergie je na penicilin. Do W‑84 se
+`obj>nmod+Acc` pojmenovalo jako ROLE VĚTY (I‑16) a v bázi ležel výrok,
+který ta věta neříká; „…na pobytu **v Berlíně**" se navíc ptalo „jakou
+roli hraje „Berlíně"", což je otázka BEZ PRAVDIVÉ ODPOVĚDI. Je to TÝŽ
+vztah jako genitivní přívlastek (W‑39), jen ho místo pádu značí
+předložka — zrcadlo, ne nový mechanismus.
+
+**HRANICI VAZBA × URČENÍ SYSTÉM NEROZHODUJE.** `alergie na penicilin` je
+vazba toho jména, `pobyt v Berlíně` jeho určení; rozbor dá v obou
+případech `nmod` s `case` a signál pro to nemá. Výčtem předložek se to
+rozhodnout NESMÍ (dvanáct instancí W‑32 … W‑83) a „tvar, který lexikon
+zná" tu hranici nevede taky, protože `v+Loc` v osivu schválně není
+(§ 12/1). Obojí je proto vztah vedle věty a KTERÝ vztah to je, řekne
+dialog. **Kdo to bude příště „opravovat" seznamem předložek, opraví
+nic.**
+
+**TŘÍDA SE ZAVÍRÁ I V NOVÉM KANÁLU.** Tvar `nmod:na+Acc` se odpovědí
+UČÍ, takže „lék na X" se po odpovědi na „alergii na penicilin" nezeptá
+a vztah si zapíše sám. Bez toho by se schopnost zavřít celou třídu
+neztratila přesunem, ale ZTRATILA. **Holý genitiv se neučí** a ptá se
+u každé věty znovu — „přínos Němcové" a „popis Němcové" mají identický
+rozbor a opačný směr (W‑39). Tvar má vlastní jmenný prostor (`nmod:`),
+aby naučené jméno okolnosti nepojmenovalo přívlastek.
+
+I‑16 SE PŘEKOTVILA, NE ZRUŠILA. Akceptační sada ztraceného členu stála
+na „Jan má alergii na penicilin." a ta věta odešla ROZHODNUTÍM, ne
+pokrokem. Nová kotva je `advcl+Nom` — „působil **jako vychovatel**",
+tedy doplněk visící přímo na slovese, kde ztracený člen účastníkem děje
+SKUTEČNĚ je; v měřeném korpusu je to pět vět, ne příklad vymyšlený pro
+test. Že sada zůstala citlivá, je doloženo MUTACÍ: rozbití učení tvaru
+(`teach_role` pod jiným klíčem) i rozbití cesty (`lost_shape`) shodí
+právě ty čtyři testy, vrácení je vrátí do zelena.
+
+| | dnes | po W‑84 |
+|---|---|---|
+| ZAPSÁNO | 8 | **9** |
+| vět s `[ZAHOZENO: …]` | 188 | **181** |
+| vět s `[PŘÍVLASTEK: …]` | 82 | **117** |
+
+ROZSAH MĚŘENÍ: **4** zmínky v populaci #139, **9** v širší populaci,
+**50 zmínek ve 48 větách** v celém korpusu 238 vět. **Důvodem stavby je
+falešná otázka, ne počet** — po pravidle z #144 by čtyři zmínky stavbu
+neospravedlnily.
+
+PROTIPŘÍKLAD DRŽÍ: genitivní přívlastek se nemění ani ve slovech otázky
+(T85, T84). W‑58 ověřeno BĚHEM: „synonyma filozofů" bez předložky
+nevznikne ani jako popis — přívlastek je „synonymum **u** filozof".
+
+**W‑84 (VAROVÁNÍ, jen pojmenované).** Rozbor tutéž předložkovou frázi
+jednou věší pod JMÉNO a jednou pod PŘÍSUDEK: „Karel Čapek byl na
+studijním pobytu v Berlíně." dá `v+Loc/Geo` na přísudku. U toho typu to
+vyjde nastejno, obecně ne — „mluvil o pobytu v Berlíně" není „mluvil
+v Berlíně o pobytu". **Vynutit jedno připojení by bylo rozhodnutí
+o významu udělané v kódu**, a proto se to nedělá.
 
 **PŘEDLOŽKOVÝ PŘÍVLASTEK JMÉNA — ZRCADLO W‑39 SE POSTAVIT NEDÁ, DOKUD
 SE NEROZHODNE SPOR, KTERÝ V SYSTÉMU UŽ JE** *(kolo #146, zadáno POSTAVIT)*.

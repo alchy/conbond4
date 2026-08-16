@@ -1884,6 +1884,58 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-46",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "DOPLNEK JMENA JE VZTAH TOHO JMENA, NE ROLE PRISUDKU "
+            "*(W-84)*. „Petr ma alergii na penicilin.“ NETVRDI, ze "
+            "Petr „ma na penicilin“ — tvrdi, ze ma alergii, a ta "
+            "alergie je na penicilin. Do W-84 se `na penicilin` "
+            "pojmenovalo jako ROLE VETY a v bazi lezel vyrok, ktery ta "
+            "veta nerika; „…na pobytu V BERLINE“ se navic ptalo "
+            "„jakou roli hraje Berline“, coz je otazka BEZ PRAVDIVE "
+            "ODPOVEDI. Je to TYZ vztah jako genitivni privlastek (W-39), "
+            "jen ho misto padu znaci predlozka — zrcadlo, ne novy "
+            "mechanismus. "
+            "HRANICI VAZBA x URCENI SYSTEM NEROZHODUJE, a je to "
+            "rozhodnuti, ne opomenuti: `alergie NA penicilin` je vazba "
+            "toho jmena, `pobyt V Berline` jeho urceni, ale rozbor da "
+            "v obou pripadech `nmod` s `case` a signal pro to NEMA. "
+            "Vyctem predlozek se to rozhodnout NESMI (dvanact instanci "
+            "W-32 … W-83: kategorie porovnana vyctem meri vycet, ne "
+            "jazyk) a „tvar, ktery lexikon zna“ tu hranici nevede "
+            "taky, protoze `v+Loc` v osivu SCHVALNE neni. Oboji je proto "
+            "vztah vedle vety a KTERY vztah to je, rekne dialog. "
+            "TRIDA SE ZAVIRA I V NOVEM KANALU: tvar `nmod:na+Acc` se "
+            "odpovedi UCI, takze „lek na X“ se po odpovedi na "
+            "„alergie na penicilin“ nezepta — schopnost se "
+            "PRESUNULA, ne ztratila. HOLY GENITIV se neuci a pta se u "
+            "kazde vety znovu (W-39: „prinos Nemcove“ x „popis "
+            "Nemcove“ maji identicky rozbor a opacny smer). Tvar ma "
+            "vlastni jmenny prostor (`nmod:`), aby naucene jmeno "
+            "okolnosti neprojmenovalo privlastek. "
+            ". ROZSAH MERENI: 4 zminky v populaci #139 (nezapsane vety se "
+            "ztratou, hlava ve cteni), 9 v sirsi populaci (vsechny "
+            "nezapsane vety se ctenim), 50 zminek ve 48 vetach v celem "
+            "korpusu 238 vet. Duvodem stavby je FALESNA OTAZKA, ne pocet. "
+            "Projev merenim potvrzen: ZAPSANO 8 -> 9, vet s [ZAHOZENO] "
+            "188 -> 181, vet s [PRIVLASTEK] 82 -> 117. "
+            "W-84 (VAROVANI, nepokryto): rozbor tutez predlozkovou frazi "
+            "jednou vesi pod JMENO a jednou pod PRISUDEK; vynutit jedno "
+            "pripojeni by bylo rozhodnuti o vyznamu udelane v kodu. "
+        ),
+        anchor="core_semantics.cascade:attribute_shape",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_prepositional_complement_of_a_noun_is_not_a_role_of_the_verb",
+            "test_one_answer_closes_the_whole_class_of_shaped_attributes",
+            "test_the_learned_attribute_shape_is_revocable_data",
+            "test_a_shaped_attribute_never_borrows_the_name_of_a_circumstance",
+            "test_nothing_is_learned_so_the_next_sentence_asks_again",
+            "test_a_prepositional_genitive_is_not_an_attribute",
+        ),
+    ),
+    Clause(
         id="S-33",
         boundary=CASCADE_SESSION,
         promise=(
