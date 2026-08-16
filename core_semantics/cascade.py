@@ -219,11 +219,18 @@ class Predication:
     #: SLOVESA a `domu` není argument „obývat". Je to vztah dvou jmen
     #: uvnitř fráze, tedy DRUHÝ VÝROK vedle věty; větě samotné chybí
     #: přívlastek, ne predikát.
-    #: Od W‑84 je to ČTVEŘICE `(hlava, doplněk, token, tvar)`: přívlastek
+    #: Od W‑99 je to PĚTICE `(hlava, doplněk, token, tvar, token hlavy)`:
+    #: hlava se do W‑99 párovala PODLE LEMMATU, a věta „…**slovo** je
+    #: překladem staršího řeckého **slova**…" má dva tokeny téhož lemmatu
+    #: — jeden je role, druhý vnořená hlava. Hlášení pak ukázalo tvar
+    #: JINÉHO výskytu. Klíč musí být INDEX TOKENU; je to táž vada jako
+    #: všude jinde v téhle sérii, jen uvnitř jedné věty.
+    #:
+    #: Od W‑84 je to jinak ČTVEŘICE `(hlava, doplněk, token, tvar)`: přívlastek
     #: se signálem má TVAR (`nmod:na+Acc`) a ten se odpovědí UČÍ, kdežto
     #: holý genitiv má tvar prázdný a učit se nesmí — „přínos Němcové"
     #: a „popis Němcové" mají identický rozbor a opačný směr.
-    pending_attribute: tuple[tuple[str, str, int, str], ...] = ()
+    pending_attribute: tuple[tuple[str, str, int, str, int], ...] = ()
     #: TVRZENÍ, KTERÉ NESE TITUL *(W‑55)*, jako `(jméno, titul, token)`.
     #: „básník Josef Hora“ tvrdí DVĚ věci — že promluvil a že je básník.
     #: Zapisovala se jedna a o druhé systém říkal „nikdo to neřekl“, což
@@ -3427,8 +3434,8 @@ def _absorbed_participle(
 
 def genitive_attributes(
     reading: Reading, predication: Predication
-) -> tuple[tuple[str, str, int, str], ...]:
-    """Přívlastky jména jako `(hlava, doplněk, token, tvar)` *(W‑39, W‑84)*.
+) -> tuple[tuple[str, str, int, str, int], ...]:
+    """Přívlastky jako `(hlava, doplněk, token, tvar, token hlavy)`.
 
     Hlava musí být JMÉNO, které je ve čtení — jinak by vztah visel na
     něčem, o čem věta nemluví. Genitiv sám ve čtení není a ani být nemá:
@@ -3526,7 +3533,7 @@ def genitive_attributes(
     narokovany = (
         root.index if predication.pending_relation and root is not None else None
     )
-    najdene: list[tuple[str, str, int, str]] = []
+    najdene: list[tuple[str, str, int, str, int]] = []
     for token in reading.tokens:
         # POD JMÉNEM JE DOPLNĚK `nmod`, POD PŘÍČESTÍM `obl` *(W‑92)*.
         # Příčestí je SLOVESNÝ TVAR (`VerbForm=Part`), takže jeho vlastní
@@ -3607,27 +3614,28 @@ def genitive_attributes(
                 token.lemma,
                 token.index,
                 attribute_shape(token, reading),
+                head.index,
             )
         )
     # Konjunkty už nalezených přívlastků: patří k TÉMUŽ vztahu.
     zmena = True
     while zmena:
         zmena = False
-        znama = {index for _, _, index, _ in najdene}
+        znama = {index for _, _, index, _, _ in najdene}
         for token in reading.tokens:
             if token.index in znama or base_deprel(token.deprel) != "conj":
                 continue
             rodic = next(
                 (
                     hlava
-                    for hlava, _, index, _ in najdene
+                    for hlava, _, index, _, _ in najdene
                     if index == token.head
                 ),
                 None,
             )
             if rodic is None or not is_bare_genitive(token, reading):
                 continue
-            najdene.append((rodic, token.lemma, token.index, ""))
+            najdene.append((rodic, token.lemma, token.index, "", token.head))
             zmena = True
     return tuple(najdene)
 
@@ -3636,7 +3644,8 @@ def head_surface(
     predication: Predication,
     lemma: str,
     reading: Reading | None = None,
-    attributes: tuple[tuple[str, str, int, str], ...] = (),
+    attributes: tuple[tuple[str, str, int, str, int], ...] = (),
+    head_index: int = 0,
 ) -> str:
     """Jak hlava přívlastku stála ve VĚTĚ *(W‑77, W‑98)*.
 
@@ -3653,6 +3662,21 @@ def head_surface(
     že všech 22 rozlišitelných případů v korpusu je právě tahle vnořená
     hlava, ne rodina.
     """
+    # KLÍČ JE INDEX TOKENU, NE LEMMA *(W‑99)*. „…**slovo** je překladem
+    # staršího řeckého **slova**…" má dva tokeny téhož lemmatu: jeden je
+    # role, druhý vnořená hlava. Párování přes lemma našlo tu roli
+    # a vrátilo tvar JINÉHO výskytu — tedy slovo, které ve větě sice
+    # stojí, ale jinde a v jiné úloze. Je to táž vada jako všude v téhle
+    # sérii: identita klíčem, který nerozlišuje to, na co se ptá.
+    if head_index:
+        for role in predication.roles:
+            if role.mention.token_index == head_index or head_index in role.absorbed:
+                return role.mention.form
+        if reading is not None:
+            token = _token_at(head_index, reading)
+            if token is not None:
+                return token.form
+        return lemma
     for role in predication.roles:
         if role.mention.lemma == lemma:
             return role.mention.form
@@ -3661,7 +3685,7 @@ def head_surface(
         # patro hlášení skládá z toho, co právě NAŠLO, a do predikace to
         # zapíše až o krok dál. Ptát se predikace by v patře vracelo
         # prázdno a vada by zůstala právě tam, kde je vidět.
-        for _, doplnek, token_index, _ in (
+        for _, doplnek, token_index, _, _ in (
             attributes or predication.pending_attribute
         ):
             if doplnek == lemma:
@@ -3749,12 +3773,12 @@ def attribute_question(
     if not predication.pending_attribute:
         return None
     parts = [
-        f"„{attribute_label(head_surface(predication, hlava, reading), attribute_filler_surface(index, reading) or doplnek, tvar, _preposition_surface(index, reading))}“"
-        for hlava, doplnek, index, tvar in predication.pending_attribute
+        f"„{attribute_label(head_surface(predication, hlava, reading, (), hlava_index), attribute_filler_surface(index, reading) or doplnek, tvar, _preposition_surface(index, reading))}“"
+        for hlava, doplnek, index, tvar, hlava_index in predication.pending_attribute
     ]
     bez_tvaru = [
         token_index
-        for _, _, token_index, tvar in predication.pending_attribute
+        for _, _, token_index, tvar, _ in predication.pending_attribute
         if not tvar
     ]
     if bez_tvaru:
@@ -4056,8 +4080,8 @@ def attribute_tier() -> Tier:
             notes.append(
                 "[PŘÍVLASTEK: "
                 + ", ".join(
-                    f"„{attribute_label(head_surface(candidate.predication, h, reading, found), attribute_filler_surface(index, reading) or g, tvar, _preposition_surface(index, reading))}“"
-                    for h, g, index, tvar in found
+                    f"„{attribute_label(head_surface(candidate.predication, h, reading, found, h_index), attribute_filler_surface(index, reading) or g, tvar, _preposition_surface(index, reading))}“"
+                    for h, g, index, tvar, h_index in found
                 )
                 + " — vztah vedle věty, čeká se na jméno role]"
             )
@@ -4069,7 +4093,7 @@ def attribute_tier() -> Tier:
             # Stavba se liší, zacházení se lišit nesmí: věta by jinak
             # o jednom členu tvrdila dvě věci najednou a na tu roli by se
             # ptala „co znamená“, ačkoli právě řekla, že je to přívlastek.
-            prislovecne = {token_index for _, _, token_index, _ in found}
+            prislovecne = {token_index for _, _, token_index, _, _ in found}
             oznacene.append(
                 Candidate(
                     replace(
@@ -4850,7 +4874,7 @@ def unaccounted_tokens(
         if inner is not None:
             ucet.add(inner.index)
     for token_index in (
-        *(index for _, _, index, _ in predication.pending_attribute),
+        *(index for _, _, index, _, _ in predication.pending_attribute),
     ):
         ucet.add(token_index)
     for _, _, token_index in (
@@ -4903,7 +4927,7 @@ def _reported_lost(
     rozdíl by se schoval přesně tam, kde se nedá vidět.
     """
     attribute_tokens = {
-        token for _, _, token, _ in genitive_attributes(reading, predication)
+        token for _, _, token, _, _ in genitive_attributes(reading, predication)
     }
     # DRUHÁ VĚTA MEZI ZTRACENÉ ČLENY NEPATŘÍ *(W‑70)*. Ptát se na ni
     # „jak se ta role jmenuje?" znamená vyzvat člověka, aby druhou větu

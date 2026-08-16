@@ -100,3 +100,28 @@ schválenou hranu `conj` u role, změřil cíl a našel nulu. Kdyby ji
 postavil, prošla by: zkoušky zelené, doložka by seděla — a nikdy by se
 neukázalo, že ten kód nikdy nic neudělá. **Kód, který nic nedělá, je
 horší než chybějící kód, protože vypadá jako splněná schopnost.**)*
+
+## MĚŘIDLO SI NESMÍ ZVOLIT JEDNOTKU, KTERÁ NEROZLIŠUJE TO, NA CO SE PTÁ
+
+Tři instance v jedné sérii, dvě moje a jedna reviewerova:
+
+  · **#154 (reviewer)** — souřadnost se počítala po KONJUNKTU místo po
+    KOORDINACI, takže „Poranění, pokousání **a** smrt" vyšlo jako dvě
+    spojení bez spojky a jedno s ní; vztah přitom nese jen ten poslední
+    člen. Vyšlo z toho „38 % bez spojky", což je nesmysl.
+  · **#156 (builder)** — sonda hledala staré lemma jako PODŘETĚZEC
+    hlášení, takže „pozornost" našla uvnitř správného tvaru
+    „pozornosti" a napočítala 81 vad, které neexistují.
+  · **#157 (builder)** — sonda hledala tvar KDEKOLI v řádku, a tentýž
+    tvar tam stál jako doplněk jiného přívlastku; výsledek vyšel
+    „opraveno" i na revizi PŘED opravou.
+
+Společné je to, že měřidlo mělo hrubší jednotku než otázka. Pravidlo:
+**napřed se řekne, co se má rozlišit, a teprve pak se volí jednotka** —
+a když sonda vrátí čistou nulu nebo plný počet hned napoprvé, je to
+důvod k podezření, ne k radosti.
+
+Důsledek pro účinek změny: **měří se TÁŽ POPULACE NA OBOU REVIZÍCH**
+(`git archive <sha>`), protože rozdíl dvou různých populací není účinek
+ničeho (#152, #153).
+

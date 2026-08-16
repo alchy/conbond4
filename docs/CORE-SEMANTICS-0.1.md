@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.86 · 16. 8. 2026
+**Verze jádra:** 0.1.87 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,31 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**KLÍČ HLAVY JE INDEX TOKENU, NE LEMMA** *(W‑99, kolo #158)*.
+
+„…**slovo** může být překladem staršího řeckého **slova** pro vesmír…"
+má `slovo` dvakrát: jednou jako podmět, tedy ROLI, a jednou jako
+vnořenou hlavu. `head_surface` pároval přes LEMMA, našel tu roli
+a vrátil tvar JINÉHO výskytu — slovo, které ve větě sice stojí, ale
+jinde a v jiné úloze. Je to táž vada jako všude v téhle sérii (identita
+klíčem, který nerozlišuje to, na co se ptá), jen uvnitř jedné věty.
+
+`pending_attribute` je proto od W‑99 **pětice** — nese i index hlavy.
+Zkouška je právě ta věta se dvěma výskyty téhož lemmatu; na větě, kde se
+lemma neopakuje, projde i špatné párování, tedy skoro všude.
+
+Měřeno nezávislou sondou nad ROZBOREM (běží stejně na obou revizích,
+protože se neptá na tvar pole): položek 211, **správný začátek 195 →
+210**. Zbývající jeden případ je **mez měřidla, ne systému**: u „byl
+prvním předsedou **československého odboru** PEN klubu" je vnořená hlava
+sama složená fráze a hlášení ukazuje celé „československého odboru" —
+správně; sonda čeká jen hlavový token. Ověřeno výpisem, ne odhadem.
+
+**A pravidlo o jednotce měření je od tohohle kola v
+`agent-tasks/PRAVIDLA.md`**, protože tři instance v jedné sérii nejsou
+náhoda: reviewerova (konjunkt × koordinace), moje (podřetězec) a moje
+(kdekoli v řádku × pozičně).
 
 **HLAVA PŘÍVLASTKU NEMUSÍ BÝT ROLE** *(W‑98, kolo #157)*.
 

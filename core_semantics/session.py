@@ -1923,12 +1923,18 @@ class Session:
         kandidátů, rozhodnout musí člověk, takže přívlastek zůstane
         čekat — stejně jako `v+Loc` u okolnosti (INV‑11).
         """
-        zbytek: list[tuple[str, str, int, str]] = []
+        zbytek: list[tuple[str, str, int, str, int]] = []
         naucene: list[tuple[str, str, str, str]] = []
-        for hlava, doplnek, token_index, tvar in predication.pending_attribute:
+        for (
+            hlava,
+            doplnek,
+            token_index,
+            tvar,
+            hlava_index,
+        ) in predication.pending_attribute:
             kandidati = self.lexicon.role_candidates(tvar) if tvar else ()
             if len(kandidati) != 1:
-                zbytek.append((hlava, doplnek, token_index, tvar))
+                zbytek.append((hlava, doplnek, token_index, tvar, hlava_index))
                 continue
             naucene.append((hlava, doplnek, tvar, kandidati[0].canonical))
         if not naucene:

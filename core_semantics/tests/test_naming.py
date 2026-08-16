@@ -442,7 +442,7 @@ def test_the_sentence_is_written_even_though_the_attribute_waits() -> None:
     assert result.statement_id is not None
     assert result.question is not None
     assert result.predication is not None
-    assert result.predication.pending_attribute == (("chov", "zvíře", 2, ""),)
+    assert result.predication.pending_attribute == (("chov", "zvíře", 2, "", 1),)
 
 
 def test_the_attribute_is_not_reported_as_a_dropped_member() -> None:
@@ -492,7 +492,7 @@ def test_nothing_is_learned_so_the_next_sentence_asks_again() -> None:
     session.play(names_attribute("Předmět.", "chov", "zvíře", "co"))
     again = session.utter(CARE_TEXT, oracle)
     assert again.predication is not None
-    assert again.predication.pending_attribute == (("péče", "majitel", 2, ""),)
+    assert again.predication.pending_attribute == (("péče", "majitel", 2, "", 1),)
     assert again.question is not None and "přívlastek" in again.question
 
 
@@ -578,7 +578,7 @@ def test_a_prepositional_complement_of_a_noun_is_not_a_role_of_the_verb() -> Non
     result = session.utter(ALLERGY, oracle)
     assert result.predication is not None
     assert result.predication.pending_attribute == (
-        ("alergie", "penicilin", 5, "nmod:na+Acc"),
+        ("alergie", "penicilin", 5, "nmod:na+Acc", 3),
     )
     session.play(
         names_attribute("Je to na co.", "alergie", "penicilin", "na co",
@@ -848,7 +848,7 @@ def test_a_complement_of_an_absorbed_participle_is_an_attribute() -> None:
     result = session.utter(PARTICIPLE_TEXT, oracle)
     assert result.predication is not None
     najdene = genitive_attributes(reading, result.predication)
-    assert [(h, g, tvar) for h, g, _, tvar in najdene] == [
+    assert [(h, g, tvar) for h, g, _, tvar, _ in najdene] == [
         ("riziko_spojený", "zvíře", "nmod:s+Ins:arg")
     ]
     assert not any(
@@ -869,7 +869,7 @@ def test_a_bare_case_under_a_participle_counts_but_is_not_learned() -> None:
     result = session.utter(PARTICIPLE_TEXT, oracle)
     assert result.predication is not None
     najdene = genitive_attributes(reading, result.predication)
-    assert [tvar for *_, tvar in najdene] == [""], "neučí se"
+    assert [tvar for _, _, _, tvar, _ in najdene] == [""], "neučí se"
 
 
 def test_an_obl_under_the_predicate_is_still_a_circumstance() -> None:
@@ -1042,3 +1042,49 @@ def test_a_nested_head_shows_the_form_too() -> None:
     assert head_surface(predication, "vznik", None, nalezene) == "vznik", (
         "bez rozboru se tvar nehádá"
     )
+
+
+def test_the_head_is_keyed_by_token_not_by_lemma() -> None:
+    """DVA VÝSKYTY TÉHOŽ LEMMATU V JEDNÉ VĚTĚ *(W‑99)*.
+
+    „…**slovo** je překladem staršího řeckého **slova**…" má `slovo`
+    dvakrát: jednou jako podmět, tedy ROLI, a jednou jako vnořenou
+    hlavu. Párování přes LEMMA našlo tu roli a vrátilo tvar JINÉHO
+    výskytu — slovo, které ve větě sice stojí, ale jinde a v jiné úloze.
+
+    **Zkouška musí být právě tahle věta.** Na větě, kde se lemma
+    neopakuje, projde i to špatné párování — tedy skoro všude."""
+    from core_semantics.cascade import genitive_attributes, head_surface
+
+    reading = Reading(
+        tokens=(
+            w(1, "Slovo", "slovo", "NOUN", 2, "nsubj",
+              Case="Nom", Gender="Neut", Number="Sing"),
+            w(2, "je", "být", "VERB", 0, "root",
+              Number="Sing", Polarity="Pos"),
+            w(3, "překladem", "překlad", "NOUN", 2, "obl",
+              Case="Ins", Gender="Masc", Number="Sing"),
+            w(4, "slova", "slovo", "NOUN", 3, "nmod",
+              Case="Gen", Gender="Neut", Number="Sing"),
+            w(5, "pro", "pro", "ADP", 6, "case", AdpType="Prep", Case="Acc"),
+            w(6, "vesmír", "vesmír", "NOUN", 4, "nmod",
+              Case="Acc", Gender="Masc", Number="Sing"),
+            w(7, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    session, oracle = _prepositional_session()
+    predication = session.utter(ALLERGY, oracle).predication
+    assert predication is not None
+
+    nalezene = genitive_attributes(reading, predication)
+    vnorena = [
+        (hlava, hlava_index)
+        for hlava, _, _, _, hlava_index in nalezene
+        if hlava == "slovo"
+    ]
+    assert vnorena, "vnořená hlava „slova“ se má najít"
+    hlava, hlava_index = vnorena[0]
+    assert head_surface(
+        predication, hlava, reading, nalezene, hlava_index
+    ) == "slova", "tvar se bere z TOHO tokenu, ne z jiného výskytu lemmatu"

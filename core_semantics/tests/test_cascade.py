@@ -1519,7 +1519,7 @@ def test_a_composed_head_keeps_its_genitive_attribute() -> None:
     predication = generate(reading)[0].predication
     assert "první_předseda" in {r.mention.lemma for r in predication.roles}
     assert genitive_attributes(reading, predication) == (
-        ("první_předseda", "odbor", 4, ""),
+        ("první_předseda", "odbor", 4, "", 3),
     )
 
 
@@ -1573,7 +1573,7 @@ def test_a_genitive_is_either_an_attribute_or_a_role() -> None:
     )
     verdict = cascade(reading, tiers=(*HARD_TIERS, attribute_tier()))
     predication = verdict.survivors[0].predication
-    assert predication.pending_attribute == (("první_předseda", "odbor", 4, ""),)
+    assert predication.pending_attribute == (("první_předseda", "odbor", 4, "", 3),)
     assert 4 not in {r.mention.token_index for r in predication.roles}
     assert "Gen" not in surface_roles(predication)
 
@@ -1662,11 +1662,11 @@ def test_a_prepositional_genitive_is_not_an_attribute() -> None:
     # PO W‑84 JE PŘÍVLASTEK I TEN PŘEDLOŽKOVÝ — ale to, co tenhle test
     # hlídal, DRŽÍ DÁL: nepravda byla „synonyma filozofů“ se zahozenou
     # předložkou, a ta se nesmí objevit ani teď.
-    assert [(g, tvar) for _, g, _, tvar in najdene] == [
+    assert [(g, tvar) for _, g, _, tvar, _ in najdene] == [
         ("vesmír", ""),
         ("filozof", "nmod:u+Gen"),
     ], "holý genitiv i předložkový jsou vztah vedle věty, každý svým tvarem"
-    popisy = [attribute_label(h, g, tvar) for h, g, _, tvar in najdene]
+    popisy = [attribute_label(h, g, tvar) for h, g, _, tvar, _ in najdene]
     assert popisy == ["synonymum vesmír", "synonymum u filozof"], (
         "„synonyma filozofů“ bez předložky je o té větě nepravda a "
         "nesmí vzniknout ani jako popis"
@@ -3345,7 +3345,7 @@ def test_a_lost_head_is_reported_with_what_was_composed_into_it() -> None:
     # „Rizika", které je ve čtení. Tvrzení testu se tím ale nemění:
     # UBRAT OTÁZKU JE POKROK JEN TEHDY, KDYŽ SE MATERIÁL OHLÁSÍ JINDE,
     # a tady se hlásí ve dvou kanálech najednou.
-    assert [g for _, g, _, _ in genitive_attributes(reading, predication)] == [
+    assert [g for _, g, _, _, _ in genitive_attributes(reading, predication)] == [
         "zvíře"
     ], "jméno pod jménem je vztah vedle věty"
     ucet = unaccounted_note(reading, predication)
@@ -3478,7 +3478,7 @@ def test_a_genitive_under_a_genitive_is_reported_too() -> None:
 
     reading = _genitive_chain()
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
-    hlavy = {genitiv for _, genitiv, _, _ in genitive_attributes(reading, predication)}
+    hlavy = {genitiv for _, genitiv, _, _, _ in genitive_attributes(reading, predication)}
     assert "lékař" in hlavy, "první patro se hlásilo už dřív"
     assert "pacient" in hlavy, "druhé patro se musí ohlásit taky"
 
@@ -3502,7 +3502,7 @@ def test_the_chain_stops_at_a_clause() -> None:
         provenance="test",
     )
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
-    hlavy = {genitiv for _, genitiv, _, _ in genitive_attributes(reading, predication)}
+    hlavy = {genitiv for _, genitiv, _, _, _ in genitive_attributes(reading, predication)}
     assert "lékař" not in hlavy, "přes vedlejší větu se řetěz nepřenese"
 
 
@@ -3531,7 +3531,7 @@ def test_the_second_member_of_an_attribute_is_an_attribute() -> None:
 
     reading = _attribute_with_two_members()
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
-    privlastky = {g for _, g, _, _ in genitive_attributes(reading, predication)}
+    privlastky = {g for _, g, _, _, _ in genitive_attributes(reading, predication)}
     assert privlastky == {"lékař", "pacient"}
     assert all(
         t.form != "pacienta" for t in _reported_lost(reading, predication)

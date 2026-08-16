@@ -1970,6 +1970,13 @@ CONTRACTS: tuple[Clause, ...] = (
             "mluvilo lemmatem. Taz vada, jen o jedno misto vlevo, a JEDNA "
             "CESTA, ne rodina: zmereno, ze vsech 22 rozlisitelnych "
             "pripadu v korpusu je prave tahle vnorena hlava. "
+            "A KLIC JE INDEX TOKENU, NE LEMMA *(W-99)*. „…SLOVO je "
+            "prekladem starsiho reckeho SLOVA…“ ma dva tokeny tehoz "
+            "lemmatu: jeden je role, druhy vnorena hlava. Parovani pres "
+            "lemma naslo tu ROLI a vratilo tvar JINEHO vyskytu — slovo, "
+            "ktere ve vete sice stoji, ale jinde a v jine uloze. Zkouska "
+            "je prave ta veta se dvema vyskyty; na vete, kde se lemma "
+            "neopakuje, projde i spatne parovani, tedy skoro vsude. "
             "HLEDA SE V TOM, CO PATRO PRAVE NASLO, ne "
             "v `predication.pending_attribute` — tam se to zapise az "
             "o krok dal, takze dotaz na predikaci by v patre vracel "
@@ -1989,6 +1996,7 @@ CONTRACTS: tuple[Clause, ...] = (
             "test_the_node_keeps_the_lemma_even_though_the_report_shows_the_form",
             "test_without_the_parse_the_report_keeps_the_lemma",
             "test_a_nested_head_shows_the_form_too",
+            "test_the_head_is_keyed_by_token_not_by_lemma",
         ),
     ),
     Clause(
