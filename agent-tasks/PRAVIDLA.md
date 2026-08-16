@@ -125,3 +125,10 @@ Důsledek pro účinek změny: **měří se TÁŽ POPULACE NA OBOU REVIZÍCH**
 (`git archive <sha>`), protože rozdíl dvou různých populací není účinek
 ničeho (#152, #153).
 
+**A druhá půlka téhož pravidla, kterou přinesl reviewer v #159:** jeho
+sonda přičítala jeden stav dvakrát a nesla tu chybu devatenáct kol —
+našla se JEN proto, že se rozešla s mým číslem (168 proti 85). Odtud:
+**shoda dvou nezávislých měřidel je slabý důkaz, ROZPOR je silný nález.**
+Když dvě sondy dají totéž, může to znamenat, že obě měří totéž špatně;
+když se rozejdou, ví se aspoň, že jedna z nich lže.
+

@@ -61,6 +61,7 @@ from .cascade import (
     AWAITING_FACTIVITY,
     argument_clause_tier,
     relative_question,
+    restrictive_attributes,
     relative_tier,
     AWAITING_ROLE_NAME,
     HARD_TIERS,
@@ -1698,6 +1699,20 @@ class Session:
         # zapsat ho znamená uložit individuum, které se ve větě
         # nejmenuje.
         pending_name = bool(predication.pending_name)
+        # PÁTÁ POLOŽKA ZÁKAZU *(B‑31)*, vedle záporu, podmínky, náhrady
+        # a `:arg`. POD `∀` NENÍ PŘÍVLASTEK VZTAH VEDLE VĚTY, JE TO
+        # ZÚŽENÍ DOMÉNY: „Chov **zvířat jako domácích mazlíčků** může
+        # vyvolávat obavy." se zapsalo jako `∀chov`, tedy o VŠEM chovu,
+        # a na „Může velkochov vyvolávat obavy?" systém odpověděl ANO —
+        # o velkochovu přitom neřekl nikdo nic.
+        #
+        # Ztracený člen, ze kterého ten přívlastek v #160 vznikl, zápis
+        # BLOKOVAL; přívlastek neblokoval, takže se zvedl poklop nad
+        # dírou, která pod ním už byla (tři z pěti případů jsou starší).
+        #
+        # `∃` a konkrétní uzel se NEMĚNÍ: tam vynechání tvrzení OSLABUJE
+        # a slabší tvrzení není nepravda.
+        pending_restriction = restrictive_attributes(predication)
         # TÝŽ DŮVOD U ROLE, KTERÁ ČEKÁ NA JÁDROVÉ JMÉNO *(B‑19)*. Věta
         # s povrchovou rolí z vedlejší věty by se zapsala teď a po
         # odpovědi `→@` ZNOVU — v bázi by ležely dva výroky o téže větě
@@ -1730,7 +1745,7 @@ class Session:
         if (
             pending_role_name
             and not (stale_ztraceno or pending_relation or pending_complete
-                     or pending_share or pending_name)
+                     or pending_share or pending_name or pending_restriction)
             and turn.reading is not None
         ):
             castecna, castecny_duvod = partial_write(
@@ -1738,7 +1753,7 @@ class Session:
             )
         elif pending_role_name and self._standing_reading is not None and not (
             stale_ztraceno or pending_relation or pending_complete
-            or pending_share or pending_name
+            or pending_share or pending_name or pending_restriction
         ):
             castecna, castecny_duvod = partial_write(
                 self._standing_reading, predication, self.lexicon
@@ -1773,6 +1788,7 @@ class Session:
             or pending_complete
             or pending_share
             or pending_name
+            or pending_restriction
             or (pending_role_name and castecna is None)
             else self._route(
                 index, turn, castecna or predication, zapisovane
@@ -1781,6 +1797,14 @@ class Session:
         if routed is None:
             if grounded.formula is None and not question:
                 lines.append("  (zakotvení neproběhlo — do báze nejde nic)")
+            elif pending_restriction and predication.mood is Mood.ASSERTION:
+                lines.append(
+                    "  [NEZAPSÁNO: přívlastek u role "
+                    + ", ".join(f"„{jmeno}“" for jmeno in pending_restriction)
+                    + " ZUŽUJE DOMÉNU `∀`, není to vztah vedle věty. Zapsat "
+                    "větu bez něj znamená tvrdit ji o všech — a to je víc, "
+                    "než ta věta říká (B‑31)]"
+                )
             elif pending_role_name and predication.mood is Mood.ASSERTION:
                 # KTERÉ PRAVIDLO ZÁPIS ZASTAVILO, musí být VIDĚT *(W‑62)*.
                 # Bez toho vypadá nezapsaná věta stejně jako věta, která

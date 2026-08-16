@@ -3770,6 +3770,44 @@ def attribute_label(
     return f"{head} {preposition or z_tvaru} {filler}"
 
 
+def restrictive_attributes(predication: Predication) -> tuple[str, ...]:
+    """Role s `∀`, které mají ČEKAJÍCÍ PŘÍVLASTEK *(B‑31)*.
+
+    **Pod `∀` není přívlastek vztah vedle věty, je to ZÚŽENÍ DOMÉNY
+    kvantifikátoru.** „Chov **zvířat jako domácích mazlíčků** může
+    vyvolávat obavy." vešlo do báze jako `∀chov` — tedy o VŠEM chovu — a
+    na dotaz „Může velkochov vyvolávat obavy?" odpověděl systém ANO,
+    ačkoli o velkochovu neřekl nikdo nic. Vynechání restrikce tvrzení
+    ZESÍLILO.
+
+    Je to táž monotonie naruby jako u záporu (B‑29), jen se na ni žádná
+    stráž nedívala: stráž částečného zápisu hlídá vynechané ROLE
+    a přívlastek rolí není.
+
+    **`∃` a konkrétní uzel se sem NEPOČÍTAJÍ, a je to celý rozdíl.**
+    „Petr má alergii na penicilin." s `∃alergie` je bez toho přívlastku
+    SLABŠÍ tvrzení, ne silnější — a slabší tvrzení není nepravda. Kdo si
+    tenhle zákaz přečte jako „přívlastek blokuje zápis", zablokuje i to,
+    co blokovat nemá.
+    """
+    if not predication.pending_attribute:
+        return ()
+    hlavy = {index for *_, index in predication.pending_attribute}
+    return tuple(
+        sorted(
+            {
+                role.name
+                for role in predication.roles
+                if role.quantifier is Quantifier.FOR_ALL
+                and (
+                    role.mention.token_index in hlavy
+                    or hlavy & set(role.absorbed)
+                )
+            }
+        )
+    )
+
+
 def attribute_question(
     predication: Predication, reading: Reading | None = None
 ) -> str | None:

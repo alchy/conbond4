@@ -1940,6 +1940,43 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-58",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "POD `∀` NENI PRIVLASTEK VZTAH VEDLE VETY, JE TO ZUZENI "
+            "DOMENY *(B-31)* — PATA POLOZKA ZAKAZU vedle zaporu, "
+            "podminky, nahrady a `:arg`. „Chov ZVIRAT JAKO DOMACICH "
+            "MAZLICKU muze vyvolavat obavy.“ se zapsalo jako "
+            "`∀chov`, tedy o VSEM chovu, a na dotaz „Muze velkochov "
+            "vyvolavat obavy?“ (po `subset(velkochov, chov)`) system "
+            "odpovedel ANO — o velkochovu pritom nerekl nikdo nic. "
+            "VYNECHANI RESTRIKCE TVRZENI ZESILILO. Je to taz monotonie "
+            "naruby jako u zaporu (B-29), jen se na ni zadna straz "
+            "nedivala: straz castecneho zapisu hlida vynechane ROLE "
+            "a privlastek roli neni. "
+            "`∃` A KONKRETNI UZEL SE NEMENI, a je to CELY ROZDIL: tam "
+            "vynechani privlastku tvrzeni OSLABUJE a slabsi tvrzeni neni "
+            "nepravda. Kdo si tenhle zakaz precte jako „privlastek "
+            "blokuje zapis“, zablokuje i to, co blokovat nema — proto "
+            "je protipriklad v akceptacni sade. "
+            "Rozhoduje KVANTIFIKATOR ROLE, ne podoba privlastku. "
+            ". ROZSAH MERENI: korpus 238 vet — pet zapisu ze sestnacti "
+            "melo `∀`-roli s cekajicim privlastkem, tedy tvrdilo vic nez "
+            "ta veta. Po oprave ZAPSANO 16 -> 11 a ZADNY ze zbylych "
+            "nema restrikci na `∀`; POKLES JE ZAMER, ne regrese — "
+            "odstranilo se pet tvrzeni, ktera nikdo nerekl. Vet, kterym "
+            "restrikce zapis blokuje: 34. "
+        ),
+        anchor="core_semantics.cascade:restrictive_attributes",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_restrictive_attribute_on_a_forall_role_is_seen",
+            "test_under_forall_the_sentence_is_not_written",
+            "test_the_four_sentence_sequence_ends_in_unknown",
+            "test_under_exists_the_sentence_is_written_as_before",
+        ),
+    ),
+    Clause(
         id="S-57",
         boundary=CASCADE_SESSION,
         promise=(

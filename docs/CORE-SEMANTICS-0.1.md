@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.89 · 16. 8. 2026
+**Verze jádra:** 0.1.90 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,35 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**POD `∀` ZUŽUJE PŘÍVLASTEK DOMÉNU** *(B‑31, kolo #161 — pátá položka
+zákazu)*.
+
+„Chov **zvířat jako domácích mazlíčků** může vyvolávat obavy." se
+zapsalo jako `∀chov`, tedy o VŠEM chovu, a po `subset(velkochov, chov)`
+odpověděl systém na „Může velkochov vyvolávat obavy?" **ANO** — o
+velkochovu přitom neřekl nikdo nic. **Vynechání restrikce tvrzení
+ZESÍLILO.** Je to táž monotonie naruby jako u záporu (B‑29), jen se na
+ni žádná stráž nedívala: stráž částečného zápisu hlídá vynechané ROLE
+a přívlastek rolí není.
+
+Čekající přívlastek na `∀`-roli proto zápis BLOKUJE — přesně jako ho
+blokoval ztracený člen, ze kterého v #160 vznikl.
+
+**`∃` a konkrétní uzel se NEMĚNÍ, a to je celý rozdíl.** Tam vynechání
+přívlastku tvrzení OSLABUJE a slabší tvrzení není nepravda. Kdo si B‑31
+přečte jako „přívlastek blokuje zápis", zablokuje i to, co blokovat
+nemá; protipříklad je proto v akceptační sadě.
+
+MĚŘENÍ: pět zápisů ze šestnácti mělo `∀`-roli s čekajícím přívlastkem.
+Po opravě **zapsáno 16 → 11** a žádný ze zbylých restrikci na `∀` nemá;
+34 vět zápis touhle cestou blokuje. **Pokles je záměr, ne regrese** —
+odstranilo se pět tvrzení, která nikdo neřekl.
+
+ČÍ TO BYLO: tři z těch pěti byly zapsané už před #160, takže třída je
+starší; řetěz přívlastků z #160 je bezprostřední příčinou dvou nových —
+ztracený člen zápis blokoval, přívlastek ne. **Zvedl poklop nad dírou,
+která pod ním už byla.**
 
 **PŘÍVLASTEK SMÍ BÝT HLAVOU DALŠÍHO PŘÍVLASTKU** *(W‑101, kolo #160)*.
 
