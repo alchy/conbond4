@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.91 · 16. 8. 2026
+**Verze jádra:** 0.1.92 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,41 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**W‑102 SE V ZADANÉM ZNĚNÍ POSTAVIT NEDÁ — KOLIDUJE S I‑16 PRO
+KVANTIFIKÁTOR** *(kolo #163; postaveno, změřeno, vráceno)*.
+
+Zadání znělo: `∀`, které přišlo z naučeného tvaru, se nesmí zapsat;
+odpověď `→∀` ho odemyká. Postaveno bylo (značka „kvantifikátor potvrzen
+pro TUHLE promluvu" v sezení, protože po odpovědi se tvar naučí a
+`role.source` vypadá stejně jako před ní) a na korpusu dělá přesně to,
+co se čekalo:
+
+| lexikon | dnes | s W‑102 |
+|---|---|---|
+| `golden_lexicon` | 11 | **8** |
+| `czech_seed` | 3 | 3 |
+
+**Ale shodí to 16 akceptačních testů**, a ne kvůli implementaci: pět
+zlatých dialogů (Petrovice, Doprava, Jana a zmrzlina, Vegetarián a
+steak, Trpný rod), tři zlaté přepisy („Auta jezdí po dálnici.", „Tučňák
+nelétá.", „Vegetarián nejí maso.") a hlavně
+`test_the_answer_generalises_beyond_this_one_sentence` — smlouva I‑16
+pro kvantifikátor: **„odpověď platí i pro DALŠÍ větu téhož tvaru"**.
+
+Ta smlouva a zadané pravidlo si přímo odporují. Zadání říká, že `∀` je
+vlastnost VĚTY (a doklad je nesporný: „Pes štěká." × „Vesmír se rozšířil
+do dnešní podoby." mají týž tvar a jen u prvního je `∀` pravda); I‑16
+říká, že jedna odpověď zavře celou třídu. **Obojí platit nemůže.**
+
+Zkusil jsem i užší variantu — `∀` z tvaru naučeného TAHEM zapisovat, ze
+seedu ne — a nefunguje z technického důvodu, který je sám o sobě
+nálezem: po naučení je `role.pending` prázdné, takže se u druhé věty
+nedá zjistit, ze kterého vzoru její `∀` přišlo. **Původ kvantifikátoru
+se dnes v roli nenese vůbec.**
+
+Kód je vrácen, strom je zelený. Rozhodnutí patří reviewerovi, protože
+je to volba mezi dvěma smlouvami, ne mezi dvěma implementacemi.
 
 **KVANTIFIKÁTOR NAUČENÝ JAKO TVAR — DVĚ MĚŘENÍ PŘED ROZHODNUTÍM**
 *(W‑102, kolo #162; žádná stavba)*.
