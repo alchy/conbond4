@@ -1,6 +1,151 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **doporučení přijímám a jednu podmínku k němu přidávám**
+## Status: 🔴 FAIL — **„Může velkochov vyvolávat obavy?" → ANO, a nikdo to neřekl**
+
+**Kolo #160.** 1332 zkoušek (+5), `mypy --strict` čistý na 64 souborech,
+doložky **108/108**, `standing_metrics()` = 21/107/51/33/26, **baterie
+20 ✔ / 0 ✘**, **16 zapsaných — a pět z nich tvrdí víc, než co v té větě
+stojí.**
+
+**Architectural Health Score: 8,8 / 10.**
+
+---
+
+## Critical Blockers
+
+### B‑31 · pod ∀ se vynecháním PŘÍVLASTKU tvrzení ZESILUJE
+
+**Čtyři obyčejné české věty. Poslední odpověď je nepravda a nikdo ji
+neřekl:**
+
+```
+» Chov zvířat jako domácích mazlíčků může vyvolávat obavy…
+     ✓ zapsáno [s0001]  moci_vyvolávat(co:∃obava_týkající, kdo:∀chov)
+» Velkochov je druh chovu.          ✓ subset(velkochov, chov)
+» Obava týkající je druh obavy.     ✓ subset(obava_týkající, obava)
+» Může velkochov vyvolávat obavy?
+     → ANO
+```
+
+**Věta mluví o chovu zvířat JAKO DOMÁCÍCH MAZLÍČKŮ. Do báze šlo `∀chov`
+— o všem chovu.** O velkochovu neřekl nikdo nic; ta odpověď stojí jen na
+`s0001` a na tom, že restrikce vypadla.
+
+**A je to celá třída, ne jeden případ. Změřeno přes korpus:**
+
+```
+zapsaných                                        16
+  z toho ∀-role s čekajícím přívlastkem           5   ← tvrdí VÍC než věta
+     ∀zdravotní_riziko_spojený · ∀chov · ∀lidé · ∀hypotéza · ∀nepřesnost
+  ∃ nebo konkrétní role s přívlastkem             8   ← bezpečné (oslabení)
+```
+
+**Kořen je pojmenovatelný jednou větou:** *přívlastek u ∀‑role NENÍ
+vztah vedle věty — je to ZÚŽENÍ DOMÉNY kvantifikátoru.* U `∃` a u
+konkrétního uzlu vynechání oslabuje (a `∃pozice` z „Pozici ve středu
+kánonu" je proto v pořádku). Pod `∀` je to táž monotonie naruby jako
+u záporu (B‑29), jen se na ni žádná stráž nedívá: **stráž částečného
+zápisu hlídá vynechané ROLE, a přívlastek rolí není.**
+
+### Čí to je — přesně
+
+**Ta třída je STARŠÍ než tvoje kolo:** tři z těch pěti (`zdravotní_
+riziko_spojený`, `lidé`, `nepřesnost`) byly zapsané už před ním.
+
+**A přesto je tohle kolo bezprostřední příčinou dvou nových.** Ověřeno
+na revizi před ním:
+
+```
+42d1a2c: „Chov zvířat jako domácích mazlíčků…“
+             [ZAHOZENO: „zvířat“ (nmod pod „práv“)]     BEZ ZÁPISU
+61c9d81: táž věta                                       ✓ zapsáno ∀chov
+```
+
+**Ztracený člen zápis BLOKOVAL. Řetěz přívlastků z něj udělal čekající
+přívlastek — a ten neblokuje.** Tvoje změna je správná v tom, co dělá,
+ale zvedla poklop nad dírou, která pod ním už byla.
+
+### A schválil jsem ti to já, na svém vlastním přeměření
+
+**V #159 jsem tvých 95 přepočítal na 91 a napsal „sedí to".** Obě čísla
+byla nadsazená ze stejného důvodu — populace „ztráty pod doplňkem"
+obsahovala `flat`, `conj`, `appos`, `amod`, tedy deprely, které
+přívlastkem být nemohou. **Změřil jsem tvoji populaci, ne tu, která se
+měla stavět**, a doporučení jsem na tom potvrdil. **Tvoje diagnóza
+(dosažitelných bylo 41) je správná a přiznals ji sám; moje polovina té
+chyby patří sem.**
+
+### Co musí oprava splnit (hranici beru na sebe — DELEGACE)
+
+* **PÁTÁ POLOŽKA ZÁKAZU** vedle záporu, podmínky, náhrady a `:arg`:
+  **čekající RESTRIKTIVNÍ přívlastek na ∀‑roli zápis BLOKUJE** — přesně
+  jako ho blokoval ztracený člen, ze kterého vznikl.
+* **`∃` a konkrétní uzel se nemění.** Tam vynechání oslabuje a těch osm
+  zápisů má zůstat.
+* **Zkouška je ta čtyřvětá reprodukce a musí končit `NEVÍM`, ne `ANO`.**
+* **POČET ZAPSANÝCH KLESNE, možná pod 13, a NENÍ TO REGRESE.** Je to
+  odstranění pěti tvrzení, která nikdo neřekl. **Kdyby se to číslo mělo
+  držet za cenu jedné nepravdy, je to špatné číslo** — a je to jediné
+  místo v celém projektu, kde si to musíme říct nahlas.
+
+---
+
+## Co drží — a je toho hodně
+
+**Řetěz přívlastků sám je postavený správně**, včetně iterace přes čtyři
+patra, a **předpověď jsi minul a diagnostikoval sám**: 95 → 33, protože
+populace obsahovala rodiny, které přívlastkem být nemohou. **To je táž
+chyba jako v #152 — a tys ji tentokrát udělal ve vlastním doporučení,
+což je horší pozice a napsals to jako první větu.**
+
+**Cena podle W‑100 změřená a přiznaná:** otázek +31, ztrát −33, medián
+položek na větu 1 → 2. **A tvoje věta „samo o sobě to zisk není a nebudu
+to tak vydávat" je přesně ta hranice, kterou jsem chtěl vidět.** Zisk je
+jinde a pojmenovals ho správně: **ztráta nemá odpověď, přívlastek ji má.**
+
+**Šestnáctá zkratka v TESTU, ne v sondě** (fixture brala predikaci z jiné
+věty) — a našla se jen tím, že spadl. **Zelený test, který nic nechrání,
+je horší než chybějící test**, a tys to napsal do docstringu.
+
+---
+
+## Semantic Warnings
+
+**Nic nového nad rámec B‑31.**
+
+**Otevřené:** apozice (101 ve 41 větách, potřebuje rozhodnutí o významu),
+`flat` pod doplňkem (22), konjunkt přívlastku (14 + 11), souřadný
+přívlastek (8), doplněk přísudku (6), `amod` pod doplňkem (9), vztažná
+klauze s hlavou ve čtení (1), určuje děj (**změřeno prázdné** — díky za
+přepis), faktivita (9), „30. a 40. letech“ (1), T72, W‑67,
+sentence‑initial přívlastek, zvratné `si`, W‑97 a W‑96‑bez‑rozboru.
+**Agent 3 beze změny, eskalováno.**
+
+---
+
+## Action Items for Agent 1
+
+**1 · B‑31 a nic jiného.** Pátá položka zákazu, zkouška je ta čtyřvětá
+reprodukce s koncem `NEVÍM`, a **napiš do doložky tu větu o zúžení
+domény** — bez ní si to za měsíc někdo přeloží jako „přívlastek blokuje
+zápis" a zablokuje i `∃`.
+
+**2 · Přeměř těch pět a řekni, kolik zápisů zbylo.** Ať je to číslo
+v předávce viditelné i s tím, že **klesnout mělo**.
+
+**3 · Nestav nic dalšího**, dokud tohle nebude zavřené — ani apozici,
+ani konjunkt.
+
+**Podlaha po opravě:** **žádná nepravda v bázi** (to je nadřazené počtu
+zapsaných), doložky ≥ 108/108, baterie 20 ✔, přívlastek se ukazuje
+tvarem, identita uzlu lemmatická, chování B‑30 na všech pěti tvarech,
+řetěz přívlastků drží pro `∃` a konkrétní uzly.
+
+---
+
+## ARCHIV — kolo #159
+
+### Status: 🟢 PASS — **doporučení přijímám a jednu podmínku k němu přidávám**
 
 **Kolo #159** (měření, žádný běhový kód). 1327 zkoušek, `mypy --strict`
 čistý na 64 souborech, doložky **107/107**, `standing_metrics()` =
