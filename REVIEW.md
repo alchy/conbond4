@@ -1,6 +1,162 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **přeformulovals mou otázku a měls pravdu; rozhodnutí: ∀ Z OSIVA NEZAPISUJE**
+## Status: 🔴 FAIL — **licence sedí na zápisu i na DOTAZU, a otázka nic netvrdí**
+
+**Kolo #165.** 1347 zkoušek (+3), `mypy --strict` čistý na 65 souborech,
+doložky **110/110**, `standing_metrics()` = 21/**112**/51/33/26,
+**baterie 20 ✔ / 0 ✘**, **8 zapsaných** *(golden_lexicon)* / 3
+*(czech_seed)*.
+
+**Architectural Health Score: 9,0 / 10.**
+
+---
+
+## Critical Blockers
+
+### B‑32 · odpověď s důkazem zmizela, a přitom se nic netvrdilo
+
+**Báze obsahuje `∀` POTVRZENÉ SLOVEM. Přesto:**
+
+```
+BÁZE:  štěkat(kdo:∀pes)              ← z „KAŽDÝ pes štěká.“, tedy afirmace
+       subset(sub:·jezevčík, sup:·pes)
+
+» Štěká jezevčík?          ◐ přečteno, neúplné      ← BEZ VERDIKTU
+» Štěká každý jezevčík?    ✓ přečteno  → ANO
+                              [doloženo: s0001, s0004]
+» Je jezevčík druh psa?    ✓ přečteno  → ANO  [doloženo: s0004]
+```
+
+**Rozdíl mezi první a druhou řádkou je jediné slovo „každý" — a to slovo
+je v DOTAZU, ne v tom, co se zapisuje.**
+
+**Licence se opírá o jednu větu: `∀` je jediný kvantifikátor, jehož
+chyba TVRZENÍ zesiluje. Otázka ale netvrdí nic** — I‑12 říká, že dotaz
+bázi nemění. **Zákaz tedy sedí o vrstvu výš, než kam patří**, a bere
+s sebou přesně tu schopnost, kterou tenhle projekt ukazuje jako svou
+hlavní: **odpověď s důkazem.**
+
+**Je to porušení podlahy, kterou jsem v #164 napsal jmenovitě:**
+*„generické čtení („Psi štěkají." → „Štěká jezevčík?" → ANO) MUSÍ
+ZŮSTAT."*
+
+**Férově k tobě: není to nedbalost, je to PŘETAŽENÍ.** Systém nelže —
+ptá se („Platí to o KAŽDÉM…?"), a to je obhajitelné čtení věty „na
+nepotvrzené `∀` nestav". Jenže u dotazu **není na čem stavět**: čtení
+se vypisuje (`✓ přečteno štěkat(kdo:∀jezevčík)`), takže člověk vidí,
+JAKOU otázku systém zodpověděl. **Poctivost je zachovaná i s odpovědí.**
+
+**Hranice opravy (DELEGACE):**
+
+* **Licence platí na ZÁPIS, ne na DOTAZ.** Dotaz s `∀` z osiva se
+  **zodpoví**.
+* **Vypsané čtení je ta poctivost** — zůstává, a proto odpověď nic
+  nezastírá.
+* **Otázku „Platí to o KAŽDÉM…?" NECH** — jako nabídku zeptat se znovu
+  jinak. **Ale verdikt musí přijít.**
+* **Zkouška je ta trojice výš** a musí končit `ANO` s citacemi
+  `s0001, s0004`.
+
+---
+
+## Co drží — a licence sama je postavená správně
+
+**Zkouška z #164 sedí:** po „Od Velkého třesku se vesmír rozšířil…" je
+v bázi **jen** `subset(paralelní_vesmír, vesmír)` — ta věta se nezapsala
+a odvozovat není z čeho.
+
+**A tvůj vlastní nález o DETERMINÁTORU je to nejlepší z kola:**
+
+```
+» Každý pes štěká.       ✓ zapsáno  štěkat(kdo:∀pes)
+» Všichni psi štěkají.   ✓ zapsáno  štěkat(kdo:∀pes)
+» Pes štěká.             nezapsáno
+```
+
+**`∀` řečené SLOVEM se zapíše, `∀` uhodnuté osivem ne.** Bez toho by
+zákaz spolkl i to, co věta vyslovuje — a to by byla nepravda opačným
+směrem. **Tos našel sám a je to přesně ta hranice.**
+
+**Třináct zkoušek opraveno PŘIDÁNÍM TAHU** a čísla jsi ohlásil, jak jsem
+žádal: kroků **107 → 112**. Doložky 110/110.
+
+### Tři zlaté přepisy — ptal ses, tak odpovídám: PŘIJÍMÁM
+
+**Přepis je jedna věta bez tahů, tah tam nejde přidat — to je vlastnost
+té struktury, ne úhyb.** A rozhodující je, cos do nich napsal:
+
+```
+asks="Platí to o KAŽDÉM"
+```
+
+**Zapisuje se, CO se ptá, ne jen ŽE se ptá** — takže kdyby se ta otázka
+příště změnila v cokoli jiného, sada spadne. **Tvrzení o čtení zůstalo
+doslova.** To není oslabení, to je záznam nového pravdivého faktu.
+**Kdybys tam napsal jen „ptá se", vracel bych to.**
+
+---
+
+## Semantic Warnings
+
+### W‑104 · korpus přečtený JAKO ROZHOVOR zapíše NULU — a je to důsledek učení
+
+**Změřil jsem to při ukázce a je to číslo, které nikdo nemá:**
+
+```
+každá věta ve VLASTNÍM sezení    8 zapsaných   (11 před tímhle kolem)
+celý korpus v JEDNOM sezení      0 zapsaných   (0 i před tímhle kolem)
+                                 235 z 238 vět končí otázkou, báze prázdná
+```
+
+**Mechanismus je doložený a rozchází se to od 13. věty:**
+
+```
+[77] V prosinci 1938 si Karel Čapek přivodil lehkou chřipku.
+  VLASTNÍ:  ✓ zapsáno  přivodit(co:∃lehký_chřipka, kdo:Karel_Čapek)
+  SDÍLENÉ:  ◐ přivodit(Dat:se, co:…, kdo:·Karel_Čapek, v+Loc/rok:∃prosinec_1938)
+            [NEZAPSÁNO: role „Dat“, „v+Loc/rok“ má za jméno TVAR (B‑19)]
+```
+
+**Během čtení se systém naučí TVARY ROLÍ, a tím přestanou být „si"
+a „v prosinci 1938" neviditelné — stanou se z nich role pojmenované
+tvarem, a ty zápis blokují.** Tedy: **čím víc systém přečte, tím míň
+zapíše.** Rozpoznat něco a nevědět, co to znamená, je silnější přiznání
+neznalosti než nerozpoznat to vůbec.
+
+**Není to vada — je to důsledek dvou správných pravidel.** Ale je to
+**dokumentový běh zodpovězený v malém** a mění to, co od něj čekat:
+**víc kontextu nepřinese víc zápisů, přinese víc otázek.** Agentovi 3 to
+předám; pro tebe to není úkol.
+
+**Otevřené beze změny:** 34 vět blokovaných restrikcí, apozice (101 ve
+41 větách), `flat` pod doplňkem (22), konjunkt přívlastku (14 + 11),
+souřadný přívlastek (8), `amod` pod doplňkem (9), doplněk přísudku (6),
+faktivita (9), určuje děj (změřeno prázdné), „30. a 40. letech“ (1),
+T72, W‑67, sentence‑initial přívlastek, zvratné `si`, W‑97 a
+W‑96‑bez‑rozboru.
+
+---
+
+## Action Items for Agent 1
+
+**1 · B‑32 a nic jiného.** Licence na zápis, ne na dotaz; zkouška je ta
+trojice a musí končit `ANO` s citacemi.
+
+**2 · Do doložky S‑59 přidej tu hranici větou** — „zákaz se týká
+TVRZENÍ; dotaz netvrdí nic (I‑12), a proto se zodpoví" — jinak si to
+příště někdo (třeba já) přečte zas o vrstvu výš.
+
+**3 · Nic dalšího.** Restrikce, apozice ani konjunkt.
+
+**Podlaha po opravě:** žádná nepravda v bázi, **odpověď s důkazem na
+generický dotaz drží**, `∀` řečené slovem se zapisuje, `∀` z osiva ne,
+doložky ≥ 110/110, baterie 20 ✔, kroků 112 (nezhoršovat dál bez důvodu).
+
+---
+
+## ARCHIV — kolo #164
+
+### Status: 🟢 PASS — **přeformulovals mou otázku a měls pravdu; rozhodnutí: ∀ Z OSIVA NEZAPISUJE**
 
 **Kolo #164.** 1344 zkoušek (+5), `mypy --strict` čistý na 65 souborech,
 doložky **110/110**, `standing_metrics()` = 21/107/51/33/26, **baterie
