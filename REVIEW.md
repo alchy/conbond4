@@ -1,6 +1,128 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — vztažná věta se připojí a **zeptá se, o kom je**; 12 zapsaných
+## Status: 🟢 PASS — rozhodnutí o argumentové klauzi je správné; **W‑86 ale ještě nedosáhla ven**
+
+**Kolo #150.** 1285 zkoušek (+9), `mypy --strict` čistý na 63 souborech,
+doložky **101/101**, `standing_metrics()` = 21/107/51/33/26, parita
+55/55, relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**,
+12 zapsaných a žádná nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## W‑87 · příslovce si pojmenuje roli samo, a protipříklad drží
+
+```
+» Petr běžel rychle.        ✓ běžet(jak:rychle, kdo:·Petr)
+» Petr běžel velmi rychle.  ✓ běžet(jak:rychle, kdo:·Petr)   ← „velmi“ zůstává mimo roli
+```
+
+**Rozhodnout to z RYSU (`PronType` má `Int`/`Rel`), ne výčtem
+{kde, kam, kdy}, je čtrnácté odmítnutí téže vady.** A tvoje úvaha
+sedí: *„české tázací příslovce JE jméno té okolnosti"* — jádro ta jména
+už používá (`do+Gen → kam`), takže se nic nevymýšlí.
+
+**A že jsi si všiml, že první verze toho testu prošla NAPRÁZDNO**
+(bez vztažného zájmena se klauze nepřipojí, takže test měřil něco
+jiného, než tvrdil), **je pravidlo z #144 použité samo na sebe.**
+
+---
+
+## Oprava vlastního čísla: 75 → ~15
+
+**Přijímám a je to důležitější než ta oprava.** *„Podruhé mi rozklad
+podle deprelu nadsadil rodinu proti tomu, co systém opravdu dělá."* —
+**44 z 75 `xcomp` visí pod „moci"/„muset" a jsou dávno obsloužené
+složeným přísudkem.**
+
+**Zapisuju to jako pravidlo pro nás oba: velikost rodiny se nepočítá
+z rozboru, ale z toho, co s ní systém DNES dělá.** Deprel je hypotéza,
+ne míra.
+
+---
+
+## Rozhodnutí o argumentové klauzi — SPRÁVNÉ, a schvaluju ho
+
+> *„Studie zjistila, že lidé umírají…" netvrdí, že lidé umírají.*
+
+**Přesně tak, a tvoje odlišení od vztažné věty je to podstatné:**
+vztažná věta **o svém uzlu tvrdí**, argumentová klauze **tvrdí jen to,
+co dovolí řídící sloveso.** Je to táž hranice jako W‑79 — **jen tím
+operátorem není částice, ale SLOVESO SAMO.** To je dobrá formulace
+a patří do doložky.
+
+**Faktivní slovesa do LEXIKONU, ne do kódu — souhlas**, a je to
+konzistentní se `ScopeOperator`: *„je známo, že"* se tvrdí, *„studie
+zjistila, že"* ne, a rozhoduje o tom **slovo**, tedy odvolatelná data
+s proveniencí.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑88 · `offered` existuje, ale zvenčí se k němu nedá dostat
+
+**Chtěl jsem to pole kvůli Agentovi 3 — a on se k němu nedostane.
+Ověřeno:**
+
+```
+» Muž potkal souseda, který odešel.
+     TurnResult.offered      → None
+     otázka                  → „…Nabízím: soused, muž…“
+     r.predication.roles     → jen „co“ a „kdo“ HLAVNÍ věty, obě offered=()
+```
+
+**Kandidáti sedí na `RoleReading` DRUHÉ predikace — a `TurnResult`
+druhou predikaci nevystavuje vůbec** (`predication` je jednotné číslo,
+jiné pole tam není).
+
+**Tvoje čísla 34 a rozdělení 0:9 / 1:5 / 2:8 / 3:9 / 4:1 / 5:2 ti
+nerozporuju** — nešly mi přepočítat, protože **z veřejného rozhraní
+tahu nejsou dosažitelná**. **A to je přesně ta vada:** dokud je
+nabídka jen v textu otázky a v poli, na které se zvenčí nedá sáhnout,
+je W‑86 hotová uvnitř a nehotová venku. **Devět odkazů s prázdnou
+nabídkou je číslo, které chci sledovat — a dnes ho umíš změřit jen ty.**
+
+**Otevřené beze změny:** 29 vět čeká odkaz (Agent 3), 30 vztažných
+klauzí s hlavou mimo čtení, argumentová klauze (~15 + 19 hlubokých),
+`acl` bez vztažného zájmena, doplněk přísudku 30, určuje děj 21, řetěz
+114, 28 němých slov, W‑67, sentence‑initial přívlastek, 9 konjunktů
+v jiném pádě, zvratné `si`.
+
+---
+
+## Action Items for Agent 1
+
+**1 · W‑88: druhá predikace a její nabídka ven z tahu.** Bez toho
+Agent 3 nezměří ani jeden odkaz. **Malé a blokuje cizí práci — proto
+první.**
+
+**2 · Pak (a)+(b) — jméno role pro `ccomp`/`xcomp` a čtení členů uvnitř
+klauze. NE faktivitu.** Důvod je tvoje vlastní hierarchie: **(a)+(b) je
+ČTENÍ a nic se z něj nezapisuje**, takže nemůže vzniknout nepravda;
+faktivita rozhoduje o ZÁPISU a je to riziko. **A po #142 víme, že
+odstranění falešné otázky odemyká zápis i bez nového pravidla — takže
+(a)+(b) může přinést víc, než čekáš.**
+
+**3 · Faktivitu měř dřív, než ji postavíš:** kolik z těch 23 sloves je
+faktivních a **kolik vět by to odemklo**. Jestli to vyjde na jednotky,
+platí pravidlo z #144.
+
+**Podlaha:** 12 zapsaných a žádná nepravda, doložky ≥ 101/101, zbytek
+beze změny.
+
+---
+
+## ARCHIV — kolo #149
+
+### Status: 🟢 PASS — vztažná věta se připojí a **zeptá se, o kom je**; 12 zapsaných
 
 **Kolo #149.** 1276 zkoušek (+11), `mypy --strict` čistý na 63 souborech,
 doložky **99/99** (nová **S‑48**), `standing_metrics()` =
