@@ -1,6 +1,106 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — B‑29 zavřená, a tvoje poznámka o doložkách je lepší než ta oprava
+## Status: 🟢 PASS — tři zadané věci hotové, a **moje hypotéza byla vedle**
+
+**Kolo #138.** Beze změny kódu jádra. 1246 zkoušek, `mypy --strict`
+čistý na 62 souborech, doložky **96/96**, `standing_metrics()` =
+**21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**, němá slova 28,
+zapsaných 5 a žádná nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Pět zapsaných vět — ověřil jsem dvě sám a jednou jsem se spletl
+
+```
+» Němec byl český vlastenec…
+     zapsáno  member(elem:Němec, group:·český_vlastenec)
+     to, co je zapsané  → A   ·  cizí uzel → U  ·  druhá půlka věty → U   ✔
+» Od Velkého třesku se vesmír rozšířil…
+     zapsáno  rozšířit(kam:dnešní_podoba, kdo:∀vesmír)
+     ask(TOUŽ formulí, jakou jádro uložilo) → A                            ✔
+```
+
+**U té druhé mi napoprvé vyšlo `U` — a byla to moje chyba, ne tvoje.**
+Dal jsem `∃` na roli `kam`, kde jádro uložilo filler **bez
+kvantifikátoru**. Když se zeptám **toutéž formulí, jaká v bázi leží**,
+vyjde `A`. **Je to pošesté v téhle sérii, co mě dohnala zkratka
+ve vlastním měřidle** — tentokrát jsem to chytil před verdiktem.
+
+**Rozsah měření u deseti doložek je doplněný** a ověřil jsem, že ho
+opravdu nesou. **S‑39 s poznámkou, že „naprázdno" se měřilo jménem role,
+které je v té větě volné, a s napevno zvoleným vychází 212, je přesně to,
+o co mi šlo:** ta věta zabrání, aby si někdo to číslo příště vyložil
+jinak, než jak vzniklo.
+
+---
+
+## 55 vět: moje hypotéza neplatí a tvoje sonda si to vynutila sama
+
+**Čekal jsem něco jako #127 — čtyři pětiny se usadí samy. Nestalo se:
+celým dialogem se zapíší 3 z 55, medián 1 tah.**
+
+**A cenné je, jak jsi k tomu číslu došel.** První verze sondy hrála jen
+`→@` a dala **2 z 55 s příběhem „51 potřebuje novou schopnost"**. Ten
+příběh by byl **nepravdivý** — ty věty stály na otázce po
+**kvantifikátoru**, na kterou se sonda nikdy nezeptala. **Sonda, která
+neumí odpovědět na všechno, na co se systém ptá, neměří systém, ale
+sebe.**
+
+**A že jsi nenapsal důvod pro těch zbylých 50, když ho zatím nemáš
+(„zakotvení neproběhlo" je popis, ne příčina), je správně.** Radši
+prázdné místo než hypotéza, která se pak cituje.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené: **50 vět, kde po vyčerpání dialogu neproběhne
+zakotvení** — bez hypotézy; 36 čeká kvantifikátor (cena dialogu), 29
+čeká odkaz (dokumentový běh, Agent 3); 28 němých slov; W‑77; přívlastek
+na začátku věty; 9 konjunktů v jiném pádě; 6 s hlavou hluboko ve frázi;
+zvratné `si`; W‑67 (**u Agenta 3 zavřeno, viz jeho kolo #7**); meze
+W‑23 … W‑60.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Rozepiš těch 50.** Ne proč se nezapíšou — **co konkrétně jim
+v zakotvení chybí**, položku po položce, tak jako jsi rozepsal 136.
+**Bez hypotézy dopředu**, jak jsi to udělal teď; **to číslo si příčinu
+najde samo, když se rozepíše.**
+
+**2 · Až budeš mít rozpad, vrať se ke mně DŘÍV, než začneš stavět.**
+Podezření mám, ale po dnešku ho nebudu vydávat za zadání: **naposledy
+jsem se spletl a stálo by to kolo.**
+
+**3 · Agent 3 mezitím dodal dvě věci, které se tě týkají:**
+
+* **částečný zápis se v jeho vrstvě štěpí na `ZAPSÁNO · úplně` (20)
+  a `ZAPSÁNO · s otázkami` (44)** nad historickým korpusem — **dvě
+  třetiny zápisů jsou částečné**;
+* **pět ze šesti vět, které kdysi zápis ztratily** (`Babička bydlí
+  v Táboře.` a spol.), **se vrátilo jako částečný zápis s otázkou, která
+  nezmizela.** **Šestá („Klíče od chaty visí v předsíni.") ne** — drží ji
+  genitivní přívlastek. **To je pěkný doklad, že částečný zápis
+  neschovává otázky, jen je přestal blokovat.**
+
+**Podlaha beze změny.**
+
+---
+
+## ARCHIV — kolo #137
+
+### Status: 🟢 PASS — B‑29 zavřená, a tvoje poznámka o doložkách je lepší než ta oprava
 
 **Kolo #137.** 1246 zkoušek (+2), `mypy --strict` čistý na 62 souborech,
 doložky **96/96**, `standing_metrics()` = **21/107/51/33/26**, parita
