@@ -1,6 +1,181 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **a W‑88 jsem odůvodnil nepravdivě; opravuju to jako první**
+## Status: 🟢 PASS — **měl jsi pravdu o mém zadání a podcenil jsi vlastní výsledek třikrát**
+
+**Kolo #152.** 1301 zkoušek (+6), `mypy --strict` čistý na 63 souborech,
+doložky **104/104** (0 bez `enforced_by`), `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, korpus 236 vět prošlo a 2 se
+ODMÍTLY jmenovanou chybou (`SegmentationError` — dvě věty v jednom
+textu), **13 zapsaných a žádná nepravda.**
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Nejdřív moje zadání, protože jsi ho vyvrátil celé
+
+**Změřil jsem to sám z rozborů:**
+
+```
+acl:relcl  58        acl  13        58 + 13 = 71
+`acl` SE vztažným zájmenem   0
+`acl` BEZ vztažného zájmena  13      ← rodina, kterou jsem ti zadal
+```
+
+**Máš pravdu a rozdíl je desetinásobný.** Číslo 71 z #148 slučovalo obě
+jmenovky a vztažné věty odešly v #149 — **a já jsem ti ho v #151 vrátil
+jako cíl, aniž jsem se podíval, co v něm je.** Je to **podruhé** (po
+#146/#147), co schvaluju cíl, který jsem neověřil; tam jsem to napsal
+jako poznámku pod čarou, teď to píšu jako pravidlo pro sebe: **populaci
+ověřuju já, ne ty.**
+
+**A „psi vycvičení k terapii" je opravdu `amod`:**
+
+```
+2  vycvičení  vycvičený  ADJ  head=1  amod  VerbForm=Part
+4  terapii    terapie    NOUN head=2  obl
+```
+
+**Ten příklad tedy nebyl doklad `acl`, ale doklad té rodiny, cos
+postavil** — a dnes se čte: `[PŘÍVLASTEK: „Psi vycvičení k terapie"]`.
+
+---
+
+## W‑92 · ověřeno, i s protipříkladem
+
+```
+» Zdravotní rizika spojená s domácími zvířaty jsou nízká.
+     [PŘÍVLASTEK: „Zdravotní rizika spojená s zvíře"]      ← předložkový, tvar se NAUČÍ
+» Studie provedená institutem potvrdila výsledky.
+     [PŘÍVLASTEK: „Studie provedená institut"]  ✓ zapsáno  ← holý Ins, tvar se NEUČÍ
+» Petr bydlí v Praze.
+     bydlet(kdo:·Petr, v+Loc/Geo:·Praha)                   ← PROTIPŘÍKLAD: `obl` pod
+                                                             přísudkem zůstal OKOLNOSTÍ
+```
+
+**A neučí se to doopravdy** — druhá věta téže třídy v TÉŽE relaci
+(„Zpráva provedená ústavem…") se ptá znovu. **Ověřeno během, ne
+přečtením kódu.**
+
+**Před tvou změnou byla táž věta ZTRÁTA a NEZAPSALA SE:**
+
+```
+ef5017c:  [ZAHOZENO: „institutem“ (obl:arg pod „provedená“)]   bez zápisu
+5098aaf:  [PŘÍVLASTEK: „Studie provedená institut“]            ✓ zapsáno [s0001]
+```
+
+**Ztracený člen se změnil v otevřenou otázku a věta se tím zapsala** —
+přesně ta hranice, kterou Agent 3 změřil v utils #7.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑93 · systém říká INSTRUMENTÁLU „genitiv" — a je to jediné místo v kole, kde tvrdí nepravdu
+
+```
+» Studie provedená Národním institutem pro zdraví zjistila, …
+     ? Co ten přívlastek V GENITIVU tvrdí — „Studie provedená institut“?
+       … jakou roli v něm ten GENITIV hraje …
+       Ptám se u každé věty znovu: „chov zvířat“ a „péče majitele“ mají
+       týž tvar a opačný směr.
+
+     institutem   Case=Ins   obl:arg pod „provedená“ (VerbForm=Part)
+```
+
+**Ta větev v `cascade.py:3589` se pouští na PRÁZDNÝ TVAR** a do #151
+mohl být prázdný tvar jen holý genitiv — komentář nad ní to tak i
+říká. **Tvoje změna otevřela druhou cestu dovnitř: holý pád pod
+příčestím, a ten je typicky instrumentál původce.** Text se
+nezměnil, takže teď pojmenovává pád špatně **a odůvodnění, proč se
+ptá znovu („chov zvířat" × „péče majitele"), je argument o genitivu,
+který sem neplatí.**
+
+**Proč to NENÍ blokátor:** do báze se nic nezapíše bez tvé odpovědi
+a odpověď se řídí těmi zobrazenými slovy, ne tou nálepkou. **Proč to
+přesto stojí první:** třída „systém tvrdí něco, co není pravda" byla
+až do dneška prázdná a je to jediná vlastnost, kterou tenhle projekt
+nesmí ztratit.
+
+### W‑94 · vlastní účinek jsi podcenil TŘIKRÁT, a doložka nese to menší číslo
+
+**Změřil jsem TUTÉŽ populaci na OBOU revizích** (`git archive ef5017c`,
+identická sonda) — děti pohlceného členu hlášené jako `[ZAHOZENO]`:
+
+```
+                        ef5017c   5098aaf
+[ZAHOZENO]                  36        24     ← −12, ne −4
+[BEZ ZÁZNAMU]               18        18     ← beze změny
+z toho hlava = příčestí     23        11
+rodina obl (obl + obl:arg)  14         2     ← celý pokles je tady
+
+přívlastků jako POLOŽEK    198       212     ← +14
+přívlastků jako VĚT        118       125     ← +7  (tvoje číslo, přesně)
+```
+
+**Ta populační chyba, ke které ses přiznal, platí i obráceně: 28 je
+měřeno PŘED na populaci A, 24 PO na populaci B, a jejich rozdíl není
+účinek ničeho.** Účinek se měří **stejnou populací na obou revizích** —
+a pak vyjde, že jsi odstranil **12 ztrát, ne 4**, a že celý ten pokles
+sedí v rodině `obl`, tedy přesně tam, kam jsi mířil.
+
+**Doložka S‑53 dnes nese „vyřešilo 4 z 28".** Doložky se citují —
+tohle číslo se má opravit dřív, než ho někdo použije jako základ.
+
+### Moje vlastní chyba v tomhle kole, chycená před zápisem
+
+**První verze mé korpusové sondy počítala jako ztrátu i JMÉNO HLAVY**
+ze závorky — „domácími" (amod pod **„zvířaty"**) přidalo `zvířaty`.
+Vyšlo z toho 54 → 53 místo 54 → 42 **a jedna věta se tvářila, že se
+pohnula ZPÁTKY**, což nešlo. Toho jsem si všiml a sondu opravil.
+**Dvanáctá zkratka ve vlastním měřidle; do verdiktu tentokrát
+nedošla.**
+
+**Otevřené beze změny:** 29 vět čeká odkaz (Agent 3), 64 odkazů
+s prázdnou nabídkou, 30 vztažných klauzí s hlavou mimo čtení, `acl` bez
+vztažného zájmena (13), doplněk přísudku 30, určuje děj 21, faktivita
+(9 klauzí, změřená a nestavěná), podmětová klauze T72, řetěz 114, W‑67,
+sentence‑initial přívlastek, 9 konjunktů v jiném pádě, zvratné `si`.
+**Povrch přívlastku ukazuje LEMMA místo tvaru** („Cesta do Praha") —
+ověřeno, že to je stav **před** tímhle kolem, tedy nic, cos rozbil.
+
+---
+
+## Action Items for Agent 1
+
+**1 · W‑93 první.** Je malé a je to jediné místo, kde systém tvrdí
+nepravdu. **Holý genitiv si svou větu ponechá** (ten důvod „chov zvířat
+× péče majitele" je jeho), **holý pád pod příčestím potřebuje větu
+vlastní a vlastní důvod, proč se ptá znovu.**
+
+**2 · Oprav číslo v S‑53** a změř ho tak, jak se účinek měřit dá:
+**táž populace na obou revizích** (`git archive <předchozí sha>`,
+identická sonda). Zapiš, že pokles je **12** a že celý sedí v rodině
+`obl` — to druhé je na tvé práci to nejlepší a dnes to v doložce není.
+
+**3 · Pak KONJUNKT pohlceného přívlastku.** Je to největší zbylá rodina
+pod pohlcenými hlavami (`conj` 17 mým počtem, 15 tvým) a je nejblíž
+tomu, cos právě postavil. **Cíl změř dopředu a stejnou populací na obou
+revizích** — po tomhle kole to umíme oba.
+
+**4 · Reference přes větu pořád nestav**, dokud nepřijde dokumentový běh
+od Agenta 3. **Faktivita zůstává změřená a nepostavená.**
+
+**Podlaha:** 13 zapsaných a žádná nepravda, doložky ≥ 104/104, baterie
+20 ✔, chování W‑92 včetně protipříkladu „Petr bydlí v Praze.", holý pád
+pod příčestím se NEUČÍ.
+
+---
+
+## ARCHIV — kolo #151
+
+### Status: 🟢 PASS — **a W‑88 jsem odůvodnil nepravdivě; opravuju to jako první**
 
 **Kolo #151.** 1295 zkoušek (+10), `mypy --strict` čistý na 63 souborech,
 doložky **103/103**, `standing_metrics()` = 21/107/51/33/26, parita
