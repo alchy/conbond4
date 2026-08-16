@@ -1210,10 +1210,23 @@ CONTRACTS: tuple[Clause, ...] = (
             "členem, který je sám venku (kolo #140), ALE projev téhle "
             "hrany je jen 16 zbytků — řetěz přes `conj` je vlastní "
             "rozhodnutí a postavený NENÍ"
+            ". DRUHÝ ČLEN PŘÍVLASTKU JE PŘÍVLASTEK, NE ČLEN VĚTY "
+            "*(W‑81)*: „…péči lékaře a **pacienta**“ se ptalo „jakou "
+            "roli hraje „pacienta“?“ — otázka, na kterou pravdivá "
+            "odpověď NEEXISTUJE (W‑75). Konjunkt už nalezeného "
+            "přívlastku patří k TÉMUŽ vztahu. NEPTÁ SE NA SDÍLENÍ, "
+            "a je to rozhodnutí s důvodem: otázka „o každém zvlášť, "
+            "nebo dohromady?“ (W‑73) se klade u ROLE, tedy u MÍSTA "
+            "VE TVRZENÍ, kde odpověď mění, co se zapíše — přívlastek "
+            "tvrzení ještě NENÍ a ptát se na rozdělení něčeho, co "
+            "nikde nestojí, je táž past jako W‑75. ROZSAH MĚŘENÍ: "
+            "11 konjunktů v 8 větách korpusu"
         ),
         anchor="core_semantics.cascade:genitive_attributes",
         entry=".utter(",
         enforced_by=(
+            "test_the_second_member_of_an_attribute_is_an_attribute",
+            "test_an_attribute_does_not_ask_about_sharing",
             "test_a_genitive_under_a_genitive_is_reported_too",
             "test_the_chain_stops_at_a_clause",
             "test_the_sentence_is_written_even_though_the_attribute_waits",

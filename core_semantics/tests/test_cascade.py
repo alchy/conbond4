@@ -3469,3 +3469,47 @@ def test_the_chain_stops_at_a_clause() -> None:
     predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
     hlavy = {genitiv for _, genitiv, _ in genitive_attributes(reading, predication)}
     assert "lékař" not in hlavy, "přes vedlejší větu se řetěz nepřenese"
+
+
+def _attribute_with_two_members() -> Reading:
+    """„Vyžadují péči lékaře a pacienta." — dva genitivy pod jednou
+    hlavou."""
+    return Reading(
+        tokens=(
+            _token(1, "Vyžadují", "vyžadovat", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(2, "péči", "péče", "NOUN", 1, "obj", Case="Acc", Gender="Fem", Number="Sing"),
+            _token(3, "lékaře", "lékař", "NOUN", 2, "nmod", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(4, "a", "a", "CCONJ", 5, "cc"),
+            _token(5, "pacienta", "pacient", "NOUN", 3, "conj", Case="Gen", Gender="Masc", Number="Sing"),
+            _token(6, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+
+
+def test_the_second_member_of_an_attribute_is_an_attribute() -> None:
+    """DRUHÝ ČLEN PŘÍVLASTKU NENÍ ČLEN VĚTY *(W‑81)*. „…péči lékaře
+    a **pacienta**" se ptalo „jakou roli hraje „pacienta“?" — otázka,
+    na kterou pravdivá odpověď NEEXISTUJE, protože `pacienta` účastník
+    děje není; je to druhé jméno TÉHOŽ vztahu vedle věty (W‑75)."""
+    from core_semantics.cascade import _reported_lost, genitive_attributes
+
+    reading = _attribute_with_two_members()
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    privlastky = {g for _, g, _ in genitive_attributes(reading, predication)}
+    assert privlastky == {"lékař", "pacient"}
+    assert all(
+        t.form != "pacienta" for t in _reported_lost(reading, predication)
+    ), "druhý člen se nesmí ptát jako role"
+
+
+def test_an_attribute_does_not_ask_about_sharing() -> None:
+    """NEPTÁ SE NA SDÍLENÍ, A JE TO ROZHODNUTÍ S DŮVODEM *(W‑81)*.
+    Otázka „o každém zvlášť, nebo dohromady?" (W‑73) se klade u ROLE,
+    tedy u MÍSTA VE TVRZENÍ, kde odpověď mění, co se zapíše. Přívlastek
+    ale tvrzení ještě NENÍ — čeká na jméno role a teprve tou odpovědí
+    se z něj vztah stane; ptát se na rozdělení něčeho, co nikde
+    nestojí, je táž past jako W‑75."""
+    reading = _attribute_with_two_members()
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    assert predication.pending_share == ()

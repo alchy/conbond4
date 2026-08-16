@@ -3295,6 +3295,20 @@ def genitive_attributes(
             if token.head in ve_cteni:
                 ve_cteni[token.index] = token.lemma
                 zmena = True
+    # DRUHÝ ČLEN PŘÍVLASTKU JE PŘÍVLASTEK, NE ČLEN VĚTY *(W‑81)*.
+    # „…péči lékaře a **pacienta**" se ptalo „jakou roli hraje
+    # „pacienta“?" — otázka, na kterou pravdivá odpověď NEEXISTUJE,
+    # protože `pacienta` účastník děje není; je to druhé jméno TÉHOŽ
+    # vztahu vedle věty (W‑75).
+    #
+    # NEPTÁ SE SE NA SDÍLENÍ, a je to rozhodnutí s důvodem: otázka
+    # „o každém zvlášť, nebo dohromady?" (W‑73) se klade u ROLE, tedy
+    # u MÍSTA VE TVRZENÍ, kde odpověď mění, co se zapíše. Přívlastek
+    # ale ještě není tvrzení — čeká na jméno role a teprve tou
+    # odpovědí se z něj vztah stane. Ptát se na sdílení dřív znamená
+    # ptát se na rozdělení něčeho, co ještě nikde nestojí; to je táž
+    # past jako W‑75. Až přívlastek tvrzením bude, je to otázka
+    # o roli a platí na ni W‑73.
     # CO SE SLOŽILO DO JMÉNA, PŘÍVLASTEK UŽ NENÍ *(W‑72)*. „v Hradci
     # Králové" dá jeden uzel `·Hradec_Králové`; ohlásit k tomu ještě
     # vztah „Hradec_Králové Králové" znamená tvrdit, že vedle věty stojí
@@ -3323,6 +3337,26 @@ def genitive_attributes(
         if head.index not in ve_cteni or head.index == narokovany:
             continue
         najdene.append((ve_cteni[head.index], token.lemma, token.index))
+    # Konjunkty už nalezených přívlastků: patří k TÉMUŽ vztahu.
+    zmena = True
+    while zmena:
+        zmena = False
+        znama = {index for _, _, index in najdene}
+        for token in reading.tokens:
+            if token.index in znama or base_deprel(token.deprel) != "conj":
+                continue
+            rodic = next(
+                (
+                    hlava
+                    for hlava, _, index in najdene
+                    if index == token.head
+                ),
+                None,
+            )
+            if rodic is None or not is_bare_genitive(token, reading):
+                continue
+            najdene.append((rodic, token.lemma, token.index))
+            zmena = True
     return tuple(najdene)
 
 
