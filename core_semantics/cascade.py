@@ -946,21 +946,37 @@ def _date_numerals(token: Token, reading: Reading) -> tuple[Token, ...]:
             )
         )
     ]
-    # ROZSAH LETOPOČTŮ JE JEDEN ÚSEK *(W‑95)*. „v letech **1910 – 1911**"
-    # má druhý letopočet jako `conj` pod prvním, takže se do zmínky
-    # nedostal a hlásil se jako ztracený člen — a zmínka se jmenovala
-    # `léta_1910`, tedy UŽŠÍ, než co ta věta říká. Do báze se to
-    # nedostalo jen proto, že ztracený člen zápis blokoval; ochrana
-    # cizím pravidlem vydrží přesně do chvíle, kdy se to pravidlo z
-    # jiného důvodu uvolní.
+    # ROZSAH LETOPOČTŮ JE JEDEN ÚSEK *(W‑95)*, ALE ÚSEK POZNÁ SPOJKA,
+    # NE TO, ŽE JSOU OBOJÍ LETOPOČTY *(B‑30)*.
+    #
+    # První verze skládala každý konjunkt letopočtu, takže „v letech
+    # 1910 **nebo** 1920" dalo TÝŽ UZEL jako „1910 – 1911" — věta říká,
+    # že se neví který, a báze by tvrdila jeden čas. A bylo to TICHÉ:
+    # žádné `[ZAHOZENO]`, žádná otázka. Pojistka „buď je úsek v uzlu
+    # celý, nebo tam ztráta zůstane" hlídala jen jeden směr; ten, který
+    # vyrábí nepravdu, je opačný — něco, co úsek NENÍ, se zapsalo jako
+    # úsek.
+    #
+    # ROZHODUJE SPOJENÍ, A ČTE SE Z ROZBORU:
+    #   · bez spojovacího slova (pomlčka, interpunkce) … ÚSEK;
+    #   · se spojovacím slovem („a", „nebo", čárkový výčet) … VÍC ČASŮ
+    #     nebo NEZNÁMO KTERÝ, tedy se NESKLÁDÁ a ztráta se hlásí;
+    #   · předložka `mezi` … ÚSEK i se spojkou („mezi lety 2009 a
+    #     2013"), protože ta předložka interval vymezuje sama.
+    #
+    # Ptá se to CELÉ KOORDINACE, ne jedné hrany: „v letech 1910, 1911
+    # **a** 1912" nese `cc` až u posledního členu, takže hrana bez `cc`
+    # by výčet prohlásila za úsek.
     #
     # BERE SE JEN KONJUNKT LETOPOČTU. „ve **30. a 40.** letech" jsou dvě
-    # desetiletí, ne jeden úsek, a složit je do jedné zmínky by tvrdilo
-    # něco, co ta věta neříká — zůstávají ztrátou a hlásí se.
+    # desetiletí, ne jeden úsek — a NEPROJDE UŽ TÍMHLE, protože to nejsou
+    # holé letopočty, ale řadové číslovky; tenhle test tedy o spojce
+    # neříká nic.
+    konjunkty: list[Token] = []
     zmena = True
     while zmena:
         zmena = False
-        znama = {t.index for t in najdene}
+        znama = {t.index for t in (*najdene, *konjunkty)}
         for kandidat in reading.tokens:
             if (
                 kandidat.index not in znama
@@ -969,9 +985,49 @@ def _date_numerals(token: Token, reading: Reading) -> tuple[Token, ...]:
                 and _is_year(kandidat)
                 and _is_year(_token_at(kandidat.head, reading) or kandidat)
             ):
-                najdene.append(kandidat)
+                konjunkty.append(kandidat)
                 zmena = True
+    if konjunkty and _is_span(token, najdene + konjunkty, reading):
+        najdene.extend(konjunkty)
     return tuple(sorted(najdene, key=lambda t: t.index))
+
+
+def _is_span(
+    head: Token, cleny: list[Token], reading: Reading
+) -> bool:
+    """Je ta koordinace letopočtů ÚSEK? *(B‑30)*
+
+    Rozhoduje SPOJENÍ, ne to, že jsou obojí letopočty. Spojovací slovo
+    (`cc`) kdekoli v koordinaci znamená „víc časů" nebo „neznámo který";
+    bez něj (pomlčka) je to úsek.
+
+    **Předložka `mezi` je jediná výjimka a je doložená korpusem** („mezi
+    lety 2009 a 2013"): vymezuje interval sama, takže spojka uvnitř na
+    tom nic nemění. Kdyby se ukázaly další, patří do lexikonu jako
+    `ScopeOperator` — ne jako seznam v kódu.
+    """
+    predlozky = [
+        child.lemma
+        for child in reading.children(head.index)
+        if base_deprel(child.deprel) == "case"
+    ]
+    if "mezi" in predlozky:
+        return True
+    # ROZHODUJE SPOJOVACÍ SLOVO, NE ZNAČKA `cc`. Táž pomlčka dostane od
+    # parseru jednou `PUNCT/punct` („v letech 1910 – 1911") a jednou
+    # `ADP/cc` („v letech 1925 – 1933") — ověřeno na živé službě. Ptát se
+    # jen na `cc` proto jeden skutečný úsek rozbilo.
+    #
+    # Slovo se pozná tím, že má PÍSMENA: „a", „nebo", „či" ano, „–" ne.
+    # Je to vlastnost tokenu, ne seznam spojek — a je odolná i vůči tomu,
+    # jak se parser u pomlčky rozhodne příště.
+    indexy = {t.index for t in cleny}
+    return not any(
+        base_deprel(child.deprel) == "cc"
+        and any(znak.isalpha() for znak in child.form)
+        for child in reading.tokens
+        if child.head in indexy
+    )
 
 
 def year_under(token: Token, reading: Reading) -> Token | None:

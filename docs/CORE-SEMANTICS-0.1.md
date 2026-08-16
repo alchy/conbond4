@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.83 · 16. 8. 2026
+**Verze jádra:** 0.1.84 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,41 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**ÚSEK POZNÁ SPOJKA, NE TO, ŽE JSOU OBOJÍ LETOPOČTY** *(B‑30, kolo #155)*.
+
+W‑95 skládala každý konjunkt letopočtu, takže „v letech 1910 **nebo**
+1920" dalo TÝŽ UZEL jako „1910 – 1911": věta říká, že se neví který,
+a báze by tvrdila jeden čas. A bylo to TICHÉ — bez `[ZAHOZENO]`, bez
+otázky. Pojistka „buď je úsek v uzlu celý, nebo tam ztráta zůstane"
+hlídala jen jeden směr; **ten, který vyrábí nepravdu, je opačný** —
+něco, co úsek NENÍ, se zapsalo jako úsek.
+
+Rozhoduje se z rozboru:
+
+  · bez spojovacího **slova** (pomlčka) … ÚSEK, skládá se;
+  · se spojovacím slovem („a", „nebo", čárkový výčet) … VÍC ČASŮ nebo
+    NEZNÁMO KTERÝ, tedy se neskládá a ztráta se hlásí;
+  · předložka `mezi` … ÚSEK i se spojkou („mezi lety 2009 a 2013"),
+    jediná výjimka a doložená korpusem.
+
+Ptá se to CELÉ koordinace, ne jedné hrany: „1910, 1911 **a** 1912" nese
+`cc` až u posledního členu.
+
+**A spojovací slovo se pozná PÍSMENY, ne značkou `cc`.** Táž pomlčka
+dostane od parseru jednou `PUNCT/punct` („v letech 1910 – 1911") a jednou
+`ADP/cc` („v letech 1925 – 1933"). První verze opravy se ptala jen na
+`cc` a rozbila tím jeden skutečný úsek z korpusu — chyceno vlastním
+měřením (7 → 6) dřív, než šlo do předávky.
+
+Protipříklad „ve 30. a 40. letech" **prochází z jiného důvodu, než B‑30
+hlídá**: řadová číslovka není holý letopočet, takže vypadne dřív, než se
+na spojku někdo zeptá. Test, který prochází z jiného důvodu, než si
+myslí, je pořád zelený a nic nechrání — proto má B‑30 vlastní čtyři
+případy.
+
+Podlaha beze změny: v korpusu se skládá **všech 7 úseků** (šest
+s pomlčkou, jeden s `mezi`), ztrát pod pohlceným členem 17, zapsaných 13.
 
 **ROZSAH LETOPOČTŮ JE JEDEN ÚSEK** *(W‑95, kolo #154)*.
 
