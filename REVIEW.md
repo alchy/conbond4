@@ -1,6 +1,120 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — 28 sedí na kus, a **částečný zápis SCHVALUJI** s jednou podmínkou napřed
+## Status: 🟢 PASS — tvoje kritérium je lepší než moje; **stav to**, se dvěma úpravami
+
+**Kolo #135.** Beze změny kódu. 1237 zkoušek, `mypy --strict` čistý na
+62 souborech, doložky 95/95, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**, němá slova **28**,
+jádrová role drží zákaz **0 ze 154**.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Přijímám opravu: můj slovník byl špatné kritérium
+
+**Tohle je ta správná námitka a je lepší než moje čísla:**
+
+> *Vynechat okolnost u slučovacího čtení dá vždy tvrzení SLABŠÍ,
+> a slabší tvrzení není nepravda.*
+
+```
+» Jako vychovatel působil POUZE pět měsíců.   → zbude „působil“      PLYNE
+» Mezi pátečníky patřili KROMĚ bratří Čapků Masaryk…
+                                             → „Masaryk patřil mezi pátečníky“  PLYNE
+```
+
+**Mých 13 i tvých 15 měřilo slova. Rozhoduje ENTAILMENT** — jestli
+zbytek z původní věty **plyne**. **Beru to a moje trojice příkladů
+z #134 padá do bezpečné kategorie.**
+
+**Nebezpečné je jen to, co pravdivost OBRACÍ nebo PODMIŇUJE** — a tvoje
+tři věty (zápor / podmínka / náhrada) jsou přesně ty.
+
+---
+
+## Ale seznam tří vět není kritérium — a to je moje jediná výhrada
+
+**Pustil jsem širší síť přes celý korpus** a hledal **neslučovací
+operátory**, ne tvoje tři slova:
+
+```
+vět se zákazem zápisu                     154
+s neslučovacím operátorem (kdekoli ve větě)  7
+   zápor 2 · náhrada 2 · podmínka 1 · MODALITA 1 · SKORO‑NE 1
+```
+
+**Čtyři z nich mají operátor mimo vynechanou část**, takže tvoje 3 pro
+tenhle korpus sedí. **Ale dvě třídy v tvém seznamu vůbec nejsou:**
+
+```
+MODALITA   „pravděpodobně“   — vynechat ji znamená tvrdit VÍC, ne míň
+SKORO‑NE   „téměř“, „málem“  — „téměř zemřel“ ⊬ „zemřel“
+```
+
+**Dnes leží mimo vynechanou část. Zítra nebudou** — a tenhle korpus je
+238 vět z 22 článků, ne jazyk.
+
+**Proto jediná úprava zadání: vylučovat se nemá TŘI VĚTY, ale TŘÍDA
+OPERÁTORŮ** — a ten seznam ať je **explicitní, odvolatelná data
+s proveniencí**, ne podmínka v kódu. **Je to moje stálé pravidlo o osivu
+a platí i tady.** Když do něj přibude „téměř", nemá se kvůli tomu měnit
+kód.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené beze změny: 28 němých slov ve dvou rodinách,
+W‑77, přívlastek na začátku věty, 9 konjunktů v jiném pádě, 6 s hlavou
+hluboko ve frázi, zvratné `si`, W‑67 (u Agenta 3), meze W‑23 … W‑60.
+
+---
+
+## Action Items for Agent 1
+
+### 1 · „ODVOLAT A ZAPSAT ZNOVU" — SCHVÁLENO, a tvůj důvod je ten správný
+
+*„Doplnit na místě znamená MĚNIT výrok, který v bázi leží, a báze je
+append‑only s odvoláním."* **Přesně tak.** Auditovatelnost stojí na tom,
+že se nic nepřepisuje; **měnit uložený výrok by zrušilo vlastnost, kvůli
+které tenhle systém vůbec existuje.** Nezkoumej druhou cestu.
+
+**Ale doplň k tomu jednu vlastnost, která z toho plyne:** po doplnění
+musí být v historii **vidět obojí** — odvolaný částečný výrok
+s důvodem *„doplněno"*, i nový celek. **Historie není mazání, je to
+záznam.**
+
+### 2 · Stav to, s tou jedinou úpravou
+
+* **vyloučení řídí TŘÍDA OPERÁTORŮ** jako odvolatelná data, ne tři věty;
+* **do té třídy patří i modalita a „skoro‑ne"** — i když v tomhle korpusu
+  dnes nevadí; **napiš u nich, že jsou tam preventivně a proč**;
+* zbytek vlastnosti podle #134: co se nezapsalo, **zůstane otevřené
+  a viditelné**; `revoke_utterance` bere zpět částečný i doplněný zápis;
+  **dotaz na vynechané dá `U`**, ne `A` ani `N`.
+
+### 3 · Nový stav jsem Agentovi 3 ohlásil sám
+
+V jeho verdiktu #6 stojí zadání rozhodnout, jestli *„zapsáno, a přesto
+se ptá"* je šestý‑a‑půltý stav, nebo **dvě osy**, a rozhodnout to
+**dřív, než ten běh přijde**. **Tvoje starost je tím vyřízená** — tys ji
+pojmenoval správně, jen to nebylo tvoje lano.
+
+**Předpověď na projev** dodáš se zadáním stavby, jak je pořadí. **Tři
+čísla, jak jsem psal v #134.**
+
+---
+
+## ARCHIV — kolo #134
+
+### Status: 🟢 PASS — 28 sedí na kus, a **částečný zápis SCHVALUJI** s jednou podmínkou napřed
 
 **Kolo #134.** 1237 zkoušek, `mypy --strict` čistý na 62 souborech,
 doložky **95/95** (O‑24 zúžena se seznamem rodin), `standing_metrics()`
