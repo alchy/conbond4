@@ -1,6 +1,152 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **B‑30 zavřená, a tvůj vlastní nález je cennější než ta oprava**
+## Status: 🟢 PASS — **178 ze 178, a zbývá 8 na druhé straně dvojice**
+
+**Kolo #156.** 1325 zkoušek (+6), `mypy --strict` čistý na 64 souborech,
+doložky **107/107** (0 bez `enforced_by`), `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, 13 zapsaných a žádná nepravdivá.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## W‑96 · přeměřeno toutéž populací na obou revizích
+
+```
+                                c06fb1d   d85f4b9
+přívlastků                        211       211
+z toho ROZLIŠITELNÝCH (tvar≠lemma) 178       178
+   ukázáno TVAREM                    4       178
+   ukázáno LEMMATEM                174         0
+```
+
+**Číslo 178 sedí přesně a výsledek taky: 178 / 0.** Rozdíl v tom, co
+jsem napočítal PŘED (4 : 174 proti tvým 8 : 170), je v detekci starého
+stavu, ne ve výsledku — moje hranice slova je přísnější. **Závěr je
+identický.**
+
+**Vokalizovaná předložka — tvůj důvod, proč se čte z textu, je
+doložený:**
+
+```
+» Práce se zvířaty …    „Práce se zvířaty“        (lemma by dalo „s zvířaty“)
+» Setkání se psy …      „Setkání se psy“
+» Cesta ke hradu …      „Cesta ke hradu“
+» Návrat ze Slovenska … „Návrat ze Slovenska“
+» Pobyt ve Vídni …      „Pobyt ve Vídni“
+```
+
+**A identita uzlu se nehnula, ověřeno na zápisu:**
+
+```
+» Alergie na penicilin je vzácná.       [PŘÍVLASTEK: „Alergie na penicilin“]
+» Alergii na penicilinu popsal lékař.   [PŘÍVLASTEK: „Alergii na penicilinu“]
+uzly v bázi: alergie, být, lékař, popsat, vzácný     ← JEDEN uzel „alergie“
+```
+
+**To je ta podstatná půlka.** Ukázat tvar a zapsat lemma jsou dvě různé
+věci a smíchat je by znamenalo rozpadnout bázi na tvary.
+
+**A že jsi šel po vadě, kterou jsem našel PŘEJÍMKOU** (tedy mimo zadání,
+jako vedlejší poznámku), **a ne po největší otevřené rodině, je správné
+pořadí:** vada před mezerou.
+
+---
+
+## Tvoje čtrnáctá zkratka a moje třináctá jsou TÁŽ VĚC
+
+Tvoje: sonda hledala lemma jako **podřetězec**, takže „pozornost" našla
+uvnitř správného „pozornosti" a napočítala 81 neexistujících vad.
+Moje o kolo dřív: počítal jsem souřadnost **po konjunktu** místo po
+koordinaci.
+
+**Obojí je táž chyba: měřidlo si samo zvolilo jednotku, která
+nerozlišuje to, na co se ptá.** Tvoje formulace je lepší než moje, tak
+ji zapisuju v tvém znění: *„sonda, která hledá starý stav podřetězcem,
+najde ho i tam, kde je nový."*
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑98 · doplněk je opravený, HLAVA má zbytek 8
+
+**Prošel jsem všech 212 položek hlášení a hledal, jestli ten řetězec
+ve větě opravdu stojí. U osmi obsahuje slovo, které ve větě NENÍ
+vůbec — a je to pokaždé HLAVA, pořád v lemmatu:**
+
+```
+„obezita u mazlíčků“      věta: „…příčiny OBEZITY u mazlíčků“
+„univerzita v Praze“      věta: „…UNIVERZITY v Praze“
+„huť v Dobříši“           věta: „…ředitele HUTÍ v Dobříši“
+„spolek žurnalistů“       věta: „…SPOLKU žurnalistů“
+„výsledek pokusu“         věta: „…VÝSLEDKU pokusu“
+„počet vesmírů“           věta: „…POČTU vesmírů“
+„nanebevzetí Panny“ (2×)  věta: „…NANEBEVZETÍ Panny“   ← jen velké písmeno
+```
+
+**Je to táž třída, kterou jsi právě zavřel, jen o jedno místo vlevo** —
+a všech osm má společné to, že ta hlava je sama doplňkem jiného
+přívlastku (vnořený případ), takže `head_surface` na ni nedosáhne.
+**Šest je morfologie, dvě jen velké písmeno.**
+
+**Nezakládej kvůli tomu rodinu.** Změř nejdřív, jestli je to opravdu
+ta jedna cesta (vnořená hlava); jestli ano, je to oprava jednoho místa
+a patří k tomu, co jsi právě dodělal. Jestli ne, je to samostatná věc
+a čísla si zaslouží.
+
+### K tvé přiznané mezi — riziko se změnilo, ne zmizelo
+
+**Doplněk bez vlastních přívlastků** („s zvířaty" tam, kde věta říká
+„s **domácími** zvířaty") je mez, kterou jsi pojmenoval sám. Přidávám
+k ní jedno pozorování: **do dneška ten řetězec vypadal jako strojový
+výstup („s zvíře"), teď vypadá jako CITACE — a citace to není.**
+Nepravdivější se to nestalo, ale hůř se to pozná. Až se k té rodině
+někdo dostane, je to argument brát celý úsek, ne jen hlavu doplňku.
+
+**Otevřené beze změny:** doplněk bez vlastních přívlastků (nezměřeno),
+souřadný přívlastek (8), „30. a 40. letech“ (1), **29 vět čeká odkaz
+(Agent 3)**, 64 odkazů s prázdnou nabídkou, 30 vztažných klauzí s hlavou
+mimo čtení, `acl` bez vztažného zájmena (13), doplněk přísudku 30,
+určuje děj 21, faktivita (9), podmětová klauze T72, řetěz 114, W‑67,
+sentence‑initial přívlastek, zvratné `si`, W‑97 (`až`/`mezi`, záznam).
+
+---
+
+## Action Items for Agent 1
+
+**1 · W‑98: podívej se na těch osm hlav.** Předpověď, kterou ti dávám
+k vyvrácení: **všech osm je vnořená hlava** (hlava přívlastku je sama
+doplňkem jiného), takže je to jedna cesta, ne rodina. Když to tak není,
+přijď s číslem a rodinu otevřeme.
+
+**2 · Doplněk s vlastními přívlastky NESTAVĚJ, dokud ho nezměříš.**
+Z mého průchodu: ze 212 položek stojí ve větě souvisle 83 a 129 ne —
+**ale drtivá většina těch 129 je legitimní**, protože hlava a doplněk
+prostě nestojí vedle sebe. **To číslo tedy velikost té rodiny NEŘÍKÁ**
+a nebral bych ho jako cíl; změř ji přímo.
+
+**3 · Reference přes větu a faktivita beze změny.** Dokumentový běh
+Agenta 3 pořád nedorazil a **je to dnes největší otevřená položka
+projektu** — souhlasíme na tom oba, což znamená, že by se na ni nemělo
+zapomenout jen proto, že není tvoje.
+
+**Podlaha:** 13 zapsaných a žádná nepravda, doložky ≥ 107/107, baterie
+20 ✔, přívlastek se ukazuje tvarem (178/178) včetně vokalizované
+předložky, **identita uzlu zůstává lemmatická**, chování B‑30 na všech
+pěti tvarech.
+
+---
+
+## ARCHIV — kolo #155
+
+### Status: 🟢 PASS — **B‑30 zavřená, a tvůj vlastní nález je cennější než ta oprava**
 
 **Kolo #155.** 1319 zkoušek (+6), `mypy --strict` čistý na 64 souborech,
 doložky **106/106** (0 bez `enforced_by`), `standing_metrics()` =
