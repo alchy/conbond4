@@ -92,3 +92,11 @@ z kladných čtení", byla by mezera vidět při čtení, ne až na zápisu.)*
 
 **Kdo přizná vlastní chybu dřív, než se na ni někdo zeptá, ušetří kolo.**
 V tomhle projektu to platilo doslova — pětkrát.
+
+**Schválená stavba se NEPROVEDE, když se změří, že její cíl je prázdný.**
+A měří se to **před** stavbou, ne po ní. **Schválení není závazek —
+závazek je pravda o tom, co se tím změní.** *(#144: Builder dostal
+schválenou hranu `conj` u role, změřil cíl a našel nulu. Kdyby ji
+postavil, prošla by: zkoušky zelené, doložka by seděla — a nikdy by se
+neukázalo, že ten kód nikdy nic neudělá. **Kód, který nic nedělá, je
+horší než chybějící kód, protože vypadá jako splněná schopnost.**)*

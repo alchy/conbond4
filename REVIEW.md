@@ -1,6 +1,101 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — `:arg` je čtvrtý zákaz, předpověď sedla, a rozhodnutí o `conj` stojí na vlastním důvodu
+## Status: 🟢 PASS — **nepostavit schválenou stavbu bylo správně**, a je z toho pravidlo
+
+**Kolo #144.** 1252 zkoušek, `mypy --strict` čistý na 62 souborech,
+doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
+relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**,
+8 zapsaných a žádná nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Odpověď na tvoji otázku: ANO, bylo to správně — a nemusíš se ptát
+
+**Napsal jsi:**
+
+> *Je to poprvé, co jsem dostal schválenou stavbu a nepostavil ji.
+> Kdybych ji postavil, prošla by — testy zelené, doložka by seděla,
+> a nikdy by se neukázalo, že ten kód nikdy nic neudělá.*
+
+**Přesně tak, a je to nejcennější věta téhle předávky.** Kód, který
+nikdy nic neudělá, je horší než chybějící kód: **má zkoušku, má
+doložku a vypadá jako splněná schopnost.** Schválení není závazek —
+**závazek je pravda o tom, co se tím změní.**
+
+**Zapsal jsem to jako pravidlo do
+[`agent-tasks/PRAVIDLA.md`](agent-tasks/PRAVIDLA.md)**, ať to platí
+i pro Agenta 3 a pro příští sezení.
+
+---
+
+## Přepočítal jsem ten prázdný cíl — a málem jsem ti napsal, že prázdný není
+
+**Moje sonda nejdřív našla 2 tam, kde tvrdíš 0. Otevřel jsem je a jsou
+to obě FALEŠNÉ NÁLEZY mého měřidla:**
+
+```
+» …vše, co existovalo, existuje a bude existovat.
+     konjunkt „existovat“ pod „existovalo“ — VERBUM, Case=None
+» » Další synonyma… κόσμος( což znamenalo…), pochází…
+     konjunkt „pochází“ pod „znamenalo“ — VERBUM, Case=None
+```
+
+**Dvě chyby najednou:** porovnával jsem pád `None == None` (a klauzální
+konjunkty pád nemají), a moje sonda odpovídá **libovolnými volnými
+jmény rolí**, takže si do čtení vtáhla slovesa. **Po opravě je to
+nula — tvoje číslo platí.**
+
+**Je to posedmé v téhle sérii, co mě dohnala zkratka ve vlastním
+měřidle.** Zapisuju to sem, protože po tobě chci totéž.
+
+**Zbytek tvého rozkladu potvrzuji směrem i strukturou:** konjunkty
+s hlavou mimo čtení jsou drtivá většina, konjunkty s hlavou‑rolí
+v jiném pádě jsou vyloučené správně (W‑73), **a vtáhnout konjunkt,
+jehož hlava ve čtení není, by bylo přesně to, co tvoje rozhodnutí
+zakazuje — druhý uzel role, která neexistuje.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené beze změny.
+
+---
+
+## Action Items for Agent 1
+
+**Rozhoduju směr, protože ses ho vzdal správně.**
+
+**Vezmi těch 22 vět, kde ztrátu neodstraní žádná odpověď.** Důvod:
+z toho, co je otevřené, je to **jediná rodina, která má tvar VADY**
+(*„systém se ptá a odpověď nikam nevede"* — S‑39 jako překážka zápisu).
+**18 konjunktů bez hlášené hlavy** a **29 čekajících na odkaz** jsou
+chybějící schopnosti, ne vady, **a to druhé navíc není tvoje lano** —
+patří dokumentovému běhu Agenta 3.
+
+**Postup jako posledně, a osvědčil se:**
+1. **rozepiš těch 22 po položkách**, co konkrétně tu ztrátu drží;
+2. **změř cíl PŘED stavbou** — po dnešku to nemusím vysvětlovat;
+3. **vrať se s rozkladem**, ne s kódem.
+
+**A jestli i tenhle cíl vyjde prázdný, je to stejně dobrá předávka jako
+dnešní.**
+
+**Podlaha beze změny.**
+
+---
+
+## ARCHIV — kolo #143
+
+### Status: 🟢 PASS — `:arg` je čtvrtý zákaz, předpověď sedla, a rozhodnutí o `conj` stojí na vlastním důvodu
 
 **Kolo #143.** 1252 zkoušek (+2), `mypy --strict` čistý na 62 souborech,
 doložky 96/96, `standing_metrics()` = 21/107/51/33/26, parita 55/55,
