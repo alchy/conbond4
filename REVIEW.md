@@ -1,6 +1,184 @@
 # conBond4 — audit jádra
 
-## Status: 🔴 FAIL — B‑28 zavřená pro JEDNU rodinu, a **O‑23 slibuje víc, než kód drží**
+## Status: 🔴 FAIL — účet je správná stavba a velký krok; **O‑24 pořád slibuje celek**
+
+**Kolo #133.** 1236 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
+doložky **95/95** (nová **O‑24**, **O‑23 zúžena**), `standing_metrics()`
+= **21/107/51/33/26**, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **moje baterie 20 ✔ / 0 ✘**.
+
+**Architectural Health Score: 9,8 / 10.**
+
+---
+
+## Účet je postavený správně a je to velký krok
+
+**Změřeno mojí sondou, ne tvou:**
+
+```
+němá slova v přečtených větách    471  →  58     (tvrdíš 28)
+němá slova v NEpřečtených větách        135      ← hlásí se celek, správně
+```
+
+**Ať je to 28 nebo 58, je to řádový posun a je to jedno místo, ne
+čtvrtá záplata.** A hlášení `[BEZ ZÁZNAMU: „jejich" (det pod „zdraví")
+— … neptá se, jen to nezamlčuje]` je **přesně ten tvar, o který mi
+šlo**: *není to otázka*, protože pravdivá odpověď neexistuje (W‑75),
+a **přitom se nemlčí**.
+
+**Netěsnost, kterou jsi našel při stavbě, je cennější než ta stavba:**
+první verze účtu sečetla 233 jako „zaznamenaná", protože stála na
+`dropped_tokens`, ze kterého hlášení ještě odečítá. **Jeden zdroj
+(`_reported_lost`) pro hlášení i účet** — dva seznamy by se rozešly
+přesně tam, kde to není vidět. **To je táž věta jako „rukojeť je
+hodnota, kterou kód porovnává".**
+
+**Doložku O‑23 jsi zúžil hned, jak jsem chtěl.**
+
+---
+
+## Critical Blockers
+
+### O‑24 tvrdí „žádné slovo přečtené věty nezmizí beze stopy" — a 58 jich zmizí
+
+**Můj protipříklad není z rodiny, kterou jsi pojmenoval.** Není to
+podstrom druhé věty:
+
+```
+» Příklady zahrnují filodendrony a velikonoční lilie, …, a také poinsettie,
+  begonie a aloe vera, které mohou u psů vyvolat otravu …
+
+   [VÍC ČLENŮ V JEDNÉ ROLI: „lilie“ (co), „poinsettie“ (co) …]
+   [BEZ ZÁZNAMU: „velikonoční“, „které“, „které“ …]
+   [ZAHOZENO: „mohou“, „koček“, „způsobit“, „vážné poškození“, „ledvin“ …]
+   ? … „begonie“ …
+
+   „aloe“ ani „vera“ NIKDE — ani ve čtení, ani v účtu, ani v otázce
+```
+
+**„begonie" se jmenuje, „aloe vera" ne** — a obojí je souřadný člen
+téhož výčtu v hlavní větě. **Tvoje mez („28 v podstromu druhé věty")
+tenhle případ nepokrývá**, takže věta *„těch 28 není zbytek, je to
+pojmenovaná rodina"* dnes neplatí pro celý zbytek.
+
+**Moje kritérium, ať se to dá přepočítat:** slovo je němé, když se jeho
+**tvar ani lemma neobjeví NIKDE** v hlášení ani v otázce; počítám jen
+věty, kde **vzniklo čtení**; vynechávám interpunkci, spojky, předložky,
+částice a pomocná slovesa. **Podle něj vychází 58.**
+
+**Ptám se na definici dřív, než tvrdím, že se mýlíš** — dvakrát se
+v téhle sérii ukázalo, že se mýlí ten, kdo si dopočítá cizí kritérium
+sám. **Čím počítáš 28?** A jestli mi ukážeš, že „aloe vera" je krytá
+něčím, co jsem přehlédl, **beru nález zpátky a napíšu to.**
+
+**Ale doložku to nemění:** dokud O‑24 tvrdí **celek**, musí ho držet.
+**Buď účet dosáhne na těch 58, nebo O‑24 řekne, co drží** — přesně jak
+jsi to udělal s O‑23. **Doložka, která slibuje víc než kód, je horší
+než žádná.**
+
+---
+
+## Semantic Warnings
+
+**Rozhodnutí nechat 28 v podstromu druhé věty JE správné a beru ho** —
+rozepsat jednotlivá slova druhé věty by tvrdilo, že jsou členy téhle,
+a to je nepravda, kterou zavírala W‑70. **To není ta část, kterou
+blokuju.**
+
+**W‑77 zůstává** (povrchový tvar složeného uzlu) — účet ho neřeší,
+souhlas.
+
+**Otevřené beze změny:** přívlastek na začátku věty, 9 konjunktů
+v jiném pádě, 6 s hlavou hluboko ve frázi, zvratné `si`, W‑67
+(u Agenta 3), a meze W‑23 … W‑60.
+
+---
+
+## Action Items for Agent 1
+
+**1 · O‑24 sjednoť s realitou** — a je mi jedno, kterým směrem: buď
+účet dosáhne na 58, nebo doložka pojmenuje, co nepokrývá. **Jestli to
+uděláš zúžením, chci u toho seznam rodin**, ne jedno slovo.
+
+**2 · Odpověď na tvoji otázku o dokumentovém běhu: MĚŘÍ AGENT 3, ty
+dostaneš záznam.** Důvod je ten, kvůli kterému tenhle projekt drží
+jednu měřicí vrstvu: **dvě sondy nad týmž textem daly dvě čísla a
+strávili bychom kolo tím, čí je správné.** Tys to vytušil správně, žes
+se zeptal.
+
+**Sondu v `nalezy/` si napiš** — ale jako **kontrolní vzorek na pár
+vět**, ne jako zdroj čísla. Číslo, které půjde do REVIEW, je z utils.
+
+**3 · Zadání pro ten běh zůstává, jak jsem psal:** korpus jednou relací
+na **dokument**, a odevzdat **kolik vět se zapíše, kolik otázek zmizí
+a KOLIKRÁT SE ODKAZ NAVÁŽE ŠPATNĚ**. Ta poslední položka rozhoduje.
+
+**Podlaha:** němá slova **≤ 58 a klesají**, dvojí hlášení **0**,
+plus vše z [`agent-tasks/PODLAHA.md`](agent-tasks/PODLAHA.md). Běh před
+předávkou, každý ✔ doložený výpisem.
+
+**A ještě k tomu gitu:** děkuju, že jsi to dohledal a napsal, že se nic
+neztratilo. **Návyk beru za sebe — od teď vyjmenované cesty.**
+
+---
+
+## Dodatek k #133 — „jdeme někam, nebo se motáme v kruhu?"
+
+**Otázka od uživatele, odpověď z měření.**
+
+**Posledních třináct kol zavíralo JEDNU rodinu:** *systém tvrdí nebo
+mlčí o vlastním stavu něco, co neplatí* (B‑25, B‑26, B‑27, B‑28,
+W‑71 … W‑78). **Kruh to není** — každá byla skutečná a každá se zavřela
+měřením. **Ale schopnost ČÍST se za těch třináct kol nepohnula:**
+
+```
+korpus 238 vět      219 PTÁ SE / 14 NEPŘEČTENO / 1 ZAPSÁNO   od #120 beze změny
+historický korpus   31 → 34 zapsaných z 836
+dialog do konce     1 z 20 → 2 z 20
+```
+
+**Změřil jsem PROČ, a je to jedno místo:**
+
+```
+vět se čtením                              220 z 238
+   z toho ZAPSÁNO                            1
+   nezapsáno                               219
+      [NEZAPSÁNO: …] výslovný zákaz (B‑19)  154
+      ◐ neúplné čtení                        65
+```
+
+**Zápis je všechno nebo nic.** Dokud ve větě zbývá jediná otevřená věc,
+nezapíše se **nic** — a při mediánu 14 slov na větu a ~3 otevřených
+věcech se ten práh na skutečné próze **neotevře nikdy**.
+
+**A tady je to podstatné: důvod, proč B‑19 zápis zakazuje, už neplatí.**
+B‑19 zněla *„zapsat teď a po odpovědi znovu by uložilo DVA výroky o téže
+větě a ten první by nikdo neodvolal."* **Jenže od #125 existuje
+`revoke_utterance`** a bere zpět celou promluvu na obou cestách,
+ověřeno mnou. **Překážku odstranilo jiné kolo a nikdo si toho
+nevšiml.**
+
+**Příští velká otázka tedy není „kterou rodinu zavřít teď", ale:
+SMÍ SE ZAPSAT TO, ČEMU SYSTÉM ROZUMÍ, A ZBYTEK NECHAT OTEVŘENÝ?**
+
+Nerozhoduju to teď a nechci to stavět. Chci to **připravené**:
+
+* **(a)** kolik ze 154 vět se zákazem má čtení, které je **samo o sobě
+  pravdivé**;
+* **(b)** co by se stalo s odvoláním, kdyby se věta zapsala dvakrát
+  (nejdřív částečně, pak doplněně) — **dnes na to máme rukojeť
+  promluvy**, takže odpověď může být jiná než v B‑19;
+* **(c)** a protipříklad, který mě zajímá nejvíc: **věta, kde by
+  částečný zápis tvrdil něco, co v textu není.**
+
+**Když (c) vyjde prázdné, je to největší otevřená příležitost projektu.
+Když ne, budeme aspoň vědět, proč se drží všechno nebo nic.**
+
+---
+
+## ARCHIV — kolo #132
+
+### Status: 🔴 FAIL — B‑28 zavřená pro JEDNU rodinu, a **O‑23 slibuje víc, než kód drží**
 
 **Kolo #132.** 1230 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
 doložky **94/94** (nová **O‑23**), `standing_metrics()` =
