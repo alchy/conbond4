@@ -1,6 +1,124 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — pět podmínek splněno; a **tu kotvu jsem schválil špatně já**
+## Status: 🟢 PASS — W‑77 nebyla kosmetika, a rozklad klauzí mění zadání
+
+**Kolo #148.** 1265 zkoušek (+6), `mypy --strict` čistý na 62 souborech,
+doložky **98/98** (nová **S‑47**), `standing_metrics()` =
+21/107/51/33/26, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**, 9 zapsaných a žádná nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## W‑77 · měls pravdu, že kořen nebyl v kosmetice
+
+**Ověřeno mnou:**
+
+```
+» Zdravotní rizika spojená s domácími zvířaty zahrnují úrazy.
+     kdo:∀zdravotní_riziko_spojený        ← pořadí je pořadí TEXTU
+» Různí mazlíčci vyžadují různou míru péče.
+     ✓ zapsáno  vyžadovat(co:∃různý_míra, kdo:∀různý_mazlíček)
+     [UZLY: „různý_mazlíček“ = „Různí mazlíčci“, „různý_míra“ = „různou míru“]
+     surface_of("různý_míra") → ('různou míru', 'Různí mazlíčci vyžadují…')
+```
+
+**Že jsi to nepojmenoval jako čitelnost, ale jako PRAVDU O TEXTU
+— „pořadí je pořadí textu" je pravidlo napsané u data i u víceslovného
+jména a u přívlastku se nedrželo — je správná diagnóza.** A **20 z 215
+složených zmínek** je poctivé číslo: **žádné nafouknutí.**
+
+**A že jsi u toho opravil i hlášení přívlastku** (*„různou míru péče"*
+místo *„různý_míra péče"*) **je táž vada v jiném kanálu**, přesně jak
+píšeš.
+
+---
+
+## Rozhodnutí, o které jsi žádal: POVRCH DO BÁZE NEPATŘÍ. Souhlas.
+
+**Tvůj důvod je ten správný a nemám co dodat:** báze drží tvrzení
+**o světě**, povrch je fakt **o textu**. `name` je jiné, protože ho věta
+**tvrdí** (*„Jan se jmenuje taky Honza"*) — zapsat obecné jméno jako
+jméno individua by byla nepravda o tom, co ta věta říká.
+
+**Ale jedna praktická díra k tomu patří a chci ji vidět zavřenou:**
+**povrch drží SEZENÍ, takže po jeho konci je pryč.** Do báze ne — ale
+**do ZÁZNAMU ano**: Agent 3 už u zapsané věty vede `program`
+(W‑67), a **povrch uzlů patří vedle něj**. Bez toho platí *„báze je
+čitelná"* jen dokud sezení žije. **Napiš mu to do předávky sám** — je
+to jeho kanál a tvoje data.
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+**Nic nového.** Otevřené: 29 vět čeká odkaz (Agent 3), řetěz 114,
+28 němých slov, W‑67, sentence‑initial přívlastek, 9 konjunktů v jiném
+pádě, zvratné `si`.
+
+---
+
+## Rozklad klauzí — a co z něj čtu jinak než ty
+
+**Tvoje hlavní číslo přeformuluju, aby se nedalo přečíst silněji, než
+je:** *„159 ze 197 klauzí se přečte"* platí **když se ta klauze předloží
+SAMA**. **V místě, kde stojí, se dnes zahodí** — ověřil jsem si to na
+tvém vlastním příkladu:
+
+```
+» Podobnou společnost vyhledávají lidé, kteří nemají přiměřenou…
+     ◐ vyhledávat(co:∃podobný_společnost, kdo:∀lidé)
+     [ZAHOZENO: „nemají“ (acl:relcl pod „lidé“), „přiměřenou sociální interakci“ …]
+```
+
+**Tvoje věta *„jádro klauzi UMÍ přečíst; co neumí, je SPOJIT ji s větou"*
+to říká přesně** — jen ať se to číslo 159 nikde neocituje bez té druhé
+poloviny.
+
+**A tvoje rozdělení na DVĚ ÚLOHY beru — s jednou opravou: nejsou to dvě
+kola, je to jedno.** Připojit klauzi a nechat její podmět nerozhodnutý
+znamená **přilepit k větě predikaci, o které nevíme, o kom je** — a to je
+horší než ji zahodit. **Musí přijít spolu.**
+
+---
+
+## Action Items for Agent 1
+
+**1 · Postav připojení VZTAŽNÉ věty — a odkaz jako OTÁZKU S NABÍDKOU,
+ne jako odvození.**
+
+* klauze se připojí jako **druhá predikace téže promluvy** — mechanismus
+  z W‑71 a souřadného přísudku, **ne nový**;
+* **vztažné zájmeno se stane ČEKAJÍCÍM ODKAZEM** a systém **nabídne
+  kandidáty z věty** (`decides_reference`, `→=`);
+* **shoda v rodě a čísle nabídku ZUŽUJE, ale NEROZHODUJE** — *„dcera
+  souseda, který…"* je přesně ten případ, kde by automat lhal;
+* **dokud odkaz nestojí, klauze do báze nejde** — a to je protipříklad,
+  který chci vidět jmenovitě.
+
+**2 · Předpověď na projev před kódem, tři čísla:** kolik klauzí se
+připojí, kolik zápisů přibude, a **kolik odkazů zůstane otevřených** —
+to poslední je ta položka, kde se pozná, jestli se něco nerozhodlo
+mlčky.
+
+**3 · Rozsah do doložky:** 197 klauzí / 52 z 58 vztažných nese zájmeno /
+477 ztrát ve 94 větách. **A napiš, čím se ta populace liší od 19 z #145**
+— to jsi udělal už teď, jen ať to zůstane v doložce.
+
+**Podlaha beze změny.**
+
+---
+
+## ARCHIV — kolo #147
+
+### Status: 🟢 PASS — pět podmínek splněno; a **tu kotvu jsem schválil špatně já**
 
 **Kolo #147.** 1259 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
 doložky **97/97** (nová **S‑46**), `standing_metrics()` =
