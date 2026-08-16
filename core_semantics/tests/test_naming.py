@@ -779,3 +779,119 @@ def test_the_written_statement_says_what_its_composed_nodes_were() -> None:
     assert not [line for line in ceka_vysledek.lines if "[UZLY:" in line], (
         "věta bez složeného uzlu ten řádek nemá"
     )
+
+
+# --------------------------------------------------------------------------
+# Doplnění pohlceného příčestí — W‑92
+# --------------------------------------------------------------------------
+
+
+def _participle(bez_predlozky: bool = False) -> Reading:
+    """«Rizika spojená s domácími zvířaty rostou.» — `obl` pod příčestím."""
+    tokens = [
+        w(1, "Rizika", "riziko", "NOUN", 5, "nsubj",
+          Case="Nom", Gender="Neut", Number="Plur"),
+        w(2, "spojená", "spojený", "ADJ", 1, "amod",
+          Case="Nom", Degree="Pos", Gender="Neut", Number="Plur",
+          VerbForm="Part", Voice="Pass"),
+        w(4, "zvířaty", "zvíře", "NOUN", 2, "obl:arg",
+          Case="Ins", Gender="Neut", Number="Plur"),
+        w(5, "rostou", "růst", "VERB", 0, "root",
+          Number="Plur", Polarity="Pos"),
+        w(6, ".", ".", "PUNCT", 5, "punct"),
+    ]
+    if not bez_predlozky:
+        tokens.append(
+            w(3, "s", "s", "ADP", 4, "case", AdpType="Prep", Case="Ins")
+        )
+    return Reading(
+        tokens=tuple(sorted(tokens, key=lambda t: t.index)), provenance=STAMP
+    )
+
+
+def _participle_session(reading: Reading) -> tuple[Session, _Recorded]:
+    from core_semantics.lexicon import (
+        LearnedPattern,
+        Operation as _Operation,
+        PatternStatus,
+        Trigger,
+        czech_seed,
+    )
+
+    lexicon = czech_seed()
+    lexicon.add(
+        LearnedPattern(
+            trigger=Trigger(lemma="", upos="NOUN", number="Plur", case="Nom",
+                            deprel="nsubj"),
+            operation=_Operation.FOR_ALL,
+            learned_from="test",
+            status=PatternStatus.CONFIRMED,
+        )
+    )
+    return Session(lexicon=lexicon), _Recorded({PARTICIPLE_TEXT: reading})
+
+
+PARTICIPLE_TEXT = "Rizika spojená s domácími zvířaty rostou."
+
+
+def test_a_complement_of_an_absorbed_participle_is_an_attribute() -> None:
+    """POD JMÉNEM JE `nmod`, POD PŘÍČESTÍM `obl` *(W‑92)*.
+
+    „Rizika **spojená** s domácími zvířaty" — `spojená` se pohltilo do
+    uzlu `riziko_spojený`, ale jeho vlastní doplnění pod ním zůstalo
+    viset a zahodilo se. Je to týž vztah vedle věty jako u W‑84, jen
+    hlavou není samo jméno, ale díl složeného uzlu."""
+    from core_semantics.cascade import genitive_attributes
+
+    reading = _participle()
+    session, oracle = _participle_session(reading)
+    result = session.utter(PARTICIPLE_TEXT, oracle)
+    assert result.predication is not None
+    najdene = genitive_attributes(reading, result.predication)
+    assert [(h, g, tvar) for h, g, _, tvar in najdene] == [
+        ("riziko_spojený", "zvíře", "nmod:s+Ins:arg")
+    ]
+    assert not any(
+        "zvířaty" in line and "ZAHOZENO" in line for line in result.lines
+    )
+
+
+def test_a_bare_case_under_a_participle_counts_but_is_not_learned() -> None:
+    """„Studie provedená **institutem**" předložku nemá a genitiv to
+    není. Bere se — je to týž vztah — ale TVAR ZŮSTÁVÁ PRÁZDNÝ, takže se
+    neučí a ptá se u každé věty znovu. Že je holý instrumentál u trpného
+    příčestí původce, je pravděpodobné, ale rozhodnout to v kódu by bylo
+    rozhodnutí o významu (W‑84)."""
+    from core_semantics.cascade import genitive_attributes
+
+    reading = _participle(bez_predlozky=True)
+    session, oracle = _participle_session(reading)
+    result = session.utter(PARTICIPLE_TEXT, oracle)
+    assert result.predication is not None
+    najdene = genitive_attributes(reading, result.predication)
+    assert [tvar for *_, tvar in najdene] == [""], "neučí se"
+
+
+def test_an_obl_under_the_predicate_is_still_a_circumstance() -> None:
+    """PROTIPŘÍKLAD, KTERÝ TU MUSÍ BÝT. `obl` pod PŘÍSUDKEM je okolnost,
+    tedy role věty; vzít ji jako přívlastek by udělalo z místa a času
+    vztah vedle věty."""
+    from core_semantics.cascade import genitive_attributes
+
+    reading = Reading(
+        tokens=(
+            w(1, "Petr", "Petr", "PROPN", 2, "nsubj",
+              Case="Nom", Gender="Masc", Number="Sing"),
+            w(2, "bydlí", "bydlet", "VERB", 0, "root",
+              Number="Sing", Polarity="Pos"),
+            w(3, "v", "v", "ADP", 4, "case", AdpType="Prep", Case="Loc"),
+            w(4, "Praze", "Praha", "PROPN", 2, "obl",
+              Case="Loc", Gender="Fem", NameType="Geo", Number="Sing"),
+            w(5, ".", ".", "PUNCT", 2, "punct"),
+        ),
+        provenance=STAMP,
+    )
+    session, oracle = _participle_session(reading)
+    result = session.utter(PARTICIPLE_TEXT, oracle)
+    assert result.predication is not None
+    assert genitive_attributes(reading, result.predication) == ()

@@ -1940,6 +1940,43 @@ CONTRACTS: tuple[Clause, ...] = (
         ),
     ),
     Clause(
+        id="S-53",
+        boundary=CASCADE_SESSION,
+        promise=(
+            "DOPLNENI POHLCENEHO PRICESTI JE VZTAH VEDLE VETY *(W-92)*. "
+            "„Zdravotni rizika SPOJENA s domacimi zviraty“ — `spojena` "
+            "se pohltilo do uzlu `zdravotni_riziko_spojeny`, ale jeho "
+            "VLASTNI doplneni pod nim zustalo viset a zahodilo se. Je to "
+            "tyz vztah jako u W-84, jen hlavou neni samo jmeno, ale DIL "
+            "SLOZENEHO UZLU — takze se hlava hleda i mezi POHLCENYMI a "
+            "vraci se lemma toho uzlu, do ktereho se slozila. "
+            "POD JMENEM JE DOPLNEK `nmod`, POD PRICESTIM `obl`, protoze "
+            "pricesti je SLOVESNY TVAR (`VerbForm=Part`) a nese slovesne "
+            "deprely. Neni to vycet deprelu pro pohodli: je to taz "
+            "hranice, jen ji rozbor znaci podle toho, CO JE HLAVA. `obl` "
+            "se proto bere JEN pod pohlcenym pricestim — pod prisudkem "
+            "je `obl` OKOLNOST a vzit ji sem by udelalo z mista a casu "
+            "vztah vedle vety (protipriklad v sade). "
+            "HOLY PAD POD PRICESTIM SE BERE, ALE NEUCI SE: tvar zustava "
+            "prazdny, takze se system pta u kazde vety znovu. Ze je holy "
+            "instrumental u trpneho pricesti puvodce, je pravdepodobne, "
+            "ale rozhodnout to v kodu by bylo rozhodnuti o vyznamu. "
+            ". ROZSAH MERENI: korpus 238 vet. POZOR NA POPULACI: 28 deti "
+            "pod pohlcenym `amod` je JINE cislo nez deti pod pohlcenym "
+            "PRICESTIM — z tech 28 jich vetsina visi pod obycejnym "
+            "adjektivem nebo cislovkou a je to KONJUNKT (15), tedy jina "
+            "rodina. Zmena vyresila 4 z 28; privlastku 117 -> 124, vet "
+            "s [ZAHOZENO] 165 -> 163, zapsanych 12 -> 13. "
+        ),
+        anchor="core_semantics.cascade:_absorbed_participle",
+        entry=".utter(",
+        enforced_by=(
+            "test_a_complement_of_an_absorbed_participle_is_an_attribute",
+            "test_a_bare_case_under_a_participle_counts_but_is_not_learned",
+            "test_an_obl_under_the_predicate_is_still_a_circumstance",
+        ),
+    ),
+    Clause(
         id="S-52",
         boundary=CASCADE_SESSION,
         promise=(

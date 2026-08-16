@@ -3320,6 +3320,21 @@ def attribute_shape(token: Token, reading: Reading) -> str:
     return "nmod:" + surface_role(token, reading)
 
 
+def _absorbed_participle(
+    head_index: int, reading: Reading, pohlcene: set[int]
+) -> bool:
+    """Je hlava POHLCENÉ PŘÍČESTÍ? *(W‑92)*
+
+    Pohlcení samo nestačí: složit se do zmínky umí i obyčejné
+    adjektivum („zdravotní rizika") a to vlastní doplnění nemá. Rys
+    `VerbForm=Part` říká, že jde o slovesný tvar, a jen ten nese `obl`.
+    """
+    if head_index not in pohlcene:
+        return False
+    hlava = _token_at(head_index, reading)
+    return hlava is not None and hlava.feat("VerbForm") == "Part"
+
+
 def genitive_attributes(
     reading: Reading, predication: Predication
 ) -> tuple[tuple[str, str, int, str], ...]:
@@ -3350,6 +3365,20 @@ def genitive_attributes(
         role.mention.token_index: role.mention.lemma
         for role in predication.roles
     }
+    # HLAVOU SMÍ BÝT I TO, CO SE DO ZMÍNKY SLOŽILO *(W‑92)*. „Zdravotní
+    # rizika **spojená** s domácími zvířaty" — `spojená` je `amod`, který
+    # se pohltil do uzlu `zdravotní_riziko_spojený`, jenže jeho VLASTNÍ
+    # doplnění („s domácími zvířaty") pod ním zůstalo viset a zahodilo
+    # se. Změřeno: 28 zmínek ve 23 větách, a je to táž rodina, kterou
+    # projekt vedl jako „28 mlčících slov".
+    #
+    # Vztah je přitom týž jako u W‑84: doplněk stojí VEDLE VĚTY a určuje
+    # tu zmínku, ne přísudek. Jediné, co scházelo, je, že hlava nebyla
+    # samo jméno, ale díl složeného uzlu — takže se hledá i mezi
+    # POHLCENÝMI a vrací se lemma toho uzlu, do kterého se složil.
+    for role in predication.roles:
+        for index in role.absorbed:
+            ve_cteni.setdefault(index, role.mention.lemma)
     # ŘETĚZ, NE JEDNA HRANA *(W‑80)*. „…péče majitele a veterinárního
     # **lékaře**" — `lékaře` visí pod `veterinárního`, tedy pod členem,
     # který sám ve čtení NENÍ, jen se o něm mluví jako o přívlastku.
@@ -3409,7 +3438,23 @@ def genitive_attributes(
     )
     najdene: list[tuple[str, str, int, str]] = []
     for token in reading.tokens:
-        if token.deprel != "nmod":
+        # POD JMÉNEM JE DOPLNĚK `nmod`, POD PŘÍČESTÍM `obl` *(W‑92)*.
+        # Příčestí je SLOVESNÝ TVAR (`VerbForm=Part`), takže jeho vlastní
+        # doplnění nese slovesné deprely — „rizika **spojená** s domácími
+        # zvířaty" má `zvířaty` jako `obl:arg` pod `spojená`. Není to
+        # výčet deprelů pro pohodlí: je to táž hranice jako u jména, jen
+        # ji rozbor značí podle toho, CO JE HLAVA.
+        #
+        # `obl` se bere JEN pod pohlceným příčestím. Pod přísudkem je
+        # `obl` OKOLNOST, tedy role věty, a vzít ji sem by znamenalo
+        # udělat z místa a času vztah vedle věty.
+        if token.deprel == "nmod":
+            pass
+        elif base_deprel(token.deprel) == "obl" and _absorbed_participle(
+            token.head, reading, pohlcene
+        ):
+            pass
+        else:
             continue
         # DOPLNĚK JMÉNA JE VZTAH TOHO JMÉNA, NE ROLE PŘÍSUDKU *(W‑84)*.
         # „…na studijním pobytu **bratra**" dá `[PŘÍVLASTEK: studijní_pobyt
@@ -3436,12 +3481,33 @@ def genitive_attributes(
             ),
             None,
         )
-        if predlozka is None and not is_bare_genitive(token, reading):
+        # POD PŘÍČESTÍM PLATÍ I HOLÝ PÁD *(W‑92)*. „Studie **provedená
+        # institutem**" — instrumentál původce předložku nemá a genitiv
+        # to není, takže by tudy vypadl, ačkoli je to týž vztah vedle
+        # věty jako „rizika spojená s domácími zvířaty".
+        #
+        # TVAR ZŮSTÁVÁ PRÁZDNÝ, tedy se NEUČÍ a ptá se u každé věty
+        # znovu. Je to konzervativní strana záměrně: že je holý
+        # instrumentál u trpného příčestí původce, je pravděpodobné, ale
+        # rozhodnout to tady by bylo rozhodnutí o významu udělané v kódu
+        # — a od W‑84 platí, že KTERÝ vztah to je, řekne dialog.
+        if (
+            predlozka is None
+            and not is_bare_genitive(token, reading)
+            and not _absorbed_participle(token.head, reading, pohlcene)
+        ):
             continue
         if token.index in pohlcene:
             continue
         head = _token_at(token.head, reading)
-        if head is None or head.upos not in ("NOUN", "PROPN"):
+        if head is None:
+            continue
+        # HLAVA JE JMÉNO — nebo POHLCENÉ PŘÍČESTÍ, které je dílem jména
+        # *(W‑92)*. Příčestí má `upos=ADJ`, takže by tudy nikdy neprošlo,
+        # ačkoli uzel, o kterém ten vztah mluví, ve čtení JE.
+        if head.upos not in ("NOUN", "PROPN") and not _absorbed_participle(
+            head.index, reading, pohlcene
+        ):
             continue
         if head.index not in ve_cteni or head.index == narokovany:
             continue

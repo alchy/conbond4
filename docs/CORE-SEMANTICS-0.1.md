@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.80 · 16. 8. 2026
+**Verze jádra:** 0.1.81 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -1064,6 +1064,39 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**DOPLNĚNÍ POHLCENÉHO PŘÍČESTÍ JE VZTAH VEDLE VĚTY** *(W‑92, kolo #152)*.
+
+„Zdravotní rizika **spojená** s domácími zvířaty" — `spojená` se pohltilo
+do uzlu `zdravotní_riziko_spojený`, ale jeho vlastní doplnění pod ním
+zůstalo viset a zahodilo se. Je to týž vztah jako u W‑84, jen hlavou není
+samo jméno, ale díl složeného uzlu. Pod jménem je doplněk `nmod`, pod
+příčestím `obl`, protože příčestí je slovesný tvar (`VerbForm=Part`);
+`obl` se proto bere JEN pod pohlceným příčestím — pod přísudkem je
+okolnost a vzít ji sem by udělalo z místa a času vztah vedle věty.
+
+**PŘEDPOVĚĎ MINULA A ROZBOR JE DŮLEŽITĚJŠÍ NEŽ ZMĚNA:**
+
+| | předpověď | skutečnost |
+|---|---|---|
+| ztrát pod pohlceným dílem zmizí | 28 | **4** (28 → 24) |
+| přívlastků | +28 | **+7** (117 → 124) |
+| zápisů | 12 → 14 | **12 → 13** |
+| vět se `[ZAHOZENO]` | 165 → ~142 | **163** |
+
+Chyba je v POPULACI, ne v odhadu účinku: měřil jsem *děti pod pohlceným
+`amod`*, ale stavěl pro *děti pod pohlceným PŘÍČESTÍM*. Z těch 28 jich
+většina visí pod obyčejným adjektivem nebo číslovkou — a **15 z nich je
+KONJUNKT** („nejoblíbenějším a nejčtenějším", „30. a 40. letech",
+„1824 – 1830"), tedy vlastní rodina souřadnosti, kterou tohle kolo
+nemíchá dovnitř. Je to potřetí, co mi populace neseděla na to, co
+stavím; pravidlo z #150 („velikost rodiny se počítá z toho, co s ní
+systém dnes dělá") platí i na definici té rodiny.
+
+**A `acl` bez vztažného zájmena, které bylo zadáním, je v korpusu jen
+10** — ne 71. Číslo 71 z #148 slučovalo `acl` a `acl:relcl`; vztažné
+věty (58) odešly v #149. Reviewerův příklad „psi vycvičení k terapii" je
+navíc `amod`, ne `acl`, a právě proto vedl na tuhle rodinu.
 
 **ČEKAJÍCÍ ODKAZY VEN Z TAHU** *(W‑88, kolo #151)*.
 `TurnResult.references` nese `(scope, role, form, candidates)` z OBOU
