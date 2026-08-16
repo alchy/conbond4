@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.67 · 16. 8. 2026
+**Verze jádra:** 0.1.68 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.68 | § 12 — W-79 přeměřena PŘES VYNECHANOU ČÁST: rizikové jsou 3 věty ze 154 (zápor, podmínka, náhrada), ne 15 — slučovací okolnost dává po vynechání tvrzení SLABŠÍ, a to není nepravda |
 | 0.1.67 | § 5.2 — účet se ptá na DOPLNĚK značek, ne na výčet slovních druhů (výčet minul 30 slov: `X`, `SYM`); § 12 — podklad k otázce, jestli se smí zapsat to, čemu systém rozumí |
 | 0.1.66 | § 5.2 — ÚČET: jedno místo místo čtvrté záplaty. Němých slov v přečtených větách 471 → 28 (zbytek leží v podstromu druhé věty); doložka O-23 sjednocena s tím, co kód drží; § 13 T115 |
 | 0.1.65 | § 5.2 — MATERIÁL Z VĚTY SE NESMÍ ZTRATIT MLČKY: přivlastnění je vidět ve TVARU zmínky a ztracený člen se hlásí i s tím, co se do něj složilo (282 tokenů korpusu bylo úplně bez zmínky); § 13 T114 |
@@ -1093,6 +1094,33 @@ smyslu"). U nich by částečný zápis tvrdil něco silnějšího, než věta
 > padla, a riziko je malé, ale NENULOVÉ a má tvar — slovo měnící
 > rozsah. **Rozhodnutí to nepředjímá**; kdyby se stavělo, musí se
 > ta trojice řešit dřív než ostatních 151.
+
+**PŘEMĚŘENO PŘES VYNECHANOU ČÁST** *(kolo #135)*. Reviewer chtěl SEZNAM,
+ne číslo, a měřeno správně — tedy nad PODSTROMEM role, která by se
+nezapsala — vychází jinak než z hrubého hledání po celé větě:
+
+| co v té vynechané části stojí | kolik | co to udělá |
+|---|---|---|
+| slovo měnící rozsah (`pouze`, `kromě`, `také`, `i`, `již`…) | 15 | **nic** |
+| z toho OMEZUJÍCÍ (`pouze`, `kromě`, `mimo`, `jen`) | 5 | **nic** |
+| zápor, podmínka nebo náhrada (`nikoliv`, `pokud`, `místo`) | **3** | **mění pravdivost** |
+
+**A tady se opravil i vlastní odhad.** Slovník „slov měnících rozsah"
+byl špatné kritérium: „působil **pouze** pět měsíců" ENTAILUJE „působil",
+a „patřili **kromě** bratří Čapků Masaryk…" entailuje „Masaryk patřil".
+Vynechat okolnost u SLUČOVACÍHO čtení dá vždy tvrzení SLABŠÍ — a slabší
+tvrzení není nepravda.
+
+Nebezpečné je jen to, co pravdivost **obrací nebo podmiňuje**:
+
+  · **zápor uvnitř okolnosti** — „…je dobré zdraví, **nikoliv** vlastnictví";
+  · **podmínka** — „může mít dopad, **pokud** nejsou dobře chována";
+  · **náhrada** — „pochází z ruského `ves mir`, **místo**…".
+
+> Rizikové jsou tedy **3 věty ze 154**, ne 15 a ne 13. Ty tři se ze
+> zápisu vylučují JMENOVITĚ; zbylých 151 vynechává okolnost, jejíž
+> vypuštění dává slabší, ale pravdivé tvrzení.
+
 
 **PŘÍVLASTEK VE JMENNÉ FRÁZI — ROZKLAD PŘED NÁVRHEM** *(kolo #130,
 16. 8. 2026)*. Po měření z #128 je jmenná fráze JEDINÁ zbývající
