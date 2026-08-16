@@ -3967,12 +3967,17 @@ def _within_subtree(
     return False
 
 
-#: Slova, která NĚCO ZNAMENAJÍ. Širší než `MEANINGFUL_UPOS`, protože
-#: účtování je jiná otázka než ztracený člen: `ADV` a `DET` rolí být
-#: nemusí, ale ve větě STOJÍ, takže se o nich nesmí mlčet *(B‑28)*.
-#: Chybí tu jen slova, která jsou ZNAČKA, ne materiál — předložka je
-#: v tvaru role, spojka ve stavbě, `AUX` v přísudku, `PUNCT` nikde.
-MATERIAL_UPOS = ("NOUN", "PROPN", "ADJ", "VERB", "NUM", "PRON", "ADV", "DET")
+#: ZNAČKY, ne materiál: předložka je v tvaru role, spojka ve stavbě,
+#: `AUX` v přísudku, `PUNCT` nikde. Účet se ptá na DOPLNĚK téhle
+#: množiny, ne na výčet slovních druhů — a je to poučení, ne estetika.
+#:
+#: **Výčet materiálu tu už jednou byl a minul 30 slov** *(B‑28)*.
+#: Stálo v něm osm druhů, jenže „aloe vera" je `X` (rozbor ho nezařadil)
+#: a „μ" je `SYM`; oboje ve větě STOJÍ a účet o nich mlčel. Je to
+#: dvanáctá instance téže rodiny (W‑32 … W‑81): kategorie, která má
+#: varianty, porovnávaná VÝČTEM. Doplněk drží i to, co UD přidá
+#: příště — výčet by minul zase.
+MARKER_UPOS = ("PUNCT", "ADP", "CCONJ", "SCONJ", "AUX", "PART")
 
 
 def unaccounted_tokens(
@@ -4028,7 +4033,7 @@ def unaccounted_tokens(
     return tuple(
         token
         for token in reading.tokens
-        if token.upos in MATERIAL_UPOS and token.index not in ucet
+        if token.upos not in MARKER_UPOS and token.index not in ucet
     )
 
 

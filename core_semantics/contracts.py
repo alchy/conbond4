@@ -1862,12 +1862,16 @@ CONTRACTS: tuple[Clause, ...] = (
             "na `dropped_tokens` prohlásil 233 slov za zaznamenaná, "
             "ačkoli je nikdo nevypsal — hlášení z toho seznamu ještě "
             "odečítá genitivní přívlastek a druhou větu. ZMĚŘENO: "
-            "němých slov v přečtených větách 471 → 28, a těch 28 je "
-            "POJMENOVANÁ ZBYTKOVÁ RODINA — leží v podstromu DRUHÉ "
-            "VĚTY, kterou hlášení hlásí jako celek („číst ji zatím "
-            "neumím“), takže věta o nich mlčí jen jednotlivě, ne jako "
-            "o kusu textu. Slovo, které ve čtení JE, se do účtu "
-            "nedostane: dvojí hlášení 0 z 220 vět"
+            "němých slov v přečtených větách 471 → 28 (kritériem "
+            "reviewera, tedy VŠE KROMĚ ZNAČEK; první verze účtu jich "
+            "minula 30, protože vyjmenovávala materiál místo aby se "
+            "ptala na doplněk — „aloe vera“ je `X`, „μ“ je `SYM`). "
+            "DOLOŽKA NEDRŽÍ CELEK A DRŽÍ TYHLE DVĚ RODINY: 26 slov "
+            "v podstromu DRUHÉ VĚTY, kterou hlášení hlásí jako celek "
+            "(„číst ji zatím neumím“) — rozepsat je znamená tvrdit, že "
+            "jsou členy TÉHLE věty (W‑70) — a 2 slova uvnitř fráze, "
+            "která je sama hlášena jen zčásti. Slovo, které ve čtení "
+            "JE, se do účtu nedostane: dvojí hlášení 0 z 220 vět"
         ),
         anchor="core_semantics.cascade:unaccounted_tokens",
         entry="cascade(",

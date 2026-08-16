@@ -3382,3 +3382,27 @@ def test_the_ledger_and_the_report_read_the_same_list() -> None:
         assert not hlasene
     else:
         assert all(form in note for form in hlasene)
+
+
+def test_a_word_the_parser_could_not_classify_is_still_material() -> None:
+    """ÚČET SE PTÁ NA DOPLNĚK ZNAČEK, NE NA VÝČET SLOVNÍCH DRUHŮ
+    *(B‑28)*. Výčet materiálu tu jednou byl a minul 30 slov: „aloe
+    vera" je `X` (rozbor ho nezařadil) a „μ" je `SYM` — oboje ve větě
+    STOJÍ. Dvanáctá instance rodiny W‑32 … W‑81: kategorie s variantami
+    porovnaná VÝČTEM."""
+    from core_semantics.cascade import unaccounted_tokens
+
+    reading = Reading(
+        tokens=(
+            _token(1, "Zahrnují", "zahrnovat", "VERB", 0, "root", Number="Plur", Polarity="Pos"),
+            _token(2, "begonie", "begonie", "NOUN", 1, "obj", Case="Acc", Gender="Fem", Number="Plur"),
+            _token(3, "a", "a", "CCONJ", 4, "cc"),
+            _token(4, "aloe", "aloe", "X", 2, "conj"),
+            _token(5, ".", ".", "PUNCT", 1, "punct"),
+        ),
+        provenance="test",
+    )
+    predication = cascade(reading, tiers=HARD_TIERS).survivors[0].predication
+    zbyle = {t.form for t in unaccounted_tokens(reading, predication)}
+    assert "aloe" in zbyle, "co rozbor nezařadil, není proto beze stopy"
+    assert "a" not in zbyle, "spojka je značka, ne materiál"

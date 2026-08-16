@@ -1,6 +1,6 @@
 # conBond4 — Core Semantics 0.1
 
-**Verze jádra:** 0.1.66 · 16. 8. 2026
+**Verze jádra:** 0.1.67 · 16. 8. 2026
 **Status:** návrh finálního znění formálního jádra. Verzované; změna
 gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 
@@ -18,6 +18,7 @@ gramatiky nebo evaluace jen vědomým rozhodnutím (I‑13, I‑16).
 | 0.1.9 | § 5.4/10 — vázanost se hledá REKURZIVNĚ i uvnitř algebraického termu (`substitute` do něj sestupuje), zakázat algebraický term jako takový by ale bylo přestřelené: rozhoduje vázanost, ne tvar; § 13 T59 | 14. 8. 2026 |
 | 0.1.10 | § 5.2.1 — napřed RECALL z uzávěrového indexu, teprve pak zákony: zapsaný `subset` s algebraickou stranou se přeskakoval a přímá otázka na vlastní fakt vracela `U`; § 13 T60 | 14. 8. 2026 |
 | 0.1.11 | § 3.3 — NEGACE OBRACÍ MONOTONII: pod negací sedne dotaz `∃` na fakt `∀` s touž povinností `subset` jako kladné `∀×∀`; kladná buňka `∀→∃` zůstává `U`, protože by potřebovala existenční import; § 13 T61 | 14. 8. 2026 |
+| 0.1.67 | § 5.2 — účet se ptá na DOPLNĚK značek, ne na výčet slovních druhů (výčet minul 30 slov: `X`, `SYM`); § 12 — podklad k otázce, jestli se smí zapsat to, čemu systém rozumí |
 | 0.1.66 | § 5.2 — ÚČET: jedno místo místo čtvrté záplaty. Němých slov v přečtených větách 471 → 28 (zbytek leží v podstromu druhé věty); doložka O-23 sjednocena s tím, co kód drží; § 13 T115 |
 | 0.1.65 | § 5.2 — MATERIÁL Z VĚTY SE NESMÍ ZTRATIT MLČKY: přivlastnění je vidět ve TVARU zmínky a ztracený člen se hlásí i s tím, co se do něj složilo (282 tokenů korpusu bylo úplně bez zmínky); § 13 T114 |
 | 0.1.64 | § 5.2 — PŘÍVLASTEK SE SKLÁDÁ I POD ZTRACENOU HLAVOU (257 členů ve 126 větách přestalo být falešnou otázkou) a velkým písmenem psaný přívlastek je ČÁST JMÉNA; skládání netvrdí `subset`; § 13 T113 |
@@ -1056,6 +1057,42 @@ name(a1, +{"Ford"}).                              @assign(t4, confirmed)
 ---
 
 ## 12 · Mimo F0 (rozhodnuto, ne opomenuto)
+
+**SMÍ SE ZAPSAT TO, ČEMU SYSTÉM ROZUMÍ? — PODKLAD, NE ROZHODNUTÍ**
+*(kolo #134, 16. 8. 2026)*. Zápis je dnes VŠECHNO NEBO NIC: dokud ve
+větě zbývá jediná otevřená věc, neuloží se nic. Ze 238 vět má 220
+čtení a zapsaná je **1**; ze 219 nezapsaných nese 154 výslovný zákaz
+`[NEZAPSÁNO: … (B‑19)]`.
+
+**(a) CO TEN ZÁKAZ DRŽÍ — jedna příčina, ne pět.** Všech 154 drží
+POVRCHOVÁ ROLE, tedy tvar bez jména. A rozhoduje tohle:
+
+> **Ve všech 154 je nepojmenovaná role JEN OKOLNOST — ani jednou
+> `kdo`, `co` nebo `jak`.** Nejčastěji `v+Loc` (50), `Gen` (18),
+> `Dat:arg` (11), `k+Dat` (10), `na+Acc` (10).
+
+Přísudek a jeho jádroví účastníci jsou tedy PŘEČTENÍ; chybí jméno
+příslovečného určení.
+
+**(b) DŮVOD Z B‑19 UŽ NEPLATÍ.** B‑19 zněla „zapsat teď a po odpovědi
+znovu by uložilo DVA výroky o téže větě a ten první by nikdo
+neodvolal". Od B‑26 (#125) má promluva RUKOJEŤ a `revoke_utterance`
+bere zpět všechno, co ta promluva založila — ověřeno: „Karel Čapek
+zemřel v Praze." po `→@` uloží 4 výroky, dotaz na celé tvrzení dá `A`,
+`revoke_utterance` je vezme všechny a dotaz je zpátky na `U`, báze
+prázdná. Překážku odstranilo jiné kolo a nikdo si toho nevšiml.
+
+**(c) KDY BY ČÁSTEČNÝ ZÁPIS TVRDIL VÍC, NEŽ V TEXTU STOJÍ.** Vynechat
+okolnost obvykle znamená říct MÍŇ, ne víc — a to je bezpečné. Není to
+ale prázdná množina: **3 ze 154** nesou v té okolnosti slovo, které
+MĚNÍ ROZSAH tvrzení („**kromě** bratří Čapků", „**jen** v tomhle
+smyslu"). U nich by částečný zápis tvrdil něco silnějšího, než věta
+říká.
+
+> Podklad tedy zní: příležitost je velká (154 vět), překážka z B‑19
+> padla, a riziko je malé, ale NENULOVÉ a má tvar — slovo měnící
+> rozsah. **Rozhodnutí to nepředjímá**; kdyby se stavělo, musí se
+> ta trojice řešit dřív než ostatních 151.
 
 **PŘÍVLASTEK VE JMENNÉ FRÁZI — ROZKLAD PŘED NÁVRHEM** *(kolo #130,
 16. 8. 2026)*. Po měření z #128 je jmenná fráze JEDINÁ zbývající
