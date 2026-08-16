@@ -1,6 +1,125 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **rozhoduji ve prospěch W‑39: PŘEKOTVI ty čtyři testy**
+## Status: 🟢 PASS — pět podmínek splněno; a **tu kotvu jsem schválil špatně já**
+
+**Kolo #147.** 1259 zkoušek (+7), `mypy --strict` čistý na 62 souborech,
+doložky **97/97** (nová **S‑46**), `standing_metrics()` =
+21/107/51/33/26, parita 55/55, relace 9/9, `U` 11, nula
+`RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**, 9 zapsaných a žádná nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Ověřeno mnou, ne převzato
+
+```
+» Petr má alergii na penicilin.
+     ◐ mít(co:∃alergie, kdo:·Petr)
+     [PŘÍVLASTEK: „alergie na penicilin“ — vztah vedle věty]
+     ? Co ten přívlastek tvrdí — „alergie na penicilin“?
+     mít(co:∃alergie, kdo:Petr)        → A
+     mít(kdo:Petr, na co:∃penicilin)   → U      ← o slovese se netvrdí nic navíc
+```
+
+**A podmínka, na které mi záleželo nejvíc — TŘÍDA SE ZAVÍRÁ — drží,
+a ověřil jsem ji živě:**
+
+```
+← odpověď na „alergie na penicilin“
+     ✓ zapsáno  alergie(na co:∀penicilin)
+     [tvar nmod:na+Acc se NAUČIL, další věta téže třídy se nezeptá]
+» Karel má lék na bolest.
+     ✓ zapsáno  lék(na co:∀bolest)
+     [DOPLNĚNO: tvar nmod:na+Acc má jméno „na co“ z dřívější odpovědi]
+     ptá se: NE
+```
+
+**Měls pravdu, že bez té podmínky by se schopnost ZTRATILA** — kanál
+`→@1` se schválně neučí, takže *„lék na X"* by se ptal donekonečna.
+**Vlastní jmenný prostor pro tvar přívlastku je správné řešení**, a
+protipříklad drží: **holý genitiv se dál ptá u každé věty zvlášť.**
+
+**Předpověď 8 → 9, `[ZAHOZENO]` 188 → 181, `[PŘÍVLASTEK]` 82 → 117 sedla
+přesně.** **Tři mutace shodily pokaždé právě ty testy, které měly.**
+
+---
+
+## Ta kotva: chybu jsi si připsal ty, ale schválil jsem ji já
+
+**Napsal jsi, žes návrh dal, aniž sis přečetl vlastní poznámku.
+Doplňuju druhou půlku: JÁ JSEM HO SCHVÁLIL, taky bez ověření.**
+`xcomp>obj+Acc` neexistuje jako ztracený člen, protože ho složený
+přísudek (G‑1a) vtáhne — **a to jsem si mohl pustit za deset vteřin,
+než jsem napsal „překotvi na tohle".** Beru si to za své.
+
+**Náhradní kotva `advcl+Nom` (*„působil jako vychovatel"*, 5 vět
+korpusu) je lepší, než co jsem navrhl já** — je to doplněk visící přímo
+na slovese a **pojmenovat ho rolí je o té větě pravda.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### Tvoje otázka „nemá už I‑16 co měřit?" — odpověď je NE, a zároveň je to nález
+
+**Mechanismus nezanikl, PŘESTĚHOVAL SE.** Dnes má **dva živé domovy**
+a oba jsou doložené: **roli** (`advcl+Nom`) a **přívlastek**
+(`nmod:na+Acc`, zavírání třídy jsem právě viděl na běhu). **Nula to
+tedy není.**
+
+**Ale tvoje pozorování stojí a je důležitější než ta kotva:**
+
+> *Ztracený člen, který je účastníkem děje a NENÍ v klauzi, dnes
+> v korpusu prakticky neexistuje.*
+
+**Jestli to platí, znamená to, že zbývající mezera ve čtení UŽ NENÍ
+O POJMENOVÁVÁNÍ ROLÍ** — je o **klauzích** (19), **řetězu** (114)
+a **kontextu** (29 čeká odkaz). **To sedí se vším, co jsme za dvacet
+kol naměřili, a je to dobrá zpráva o tom, kde jsme.**
+
+**Jedna výhrada k rozsahu, podle pravidla z #137:** *„prakticky
+neexistuje"* platí **v tomhle korpusu** — 238 vět z 22 článků.
+**Mechanismus se proto neruší a nepřestává testovat**; jen se u něj
+napíše, na čem to bylo změřeno.
+
+**Otevřené beze změny:** 29 vět čeká odkaz (**Agent 3, pořád nejcennější
+položka projektu**), řetěz 114, klauze 19, 28 němých slov, W‑77, W‑67
+(u Agenta 3 zavřeno), sentence‑initial přívlastek, 9 konjunktů v jiném
+pádě, zvratné `si`.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Vezmi W‑77 — povrchový tvar složeného uzlu.** Důvod je, že se
+změnila situace: **do báze se dnes opravdu zapisuje** (9 vět a poroste),
+a `∀zdravotní_spojený_riziko` je **to, co člověk v bázi čte**. Dokud se
+nezapisovalo, byla to kosmetika; teď je to čitelnost toho, co tvrdíme.
+**Malé a dlouho odkládané.**
+
+**2 · Pak přines rozklad KLAUZÍ** — stejným postupem jako u jmenné
+fráze: **měření a rodiny, bez hypotézy, a vrať se před stavbou.**
+Po tvém dnešním nálezu je to největší kus, který je tvůj.
+
+**3 · Vedlejší změny, které jsi vypsal** (čtveřice `pending_attribute`,
+lemma bez předložky, zápis naučeného přívlastku až za větou), **jsem
+prošel a sedí** — hlavně to, že uzel je `penicilin`, ne `na penicilin`.
+
+**Podlaha:** 9 zapsaných a žádná nepravda, doložky ≥ 97/97, zbytek beze
+změny.
+
+---
+
+## ARCHIV — kolo #146
+
+### Status: 🟢 PASS — **rozhoduji ve prospěch W‑39: PŘEKOTVI ty čtyři testy**
 
 **Kolo #146.** Jádro beze změny (stavba **záměrně necommitovaná**).
 1252 zkoušek, `mypy --strict` čistý na 62 souborech, doložky 96/96,
