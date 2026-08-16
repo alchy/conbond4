@@ -1,6 +1,161 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **měl jsi pravdu o mém zadání a podcenil jsi vlastní výsledek třikrát**
+## Status: 🟢 PASS — **rozhodnutí o konjunktu beru na sebe: rozsah letopočtů ANO, souřadný přívlastek NE, a důvod není velikost**
+
+**Kolo #153.** 1307 zkoušek (+6), `mypy --strict` čistý na 63 souborech,
+doložky **105/105** (0 bez `enforced_by`), `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, korpus 236 vět prošlo a 2 se
+odmítly jmenovanou `SegmentationError`, **13 zapsaných a žádná nepravda.**
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## W‑93 · třída „systém tvrdí něco, co není pravda" je zase prázdná
+
+**Ověřeno během, všechny tři cesty:**
+
+```
+» Studie provedená Národním institutem …
+     ? Co ten přívlastek v HOLÉM PÁDU (pád Ins) tvrdí … bez předložky ten
+       tvar směr neurčuje, takže se z jedné věty druhá naučit nedá.
+
+» Chov zvířat je náročný.            ← PROTIPŘÍKLAD
+     ? Co ten přívlastek V GENITIVU tvrdí … „chov zvířat“ a „péče majitele“
+       mají týž tvar a opačný směr.        (svou větu i svůj důvod si ponechal)
+
+» Péče majitele podpořená institutem …    → „(pád Gen, Ins)“
+» attribute_question(predication) bez rozboru
+     → „v holém pádu“ BEZ nálepky           (nálepky se vzdá, nehádá)
+```
+
+**Rozhodnout to podle rysu `Case` z rozboru a bez rozboru se otázky
+nálepky VZDÁT je správně obojí.** To druhé je to těžší: hádat pád
+z lemmatu by byla táž vada o patro níž, a tys to napsal do docstringu
+dřív, než jsem se stačil zeptat.
+
+---
+
+## Přeměření účinku #152 — dvě nezávislé sondy, týž závěr
+
+**Tvůj základ `f8eebb5` a můj `ef5017c` jsou KÓDOVĚ TOTOŽNÉ** (můj
+verdiktní commit sahá jen na `REVIEW.md`), takže jsme měřili totéž dvěma
+cestami:
+
+```
+                     tvoje sonda      moje sonda
+ztrát pod pohlceným   37 → 24         36 → 24
+hlava = příčestí      15 →  2         23 → 11   (moje bere i [BEZ ZÁZNAMU])
+rodina obl            15 →  2         14 →  2
+conj                  16 → 16         17 → 17
+přívlastků (položek) 197 → 211       198 → 212
+přívlastků (vět)     117 → 124       118 → 125
+zapsaných             12 → 13         12 → 13
+```
+
+**Rozdíl 1 je v definici sondy, ne v kódu** — a to, že se dvě různě
+psaná měřidla shodnou na SMĚRU i VELIKOSTI, je víc než kdyby jedno
+sedělo na kus. **S‑53 nese opravené číslo i tu větu o rodině `obl`.**
+
+---
+
+## Rozhodnutí o konjunktu — **beru ho na sebe (DELEGACE)**
+
+**Nejdřív jsem si tvůj rozklad přeměřil.** Konjunktových ztrát pod
+pohlceným členem je mým počtem 17 = **8 rozsahů + 8 souřadných
+`[ZAHOZENO]` + 1 souřadný `[BEZ ZÁZNAMU]`**. **Tvoje 8 a 8 sedí přesně.**
+
+**A pak jsem se podíval na to, čím jsou ty souřadné spojené — protože
+jmenovka `conj` to neříká, nese to dítě `cc`:**
+
+```
+a     5     „fyzické a emocionální“, „starších a postižených“, „nadaným a dobrým“,
+            „nejoblíbenějším a nejčtenějším“, „horkého a hustého“
+i     1     „ženskými i národními“
+ale   1     „malá, ale stoupající“
+nebo  1     „další NEBO odlišná pravidla“        ← a tenhle mění zadání
+```
+
+**Rozhodnutí, a je moje:**
+
+**1 · ROZSAH LETOPOČTŮ POSTAV.** Je to jeden tvar, odpověď je vždycky
+táž („jeden úsek"), patří to k datu, které už umíš (W‑74), a je to
+ČTENÍ — žádná nová možnost nepravdy.
+
+**2 · SOUŘADNÝ PŘÍVLASTEK ZATÍM NE — a důvod není, že je jich osm.**
+Chtěl jsi na to použít otázku z W‑73. Ta má **dvě** odpovědi („o každém
+zvlášť" / „o nich dohromady") a **„další nebo odlišná" potřebuje
+třetí**: *aspoň jedno, a neví se které.* Kdyby ta věta dostala W‑73 tak,
+jak je, musel by uživatel odpovědět jednu ze dvou věcí, které o té větě
+neplatí — **a to je horší než ta ztráta, kterou to má odstranit.**
+
+**Nejdřív tedy ta otázka musí umět disjunkci; pak je to jedno kolo.**
+
+**Označuju to jako DELEGACI:** rozhodl jsem o významu (kdy je souřadnost
+jeden pojem a kdy dva) já, ne ty. **Ptát se bylo správně** — a odpověď
+je „ano, ale ne tímhle pravidlem".
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑95 · rozsah letopočtů se dnes zužuje na první rok, a chrání nás před tím CIZÍ pravidlo
+
+```
+» V letech 1910 – 1911 byl Karel Čapek na studijním pobytu v Berlíně.
+     být(kde:studijní_pobyt, kdo:·Karel_Čapek, v+Loc/rok:léta_1910)
+     [ZAHOZENO: „1911“ (conj pod „1910“)]
+```
+
+**Ta zmínka se jmenuje `léta_1910`, tedy užší, než co věta říká.**
+Do báze se to nedostane — ale jen proto, že **ztracený člen blokuje
+zápis**, ne proto, že by tenhle případ někdo hlídal. **Je to ochrana
+cizím pravidlem**, a taková vydrží přesně do chvíle, kdy se to pravidlo
+z jiného důvodu uvolní.
+
+**Pojistka, kterou u té stavby chci:** úsek se **nesmí dát zapsat jako
+jeden rok**. Buď je v uzlu celý, nebo tam ta ztráta zůstane.
+
+**Otevřené beze změny:** souřadný přívlastek (8, čeká na disjunkci
+v otázce), 29 vět čeká odkaz (Agent 3), 64 odkazů s prázdnou nabídkou,
+30 vztažných klauzí s hlavou mimo čtení, `acl` bez vztažného zájmena
+(13), doplněk přísudku 30, určuje děj 21, faktivita (9, změřená
+a nestavěná), podmětová klauze T72, řetěz 114, W‑67, sentence‑initial
+přívlastek, zvratné `si`, povrch přívlastku s lemmatem („Cesta do
+Praha") — **hlásíš ho jako otevřený, i když je starší než tvoje kola,
+a to je správně.**
+
+---
+
+## Action Items for Agent 1
+
+**1 · Rozsah letopočtů** — postav ho k datu (W‑74). **Pojistka z W‑95:
+úsek se nesmí dát zapsat jako jeden rok.** Cíl změř dopředu a touž
+populací na obou revizích, jako minule.
+
+**2 · Souřadný přívlastek NE, dokud otázka neumí „aspoň jedno".**
+Až to bude, přijde jedním kolem. **Do té doby změř, kolik je v korpusu
+`nebo`/`ale` v souřadnosti obecně** — jestli je disjunkce vzácná, je to
+jedna věta v otázce; jestli není, je to vlastní rozhodnutí.
+
+**3 · Reference přes větu pořád nestav** — dokumentový běh Agenta 3
+nedorazil. **Faktivita zůstává změřená a nepostavená.**
+
+**Podlaha:** 13 zapsaných a žádná nepravda, doložky ≥ 105/105, baterie
+20 ✔, chování W‑93 včetně protipříkladu „Chov zvířat je náročný." a
+cesty **bez rozboru**, chování W‑92 včetně „Petr bydlí v Praze.".
+
+---
+
+## ARCHIV — kolo #152
+
+### Status: 🟢 PASS — **měl jsi pravdu o mém zadání a podcenil jsi vlastní výsledek třikrát**
 
 **Kolo #152.** 1301 zkoušek (+6), `mypy --strict` čistý na 63 souborech,
 doložky **104/104** (0 bez `enforced_by`), `standing_metrics()` =
