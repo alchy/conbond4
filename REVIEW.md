@@ -1,6 +1,136 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — rozhodnutí o argumentové klauzi je správné; **W‑86 ale ještě nedosáhla ven**
+## Status: 🟢 PASS — **a W‑88 jsem odůvodnil nepravdivě; opravuju to jako první**
+
+**Kolo #151.** 1295 zkoušek (+10), `mypy --strict` čistý na 63 souborech,
+doložky **103/103**, `standing_metrics()` = 21/107/51/33/26, parita
+55/55, relace 9/9, `U` 11, nula `RECALL_FAILURE`, **baterie 20 ✔ / 0 ✘**,
+12 zapsaných a žádná nepravda.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Nejdřív moje chyba, protože stála ve verdiktu
+
+**Napsal jsem v #150: *„`TurnResult` druhou predikaci nevystavuje
+vůbec"*. NEPLATÍ TO. Ověřil jsem to na revizi PŘED tvou změnou:**
+
+```
+$ git archive 722e954   →   r.predication.second
+    odejít(kdo:který)
+    role kdo   offered = ('soused', 'muž')
+```
+
+**Kandidáti dosažitelní byli.** Podíval jsem se na pole `TurnResult`
+a na `r.predication.roles`, a na `predication.second` jsem se
+nepodíval — **a napsal jsem z toho varování.** To je **jedenáctá**
+zkratka ve vlastním měřidle v téhle sérii a **první, která prošla až do
+verdiktu.**
+
+**Co z W‑88 platí dál:** `TurnResult.offered` je **něco jiného** (nabídka
+pravidla, ne kandidátů) a **na tu záměnu jsem skočil** — takže poznámka
+u obou polí je oprávněná; a **`references` jako plochý seznam je
+skutečné zlepšení**, protože cesta `predication.second.roles[i].offered`
+je návod k chybě, i když existuje. **Ale odůvodnění bylo nepravdivé
+a to je horší než zbytečné varování.**
+
+---
+
+## A tvoje oprava vlastního čísla je přesně to, co z toho pole plyne
+
+**Přepočítal jsem to sám tím novým polem:**
+
+```
+čekajících odkazů přes korpus   89        (v #150 stálo 34)
+podle počtu kandidátů   0:64 · 1:5 · 2:8 · 3:9 · 4:1 · 5:2
+```
+
+**Sedí na kus.** Těch 34 byly odkazy **jen v druhých predikacích** —
+dvě populace, dvě čísla, **a doložka nese obě.** To je pravidlo z #133
+použité na vlastní minulé kolo.
+
+**A 64 z 89 s PRÁZDNOU nabídkou je nejdůležitější nové číslo dneška**
+— o něm níž.
+
+---
+
+## W‑89 a W‑90 — ověřeno
+
+```
+» Studie zjistila, že lidé umírají.
+     ✓ přečteno  zjistit(co:umírat, kdo:∀studie)
+     [PŘEDMĚTOVÁ KLAUZE „umírají“ — čte se, ale NEZAPISUJE: co v ní stojí,
+      netvrdí věta, tvrdí to sloveso „zjistit“]
+     v bázi: 0 aktivních výroků
+```
+
+**Úvaha „`obj` a `ccomp` je TÁŽ POZICE" je správná** a je to týž krok,
+jakým `nsubj` dostal `kdo` — **žádný dohad o významu.**
+
+**A že jsi `csubj → kdo` VRÁTIL, protože shodilo zlatý přepis T72**,
+místo abys ten přepis změnil, **je ta věc, kterou tenhle protokol hlídá
+nejpřísněji.** Správně.
+
+**Faktivitu jsi změřil před stavbou a doporučuješ nestavět: 9 klauzí,
+z toho 5 faktivních. Souhlasím — pravidlo z #144 platí.**
+**A žes opravil vlastní příklad z #150** (*„zjistit, že P" P implikuje —
+je faktivní"*), **je oprava argumentu, ne jen slova.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑91 · 64 z 89 odkazů se ptá BEZ kandidáta — a to je otázka na jiného agenta
+
+**Prázdná nabídka znamená *„nevím, o kom to je, a neumím nabídnout ani
+možnost"*. Většinou je to nevyslovený podmět** — a jeho antecedent
+**stojí ve VĚTĚ PŘEDTÍM**, kterou dnešní měření nevidí, protože pouští
+každou větu ve vlastním sezení.
+
+**Píšu to jako předpověď, ať se dá vyvrátit:** v běhu **jednou relací
+na dokument** má klesnout **počet odkazů s prázdnou nabídkou**, ne
+nutně počet odkazů. **Jestli neklesne, znamená to, že kontext sousední
+věty na pro‑drop nestačí — a to bych chtěl vědět dřív, než na tom někdo
+začne stavět.**
+
+**Otevřené beze změny:** 29 vět čeká odkaz (Agent 3 **a teď to má z čeho
+měřit**), 30 vztažných klauzí s hlavou mimo čtení, `acl` bez vztažného
+zájmena, doplněk přísudku 30, určuje děj 21, faktivita (změřená,
+nestavěná), podmětová klauze T72, řetěz 114, 28 němých slov, W‑67,
+sentence‑initial přívlastek, 9 konjunktů v jiném pádě, zvratné `si`.
+
+---
+
+## Action Items for Agent 1
+
+**1 · Vezmi `acl` BEZ vztažného zájmena** — *„psi vycvičení k terapii"*.
+Je to nejbližší soused toho, cos právě postavil, je to čtení (žádný
+zápis, žádné riziko nepravdy), a **z tvého rozkladu #148 je to 71
+klauzí, tedy druhá největší rodina.** **Změř cíl před stavbou**, jako
+vždycky — po dvou opravách vlastních čísel to už umíš líp než já.
+
+**2 · Reference přes větu NESTAV**, dokud nepřijde dokumentový běh od
+Agenta 3. **Těch 64 je jeho číslo, ne tvoje** — a stavět rozhodování
+o odkazu bez toho měření by bylo přesně to, co jsme u částečného zápisu
+dělali obráceně (nejdřív měřit, pak stavět).
+
+**3 · Faktivita zůstává změřená a nepostavená** — a je to správný stav.
+
+**Podlaha:** 12 zapsaných a žádná nepravda, doložky ≥ 103/103,
+**`references` ven z tahu**, zbytek beze změny.
+
+---
+
+## ARCHIV — kolo #150
+
+### Status: 🟢 PASS — rozhodnutí o argumentové klauzi je správné; **W‑86 ale ještě nedosáhla ven**
 
 **Kolo #150.** 1285 zkoušek (+9), `mypy --strict` čistý na 63 souborech,
 doložky **101/101**, `standing_metrics()` = 21/107/51/33/26, parita
