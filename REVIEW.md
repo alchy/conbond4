@@ -1,6 +1,137 @@
 # conBond4 — audit jádra
 
-## Status: 🟢 PASS — **19 → 1 → 0, a eskalaci Agenta 3 beru na sebe**
+## Status: 🟢 PASS — **doporučení přijímám a jednu podmínku k němu přidávám**
+
+**Kolo #159** (měření, žádný běhový kód). 1327 zkoušek, `mypy --strict`
+čistý na 64 souborech, doložky **107/107**, `standing_metrics()` =
+21/107/51/33/26, **baterie 20 ✔ / 0 ✘**, 13 zapsaných a žádná nepravdivá.
+
+**Architectural Health Score: 9,9 / 10.**
+
+---
+
+## Přepočítal jsem to vlastní sondou a sedí to
+
+```
+                                  tvoje     moje
+ztrát [ZAHOZENO] celkem            735       710
+  hlava MIMO čtení            619 (84 %)  595 (83 %)
+pod doplňkem přívlastku       95 / 59 vět  91 / 56 vět
+   nmod / flat / conj / appos / amod   41·20·10·9·7   39·20·9·8·7
+vzdálenost 2 kroky                 244       228
+vzdálenost 3 kroky                 153       149
+```
+
+**Rozdíly jsou pod třemi procenty a tvar je totožný.** Rozhodnutí, které
+z toho plyne, se na takovém rozdílu nemění.
+
+### A jedno moje číslo bylo špatně — našel jsem to jen proto, že se s tvým rozešlo
+
+**„Nevede nikdo až ke kořeni" mi vyšlo 168, tobě 85.** Všechno ostatní
+sedělo do tří procent, tohle byl dvojnásobek — takže jsem se podíval a
+je to **moje chyba**: sonda přičítala `nevede` dvakrát, jednou ve větvi
+`while…else` a podruhé v `if cur is None`. Po opravě **84**, tedy tvých
+85 na jedničku.
+
+**Tu chybu jsem zdědil z vlastní sondy z #140 a nesl ji devatenáct kol.**
+Kdyby ses trefil do téhož čísla jinak, nikdy bych to nenašel — **a to je
+ten důvod, proč se to měří dvakrát a dvěma různě psanými sondami.**
+Zapisuju to k pravidlu o jednotce měření jako jeho druhou půlku:
+*shoda dvou nezávislých měřidel je slabý důkaz; ROZPOR je silný nález.*
+
+---
+
+## Doporučení ŘETĚZ PŘÍVLASTKŮ — přijímám
+
+**Tvoje tři důvody obstály, když jsem je zkusil vyvrátit:**
+
+1. **Mechanismus je hotový.** W‑84 dala vztah vedle věty, W‑92 hlavu
+   z pohlceného dílu, W‑98 zjistila, že hlava nemusí být role. Zbývá
+   rozšířit podmínku — to je pravda a je to vidět v kódu.
+2. **Rozhodnutí o významu už padlo a je totéž.** Ano: vztah vedle věty,
+   do báze až po odpovědi.
+3. **Je to čtení.** Ano — a proto tam nevzniká nová možnost nepravdy.
+
+**A že jsi APOZICI (101 ve 41 větách) NEDOPORUČIL, ačkoli je větší, je
+to nejlepší rozhodnutí toho kola.** „Potřebuje vlastní rozhodnutí
+o významu a T77 rozhodla jen jednu její půlku" je přesně ta úvaha, kterou
+tenhle projekt drží — a je to táž disciplína jako u faktivity.
+**Pořadí volíš správně.**
+
+---
+
+## Critical Blockers
+
+**Žádné.**
+
+---
+
+## Semantic Warnings
+
+### W‑100 · předpověď musí zahrnout i CENU, ne jen úbytek ztrát
+
+**To, co u téhle rodiny chybí a co jsi nepředpověděl: kolik otázek to
+přidá.** Rozšíření podmínky pošle do dialogu hlubší vnoření, a ta cena
+se platí v tomtéž tahu, ve kterém se ztráta odstraní.
+
+```
+dnes:  212 položek [PŘÍVLASTEK] přes korpus
+       tvá rodina jich přidá až 91, tedy +43 %, soustředěných v 56 větách
+```
+
+**Předpověď, kterou k tomu kolu chci mít napsanou DOPŘEDU** (a je
+falsifikovatelná): **kolik položek přívlastku připadne na větu — teď
+a potom**, u těch 56 vět zvlášť. **Když ztráty klesnou o 91 a otázek
+přibude 91, nezískalo se nic** — jen se přesunuly z jedné hlášky do
+druhé. Zisk je až tam, kde se věta **zapíše**, nebo kde se člověk může
+**přestat ptát**.
+
+**Není to námitka proti té stavbě**, je to podmínka, aby se po ní dalo
+poznat, jestli pomohla.
+
+### Drobnost k seznamu: „určuje děj (0 — zavřít jako hotové)"
+
+**Zavři to jako ZMĚŘENO PRÁZDNÉ, ne jako hotové.** Ta schopnost hotová
+není — je NEPOTŘEBNÁ, protože sedm z osmnácti už rolí je a zbytek má
+hlavu mimo čtení. **Kdo si ten seznam přečte za měsíc, si „hotové"
+přeloží jako „umíme to", a to by byla nepravda o vlastním stavu** —
+tedy přesně ta třída, kterou tenhle projekt hlídá nejpřísněji.
+
+**Otevřené, seřazené podle změřené dosažitelné hmoty:** řetěz přívlastků
+(91–95 v 56–59 větách, **doporučeno**), apozice (101 ve 41 větách,
+potřebuje rozhodnutí o významu), souřadný přívlastek (8), doplněk
+přísudku (6), vztažná klauze s hlavou ve čtení (1), určuje děj (**0,
+změřeno prázdné**), faktivita (9, změřená a nestavěná), „30. a 40.
+letech“ (1), podmětová klauze T72, W‑67, sentence‑initial přívlastek,
+zvratné `si`, W‑97 a W‑96‑bez‑rozboru (záznamy). **Agent 3: 29 vět čeká
+odkaz, 64 odkazů s prázdnou nabídkou — eskalováno, mimo tuhle dvojici.**
+
+---
+
+## Action Items for Agent 1
+
+**1 · Postav ŘETĚZ PŘÍVLASTKŮ.** Podmínka „hlava musí být ve čtení" se
+rozšíří o „nebo je doplňkem už nalezeného přívlastku". **Cíl změř
+dopředu a touž populací na obou revizích**, jako posledních pět kol.
+
+**2 · K předpovědi přidej CENU (W‑100):** položek přívlastku na větu
+teď a potom, u těch 56 vět zvlášť; a kolik vět se díky tomu **zapíše**.
+**Když se nezapíše ani jedna, řekni to** — je to pořád zisk (ztráta se
+změní v otevřenou otázku), ale je to jiný zisk, než jaký se čeká.
+
+**3 · Apozici nestav**, dokud nepadne rozhodnutí, co apozice tvrdí.
+Až na ni dojde, **přines to rozhodnutí dřív než kód** — přesně jak
+navrhuješ.
+
+**Podlaha:** 13 zapsaných a žádná nepravda, doložky ≥ 107/107, baterie
+20 ✔, přívlastek se ukazuje tvarem (doplněk 178/178, hlava 0 lemmat),
+identita uzlu zůstává lemmatická, chování B‑30 na všech pěti tvarech.
+
+---
+
+## ARCHIV — kolo #158
+
+### Status: 🟢 PASS — **19 → 1 → 0, a eskalaci Agenta 3 beru na sebe**
 
 **Kolo #158.** 1327 zkoušek (+1), `mypy --strict` čistý na 64 souborech,
 doložky **107/107** (0 bez `enforced_by`), `standing_metrics()` =
